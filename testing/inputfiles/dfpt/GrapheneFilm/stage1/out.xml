@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-08-06T14:31:12" user="bornhake" host="iffcluster1810" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/bornhake/cluster/build/external/libxc-gi" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.1-195-g9d9df2efb" branch="develop" lastCommitHash="9d9df2efb12e3cf656331e7d00825102eb5a9a29"/>
+      <compilationInfo date="2026-09-11T11:14:36" user="bornhake" host="iffcluster1801" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/bornhake/clean_code/build.wannier/extern" link="annier90_lib;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.1-308-gc8aa82ca6-dirty" branch="HEAD" lastCommitHash="c8aa82ca6d8740c80438b0f8cd527a3ad8ac117e"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/bornhake/cluster/build/fleur_MPI"/>
+      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build.wannier/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="131734196 kB"/>
+      <mem memoryPerNode="131734184 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/08/06" time="14:39:37" zone="+0200"/>
+   <startDateAndTime date="2026/09/11" time="11:57:57" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -73,11 +73,11 @@
      </atomSpecies>
      <atomGroups>
         <atomGroup species="C-1">
-           <filmPos label="                   1" wannier="F" alignToSpin="F">1.000/6.000 -1.000/6.000 .0000000000</filmPos>
+           <filmPos label="                   1" wannier="F">1.000/6.000 -1.000/6.000 .0000000000</filmPos>
            <force calculate="T" relaxXYZ="TTT"/>
         </atomGroup>
         <atomGroup species="C-1">
-           <filmPos label="                   2" wannier="F" alignToSpin="F">-1.000/6.000 1.000/6.000 .0000000000</filmPos>
+           <filmPos label="                   2" wannier="F">-1.000/6.000 1.000/6.000 .0000000000</filmPos>
            <force calculate="T" relaxXYZ="TTT"/>
         </atomGroup>
      </atomGroups>
@@ -190,5 +190,5 @@
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/08/06" time="14:39:37" zone="+0200"/>
+   <endDateAndTime date="2026/09/11" time="11:57:58" zone="+0200"/>
 </fleurOutput>

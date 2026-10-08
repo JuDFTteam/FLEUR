@@ -1,5 +1,10 @@
-# set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_DOUBLE")
-# set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_DOUBLE")
+#Two lists of preprocessor definitions are collected by the tests below:
+#  FLEUR_DEFINITIONS          - features shared by every FLEUR target
+#                               (fleur, inpgen, fleurinput, diag_test)
+#  FLEUR_PARALLEL_DEFINITIONS - the parallel eigensolver stack, applied to the
+#                               fleur executable only. inpgen must not see these:
+#                               it compiles types_mpimat.F90 but links no ScaLAPACK.
+#A macro belongs in exactly one of the two lists, never in both.
 
 include("cmake/tests/test_GIT.cmake")
 include("cmake/tests/test_linker.cmake")
@@ -16,8 +21,6 @@ include("cmake/tests/test_prog_thread.cmake")
 include("cmake/tests/test_SpFFT.cmake")
 include("cmake/tests/test_HDF5.cmake")
 include("cmake/tests/test_Wannier90.cmake")
-#include("cmake/tests/test_Wannier4.cmake")
-#include("cmake/tests/test_Wannier5.cmake")
 include("cmake/tests/test_GPU.cmake")
 include("cmake/tests/test_MAGMA.cmake")
 include("cmake/tests/test_LibXC.cmake")

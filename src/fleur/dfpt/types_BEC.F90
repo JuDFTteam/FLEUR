@@ -7,6 +7,22 @@
 module m_types_BEC
     use m_juDFT
     use m_types_dfpt_scf
+    use m_dfpt_generate_gradient
+    use m_dfpt_born_effcharge
+    use m_dfpt_dielecten
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
     implicit none 
 
@@ -57,7 +73,6 @@ module m_types_BEC
 
 
 subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
-        use m_types
         class(t_BEC), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
@@ -74,9 +89,7 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
 
     subroutine q_indepent_properties_BEC(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
-        use m_types
         
-        use m_dfpt_generate_gradient
 
         class(t_BEC), intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob
@@ -109,8 +122,6 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
                                           dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
         
         
-        use m_types
-        use m_dfpt_born_effcharge
         
 
         class(t_BEC),intent(inout) :: this
@@ -155,8 +166,6 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
 
     subroutine postprocessing_qpoint_BEC(this,fi,fmpi,dfpt,qpts,iQ,q_list)
 
-        use m_types
-        use m_dfpt_dielecten
 
         class(t_BEC), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
@@ -171,8 +180,6 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
 
     subroutine write_outfiles_BEC(this,fi,fmpi,dfpt)
 
-        use m_types 
-        use m_dfpt_born_effcharge
 
         class(t_BEC),intent(inout)   :: this         
         type(t_fleurinput),intent(in) :: fi

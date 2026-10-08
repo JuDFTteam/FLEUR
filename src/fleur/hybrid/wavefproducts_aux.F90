@@ -1,18 +1,35 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_wavefproducts_aux
    use m_types_fftGrid
-   use m_types
+!$ use omp_lib
+   use m_constants
+   use m_judft
+   use m_fft_interface
+   use m_io_hybrid
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_atoms
+   use m_types_fft
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_stars
+   implicit none
+   private
+   public :: wavefproducts_is_fft, setup_g_ptr, wavef2rs, prep_list_of_gvec, calc_number_of_basis_functions, &
+      outer_prod
 CONTAINS
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                   ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
-      !$ use omp_lib
-      use m_constants
-      use m_judft
-      use m_fft_interface
-      use m_io_hybrid
-      use m_juDFT
-#ifdef CPP_MPI
-      use mpi
-#endif
+                                   ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod, lapw_kq_out, z_kq_out)
       implicit NONE
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -29,6 +46,10 @@ CONTAINS
       complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
       complex, allocatable  :: prod(:,:), psi_k(:, :), psi_kqpt(:,:)
+
+      ! films: k+q basis and eigenvectors of this band package, reused for the vacuum rows
+      type(t_lapw), intent(out), optional :: lapw_kq_out
+      type(t_mat), intent(out), optional  :: z_kq_out
 
       type(t_mat)     :: z_kqpt
       type(t_lapw)    :: lapw_ikqpt
@@ -74,7 +95,7 @@ CONTAINS
          
          CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
 
-         nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
+         nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi, jsp)
          call z_kqpt%alloc(z_k%l_real, nbasfcn, psize)
          call z_kqpt_p%init(z_kqpt)
 
@@ -197,6 +218,16 @@ CONTAINS
 
       call timestop("Big OMP loop")
       deallocate(psi_kqpt)
+      if (present(lapw_kq_out)) lapw_kq_out = lapw_ikqpt
+      if (present(z_kq_out)) then
+         call z_kq_out%alloc(z_kqpt%l_real, z_kqpt%matsize1, z_kqpt%matsize2)
+         if (z_kqpt%l_real) then
+            z_kq_out%data_r = z_kqpt%data_r
+         else
+            z_kq_out%data_c = z_kqpt%data_c
+         endif
+      endif
+
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
@@ -220,9 +251,6 @@ CONTAINS
 
    subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, grid, fft, psi)
       ! put block of wave functions through FFT
-!$    use omp_lib
-      use m_types
-      use m_fft_interface
       implicit none
       type(t_fleurinput), intent(in) :: fi
       type(t_lapw), intent(in)       :: lapw
@@ -249,8 +277,6 @@ CONTAINS
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
-      use m_types
-      use m_juDFT
       implicit none
       type(t_lapw), intent(in)    :: lapw
       TYPE(t_mpdata), intent(in)         :: mpdata
@@ -285,18 +311,18 @@ CONTAINS
       call timestop("prep list of Gvec")
    end subroutine prep_list_of_gvec
 
-   function calc_number_of_basis_functions(lapw, atoms, noco) result(nbasfcn)
-      use m_types
+   function calc_number_of_basis_functions(lapw, atoms, noco, jsp) result(nbasfcn)
       implicit NONE
       type(t_lapw), intent(in)  :: lapw
       type(t_atoms), intent(in) :: atoms
       type(t_noco), intent(in)  :: noco
+      integer, intent(in)       :: jsp
       integer                   :: nbasfcn
 
       if (noco%l_noco) then
          nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot
       else
-         nbasfcn = lapw%nv(1) + atoms%nlotot
+         nbasfcn = lapw%nv(jsp) + atoms%nlotot
       endif
    end function calc_number_of_basis_functions
 

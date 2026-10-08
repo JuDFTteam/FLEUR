@@ -1,10 +1,34 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_pwden
+   USE m_types_dos
+   USE m_constants
+   USE m_forceb8
+   USE m_pwint
+   USE m_juDFT
+   USE m_types_fftGrid
+   USE m_fft_interface
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_stars
+   USE m_types_sym
+   implicit none
+   PRIVATE
+   PUBLIC :: pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, iDir, &
@@ -39,14 +63,6 @@ CONTAINS
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 !DEC$ NOOPTIMIZE
-      USE m_types
-      USE m_types_dos
-      USE m_constants
-      USE m_forceb8
-      USE m_pwint
-      USE m_juDFT
-      USE m_types_fftGrid
-      USE m_fft_interface
 
       IMPLICIT NONE
 
@@ -248,10 +264,6 @@ CONTAINS
             ENDIF
             q0 = q0/cell%omtil
          ENDIF
-
-         IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
-            if (dos%l_initialized) dos%qis = 0.0
-         END IF
       END IF
 
       wtf(:ne) = we(:ne)/cell%omtil

@@ -8,6 +8,14 @@ MODULE m_types_kpts
    USE m_judft
    USE m_types_fleurinput_base
    USE m_constants
+   USE m_mpi_bc_tool
+   USE m_calculator
+   USE m_types_xml
+   USE m_types_sym
+   USE m_types_input
+   USE m_types_cell
+   USE m_tetcon
+   USE m_triang
    IMPLICIT NONE
    PRIVATE
    type t_eibz
@@ -108,7 +116,6 @@ CONTAINS
       is_kpt = kpts%get_nk(kpoint) > 0
    end function kpts_is_kpt
    SUBROUTINE mpi_bc_kpts(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_kpts), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -141,13 +148,23 @@ CONTAINS
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
 
-   recursive logical function read_kpts_by_name(this,filename,name)
-      USE m_calculator
+   !> l_labels asks for the high-symmetry names as well, and defaults to off: this reader
+   !> does not fill them otherwise, and reference banddos.hdf files elsewhere in the tree
+   !> record that absence in their kptSPLabels. Reading them unconditionally -- which is
+   !> what read_xml_kpts does -- means refreshing those references in the same commit.
+   recursive logical function read_kpts_by_name(this,filename,name,l_labels)
       CLASS(t_kpts), INTENT(inout):: this
       character(len=*),INTENT(IN) :: filename,name
+      logical,INTENT(IN),OPTIONAL :: l_labels
 
-      character(len=150):: line
-      integer           :: error,n,fid,nlines
+      character(len=150):: line,raw
+      integer           :: error,n,fid,nlines,nlab,i
+      logical           :: l_lab
+      character(len=50),allocatable :: lname(:)
+      integer,allocatable           :: lidx(:)
+
+      l_lab=.false.
+      IF (present(l_labels)) l_lab=l_labels
 
       OPEN(newunit=fid,file=filename,action='READ')
       read_kpts_by_name=.false.
@@ -179,10 +196,13 @@ CONTAINS
                   backspace(fid)
                ENDDO
                n=0
+               nlab=0
+               IF (l_lab) ALLOCATE(lname(this%nkpt),lidx(this%nkpt))
                DO while (n<this%nkpt)
                   read(fid,"(a)") line
                   IF (index(line,"<kPoint")==0) cycle
                   n=n+1
+                  raw=line
                   line=line(index(line,"weight"):)
                   line=line(index(line,'"')+1:)
                   this%wtkpt(n)=evaluateFirstOnly(line(:index(line,'"')-1))
@@ -190,22 +210,44 @@ CONTAINS
                   this%bk(1, n) = evaluatefirst(line)
                   this%bk(2, n) = evaluatefirst(line)
                   this%bk(3, n) = evaluatefirst(line)
+                  IF (l_lab) THEN
+                     IF (index(raw,'label="')>0) THEN
+                        raw=raw(index(raw,'label="')+7:)
+                        IF (index(raw,'"')>1) THEN
+                           nlab=nlab+1
+                           lname(nlab)=raw(:index(raw,'"')-1)
+                           lidx(nlab)=n
+                        ENDIF
+                     ENDIF
+                  ENDIF
                ENDDO
+               IF (l_lab.AND.nlab>0) THEN
+                  IF (allocated(this%specialPointIndices)) deallocate(this%specialPointIndices)
+                  IF (allocated(this%specialPointNames)) deallocate(this%specialPointNames)
+                  IF (allocated(this%specialPoints)) deallocate(this%specialPoints)
+                  this%numSpecialPoints=nlab
+                  ALLOCATE(this%specialPointIndices(nlab),this%specialPointNames(nlab))
+                  ALLOCATE(this%specialPoints(3,nlab))
+                  DO i=1,nlab
+                     this%specialPointIndices(i)=lidx(i)
+                     this%specialPointNames(i)=lname(i)
+                     this%specialPoints(:,i)=this%bk(:,lidx(i))
+                  ENDDO
+               ENDIF
+               IF (allocated(lname)) deallocate(lname,lidx)
                read_kpts_by_name=.true.
             endif
          ENDIF
          if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
             line=line(index(line,'href="')+6:)
             line=line(:index(line,'"')-1)
-            read_kpts_by_name=this%read_kpts_by_name(line,name)
+            read_kpts_by_name=this%read_kpts_by_name(line,name,l_lab)
          endif
       enddo
       close(fid)
    end function
 
    SUBROUTINE read_xml_kptsByIndex(this, filename_add, xml, kptsIndex)
-      USE m_types_xml
-      USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       CHARACTER(len=*), INTENT(IN) :: filename_add
       TYPE(t_xml), INTENT(INOUT) ::xml
@@ -246,6 +288,8 @@ CONTAINS
                IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
             CASE ('path')
                this%kptsKind = KPTS_KIND_PATH
+            CASE ('plane')
+               this%kptsKind = KPTS_KIND_PLANE
             CASE ('tria')
                this%kptsKind = KPTS_KIND_TRIA
             CASE ('tria-bulk')
@@ -366,8 +410,6 @@ CONTAINS
    END SUBROUTINE read_xml_kptsByIndex
 
    SUBROUTINE read_xml_kpts(this, xml)
-      USE m_types_xml
-      USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT) ::xml
 
@@ -553,7 +595,6 @@ CONTAINS
    END SUBROUTINE add_special_line
 
    subroutine init_EIBZ(EIBZ, kpts, sym, nk)
-      USE m_types_sym
       implicit none
       class(t_eibz), intent(inout)   :: EIBZ
       type(t_kpts), intent(in)       :: kpts
@@ -565,13 +606,6 @@ CONTAINS
    end subroutine init_EIBZ
 
    SUBROUTINE initTetra(kpts,input,cell,sym,l_soc_or_ss)
-      USE m_juDFT
-      USE m_constants
-      USE m_types_input
-      USE m_types_cell
-      USE m_types_sym
-      USE m_tetcon
-      USE m_triang
       CLASS(t_kpts),    INTENT(INOUT) :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -749,9 +783,6 @@ CONTAINS
    END SUBROUTINE initTetra
 
    SUBROUTINE tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
-      USE m_types_cell
-      USE m_juDFT
-      USE m_constants
       CLASS(t_kpts),          INTENT(INOUT)  :: kpts
       LOGICAL,                INTENT(IN)     :: film
       TYPE(t_cell),           INTENT(IN)     :: cell
@@ -918,9 +949,6 @@ CONTAINS
    END SUBROUTINE tetrahedron_regular
 
    SUBROUTINE get_tetra(cell,grid,ntetra,vol,tetra)
-      USE m_types_cell
-      USE m_juDFT
-      USE m_constants
       TYPE(t_cell),  INTENT(IN)     :: cell
       INTEGER,       INTENT(IN)     :: grid(:)
       INTEGER,       INTENT(INOUT)  :: ntetra
@@ -976,8 +1004,6 @@ CONTAINS
 
 
    SUBROUTINE init_kpts(kpts, sym, film, l_eibz, l_timeReversalCheck)
-      use m_juDFT
-      USE m_types_sym
       CLASS(t_kpts), INTENT(inout):: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: film, l_eibz
@@ -1027,8 +1053,6 @@ CONTAINS
       !     bkp    ::    k-point parent
       !     bksym  ::    symmetry operation, that connects the parent
       !                  k-point with the current one
-      USE m_juDFT
-      USE m_types_sym
       TYPE(t_kpts), INTENT(INOUT) :: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: l_timeReversalCheck
@@ -1110,8 +1134,6 @@ CONTAINS
    END SUBROUTINE gen_bz
    
    SUBROUTINE gen_bz_internal(kpts, sym, rrot, nsym)
-      USE m_juDFT
-      USE m_types_sym
       TYPE(t_kpts), INTENT(INOUT) :: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       REAL, INTENT(IN)            :: rrot(3, 3, 2*sym%nop)
@@ -1216,8 +1238,6 @@ CONTAINS
    end function nkpt3_kpts
 
    subroutine calc_nkpt_EIBZ(eibz, kpts, sym, nk)
-      USE m_types_sym
-      USE m_juDFT
       IMPLICIT NONE
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts),  INTENT(IN)     :: kpts
@@ -1304,7 +1324,6 @@ CONTAINS
    END subroutine calc_nkpt_EIBZ
 
    subroutine calc_pointer_EIBZ(eibz, kpts, sym, nk)
-      USE m_types_sym
       implicit none
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts), INTENT(IN)      :: kpts
@@ -1370,7 +1389,6 @@ CONTAINS
    end subroutine calc_pointer_EIBZ
 
    subroutine calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
-      USE m_types_sym
       implicit none
       class(t_kpts), intent(in) :: kpts
       type(t_sym), intent(in)   :: sym
@@ -1408,7 +1426,6 @@ CONTAINS
 
    SUBROUTINE calcCommonFractions(kpts,commonFractions)
 
-      USE m_constants
 
       IMPLICIT NONE
 

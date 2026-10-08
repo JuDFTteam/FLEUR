@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -36,19 +36,39 @@
 
 MODULE m_mixedbasis
 
+   USE m_judft
+   USE m_constants
+   USE m_loddop, ONLY: loddop
+   USE m_intgrf, ONLY: intgrf_init, intgrf
+   USE m_hybrid_core
+   USE m_wrapper
+   USE m_eig66_io
+   USE m_mixedbasis_vac, ONLY: gen_vac_basis
+   USE m_vac_rows, ONLY: NVAC_MPB, vac_src
+   USE m_radfun, ONLY: radfun
+   USE m_radflo, ONLY: radflo
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_hybdat
+   USE m_types_hybinp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_mpinp
+   USE m_types_potden
+   USE m_types_usdus
+   USE m_types_vacuum
+   USE m_types_xcpot_inbuild
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mixedbasis, gen_bas_fun, calc_selecmat
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpinp, mpdata, hybinp, hybdat,&
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, vacuum, xcpot, mpinp, mpdata, hybinp, hybdat,&
                          enpara, fmpi, v, iterHF)
 
-      USE m_judft
-      USE m_types
-      USE m_constants
-      USE m_loddop, ONLY: loddop
-      USE m_intgrf, ONLY: intgrf_init, intgrf
-      USE m_hybrid_core
-      USE m_wrapper
-      USE m_eig66_io
 
       IMPLICIT NONE
 
@@ -62,6 +82,7 @@ CONTAINS
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
+      TYPE(t_vacuum), INTENT(IN)  :: vacuum
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_potden), INTENT(IN)    :: v
 
@@ -72,6 +93,7 @@ CONTAINS
 
       ! local scalars
       INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
+      INTEGER :: ivac_mpb
       INTEGER                         ::  i_basfn, i, n_grid_pt,j
       REAL                            ::  rdum, rdum1, max_momentum, momentum
 
@@ -95,12 +117,18 @@ CONTAINS
 
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
-      ! Deallocate arrays which might have been allocated in a previous run of this subroutine
       IF (ALLOCATED(mpdata%n_g)) deallocate(mpdata%n_g)
-      IF (ALLOCATED(mpdata%num_radbasfn)) deallocate(mpdata%num_radbasfn)
+      IF (iterHF <= 1 .AND. ALLOCATED(mpdata%num_radbasfn)) deallocate(mpdata%num_radbasfn)
       IF (ALLOCATED(mpdata%gptm_ptr)) deallocate(mpdata%gptm_ptr)
       IF (ALLOCATED(mpdata%g)) deallocate(mpdata%g)
-      IF (ALLOCATED(mpdata%radbasfn_mt)) deallocate(mpdata%radbasfn_mt)
+      IF (iterHF <= 1 .AND. ALLOCATED(mpdata%radbasfn_mt)) deallocate(mpdata%radbasfn_mt)
+      IF (ALLOCATED(mpdata%g_vac)) deallocate(mpdata%g_vac)
+      IF (ALLOCATED(mpdata%n_g_vac)) deallocate(mpdata%n_g_vac)
+      IF (ALLOCATED(mpdata%gptm_ptr_vac)) deallocate(mpdata%gptm_ptr_vac)
+      IF (ALLOCATED(mpdata%glen_ptr_vac)) deallocate(mpdata%glen_ptr_vac)
+      IF (ALLOCATED(mpdata%glen_vac)) deallocate(mpdata%glen_vac)
+      IF (ALLOCATED(mpdata%num_zbasfn_vac)) deallocate(mpdata%num_zbasfn_vac)
+      IF (ALLOCATED(mpdata%zbasfn_vac)) deallocate(mpdata%zbasfn_vac)
 
       CALL usdus%init(atoms, input%jspins)
 
@@ -113,15 +141,17 @@ CONTAINS
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
+      IF (iterHF <= 1) THEN
+         allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
 
-      vr0(:,:,:) = v%mt(:,0, :,:)
+         vr0(:,:,:) = v%mt(:,0, :,:)
 
-      ! calculate radial basisfunctions u and u' with
-      ! the spherical part of the potential vr0 and store them in
-      ! bas1 = large component ,bas2 = small component
+         ! calculate radial basisfunctions u and u' with
+         ! the spherical part of the potential vr0 and store them in
+         ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
+         call gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
+      END IF
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
@@ -129,6 +159,7 @@ CONTAINS
       call mpdata%gen_gvec(mpinp, cell, kpts, fmpi)
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
+      IF (iterHF <= 1) THEN
 
       IF (fmpi%irank == 0) THEN
          WRITE (oUnit, '(A)') 'MT product basis for non-local exchange potential:'
@@ -365,6 +396,8 @@ CONTAINS
 
       call mpdata%check_radbasfn(atoms, hybinp)
 
+      END IF ! iterHF <= 1 -- end of the frozen MT product basis construction
+
       !count basis functions
       hybdat%n_mt = 0
       DO itype = 1, atoms%ntype
@@ -376,6 +409,26 @@ CONTAINS
       END DO
       hybdat%nbasm = hybdat%n_mt + mpdata%n_g
 
+      IF (input%film) THEN
+         ! films: VAC block, appended after IR; vz_vac/evac_vac regenerate the vacuum functions
+         ! of the eigenvectors in wavefproducts_vac
+         IF (ALLOCATED(hybdat%vz_vac)) DEALLOCATE (hybdat%vz_vac)
+         IF (ALLOCATED(hybdat%evac_vac)) DEALLOCATE (hybdat%evac_vac)
+         ALLOCATE (hybdat%vz_vac(vacuum%nmz, NVAC_MPB, input%jspins))
+         ALLOCATE (hybdat%evac_vac(NVAC_MPB, input%jspins))
+         DO ivac_mpb = 1, NVAC_MPB
+            hybdat%vz_vac(:, ivac_mpb, :) = &
+               v%vac(:vacuum%nmz, 1, vac_src(vacuum%nvac, ivac_mpb), :input%jspins)
+            hybdat%evac_vac(ivac_mpb, :) = &
+               enpara%evac(vac_src(vacuum%nvac, ivac_mpb), :input%jspins)
+         END DO
+
+         CALL gen_vac_basis(vacuum, cell, kpts, input, mpinp, mpdata, enpara, v, fmpi)
+         DO i = 1, kpts%nkptf
+            hybdat%nbasm(i) = hybdat%nbasm(i) + mpdata%n_vac_fun(i, NVAC_MPB)
+         END DO
+      END IF
+
       hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype
          hybdat%maxlmindx = max(hybdat%maxlmindx,&
@@ -385,11 +438,6 @@ CONTAINS
    END SUBROUTINE mixedbasis
 
    subroutine gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
-      use m_judft
-      use m_types
-      USE m_radfun, ONLY: radfun
-      USE m_radflo, ONLY: radflo
-      USE m_intgrf,   ONLY: intgrf
       implicit NONE
       type(t_atoms), intent(in)        :: atoms
       type(t_enpara), intent(in)       :: enpara
@@ -472,8 +520,6 @@ CONTAINS
 
    function calc_selecmat(atoms,mpdata,seleco, selecu) result(selecmat)
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-      use m_types
-      use m_judft
       implicit NONE
 
       type(t_atoms),  intent(in) :: atoms

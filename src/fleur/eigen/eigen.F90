@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,18 +11,49 @@ MODULE m_eigen
    use mpi
 #endif
    USE m_juDFT
+   USE m_constants
+   USE m_eigen_hssetup
+   USE m_pot_io
+   USE m_eigen_diag
+   USE m_local_Hamiltonian
+   USE m_util
+   USE m_eig66_io, ONLY: write_eig, read_eig
+   USE m_xmlOutput
+   USE m_symmetrize_matrix
+   USE m_unfold_band_kpts
+   USE m_types_mpimat
+   USE m_store_load_hybrid
+   USE m_npy
+   USE m_types_mat
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_tlmplm
+   USE m_types_xcpot
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: eigen
 CONTAINS
    !>The eigenvalue problem is constructed and solved in this routine. The following steps are performed:
    !> 1. Preparation: generate energy parameters, open eig-file
-   !> 2. CALL to mt_setup() : this constructs the local Hamiltonian (i.e. the Hamiltonian in the \f$ u,\dot u, u_{lo} \f$ basis) LDA+U is also added here
+   !> 2. CALL to local_ham() : this constructs the local Hamiltonian (i.e. the Hamiltonian in the \f$ u,\dot u, u_{lo} \f$ basis) LDA+U is also added here
    !> 3. within the (collinear)spin and k-point loop: CALL to eigen_hssetup() to generate the matrices, CALL to eigen_diag() to perform diagonalization
    !> 4. writing (saving) of eigenvectors
    !>
    !>@author D. Wortmann
    !
    ! Modifications done to use this with DFPT phonons:
-   ! a) We need additional MT-integrals from mt_setup that cover the potential variation V1.
+   ! a) We need additional MT-integrals from dfpt_tlmplm that cover the potential variation V1.
    ! b) The eigenvalues are to be evaluated for k+q, not k.
    ! c) Additionally, load in the occupied states for k without q.
    ! d) The work isn't done once the eigenvectors and eigenvalues are found. There is post-
@@ -31,25 +62,11 @@ CONTAINS
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
                     hybdat,iter,eig_id,results,inden,pot,potx,hub1data,&
-                    bqpt, hmat_out, smat_out)
+                    bqpt, hmat_out, smat_out, vTau)
 
-      USE m_types
-      USE m_constants
-      USE m_eigen_hssetup
-      USE m_pot_io
-      USE m_eigen_diag
       !USE m_hsefunctional
-      USE m_local_Hamiltonian
-      USE m_util
       !USE m_icorrkeys
-      USE m_eig66_io, ONLY : write_eig, read_eig
-      USE m_xmlOutput
 
-      USE m_symmetrize_matrix
-      USE m_unfold_band_kpts !used for unfolding bands
-      USE m_types_mpimat
-      use m_store_load_hybrid
-      USE m_npy
 
       IMPLICIT NONE
 
@@ -76,6 +93,7 @@ CONTAINS
 
       REAL,    OPTIONAL, INTENT(IN) :: bqpt(3)
       CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: hmat_out, smat_out
+      TYPE(t_potden), OPTIONAL, INTENT(IN) :: vTau
 
       ! Local Scalars
       INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
@@ -93,7 +111,6 @@ CONTAINS
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
       TYPE(t_tlmplm)            :: td
-      TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw
       CLASS(t_mat), ALLOCATABLE :: zMat
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
@@ -139,7 +156,6 @@ CONTAINS
           END DO
       END IF
 
-      call ud%init(fi%atoms,fi%input%jspins)
 
       ALLOCATE(eig(fi%input%neig))
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
@@ -153,7 +169,11 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
+      IF (xcpot%needs_MetaGGA_ham()) THEN
+         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=alpha_hybrid,vTau=vTau)
+      ELSE
+         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=alpha_hybrid)
+      ENDIF
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300
@@ -172,7 +192,11 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat)
+            IF (xcpot%needs_MetaGGA_ham()) THEN
+               CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,td,pot,lapw,nk,smat,hmat,vTau=vTau)
+            ELSE
+               CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,td,pot,lapw,nk,smat,hmat)
+            ENDIF
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN

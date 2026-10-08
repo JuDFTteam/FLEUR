@@ -7,11 +7,18 @@
 MODULE m_dfpt_mt_perturbation
     USE m_juDFT
     USE m_polangle
-    USE m_types
     USE m_constants
     USE m_mt_tofrom_grid
+    USE m_types_atoms
+    USE m_types_xcpot
+    USE m_types_noco
+    USE m_types_potden
+    USE m_types_sphhar
+    USE m_types_sym
 
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: get_mt_local_perturbation, get_mt_global_perturbation
 
 CONTAINS
 

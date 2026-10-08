@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,31 +13,48 @@ MODULE m_mix
   !    IMIX = 7 : Generalized Anderson method
   !------------------------------------------------------------------------
 
+   use m_juDFT
+   use m_constants
+   use m_cdn_io
+   use m_stmix
+   use m_broyden
+   use m_qfix
+   use m_umix
+   use m_vmix
+   use m_checkMMPmat
+   use m_kerker
+   use m_pulay
+   use m_a_pulay
+   use m_types_mixvector
+   use m_distance
+   use m_mixing_history
+   use m_RelaxSpinAxisMagn
+   use m_plot
+   use m_types_atoms
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_sliceplot
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   use m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mix_charge
 contains
 
-  SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
+  SUBROUTINE mix_charge( field,   fmpi,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
-         dfpt_tag)
+         dfpt_tag, inTau, outTau)
 
-    use m_juDFT
-    use m_constants
-    use m_cdn_io
-    use m_stmix
-    use m_broyden
-    use m_qfix
-    use m_types
-    use m_umix
-    use m_vmix
-    use m_checkMMPmat
-    USE m_kerker
-    use m_pulay
-    use m_a_pulay
-    use m_types_mixvector
-    USE m_distance
-    use m_mixing_history
-    use m_RelaxSpinAxisMagn
-    USE m_plot
     implicit none
 
 
@@ -60,12 +77,13 @@ contains
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType
     integer,           intent(inout) :: iteration
-    LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
     
     type(t_potden), OPTIONAL , intent(inout) :: coreDen
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
+    ! MetaGGA kinetic energy densities: mixed with the coefficients of the density (passive)
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
@@ -106,7 +124,10 @@ contains
 
     CALL timestart("Reading of distances")
     IF (iteration==1) CALL mixvector_reset(.TRUE.)
-    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
+    ! History files do not contain tau, so a run that mixes tau never continues an old history
+    IF (iteration==1 .AND. PRESENT(inTau)) CALL mixing_history_reset(fmpi)
+    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt,&
+                        l_tau=PRESENT(inTau))
     CALL timestart("read history")
     IF (.NOT.l_dfpt) THEN
       CALL mixing_history_open(fmpi,input%maxiter)
@@ -117,7 +138,7 @@ contains
     CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
     IF (.NOT.l_dfpt) THEN
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inTau=inTau,outTau=outTau)
     ELSE
       IF (iteration==1) CALL dfpt_mixing_history_reset()
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
@@ -197,8 +218,15 @@ contains
     IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     IF (ALLOCATED(inDen%nIJ_llp_mmp).AND.l_densitymatrixV) inden%nIJ_llp_mmp(:,:,:,:)=CMPLX(0.0,0.0)
+    IF (PRESENT(inTau)) THEN
+      ! to_density collects by summation over the PEs
+      inTau%pw=0.0; inTau%mt=0.0
+      IF (ALLOCATED(inTau%vac)) inTau%vac=0.0
+      IF (ALLOCATED(inTau%mmpMat)) inTau%mmpMat=0.0
+      IF (ALLOCATED(inTau%nIJ_llp_mmp)) inTau%nIJ_llp_mmp=CMPLX(0.0,0.0)
+    END IF
     IF (.NOT.l_dfpt) THEN
-      CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd,tau=inTau)
     ELSE
       CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
     END IF
@@ -290,12 +318,6 @@ contains
 #endif
     call timestop("Density output")
     inDen%iter = inDen%iter + 1
-
-    IF (.NOT.l_dfpt) THEN
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
-    ELSE
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi,dfpt_tag)
-    END IF
 
     CALL timestop("Postprocessing")
     CALL timestop("Charge Density Mixing")

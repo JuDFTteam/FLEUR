@@ -2,6 +2,9 @@
 !
 !     orders (k1,x1), (k2,x2), (k3,x3) such that x1 < x2 < x3
 !
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: trisrt
       CONTAINS
       SUBROUTINE trisrt(x1,x2,x3,k1,k2,k3)
 

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,38 @@ MODULE m_dfpt_cdngen
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_types_vacdos
+   USE m_constants
+   USE m_juDFT
+   USE m_dfpt_cdnval
+   USE m_cdn_io
+   USE m_wrtdop
+   USE m_cdncore
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cdnval
+   USE m_types_cell
+   USE m_types_dos
+   USE m_types_enpara
+   USE m_types_gfinp
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_regioncharges
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_cdngen
 CONTAINS
 
 SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
@@ -15,14 +47,6 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
                   archiveType, xcpot,outDen,bqpt,iDtype,iDir,l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m)
 
-   use m_types_vacdos
-   USE m_types
-   USE m_constants
-   USE m_juDFT
-   USE m_dfpt_cdnval
-   USE m_cdn_io
-   USE m_wrtdop
-   USE m_cdncore
    
 
    IMPLICIT NONE

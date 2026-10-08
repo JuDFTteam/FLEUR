@@ -1,10 +1,24 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_distrib_vx
-   use m_types
 #ifdef CPP_MPI
    use mpi
 #endif
    use m_types_mpimat
    use m_glob_tofrom_loc
+   use m_judft
+   use m_types_mat
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_lapw
+   use m_types_mpi
+   use m_types_nococonv
+   implicit none
+   private
+   public :: distrib_vx, distrib_single_vx, copy_vx_to_distr
 contains
    subroutine distrib_vx(fi, fmpi, nococonv, vx_loc, vx_tmp, hybdat)
       implicit none 

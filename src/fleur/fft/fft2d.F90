@@ -1,4 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fft2d
+   USE m_types_fftgrid
+   USE m_types_cell
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: fft2d
 CONTAINS
    SUBROUTINE fft2d(stars,afft2,bfft2,fg,isn,firstderiv,secondderiv,cell )
       !!
@@ -15,8 +26,6 @@ CONTAINS
     !* stars%pgfft2(i)   contains the phases of the G-vectors of sph.  *
     !*                                                           *
     !*************************************************************
-      USE m_types_fftgrid
-      USE m_types
 
       IMPLICIT NONE
 

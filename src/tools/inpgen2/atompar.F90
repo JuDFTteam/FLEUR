@@ -1,7 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_atompar
   USE m_judft
   USE m_types_profile
+  USE m_constants
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: add_defaults, add_atompar, find_atompar, read_params, read_atom_params_old, dump_list, t_atompar, &
+     atompar_list, no_of_atompars
   type t_atompar
      integer :: id = -1
      integer :: nucnumber = 0
@@ -299,7 +308,6 @@ contains
 
   CONTAINS
     INTEGER FUNCTION element_to_z(element)
-      USE m_constants,ONLY: namat_const
       IMPLICIT NONE
       CHARACTER(len=*),INTENT(in)::  element
 
@@ -327,7 +335,6 @@ contains
 
   SUBROUTINE dump_list()
 
-    USE m_constants
 
     INTEGER::n
 

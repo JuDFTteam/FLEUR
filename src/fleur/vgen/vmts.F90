@@ -1,7 +1,32 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_vmts
 #ifdef CPP_MPI
   use mpi
 #endif
+  use m_constants
+  use m_mpi_reduce_tool
+  use m_intgr, only: intgr2, sfint
+  use m_phasy1
+  use m_sphbes
+  use m_SphBessel
+!$ use omp_lib
+  use m_types_parallelloop
+  use m_types_atoms
+  use m_types_cell
+  use m_types_input
+  use m_types_mpi
+  use m_types_potden
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_sternheimerjob
+  use m_types_sym
+  implicit none
+  private
+  public :: vmts
 contains
 
   subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul, den, ispin, sternheimerJob, iDtype, iDir, iDir2)
@@ -32,16 +57,8 @@ contains
   ! F. Tran, P. Blaha: Phys. Rev. B 83, 235118(2011)
   !-------------------------------------------------------------------------
 
-    use m_constants
-    use m_types
-    use m_mpi_reduce_tool
-    use m_intgr, only : intgr2, sfint
-    use m_phasy1
-    use m_sphbes
     
      
-    use m_SphBessel
-    !$ use omp_lib
     implicit none
 
     type(t_input),  intent(in)        :: input

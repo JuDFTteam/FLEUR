@@ -1,5 +1,12 @@
       MODULE m_strgndim
       use m_juDFT
+      use m_constants
+      use m_boxdim
+      use m_spgrot
+      use m_ifft, only: i2357, next_optimal_fft_size
+      implicit none
+      private
+      public :: strgn1_dim, strgn2_dim
       CONTAINS
       SUBROUTINE strgn1_dim(
      >                  l_write,gmax,bmat,invs,zrfs,mrot,tau,nop,nop2,
@@ -11,11 +18,7 @@ c     for slab geometry
 c     e. wimmer   nov.1984    c.l.fu  1987
 c     *********************************************************
 
-      USE m_constants
        
-      USE m_boxdim
-      USE m_spgrot
-      USE m_ifft, ONLY : i2357
 
       IMPLICIT NONE
 
@@ -139,10 +142,6 @@ c     *********************************************************
 c     generate three-dimensional stars for bulk
 c     based on  e. wimmer   nov.1984    c.l.fu  1987
 c     *********************************************************
-      USE m_constants
-      USE m_boxdim
-      USE m_spgrot
-      USE m_ifft, ONLY : next_optimal_fft_size
       IMPLICIT NONE
 
       LOGICAL,INTENT(IN)    :: l_write

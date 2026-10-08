@@ -1,16 +1,38 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleurinput_read_xml
-  USE m_types_fleurinput
+  USE m_types_xml
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_corespecinput
+  USE m_types_dfpt
+  USE m_types_enparaxml
+  USE m_types_field
+  USE m_types_forcetheo_data
+  USE m_types_gfinp
+  USE m_types_hub1inp
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpinp
+  USE m_types_noco
+  USE m_types_sliceplot
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_wannierlib
+  USE m_types_xas
+  USE m_types_xcpot
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,filename_add,cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version)
-    USE m_types_xml
+       sliceplot,banddos,xas,mpinp,hybinp ,coreSpecInput,&
+       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version,wannierlib)
     integer,INTENT(IN)             :: xmlOUTFileID
     CHARACTER(len=*), INTENT(IN) :: filename_add
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
@@ -22,11 +44,12 @@ CONTAINS
     TYPE(t_field),INTENT(OUT),OPTIONAL::field
     TYPE(t_sliceplot),INTENT(OUT),OPTIONAL::sliceplot
     TYPE(t_banddos),INTENT(OUT),OPTIONAL::banddos
+    TYPE(t_xas),INTENT(OUT),OPTIONAL::xas
     TYPE(t_mpinp), INTENT(OUT), OPTIONAL :: mpinp
     TYPE(t_hybinp),INTENT(OUT),OPTIONAL::hybinp
 
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
-    TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
+   TYPE(t_wannierlib_wannierize),INTENT(OUT),OPTIONAL::wannierlib
     CLASS(t_xcpot),INTENT(OUT),OPTIONAL::xcpot
     TYPE(t_forcetheo_data),INTENT(OUT),OPTIONAL::forcetheo_data
     TYPE(t_enparaXML),INTENT(OUT),OPTIONAL::enparaXML
@@ -58,10 +81,11 @@ CONTAINS
     if (present(field)) call field%read_xml(xml)
     if (present(sliceplot)) call sliceplot%read_xml(xml)
     if (present(banddos)) call banddos%read_xml(xml)
+    if (present(xas)) call xas%read_xml(xml)
     if (present(mpinp)) call mpinp%read_xml(xml)
     if (present(hybinp)) call hybinp%read_xml(xml)
     if (present(coreSpecInput)) call coreSpecInput%read_xml(xml)
-    if (present(wann)) call wann%read_xml(xml)
+   if (present(wannierlib)) call wannierlib%read_xml(xml)
     if (present(xcpot)) call xcpot%read_xml(xml)
     if (present(forcetheo_data)) call forcetheo_data%read_xml(xml)
     if (present(enparaXML)) call enparaXML%read_xml(xml)

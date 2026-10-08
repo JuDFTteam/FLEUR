@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_corpbe
 
 !----------------------------------------------------------------------
@@ -12,6 +17,10 @@ MODULE m_corpbe
 !     density functional}, submitted to phys. rev. b, feb. 1996.
 ! [c] j. p. perdew and y. wang, phys. rev. b {\bf 45}, 13244 (1992).
 !----------------------------------------------------------------------
+   USE m_pbecor2
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: corpbe
 CONTAINS
    SUBROUTINE corpbe( &
       l_pbes,rs,zet,t,uu,vv,ww,lgga,lpot, &
@@ -34,7 +43,6 @@ CONTAINS
 !        : dvcdn=nonlocal correction to vcdn
 !----------------------------------------------------------------------
 
-      USE m_pbecor2
       IMPLICIT NONE
       LOGICAL,INTENT(IN)    :: l_pbes
       INTEGER, INTENT (IN)  :: lgga,lpot

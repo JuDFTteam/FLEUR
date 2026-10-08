@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,33 @@ module m_vgen_coulomb
 #ifdef CPP_MPI
   use mpi
 #endif
+  use m_constants
+  use m_vmts
+  use m_intnv
+  use m_vvac
+  use m_vvacis
+  use m_vvacxy
+  use m_vintcz
+  use m_checkdopall
+  use m_convol
+  use m_psqpw
+  use m_cfft
+  use m_types_atoms
+  use m_types_cell
+  use m_types_dfpt
+  use m_types_field
+  use m_types_input
+  use m_types_mpi
+  use m_types_potden
+  use m_types_misc
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_sternheimerjob
+  use m_types_sym
+  use m_types_vacuum
+  implicit none
+  private
+  public :: vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
@@ -24,18 +51,6 @@ contains
     ! resides.
     !----------------------------------------------------------------------------
 
-    use m_constants
-    use m_types
-    use m_vmts
-    use m_intnv
-    use m_vvac
-    use m_vvacis
-    use m_vvacxy
-    use m_vintcz
-    use m_checkdopall
-    use m_convol
-    use m_psqpw
-    use m_cfft
     
     implicit none
 

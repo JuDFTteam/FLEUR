@@ -8,6 +8,7 @@ stages:
    - perf
    - html
    - deploy
+   - review
 
 include:
    - "packaging/CI/test-template.yml"
@@ -15,6 +16,8 @@ include:
    - "packaging/CI/gfortran-serial.yml"
    - "packaging/CI/oneAPI.yml"
    - "packaging/CI/NVHPC.yml"
+   - "packaging/CI/LLVM.yml"
    - "packaging/CI/html.yml"
    - "packaging/CI/AiiDA.yml"
    - "packaging/CI/CB.yml"
+   - "packaging/CI/CLAUDE.yml"

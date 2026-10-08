@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,10 +7,14 @@
 MODULE m_corespec_io
 
   USE m_corespec
-  USE m_types
   USE m_juDFT
+  USE m_types_atoms
+  USE m_types_corespecinput
+  USE m_types_input
 
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: corespec_init, iounit
 
   CONTAINS
 
@@ -156,12 +160,13 @@ MODULE m_corespec_io
     endif
     if(count(csi%edgeidx.gt.0).gt.(2*csv%nc-1)) then
       write(*,csmsgs) trim(smeno),&
-         &"found more than 2*csv%nc-1 of csi%edgeidx > 0 !"//csmsgerr ; stop
+         &"found more than 2*csv%nc-1 of csi%edgeidx > 0 !"//csmsgerr
+      CALL judft_error("found more than 2*csv%nc-1 of csi%edgeidx > 0", calledby=trim(smeno))
     endif
     if((csv%nc-1)**2+maxval(csi%edgeidx).gt.atoms%econf(csi%atomType)%num_core_states) then
       write(*,csmsgs) trim(smeno),&
          &"found (csv%nc-1)^2+maxval(csi%edgeidx) > num_core_states(csi%atomType)!"//csmsgerr
-      stop
+      CALL judft_error("found (csv%nc-1)^2+maxval(csi%edgeidx) > num_core_states", calledby=trim(smeno))
     endif
     csv%nljc = count(csi%edgeidx.gt.0)
     if(.not.allocated(csv%lc)) allocate(csv%lc(csv%nljc))

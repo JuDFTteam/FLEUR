@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_generic_txtio
 
    !------------------------------------------------------------------------------
@@ -13,6 +18,7 @@ MODULE m_generic_txtio
    !
    !------------------------------------------------------------------------------
    USE m_juDFT
+   USE m_types_mat
 
    IMPLICIT NONE
 
@@ -174,7 +180,6 @@ CONTAINS
 
    SUBROUTINE write_tmat(iounit,mat)
 
-      USE m_types
       IMPLICIT NONE
 
       INTEGER,          INTENT(IN)  :: iounit

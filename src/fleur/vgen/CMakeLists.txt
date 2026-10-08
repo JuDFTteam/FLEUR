@@ -24,6 +24,7 @@ src/fleur/vgen/vgen_finalize.F90
 src/fleur/vgen/psqpw.F90
 src/fleur/vgen/rotate_int_den_tofrom_local.f90
 src/fleur/vgen/vintcz.f90
+src/fleur/vgen/mgga_alpha.F90
 src/fleur/vgen/vis_xc.F90
 src/fleur/vgen/pw_tofrom_grid.F90
 src/fleur/vgen/vmts.F90

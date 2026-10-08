@@ -1,11 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_jointdos
    use m_judft
    use m_types_eigdos
+   use m_types_atoms
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_banddos
+   use m_types_dos
+   use m_sort
+   use m_types_input
+   use m_types_kpts
    implicit none
    PRIVATE
    public t_jointdos
@@ -57,12 +65,6 @@ CONTAINS
    end function charge_mag
 
    subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
-      use m_types_dos
-      use m_sort 
       class(t_jointDOS), intent(inout):: this
       class(t_eigdos_list), intent(in),optional    :: alldos(:)
       TYPE(t_noco), INTENT(IN)        :: noco
@@ -93,18 +95,15 @@ CONTAINS
          if (size(dos%qis,3)<3) then !collinear case
             DO ispin=1,size(dos%qis,3)
                DO jspin=1,ispin
+                  if (jspin /= ispin) cycle !only spin-conserving transitions
+                  iispin=ispin
                   ii=0
                   DO i=1,size(dos%qis,1)
                      if (dos%eig(i,ikpt,ispin) < ef) then  !valid initial state
                         DO j=1,size(dos%qis,1)
                            if (dos%eig(j,ikpt,jspin) > ef) then !valid final state
                               ii=ii+1
-                              if (ispin==jspin) then
-                                 iispin=ispin
-                              else
-                                 iispin=3
-                              end if   
-                              this%eig(ii,ikpt,iispin)=this%eig(ii,ikpt,iispin)+dos%eig(j,ikpt,jspin)-dos%eig(i,ikpt,ispin)
+                              this%eig(ii,ikpt,iispin)=dos%eig(j,ikpt,jspin)-dos%eig(i,ikpt,ispin)
                               !add contribution to jointDOS
                               this%qis(ii,ikpt,iispin)=this%qis(ii,ikpt,iispin)+dos%qis(i,ikpt,ispin)*dos%qis(j,ikpt,jspin)
                               this%qTot(ii,ikpt,iispin)=this%qTot(ii,ikpt,iispin)+dos%qTot(i,ikpt,ispin)*dos%qTot(j,ikpt,jspin)
@@ -138,7 +137,6 @@ CONTAINS
                      if (dos%eig(j,ikpt,1) >ef) then !valid final state
                         ii=ii+1
                         this%eig(ii,ikpt,:)=dos%eig(j,ikpt,1)-dos%eig(i,ikpt,1)
-                        print *, "jDOS:",ii,"=", i, "->", j,this%eig(ii,ikpt,1)
                         !add contribution to jointDOS (charge and magnetisation components)
                         this%qis(ii,ikpt,1:2)=this%qis(ii,ikpt,1:2)+charge_mag(dos%qis(i,ikpt,:),dos%qis(j,ikpt,:))
                         this%qTot(ii,ikpt,1:2)=this%qTot(ii,ikpt,1:2)+charge_mag(dos%qTot(i,ikpt,:),dos%qTot(j,ikpt,:))
@@ -226,11 +224,6 @@ CONTAINS
    end function
 
    SUBROUTINE jointDOS_init(thisDOS, input, atoms, kpts, banddos, l_noco, eig)
-      USE m_types_input
-      USE m_types_atoms
-      USE m_types_banddos
-      USE m_types_kpts
-      USE m_types_noco
       IMPLICIT NONE
       CLASS(t_jointDOS), INTENT(INOUT) :: thisDOS
       TYPE(t_input), INTENT(IN)    :: input
@@ -242,6 +235,7 @@ CONTAINS
 
       INTEGER :: ntype, l, i, ind,ispin
       character :: spdfg(0:4) = ["s", "p", "d", "f", "g"]
+      thisDOS%l_initialized = .TRUE.
       thisDOS%name_of_dos = "jointDOS"
       
       ispin= merge(2,input%jspins,l_noco)
@@ -249,6 +243,7 @@ CONTAINS
       ALLOCATE (thisDOS%qal(0:3, size(banddos%dos_typelist), (input%neig*input%neig)/4+1, kpts%nkpt,ispin))
       ALLOCATE (thisDOS%qTot((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
       ALLOCATE (thisDOS%eig((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
+      thisDOS%eig = 0.0
       thisDOS%qis = 0.0
       thisDOS%qal = 0.0
       thisDOS%qTot = 0.0

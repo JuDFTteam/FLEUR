@@ -1,27 +1,34 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_dfpt_vefield
     
+    use m_ylm
+    use m_sphbes
+    use m_constants
+    use m_dfpt_gradient
+    use m_types_cell
+    use m_inv3
+    use m_phasy1
+    use m_npy
+    use m_types_atoms
+    use m_types_dfpt
+    use m_types_potden
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sym
     implicit none
+    private
+    public :: dfpt_vefield
 
 contains
     
     subroutine dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,iDir,q_sign)
         !Currently only spin=1
 
-        use m_types
-        use m_ylm
-        use m_sphbes
-        USE m_constants
-        use m_dfpt_gradient
-        USE m_types_cell
-        use m_inv3
-        use m_phasy1
-        use m_npy
 
 
 

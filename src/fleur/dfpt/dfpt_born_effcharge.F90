@@ -1,11 +1,10 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_dfpt_born_effcharge
-    use m_types
     USE m_make_stars
     use m_convol
     use m_dfpt_dynmat
@@ -17,12 +16,26 @@ module m_dfpt_born_effcharge
     USE m_constants
     USE m_checkdopall
     USE m_types_fftGrid
+    USE m_xmlOutput
+    USE m_types_fleurinput
+    USE m_types_hybdat
+    USE m_types_mpi
+    USE m_types_nococonv
+    USE m_types_potden
+    USE m_types_sphhar
+    USE m_types_stars
+    USE m_types_sternheimerjob
+    USE m_types_xcpot
+    USE m_juDFT
     
 
 
 
 
     implicit none 
+    PRIVATE
+    PUBLIC :: dfpt_born_eff_charge_element_nef, dfpt_born_eff_charge_element, dfpt_born_eff_charge_final, &
+       write_born_effective_charge, dfpt_checkdopall
 
 contains 
 
@@ -325,7 +338,6 @@ contains
 
     subroutine dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions)
 
-         USE m_xmlOutput
 
         type(t_fleurinput), intent(in)    :: fi
         complex, intent(inout)   :: born_eff_charge(:,:,:)
@@ -493,7 +505,7 @@ contains
         !stop
         CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,product,1,'v1n1')
 
-        stop
+        CALL judft_error("Stop after debug output", calledby="dfpt_checkdopall")
     
     end subroutine dfpt_checkdopall
 

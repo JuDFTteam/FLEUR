@@ -1,12 +1,30 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_types_denmatrix
    use m_judft
+   use m_types_mpi
+   use m_types_radfun
+   use m_constants
+   use m_types_atoms
+   use m_intgr, only: intgr3
+   use m_types_sphhar
+   use m_types_sym
+   use m_types_abc
+   use m_gaunt
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_input
+   use m_types_cdnval
+   use m_types_noco
+   use m_gradYlm, only: Derivative
    implicit none
+   private
+   public :: mpi_collect, init, l_like_charge, hff_contact, hff_dipolar, rhonmt, to_full_density, t_denmatrix
    type:: t_denmatrix
       integer, private:: itype = 0
       logical         :: l_triang = .false.
@@ -18,16 +36,13 @@ module m_types_denmatrix
       procedure, pass :: hff_contact
       procedure, pass :: hff_dipolar
       procedure, pass :: to_full_density
+      procedure, pass :: to_kinetic_energy_density
       procedure, pass  :: mpi_collect
    end type
 
 contains
 
    subroutine mpi_collect(this,fmpi)
-      use m_types_mpi
-#ifdef CPP_MPI
-      use mpi
-#endif      
       implicit none
       class(t_denmatrix), intent(inout):: this
       type(t_mpi), intent(in):: fmpi
@@ -38,8 +53,6 @@ contains
 #endif
    end subroutine
    subroutine init(this, itype, atoms, input, sphhar)
-      use m_types
-      use m_types_radfun
       implicit none
       class(t_denmatrix), intent(inout):: this
       integer, intent(in):: itype
@@ -60,8 +73,6 @@ contains
    end subroutine
 
    function l_like_charge(this, radfun, ispin, lmax) result(qmtl)
-      use m_types_radfun
-      use m_constants
       implicit none
       class(t_denmatrix), intent(in)   :: this
       type(t_radfun), intent(in)       :: radfun
@@ -81,10 +92,6 @@ contains
    end function
 
    function hff_contact(this, radfun, atoms, itype, ispin) result(contribs)
-      use m_types_radfun
-      use m_types_atoms
-      use m_intgr, only: intgr3
-      use m_constants, only: pi_const, c_light
       implicit none
       class(t_denmatrix), intent(in)  :: this
       type(t_radfun),     intent(in)  :: radfun
@@ -127,12 +134,6 @@ contains
       !! Y_2^0 content of the lattice harmonics.  For cubic symmetry, returns zero
       !! by symmetry (no Y_2^0 in any lattice harmonic).
       !! Both large and small radial components enter the 1/r^3 matrix element.
-      use m_types_radfun
-      use m_types_atoms
-      use m_types_sphhar
-      use m_types_sym
-      use m_intgr, only: intgr3
-      use m_constants, only: pi_const
       implicit none
       class(t_denmatrix), intent(in)  :: this
       type(t_radfun),     intent(in)  :: radfun
@@ -225,9 +226,6 @@ contains
     !! \(\tilde{f}_{\nu\boldsymbol{k}}\): (Smeared) occupation number [perturbed for \(\tilde{f}^{(1)}\)]
     !!
     !! \(A\): Summed matching coefficients and eigenvectors [perturbed for \(A^{(1)}\)]
-      use m_types
-      use m_types_abc
-      use m_gaunt
       implicit none
       class(t_denmatrix)         :: this
       type(t_sym), intent(IN)    :: sym
@@ -332,8 +330,6 @@ contains
       !! \(s\) is the index for the big/small components yielded by the
       !! scalar-relativistic Schrödinger equation.
 
-      use m_types
-      use m_types_radfun
 
       implicit none
       CLASS(t_denmatrix), intent(IN)  :: denmat
@@ -386,4 +382,133 @@ contains
       END DO
      
    end subroutine to_full_density
+
+   subroutine to_kinetic_energy_density(denmat, ispin, ispinpr, itype, input, sphhar, atoms, noco, sym, radfun, tau)
+      !! Compute the kinetic energy density in the muffin-tin sphere from the
+      !! density matrix and radial functions.
+      !!
+      !! The kinetic energy density is:
+      !!   τ(r) = (1/2) Σ_ν f_ν |∇ψ_ν(r)|²
+      !!
+      !! Using the LAPW expansion ψ = Σ_{lm,α} c_α^{lm} u_α^l(r) Y_{lm}(r̂),
+      !! and the stored radial functions R_α^l(r) = r·u_α^l(r), the KED
+      !! in the muffin-tin lattice-harmonic representation becomes:
+      !!
+      !!   r²·τ_L(r) = (1/2) Σ_{l,l',α,β} d_{αβ,l,l',L} ×
+      !!     [ D_α^l·D_β^l'  +  angfac/r² · R_α^l·R_β^l' ]
+      !!
+      !! where:
+      !!   D_α^l(r) = dR_α^l/dr - R_α^l/r   (radial derivative term)
+      !!   angfac = (1/2)[l(l+1) + l'(l'+1) - l_v(l_v+1)]
+      !!   l_v = angular momentum of the lattice harmonic L
+      !!
+      !! Both large (1) and small (2) components of the scalar-relativistic
+      !! radial functions contribute, analogous to the charge density.
+      !!
+      !! The angular factor follows from the identity:
+      !!   (∇_Ω Y_{lm})* · (∇_Ω Y_{l'm'}) =
+      !!     (1/2)[l(l+1)+l'(l'+1)-L(L+1)] × Gaunt(l,l',L;m,m',M) Y_{LM}
+
+
+      implicit none
+      CLASS(t_denmatrix), intent(IN)  :: denmat
+      integer, intent(in)             :: itype, ispin, ispinpr
+      type(t_input), intent(IN)       :: input
+      type(t_sphhar), intent(IN)      :: sphhar
+      type(t_atoms), intent(IN)       :: atoms
+      type(t_sym), intent(IN)         :: sym
+      type(t_noco), intent(IN)        :: noco
+      type(t_radfun), intent(in)      :: radfun
+      real, intent(inout)             :: tau(:, 0:, :, :)  ! (jmtd, 0:nlhd, ntype, jspins)
+
+      ! Local variables
+      integer :: lh, l, lp, j, i, ii, spin, ns, lv, jri
+      complex :: cs
+      real    :: angfac, r_inv
+
+      ! Arrays for radial derivatives D_α^l = dR/dr - R/r
+      ! Precomputed for all radial functions, l-channels, spins, components
+      real, allocatable :: D(:, :, :, :, :)  ! (jmtd, 1:2, max_n_r, 0:lmaxd, jspins)
+      real, allocatable :: dR_dr(:)           ! temporary for derivative computation
+
+      integer :: max_n_r, n_comp
+
+      spin = merge(ispin, 3, ispin == ispinpr)
+      if (spin == 3 .and. .not. noco%l_mperp) return
+
+      jri = atoms%jri(itype)
+      max_n_r = maxval(radfun%n_r)
+
+      ! ----------------------------------------------------------------
+      ! Step 1: Precompute D_α^l(r) = dR_α^l/dr - R_α^l(r)/r
+      !         for both large (1) and small (2) components
+      ! ----------------------------------------------------------------
+      allocate(D(jri, 2, max_n_r, 0:atoms%lmaxd, input%jspins), source=0.0)
+      allocate(dR_dr(jri))
+
+      do n_comp = 1, 2  ! large and small components
+         do l = 0, atoms%lmax(itype)
+            do i = 1, radfun%n_r(l)
+               ! Compute dR/dr on the logarithmic mesh using the Derivative routine
+               call Derivative(radfun%R(1:jri, n_comp, i, l, ispin), itype, atoms, dR_dr(1:jri))
+               ! D(r) = dR/dr - R/r
+               do j = 1, jri
+                  D(j, n_comp, i, l, ispin) = dR_dr(j) - radfun%R(j, n_comp, i, l, ispin) / atoms%rmsh(j, itype)
+               end do
+               ! For the second spin if off-diagonal
+               if (ispin /= ispinpr) then
+                  call Derivative(radfun%R(1:jri, n_comp, i, l, ispinpr), itype, atoms, dR_dr(1:jri))
+                  do j = 1, jri
+                     D(j, n_comp, i, l, ispinpr) = dR_dr(j) - radfun%R(j, n_comp, i, l, ispinpr) / atoms%rmsh(j, itype)
+                  end do
+               end if
+            end do
+         end do
+      end do
+      deallocate(dR_dr)
+
+      ! ----------------------------------------------------------------
+      ! Step 2: Accumulate kinetic energy density contributions
+      ! ----------------------------------------------------------------
+      ns = sym%ntypsy(atoms%firstAtom(itype))
+
+      do lh = 0, sphhar%nlh(ns)
+         lv = sphhar%llh(lh, ns)  ! angular momentum of this lattice harmonic
+
+         do l = 0, atoms%lmax(itype)
+            do lp = 0, merge(l, atoms%lmax(itype), denmat%l_triang)
+
+               ! Angular factor: (1/2)[l(l+1) + l'(l'+1) - l_v(l_v+1)]
+               angfac = 0.5 * real(l*(l + 1) + lp*(lp + 1) - lv*(lv + 1))
+
+               !$OMP SIMD PRIVATE(j, cs, i, ii, r_inv)
+               do j = 1, jri
+                  r_inv = 1.0 / atoms%rmsh(j, itype)
+                  cs = 0.0
+                  do i = 1, radfun%n_r(l)
+                     do ii = 1, radfun%n_r(lp)
+                        cs = cs + denmat%mat(ii, i, l, lp, lh) * ( &
+                             ! Radial derivative contribution: D_i * D_ii (large + small)
+                             (D(j, 1, i, l, ispinpr) * D(j, 1, ii, lp, ispin) &
+                            + D(j, 2, i, l, ispinpr) * D(j, 2, ii, lp, ispin)) &
+                             ! Angular gradient contribution: angfac/r² * R_i * R_ii (large + small)
+                            + angfac * r_inv * r_inv * &
+                             (radfun%R(j, 1, i, l, ispinpr) * radfun%R(j, 1, ii, lp, ispin) &
+                            + radfun%R(j, 2, i, l, ispinpr) * radfun%R(j, 2, ii, lp, ispin)) &
+                                                                  )
+                     end do
+                  end do
+                  ! Factor 1/2 from τ = (1/2)|∇ψ|², divided by neq
+                  tau(j, lh, itype, spin) = tau(j, lh, itype, spin) &
+                                          + 0.5 * real(cs) / atoms%neq(itype)
+               end do
+               !$OMP END SIMD
+            end do
+         end do
+      end do
+
+      deallocate(D)
+
+   end subroutine to_kinetic_energy_density
+
 end module m_types_denmatrix

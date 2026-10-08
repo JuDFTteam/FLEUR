@@ -1,5 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_slabgeom
   USE m_juDFT
+  USE m_types_atoms
+  USE m_types_cell
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: slabgeom
 CONTAINS
   SUBROUTINE slabgeom(atoms,cell,nsld,&
        nsl,zsl,nmtsl,nslat,volsl,volintsl)
@@ -32,7 +42,6 @@ CONTAINS
     !                               the nsl-layer 
     !-----------------------------------------------------------------------
     !
-    USE m_types_setup
     IMPLICIT NONE
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)   :: atoms

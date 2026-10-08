@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,12 +9,40 @@ MODULE m_vgen_xcpot
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_intnv
+   use m_vmt_xc
+   use m_vvac_xc
+   use m_vis_xc
+   use m_checkdopall
+   use m_cdn_io
+   use m_convol
+   use m_intgr
+   use m_dfpt_vmt_xc
+   use m_dfpt_vis_xc
+   use m_dfpt_vvac_xc
+   use m_types_atoms
+   use m_types_cell
+   use m_types_hybdat
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_potden
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   use m_types_xcpot
+   implicit none
+   private
+   public :: vgen_xcpot
 
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
                           cell, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, &
-                          den1Rot, starsq)
+                          den1Rot, starsq, vTau)
       !! FLAPW potential generator                           
       !! Calculates the density-potential integrals needed for the total energy
       !! TE_VCOUL:   charge density-coulomb potential integral
@@ -23,23 +51,7 @@ CONTAINS
       !!
       !! DFPT case: Calculate Vxc1 instead of Vxc. For this we need fxc, the xc Kernel.
       !! The calculation changes dramatically, so we enter different subroutines for it.
-      !! TODO: They only work for LDA right now. GGA requires some mathematical considerations
-      !! and will have to use grad_rho1 as input as well.
 
-      USE m_types
-      USE m_constants
-      USE m_intnv
-      USE m_vmt_xc
-      USE m_vvac_xc
-      USE m_vis_xc
-      USE m_checkdopall
-      USE m_cdn_io
-      USE m_convol
-      USE m_intgr
-      USE m_metagga
-      USE m_dfpt_vmt_xc
-      USE m_dfpt_vis_xc
-      USE m_dfpt_vvac_xc
 
       IMPLICIT NONE
 
@@ -60,14 +72,15 @@ CONTAINS
       TYPE(t_results),   INTENT(INOUT), OPTIONAL :: results
       TYPE(t_potden),    INTENT(IN),    OPTIONAL :: den1Rot
       TYPE(t_stars),     INTENT(IN),    OPTIONAL :: starsq
+      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: vTau
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, veff
-      Type(t_kinED)     :: kinED
       REAL, ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
       REAL, ALLOCATABLE :: tec(:,:), qintc(:,:)
       ! Local Scalars
       INTEGER :: ifftd2, ispin, i, iType
+      REAL    :: alphaMinMT, alphaMaxMT, alphaMinIR, alphaMaxIR
       REAL    :: dpdot
       LOGICAL :: l_dfptvgen
 #ifdef CPP_MPI
@@ -76,8 +89,10 @@ CONTAINS
 
       l_dfptvgen = PRESENT(starsq)
 
-      call set_kinED(fmpi, sphhar, atoms, sym,  xcpot, &
-      input, noco, stars,vacuum , cell, Den, EnergyDen, vTot,kinED)
+      ! MetaGGA iso-orbital indicator: seeded so that MIN/MAX accumulate correctly, and
+      ! left at these sentinels if no MetaGGA grid point is ever visited.
+      alphaMinMT =  HUGE(1.0); alphaMaxMT = -HUGE(1.0)
+      alphaMinIR =  HUGE(1.0); alphaMaxIR = -HUGE(1.0)
 
       IF (PRESENT(results)) THEN
          CALL veff%init(stars, atoms, sphhar, vacuum, noco, input%jspins, 1)
@@ -98,7 +113,7 @@ CONTAINS
             ifftd2 = 9*stars%mx1*stars%mx2
 
             IF (.NOT. l_dfptvgen) THEN
-               CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
+               CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc, vx)
             ELSE
                CALL dfpt_vvac_xc(ifftd2,  stars,  starsq,  vacuum,  noco,  cell,denRot, den1Rot, xcpot,  input, vTot)
             END IF  
@@ -108,7 +123,8 @@ CONTAINS
          ! interstitial region
          CALL timestart("Vxc in interstitial")
          IF (.NOT.l_dfptvgen) THEN
-             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
+             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc, vxc, vTau=vTau, &
+                         alphaMin=alphaMinIR, alphaMax=alphaMaxIR)
          ELSE
              ! TODO: This is different enough to warrant a separate subroutine, right?
              CALL dfpt_vis_xc(stars, starsq, sym, cell, denRot, den1Rot, xcpot, input, vTot)
@@ -126,7 +142,8 @@ CONTAINS
 
       IF (.NOT.l_dfptvgen) THEN
           CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
-                      EnergyDen,kinED, noco,vTot, vx, exc, vxc)
+                      EnergyDen, noco,vTot, vx, exc, vxc, vTau=vTau, &
+                      alphaMin=alphaMinMT, alphaMax=alphaMaxMT)
       ELSE
           CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,xcpot,input,sym,noco,vTot)
       END IF
@@ -155,6 +172,8 @@ CONTAINS
                veff%pw = vTot%pw - xcpot%get_exchange_weight()*vx%pw
                veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight()*vx%pw_w
                veff%mt = vTot%mt - xcpot%get_exchange_weight()*vx%mt
+               ! as hsvac_hyb for the Hamiltonian
+               IF (input%film) veff%vac = vTot%vac - xcpot%get_exchange_weight()*vx%vac
             END IF
 
             DO ispin = 1, input%jspins
@@ -207,6 +226,34 @@ CONTAINS
             WRITE (oUnit, FMT=8080) results%te_exc
 
 8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, ES20.10)
+
+            ! MetaGGA: CALCULATE THE INTEGRAL OF tau*V_tau
+            ! V_tau enters the Hamiltonian, so <psi|V_tau|psi> sits inside the eigenvalue sum
+            ! and has to be removed again in totale, exactly like the n*Veff double counting.
+            ! This has to run before vgen rescales vTau%pw_w by stars%nstr, because int_nv
+            ! expects the nstr-weighted convention that pw_from_grid produces.
+            results%te_vtau = 0.0
+            IF (PRESENT(vTau).AND.xcpot%needs_MetaGGA_ham()) THEN
+               IF (ALLOCATED(EnergyDen%mt).AND.ALLOCATED(vTau%pw_w)) THEN
+                  IF (REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) THEN
+                     DO ispin = 1, input%jspins
+                        CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, &
+                                    vTau, EnergyDen, results%te_vtau)
+                     END DO
+                     WRITE (oUnit, FMT=8090) results%te_vtau
+8090                 FORMAT(/, 10x, 'kinetic energy density-V_tau integral :', t40, ES20.10)
+                  END IF
+               END IF
+            END IF
+
+            ! Hand the iso-orbital indicator extrema to cdngen for output. Left at zero when
+            ! no MetaGGA grid point was visited, so the sentinels never reach out.xml.
+            IF (alphaMaxMT > -HUGE(1.0)) THEN
+               results%alphaMinMT = alphaMinMT; results%alphaMaxMT = alphaMaxMT
+            END IF
+            IF (alphaMaxIR > -HUGE(1.0)) THEN
+               results%alphaMinIR = alphaMinIR; results%alphaMaxIR = alphaMaxIR
+            END IF
          END IF
       END IF ! fmpi%irank == 0
 

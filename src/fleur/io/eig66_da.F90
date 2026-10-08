@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,6 +18,8 @@ use m_juDFT
    USE m_eig66_data
    USE m_types_mat
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: priv_find_data, open_eig, close_eig, read_eig, write_eig
 
 CONTAINS
    SUBROUTINE priv_find_data(id, d)

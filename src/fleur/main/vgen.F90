@@ -1,15 +1,45 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_vgen
    USE m_juDFT
+   USE m_constants
+   USE m_rotate_int_den_tofrom_local
+   USE m_vgen_coulomb
+   USE m_vgen_xcpot
+   USE m_vgen_finalize
+   USE m_rotate_mt_den_tofrom_local
+   USE m_magnMomFromDen
+   USE m_force_sf
+   USE m_fleur_vdW
+   USE m_vgen_constraint
+   USE m_types_moessbauerParams
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_field
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
 
+   implicit none
+   PRIVATE
+   PUBLIC :: vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
+                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,vTau,&
                    moessbauerParams)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)
@@ -27,18 +57,6 @@ CONTAINS
       !
       !--------------------------------------------------------------------------
 
-      USE m_types
-      USE m_constants
-      USE m_rotate_int_den_tofrom_local
-      USE m_vgen_coulomb
-      USE m_vgen_xcpot
-      USE m_vgen_finalize
-      USE m_rotate_mt_den_tofrom_local
-      USE m_magnMomFromDen
-      USE m_force_sf ! Klueppelberg (force level 3)
-      USE m_fleur_vdW
-      use m_vgen_constraint
-      USE m_types_moessbauerParams
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -60,6 +78,7 @@ CONTAINS
       TYPE(t_potden),    INTENT(IN)    :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT) :: den
       TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vCoul, vxc, exc
+      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: vTau
       TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
 
       TYPE(t_potden)                   :: workden, denRot
@@ -105,7 +124,18 @@ CONTAINS
       results%force=0.0
 
       CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
-
+      IF (PRESENT(vTau)) THEN
+         ! In MetaGGA, vTau is needed for the XC potential, so we initialize it here (and set it to zero).
+         ! This is keyed on PRESENT(vTau) rather than on xcpot%is_MetaGGA(), because in the
+         ! bootstrap iteration xcpot is the auxiliary GGA and vTau must still be defined.
+         CALL vTau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTTOT)
+         ! init() does not allocate pw_w (and, being INTENT(OUT), would wipe it), so do it here.
+         ! Without this, pw_from_grid and hs_int silently see an absent optional argument and
+         ! the interstitial V_tau term is dropped. Must happen on all ranks: t_potden%distribute
+         ! tests ALLOCATED(pw_w) per rank, so a rank-0-only allocation would desynchronize.
+         ALLOCATE(vTau%pw_w(stars%ng3,input%jspins))
+         vTau%pw_w = CMPLX(0.0,0.0) ! pw_from_grid accumulates into pw_w
+      END IF
       ! a)
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
@@ -128,13 +158,31 @@ CONTAINS
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
+                      cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results,vTau=vTau)
 
-      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
+      ! Rescale vTau%pw_w with the number of stars, so that it is in the same convention as
+      ! stars%ustep when hs_int_direct consumes it. This mirrors what vgen_finalize does to
+      ! vTot%pw_w, and must stay in step with it. It has to happen *after* vgen_xcpot, which
+      ! consumes the nstr-weighted form via int_nv to build results%te_vtau.
+      IF (PRESENT(vTau)) THEN
+         IF (ALLOCATED(vTau%pw_w).AND.fmpi%irank==0) THEN
+            DO js = 1, SIZE(vTau%pw_w,2)
+               vTau%pw_w(:stars%ng3,js) = vTau%pw_w(:stars%ng3,js) / stars%nstr(:stars%ng3)
+            END DO
+         END IF
+      END IF
 
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+
+      ! The transverse constraining field has to be added AFTER vgen_finalize.
+      ! For l_mtNocoPot=T the latter calls rotate_mt_den_from_local, which zeroes
+      ! vTot%mt and rebuilds all four spin components from the local-frame diagonal
+      ! pair plus theta_mt/phi_mt. Anything written into components 3/4 before that
+      ! point is therefore discarded. This mirrors the placement of bfield(), which
+      ! carries the longitudinal b_con(3) of the fixed-moment constraint.
+      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL vTot%distribute(fmpi%mpi_comm)
@@ -142,6 +190,10 @@ CONTAINS
       CALL vx%distribute(fmpi%mpi_comm)
       CALL vxc%distribute(fmpi%mpi_comm)
       CALL exc%distribute(fmpi%mpi_comm)
+      IF (PRESENT(vTau)) THEN ! must be nested: Fortran does not short-circuit .AND.
+         IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
+      END IF
+    
 
       IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcEFG(atoms, sym, sphhar, fmpi, vCoul)
 

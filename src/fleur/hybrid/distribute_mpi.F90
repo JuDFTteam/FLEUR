@@ -1,8 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_distribute_mpi 
+   use m_types_hybmpi
+   use m_types_mpi
+   implicit none
+   private
+   public :: distribute_mpi
 contains 
    subroutine distribute_mpi(weights, glob_mpi, group_mpi, group_rank)
-      use m_types_hybmpi
-      use m_types_mpi
       implicit none 
       integer, intent(in)           :: weights(:)
       type(t_hybmpi), intent(in)    :: glob_mpi

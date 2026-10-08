@@ -1,9 +1,36 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_totale
+   USE m_intgr, ONLY: intgr3
+   USE m_constants
+   USE m_force_a4
+   USE m_force_a3
+   USE m_force_a4_add
+   USE m_force_sf
+   USE m_forcew
+   USE m_cdn_io
+   USE m_xmlOutput
+   USE m_judft
+   USE m_vdWfleur_grimme
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: totale
 CONTAINS
   SUBROUTINE totale(fmpi,atoms,sphhar,stars,vacuum, &
        sym,input,noco,cell , xcpot,hybdat,vTot,vCoul,it,den,results)
@@ -40,18 +67,6 @@ CONTAINS
     !     E0 = TOTE - TS/2
     !     ***************************************************
     !
-    USE m_intgr    , ONLY : intgr3
-    USE m_constants
-    USE m_force_a4
-    USE m_force_a3
-    USE m_force_a4_add ! Klueppelberg (force level 1)
-    USE m_force_sf ! Klueppelberg (force level 3)
-    USE m_forcew
-    USE m_cdn_io
-    USE m_types
-    USE m_xmlOutput
-    use m_judft
-    USE m_vdWfleur_grimme
     
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)          :: fmpi
@@ -115,6 +130,26 @@ CONTAINS
        results%tote = results%tote + results%te_exc
        WRITE (oUnit,FMT=8040) results%te_exc
 8040   FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,f20.10)
+       !
+       !      ---> subtract MetaGGA double counting of V_tau
+       !
+       !      V_tau is part of the Hamiltonian, so the eigenvalue sum above already contains
+       !      <psi|V_tau|psi> = int(tau*V_tau). Remove it again, as is done for n*Veff.
+       !      te_vtau is zero whenever no MetaGGA V_tau entered the Hamiltonian.
+       IF (results%te_vtau.NE.0.0) THEN
+          results%tote = results%tote - results%te_vtau
+          WRITE (oUnit,FMT=8041) results%te_vtau
+       END IF
+8041   FORMAT (/,10x,'kinetic energy density-V_tau integral=', t40,f20.10)
+       !
+       !      ---> MetaGGA core double counting: the core states solve the auxiliary GGA
+       !           potential and contain no V_tau (cdngen)
+       !
+       IF (results%te_core_mgga.NE.0.0) THEN
+          results%tote = results%tote + results%te_core_mgga
+          WRITE (oUnit,FMT=8042) results%te_core_mgga
+       END IF
+8042   FORMAT (/,10x,'MetaGGA core double counting =', t40,f20.10)
        !
        !      ---> Fock exchange contribution
        !
@@ -232,6 +267,12 @@ CONTAINS
        CALL writeXMLElementFormPoly('densityCoulombPotentialIntegral',(/'value'/),(/results%te_vcoul/),reshape((/17,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('densityEffectivePotentialIntegral',(/'value'/),(/results%te_veff/),reshape((/15,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('chargeDenXCDenIntegral',(/'value'/),(/results%te_exc/),reshape((/26,20/),(/1,2/)))
+       ! MetaGGA double counting. Written only when non-zero, so that the reference out.xml
+       ! files of all non-MetaGGA tests stay unchanged.
+       IF (results%te_vtau.NE.0.0) &
+          CALL writeXMLElementFormPoly('kinEnergyDenVTauIntegral',(/'value'/),(/results%te_vtau/),reshape((/26,20/),(/1,2/)))
+       IF (results%te_core_mgga.NE.0.0) &
+          CALL writeXMLElementFormPoly('mggaCoreDoubleCounting',(/'value'/),(/results%te_core_mgga/),reshape((/26,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyValence',(/'value'/),(/0.5e0*results%te_hfex%valence/),reshape((/23,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyCore',(/'value'/),(/0.5e0*results%te_hfex%core/),reshape((/26,20/),(/1,2/)))
        if (btest(input%vdw,0).or.btest(input%vdW,1)) call writeXMLElementFormPoly('vdWEnergy',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))

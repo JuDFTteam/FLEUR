@@ -1,11 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_slab
   use m_judft
   use m_types_eigdos
+  use m_types_atoms
+  use m_types_noco
+  use m_types_nococonv
+  use m_types_banddos
+  use m_types_kpts
+  use m_slabdim
+  use m_slabgeom
+  use m_types_abc
+  use m_types_radfun
+  use m_pwintsl
+  use m_types_cell
+  use m_types_input
+  use m_types_lapw
+  use m_types_mat
+  use m_types_stars
+  use m_types_sym
   implicit none
   PRIVATE
   public t_slab
@@ -31,10 +47,6 @@ MODULE m_types_slab
    END TYPE t_slab
 CONTAINS
   subroutine postprocessing(this, noco,nococonv, banddos,alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
       class(t_slab), intent(inout):: this
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -83,10 +95,6 @@ CONTAINS
 
 
   SUBROUTINE slab_init(thisSlab,banddos,atoms,cell,input,kpts)
-   USE m_types_setup
-   USE m_types_kpts
-   USE m_slabdim
-   USE m_slabgeom
 
    IMPLICIT NONE
 
@@ -144,9 +152,6 @@ END SUBROUTINE slab_init
   !***********************************************************************
   !
   SUBROUTINE calc_mt_slab(slab,itype,jsp,ikpt,atoms,ev_list,ne,abc,radfun)
-    USE m_types_setup
-    USE m_types_abc
-    USE m_types_radfun
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_abc),INTENT(IN)          :: abc
@@ -199,8 +204,6 @@ END SUBROUTINE slab_init
     !             From pwden_old.F and pwint.F by  c.l.fu
     !     *******************************************************
 
-    USE m_pwintsl
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)   :: lapw

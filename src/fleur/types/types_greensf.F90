@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -21,10 +21,23 @@ MODULE m_types_greensf
 
    USE m_juDFT
    USE m_constants
-   USE m_types_setup
    USE m_types_greensfContourData
    USE m_types_scalarGF
    USE m_types_nococonv
+   USE m_mpi_bc_tool
+   USE m_rotMMPmat
+   USE m_types_mat
+   USE m_intgr
+   USE m_types_usdus
+   USE m_types_denCoeffsOffDiag
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_gfinp
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_sym
 
    IMPLICIT NONE
 
@@ -146,7 +159,6 @@ MODULE m_types_greensf
       END SUBROUTINE init_greensf
 
       SUBROUTINE mpi_bc_greensf(this,mpi_comm,irank)
-         USE m_mpi_bc_tool
          CLASS(t_greensf), INTENT(INOUT)::this
          INTEGER, INTENT(IN):: mpi_comm
          INTEGER, INTENT(IN), OPTIONAL::irank
@@ -179,9 +191,6 @@ MODULE m_types_greensf
 
       SUBROUTINE collect_greensf(this,mpi_communicator)
 
-#ifdef CPP_MPI
-         USE mpi
-#endif
 
          CLASS(t_greensf),     INTENT(INOUT) :: this
          INTEGER,              INTENT(IN)    :: mpi_communicator
@@ -336,8 +345,6 @@ MODULE m_types_greensf
 
       FUNCTION occmtx_greensf_spin(this,spin,gfinp,input,atoms,noco,nococonv,check,occError) Result(occmtx)
 
-         USE m_rotMMPmat
-         USE m_types_mat
 
          !calculates the occupation of the greens function for a given spin
          !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -486,7 +493,6 @@ MODULE m_types_greensf
 
       SUBROUTINE get_gf(this,atoms,iz,l_conjg,spin,gmat)
 
-         USE m_types_mat
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !can also return the spherically averaged GF with the given scalar products
@@ -638,7 +644,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getFullMatrix_gf(this,atoms,iz,l_conjg,gmat)
 
-         USE m_types_mat
 
          !Return the full matrix with all spin blocks for the given energy point
 
@@ -924,7 +929,6 @@ MODULE m_types_greensf
 
       SUBROUTINE set_gf(this,iz,l_conjg,gmat,spin)
 
-         USE m_types_mat
 
          !Sets the spherically averaged greens function matrix belonging to energy point iz with l,lp,nType,nTypep
          !equal to gmat
@@ -1035,7 +1039,6 @@ MODULE m_types_greensf
 
       SUBROUTINE rotate_gf(this,sym,atoms)
 
-         USE m_rotMMPmat
 
          !Applies the given symmetry operation to the greens function
          CLASS(t_greensf),    INTENT(INOUT)  :: this
@@ -1103,7 +1106,6 @@ MODULE m_types_greensf
 
       SUBROUTINE rotate_euler_angles_gf(this,atoms,alpha,beta,gamma,spin_rotation,real_space_rotation)
 
-         USE m_rotMMPmat
 
          !Applies the given symmetry operation to the greens function
          CLASS(t_greensf),    INTENT(INOUT)  :: this
@@ -1274,10 +1276,6 @@ MODULE m_types_greensf
 
       FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,l_fullRadial) Result(gIntegrated)
 
-         USE m_intgr
-         USE m_types_usdus
-         USE m_types_denCoeffsOffDiag
-         USE m_types_mat
 
          CLASS(t_greensf),                   INTENT(IN) :: this
          TYPE(t_atoms),                      INTENT(IN) :: atoms

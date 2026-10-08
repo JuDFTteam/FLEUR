@@ -1,13 +1,32 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_dmi
-  USE m_types
   USE m_types_forcetheo
   USE m_judft
+  USE m_calculator
+  USE m_constants
+  USE m_types_potden
+  USE m_xmlOutput
+  USE m_types_nococonv
+  USE m_types_mpi
+  USE m_ssomat
+#ifdef CPP_MPI
+  USE mpi
+  USE m_mpi_bc_tool
+#endif
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_enpara
+  USE m_types_fleurinput
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_misc
+  USE m_types_sym
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_dmi
@@ -31,8 +50,6 @@ CONTAINS
 
 
   SUBROUTINE dmi_init(this,q,theta,phi,ef_shifts,ntype)
-    USE m_calculator
-    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     REAL,INTENT(in)                     :: q(:,:)
@@ -61,7 +78,6 @@ CONTAINS
   END SUBROUTINE dmi_init
 
   SUBROUTINE dmi_start(this,potden,l_io)
-    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)       :: potden
@@ -84,11 +100,6 @@ CONTAINS
   END SUBROUTINE  dmi_start
 
   LOGICAL FUNCTION dmi_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
-    USE m_types_setup
-    USE m_xmlOutput
-    USE m_constants
-    USE m_types_nococonv
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     TYPE(t_mpi), INTENT(IN)             :: fmpi
@@ -126,15 +137,12 @@ CONTAINS
     END IF
   END FUNCTION dmi_next_job
 
-  SUBROUTINE dmi_postprocess(this,fi,results)
-    USE m_xmlOutput
-#ifdef CPP_MPI
-    USE mpi
-#endif
+  SUBROUTINE dmi_postprocess(this,fi,results,fmpi)
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
     TYPE(t_results),INTENT(IN)      :: results
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     !Locals
     INTEGER:: n,q,i,nef,ierr
     CHARACTER(LEN=20):: attributes(6)
@@ -177,15 +185,10 @@ CONTAINS
     CALL MPI_BARRIER(MPI_COMM_WORLD,ierr) ! This barrier is placed to ensure that the output above this line is actually written out.
 #endif
 
-    CALL judft_end("Forcetheorem DMI")
+    CALL judft_end("Forcetheorem DMI", fmpi%irank)
   END SUBROUTINE dmi_postprocess
 
   SUBROUTINE dmi_dist(this,fmpi)
-#ifdef CPP_MPI
-    USE mpi
-    USE m_mpi_bc_tool
-#endif
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     TYPE(t_mpi),INTENT(in):: fmpi
@@ -201,8 +204,6 @@ CONTAINS
 
   FUNCTION dmi_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
-     USE m_types
-     USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     LOGICAL :: skip

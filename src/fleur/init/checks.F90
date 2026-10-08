@@ -1,20 +1,38 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_checks
   USE m_juDFT
-  USE m_types
+  USE m_nocoInputCheck
+  USE m_socsym
+  USE m_constants
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_dfpt
+  USE m_types_gfinp
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpi
+  USE m_types_mpinp
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_wannierlib
   IMPLICIT NONE
   private
-  public :: check_command_line,check_input_switches,check_input_switches_all_pe
+  public :: check_command_line,check_input_switches,check_input_switches_all_pe,check_apw
   CONTAINS
     SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
 #ifdef CPP_MPI
-      USE mpi
       INTEGER:: isize,ierr,irank
 #endif
       TYPE(t_mpi), INTENT(INOUT):: fmpi
@@ -49,10 +67,6 @@ MODULE m_checks
     END SUBROUTINE check_command_line
 
     SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
-      USE m_nocoInputCheck
-      USE m_socsym
-      USE m_types_fleurinput
-      USE m_constants
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
@@ -139,17 +153,49 @@ MODULE m_checks
         CALL juDFT_error("LDA+V is incompatible to the usage of symmetries beyond the identity, but you have such symmetries.", hint="Please recreate your FLEUR input by using inpgen with the '-nosym' command line option.", calledby ="check_input_switches")
      END IF
 
-     ! Disable functionalities that are known to have bugs:
-     
-     IF (ANY(atoms%lapw_l(:).GE.0)) THEN
-        CALL juDFT_warn("APW+lo calculations are disabled at the moment.")
-     END IF
-
 #ifndef CPP_HDF
      if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
+     if (noco%l_noco.and.noco%l_mperp) call juDFT_error("l_mperp=T requires HDF5 for the charge density IO", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization. Recompile with HDF5.", &
+                  calledby="check_input_switches")
+#else
+     if (noco%l_noco.and.noco%l_mperp.and.juDFT_was_argument("-no_cdn_hdf")) &
+        call juDFT_error("l_mperp=T cannot be used with -no_cdn_hdf", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization.", &
+                  calledby="check_input_switches")
 #endif
 
    END SUBROUTINE check_input_switches
+
+    SUBROUTINE check_apw(atoms,input,noco,banddos,hybinp,gfinp,dfpt,wannierlib)
+      !! stop for features that are not implemented for APW+lo
+      TYPE(t_atoms),INTENT(IN)    :: atoms
+      TYPE(t_input),INTENT(IN)    :: input
+      TYPE(t_noco),INTENT(IN)     :: noco
+      TYPE(t_banddos),INTENT(IN)  :: banddos
+      TYPE(t_hybinp),INTENT(IN)   :: hybinp
+      TYPE(t_gfinp),INTENT(IN)    :: gfinp
+      TYPE(t_dfpt),INTENT(IN)     :: dfpt
+      TYPE(t_wannierlib_wannierize),INTENT(IN) :: wannierlib
+
+      IF (.NOT.input%l_useapw) RETURN
+      IF (noco%l_ss.AND.ANY(noco%l_unrestrictMT)) CALL apw_error("spin spirals with l_mtNocoPot")
+      IF (input%l_f.AND.input%f_level>=2) CALL apw_error("forces with f_level>=2")
+      IF (input%gw>0)            CALL apw_error("SPEX/GW output")
+      IF (dfpt%l_dfpt)           CALL apw_error("DFPT")
+      IF (hybinp%l_hybrid)       CALL apw_error("hybrid functionals")
+      IF (wannierlib%l_wannierize) CALL apw_error("Wannier functions")
+      IF (gfinp%n>0)             CALL apw_error("Green's functions")
+      IF (atoms%n_v>0)           CALL apw_error("LDA+V")
+      IF (input%l_coreSpec)      CALL apw_error("core-level spectroscopy")
+      IF (banddos%l_mcd)         CALL apw_error("MCD")
+    CONTAINS
+      SUBROUTINE apw_error(feature)
+         CHARACTER(len=*),INTENT(IN) :: feature
+         CALL juDFT_error("APW+lo is not implemented for "//feature, &
+                          hint="Remove the APW local orbitals and lmaxAPW or switch the feature off.",calledby="check_apw")
+      END SUBROUTINE
+    END SUBROUTINE check_apw
 
     !> Input checks that must be executed by *every* MPI rank.
     !>
@@ -162,7 +208,6 @@ MODULE m_checks
     !> continue -- i.e. a warning rather than an error -- belongs here instead.
     !> Call this after fleurinput_mpi_bc, when all ranks have the input.
     SUBROUTINE check_input_switches_all_pe(input,hybinp,mpinp)
-      USE m_types_fleurinput
       type(t_input),INTENT(IN)  :: input
       type(t_hybinp),INTENT(IN) :: hybinp
       type(t_mpinp),INTENT(IN)  :: mpinp

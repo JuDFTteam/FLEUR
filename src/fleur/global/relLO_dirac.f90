@@ -12,16 +12,16 @@ MODULE m_relLO_dirac
   ! together with the large component's value and slope at R_mt.
   !********************************************************************************
   USE m_juDFT
+  USE m_constants, ONLY: c_light
+  USE m_differ
+  USE m_intgr, ONLY: intgr0
+  USE m_differentiate, ONLY: difcub
+  USE m_types_atoms
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: relLO_dirac_radial
 CONTAINS
   SUBROUTINE relLO_dirac_radial(atoms,itype,l,nqn,e,vr, p,q,us,dus)
-    USE m_constants,      ONLY : c_light
-    USE m_differ
-    USE m_intgr,          ONLY : intgr0
-    USE m_differentiate,  ONLY : difcub
-    USE m_types_atoms
     TYPE(t_atoms),INTENT(IN)    :: atoms
     INTEGER,      INTENT(IN)    :: itype,l,nqn
     REAL,         INTENT(INOUT) :: e                  ! energy guess in, converged Dirac eigenvalue out

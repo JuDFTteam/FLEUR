@@ -21,6 +21,5 @@ foreach (teststring "-lfftw3" "-lfftw3;-ldl")
 
 message("FFT from FFTW found:${FLEUR_USE_FFTW}")
 if (FLEUR_USE_FFTW)
-   set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_FFTW")
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_FFTW")
 endif()

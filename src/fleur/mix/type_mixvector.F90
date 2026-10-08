@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,7 +10,20 @@ MODULE m_types_mixvector
 #ifdef CPP_MPI
    use mpi
 #endif
-   USE m_types
+   USE m_convol
+   USE m_metrz0
+   USE m_constants
+   USE m_types_mpi
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_judft
    IMPLICIT NONE
 
    PRIVATE
@@ -40,6 +53,10 @@ MODULE m_types_mixvector
    INTEGER                :: mt_rank = 0
    INTEGER                :: mt_size = 1
    LOGICAL                :: l_pot = .FALSE. !Is this a potential?
+   ! MetaGGA: the kinetic energy density is carried along as a passive component. It uses the
+   ! pw/MT layout of the density, has zero weight in the metric and therefore does not enter
+   ! any dot product, so the mixing coefficients are determined by the density alone.
+   LOGICAL                :: tau_here = .FALSE.
    REAL, ALLOCATABLE       :: g_mt(:), g_vac(:), g_misc(:)
 
    TYPE, PUBLIC:: t_mixvector
@@ -47,6 +64,7 @@ MODULE m_types_mixvector
       REAL, ALLOCATABLE       :: vec_mt(:)
       REAL, ALLOCATABLE       :: vec_vac(:)
       REAL, ALLOCATABLE       :: vec_misc(:)
+      REAL, ALLOCATABLE       :: vec_tau_pw(:), vec_tau_mt(:)
    CONTAINS
       PROCEDURE :: alloc => mixvector_alloc
       PROCEDURE :: from_density => mixvector_from_density
@@ -83,7 +101,7 @@ CONTAINS
       CLASS(t_mixvector), INTENT(INOUT)::this
       INTEGER, INTENT(IN)::unit
       call timestart("read_mixing")
-      CALL this%alloc()
+      CALL this%alloc() ! tau is never stored in history files and stays zero
       IF (pw_here) READ (unit) this%vec_pw
       IF (mt_here) READ (unit) this%vec_mt
       IF (vac_here) READ (unit) this%vec_vac
@@ -127,15 +145,16 @@ CONTAINS
       mt_rank = 0
       mt_size = 1
       l_pot = .FALSE. !Is this a potential?
+      tau_here = .FALSE.
    END SUBROUTINE mixvector_reset
 
-   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin)
-      USE m_types
+   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin, tau)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
       INTEGER, INTENT(IN) :: nmzxyd
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: tau !! MetaGGA kinetic energy density
       INTEGER:: js, ii, n, l, iv, jspin, mmpSize, nIJ_llp_mmpSize, offset
       LOGICAL :: l_dfpt
 
@@ -283,13 +302,35 @@ CONTAINS
          END IF
       END DO
 
+      IF (PRESENT(tau) .AND. tau_here) THEN
+         ! Collinear only (tau_here is never set for noco), same layout as the density
+         CALL tau%DISTRIBUTE(mix_mpi_comm)
+         DO js = 1, jspins
+            IF (.NOT. spin_here(js)) CYCLE
+            IF (pw_here) THEN
+               vec%vec_tau_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(tau%pw(:, js))
+               IF (.NOT. sym%invs) vec%vec_tau_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(tau%pw(:, js))
+            END IF
+            IF (mt_here) THEN
+               ii = mt_start(js) - 1
+               DO n = mt_rank + 1, atoms%ntype, mt_size
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
+                     vec%vec_tau_mt(ii + 1:ii + atoms%jri(n)) = tau%mt(:atoms%jri(n), l, n, js)
+                     ii = ii + atoms%jri(n)
+                  END DO
+               END DO
+            END IF
+         END DO
+      END IF
+
    END SUBROUTINE mixvector_from_density
 
-   SUBROUTINE mixvector_to_density(vec, den, nmzxyd)
-      USE m_types
+   SUBROUTINE mixvector_to_density(vec, den, nmzxyd, tau)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
       TYPE(t_potden), INTENT(INOUT) :: den
+      !! MetaGGA kinetic energy density; all its fields must be zero on entry (summed by collect)
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: tau
       INTEGER,INTENT(IN) :: nmzxyd
       INTEGER:: js, i, ii, n, l, iv, mmpSize, nIJ_llp_mmpSize, offset
 
@@ -382,6 +423,30 @@ CONTAINS
 
       CALL den%collect(mix_mpi_comm)
 
+      IF (PRESENT(tau) .AND. tau_here) THEN
+         DO js = 1, jspins
+            IF (.NOT. spin_here(js)) CYCLE
+            IF (pw_here) THEN
+               IF (sym%invs) THEN
+                  tau%pw(:, js) = vec%vec_tau_pw(pw_start(js):pw_start(js) + stars%ng3 - 1)
+               ELSE
+                  tau%pw(:, js) = CMPLX(vec%vec_tau_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), &
+                                        vec%vec_tau_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
+               END IF
+            END IF
+            IF (mt_here) THEN
+               ii = mt_start(js)
+               DO n = mt_rank + 1, atoms%ntype, mt_size
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
+                     tau%mt(:atoms%jri(n), l, n, js) = vec%vec_tau_mt(ii:ii + atoms%jri(n) - 1)
+                     ii = ii + atoms%jri(n)
+                  END DO
+               END DO
+            END IF
+         END DO
+         CALL tau%collect(mix_mpi_comm)
+      END IF
+
       !Restore up/down density
       if (l_noco) then 
          block
@@ -420,8 +485,6 @@ CONTAINS
    END SUBROUTINE mixvector_to_density
 
    FUNCTION mixvector_metric(vec,l_dfpt) RESULT(mvec)
-      USE m_types
-      USE m_convol
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN) :: vec
       LOGICAL,            INTENT(IN) :: l_dfpt
@@ -433,6 +496,8 @@ CONTAINS
       
       call timestart("metric")
       mvec = vec
+      IF (ALLOCATED(mvec%vec_tau_pw)) mvec%vec_tau_pw = 0.0
+      IF (ALLOCATED(mvec%vec_tau_mt)) mvec%vec_tau_mt = 0.0
       IF (pw_here) ALLOCATE (pw(stars%ng3), pw_w(stars%ng3))
 
       DO js = 1, n_spinblocks
@@ -480,7 +545,6 @@ CONTAINS
    END FUNCTION mixvector_metric
 
    SUBROUTINE init_metric(vacuum, stars, l_dfpt)
-      USE m_metrz0
       IMPLICIT NONE
       !
       TYPE(t_vacuum), INTENT(in) :: vacuum
@@ -625,8 +689,7 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, l_densitymatrixV, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
-      USE m_types
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, l_densitymatrixV, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt, l_tau)
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
@@ -642,11 +705,14 @@ CONTAINS
       TYPE(t_sym), INTENT(IN), TARGET    :: sym_i
 
       LOGICAL, INTENT(IN) :: l_dfpt
+      LOGICAL, INTENT(IN), OPTIONAL :: l_tau !! mix a MetaGGA kinetic energy density along
 
       INTEGER :: js, n, len, i_v, natom2
 
       !Store pointers to data-types
       IF (ASSOCIATED(atoms)) RETURN !was done before...
+      tau_here = .FALSE.
+      IF (PRESENT(l_tau)) tau_here = l_tau .AND. .NOT. noco%l_noco .AND. .NOT. l_dfpt
       jspins = input%jspins
       nvac = vacuum%nvac
       l_noco = noco%l_noco
@@ -734,6 +800,9 @@ CONTAINS
       ALLOCATE (vec%vec_mt(mt_length))
       ALLOCATE (vec%vec_vac(vac_length))
       ALLOCATE (vec%vec_misc(misc_length))
+      ALLOCATE (vec%vec_tau_pw(MERGE(pw_length, 0, tau_here)), vec%vec_tau_mt(MERGE(mt_length, 0, tau_here)))
+      vec%vec_tau_pw = 0.0
+      vec%vec_tau_mt = 0.0
    END SUBROUTINE mixvector_alloc
 
    FUNCTION multiply_scalar(scalar, vec) RESULT(vecout)
@@ -746,6 +815,8 @@ CONTAINS
       vecout%vec_mt = vecout%vec_mt*scalar
       vecout%vec_vac = vecout%vec_vac*scalar
       vecout%vec_misc = vecout%vec_misc*scalar
+      IF (ALLOCATED(vecout%vec_tau_pw)) vecout%vec_tau_pw = vecout%vec_tau_pw*scalar
+      IF (ALLOCATED(vecout%vec_tau_mt)) vecout%vec_tau_mt = vecout%vec_tau_mt*scalar
    END FUNCTION multiply_scalar
 
    FUNCTION multiply_scalar_spin(scalar, vec) RESULT(vecout)
@@ -767,6 +838,10 @@ CONTAINS
          IF (mt_start(js) > 0) vecout%vec_mt(mt_start(js):mt_stop(js)) = vecout%vec_mt(mt_start(js):mt_stop(js))*fac
          IF (vac_start(js) > 0) vecout%vec_vac(vac_start(js):vac_stop(js)) = vecout%vec_vac(vac_start(js):vac_stop(js))*fac
          IF (misc_start(js) > 0) vecout%vec_misc(misc_start(js):misc_stop(js)) = vecout%vec_misc(misc_start(js):misc_stop(js))*fac
+         IF (tau_here .AND. js <= jspins) THEN
+            IF (pw_start(js) > 0) vecout%vec_tau_pw(pw_start(js):pw_stop(js)) = vecout%vec_tau_pw(pw_start(js):pw_stop(js))*fac
+            IF (mt_start(js) > 0) vecout%vec_tau_mt(mt_start(js):mt_stop(js)) = vecout%vec_tau_mt(mt_start(js):mt_stop(js))*fac
+         END IF
       END DO
    END FUNCTION multiply_scalar_spin
 
@@ -779,6 +854,12 @@ CONTAINS
       vecout%vec_mt = vecout%vec_mt + vec2%vec_mt
       vecout%vec_vac = vecout%vec_vac + vec2%vec_vac
       vecout%vec_misc = vecout%vec_misc + vec2%vec_misc
+      IF (ALLOCATED(vecout%vec_tau_pw) .AND. ALLOCATED(vec2%vec_tau_pw)) THEN
+         IF (SIZE(vecout%vec_tau_pw) == SIZE(vec2%vec_tau_pw)) vecout%vec_tau_pw = vecout%vec_tau_pw + vec2%vec_tau_pw
+      END IF
+      IF (ALLOCATED(vecout%vec_tau_mt) .AND. ALLOCATED(vec2%vec_tau_mt)) THEN
+         IF (SIZE(vecout%vec_tau_mt) == SIZE(vec2%vec_tau_mt)) vecout%vec_tau_mt = vecout%vec_tau_mt + vec2%vec_tau_mt
+      END IF
    END FUNCTION add_vectors
 
    FUNCTION subtract_vectors(vec1, vec2) RESULT(vecout)
@@ -790,6 +871,12 @@ CONTAINS
       vecout%vec_mt = vecout%vec_mt - vec2%vec_mt
       vecout%vec_vac = vecout%vec_vac - vec2%vec_vac
       vecout%vec_misc = vecout%vec_misc - vec2%vec_misc
+      IF (ALLOCATED(vecout%vec_tau_pw) .AND. ALLOCATED(vec2%vec_tau_pw)) THEN
+         IF (SIZE(vecout%vec_tau_pw) == SIZE(vec2%vec_tau_pw)) vecout%vec_tau_pw = vecout%vec_tau_pw - vec2%vec_tau_pw
+      END IF
+      IF (ALLOCATED(vecout%vec_tau_mt) .AND. ALLOCATED(vec2%vec_tau_mt)) THEN
+         IF (SIZE(vecout%vec_tau_mt) == SIZE(vec2%vec_tau_mt)) vecout%vec_tau_mt = vecout%vec_tau_mt - vec2%vec_tau_mt
+      END IF
    END FUNCTION subtract_vectors
 
    FUNCTION multiply_dot(vec1, vec2) RESULT(dprod)

@@ -1,23 +1,43 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_store_load_hybrid
 #ifdef CPP_HDF
    USE hdf5
 #endif
    use m_juDFT
-   use m_types
    use m_mpi_bc_tool
    use m_juDFT
    use m_types_mpimat
    use m_distrib_vx
+   use m_constants
+   use m_mixing_history
+   use m_glob_tofrom_loc
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_misc
+#ifdef CPP_MPI
+   use mpi
+#endif
+   implicit none
+   private
+   public :: load_state_weights_hybrid, store_state_weights_hybrid, collect_vx, hybstore_fname
+#ifdef CPP_HDF
+   public :: open_dataset, write_int_1d, read_int_2d, write_dbl_2d, read_dbl_2d, write_dbl_3d, read_dbl_3d, get_dims
+#endif
 
    character(len=*), parameter :: hybstore_fname = "hybrid.hdf"
    public store_hybrid_data, load_hybrid_data
 #ifdef CPP_HDF
-   private open_file, open_datasetr, write_int_2d, close_dataset, close_file
+   private open_file, write_int_2d, close_dataset, close_file
 #endif
 contains
    subroutine load_hybrid_data(fi, fmpi, hybdat, mpdata)
-      use m_constants
-      use m_mixing_history
       implicit none
       type(t_fleurinput), intent(in)     :: fi
       type(t_mpi), intent(in)            :: fmpi
@@ -256,7 +276,6 @@ contains
    end subroutine store_state_weights_hybrid
 
    subroutine collect_vx(fi, fmpi, hybdat, nk, jsp, vx_tmp)
-      use m_glob_tofrom_loc
       implicit none 
       type(t_fleurinput), intent(in)     :: fi
       type(t_mpi), intent(in)            :: fmpi

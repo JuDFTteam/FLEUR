@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -16,6 +16,7 @@ module m_available_solvers
    use m_cuda_diag
    use m_elpa
    use m_nvlamath
+   use m_juDFT
    implicit none
    private
    integer :: first_real_solver = 4, num_solvers = 11
@@ -72,14 +73,17 @@ contains
 
       parallel_solver_available = .false.
       !make an explit loop here
-      do i = 1, num_solvers
+      !Only the real solvers are considered. The pseudo-solvers below
+      !first_real_solver ('stop','dummy','debugout') can be requested by name with
+      !-diag, but select_solver never picks them as a default, so counting them
+      !here would claim a parallel solver that the default selection cannot use.
+      do i = first_real_solver, num_solvers
          call assign_solver(i, s)
          parallel_solver_available = parallel_solver_available .or. (s%available .and. s%parallel)
       end do
    end function parallel_solver_available
 
    subroutine select_solver(parallel, gpu, single_precision, diag_solver, diag_transform)
-      use m_juDFT
       logical, intent(IN)           :: parallel
       logical, intent(in), optional  :: single_precision, gpu
       class(t_solver), INTENT(OUT), allocatable  :: diag_solver, diag_transform

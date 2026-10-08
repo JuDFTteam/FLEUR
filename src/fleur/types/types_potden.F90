@@ -6,7 +6,22 @@
 MODULE m_types_potden
 
   !> Data type for the density or the potential
+   use m_mpi_bc_tool
+   use m_judft
+   use m_types_atoms
+   use m_types_stars
+   use m_types_vacuum
+   use m_types_noco
+   use m_types_sphhar
+   use m_constants
+#ifdef CPP_MPI
+   use mpi
+#endif
    implicit none
+   PRIVATE
+   PUBLIC :: collect, distribute, sum_both_spin, copy_both_spin, spinstochargeandmagnetisation, &
+      chargeandmagnetisationtospins, addpotden, subpotden, copypotden, init_potden_types, init_potden_simple, &
+      resetpotden, reset_dfpt, t_potden
    TYPE t_potden
      INTEGER             :: iter
      INTEGER             :: potdenType
@@ -56,10 +71,6 @@ MODULE m_types_potden
 
 CONTAINS
   subroutine collect(this,fmpi_comm,the_other)
-    use m_mpi_bc_tool
-#ifdef CPP_MPI
-    use mpi
-#endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
     class(t_potden),OPTIONAL,INTENT(INOUT) :: the_other
@@ -127,10 +138,6 @@ CONTAINS
   end subroutine collect
 
   subroutine distribute(this,fmpi_comm)
-    use m_mpi_bc_tool
-#ifdef CPP_MPI
-    use mpi
-#endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
     integer :: fmpi_comm
@@ -349,12 +356,6 @@ CONTAINS
   end subroutine copyPotDen
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type,l_dfpt)
-    USE m_judft
-    USE m_types_atoms
-    USE m_types_stars
-    USE m_types_vacuum
-    USE m_types_noco
-    USE m_types_sphhar
 
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd
@@ -372,8 +373,6 @@ CONTAINS
   END SUBROUTINE init_potden_types
 
   SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,l_dfpt)
-    USE m_constants
-    USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
     INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,potden_type

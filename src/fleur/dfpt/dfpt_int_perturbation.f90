@@ -7,16 +7,23 @@
 MODULE m_dfpt_int_perturbation
     USE m_juDFT
     USE m_fft3d
-    USE m_types
+    USE m_constants
+    USE m_types_atoms
+    USE m_types_input
+    USE m_types_potden
+    USE m_types_sphhar
+    USE m_types_stars
+    USE m_types_sym
 
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: get_int_local_perturbation, get_int_global_perturbation
 
 CONTAINS
 
     SUBROUTINE get_int_local_perturbation(sym, stars, atoms, sphhar, &
                                         & input, den, den1, theta1_pw, phi1_pw, starsq)
 
-        USE m_constants
 
         TYPE(t_input),  INTENT(IN)    :: input
         TYPE(t_sym),    INTENT(IN)    :: sym

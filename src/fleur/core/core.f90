@@ -1,22 +1,30 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_core
 
+   USE m_constants
+   USE m_felim
+   USE m_findlim
+   USE m_cnodes
+   USE m_coredir
+   USE m_ccsdnt
+   USE m_rsimp
+   USE m_cfnorm
+   USE m_coreerr
+   USE m_corehff
+   USE m_nwrfst
+   USE m_rinvgj
+   USE m_intgr
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: core
    CONTAINS
    
    SUBROUTINE core(mrad,vt,bt,zz,stval,dx,nlshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn,bhff_out,isomerShift_out)
 
-      USE m_constants
-      USE m_felim
-      USE m_findlim
-      USE m_cnodes
-      USE m_coredir
-      USE m_ccsdnt
-      USE m_rsimp
-      USE m_cfnorm
-      USE m_coreerr
-      USE m_corehff
-      USE m_nwrfst
-      USE m_rinvgj
-      USE m_intgr
 
       IMPLICIT NONE
 

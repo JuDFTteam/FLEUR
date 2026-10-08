@@ -5,16 +5,25 @@
 !--------------------------------------------------------------------------------
 
 module m_dfpt_dielecten
-    use m_types
     use m_dfpt_vefield
     use m_convol
     use m_dfpt_dynmat
     use m_npy
     USE m_make_stars
     use m_inv3
+    use m_xmlOutput
+    use m_constants
+    use m_types_fleurinput
+    use m_types_mpi
+    use m_types_potden
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
 
 
     implicit none
+    private
+    public :: dfpt_dielecten_hf_int, dfpt_dielecten_final_new, dfpt_dielecten_final_old
 
 contains
 
@@ -136,7 +145,6 @@ contains
     subroutine dfpt_dielecten_final_new(fi, dielecten)
 
         !USE m_inv3
-        USE m_xmlOutput
         type(t_fleurinput), intent(in)    :: fi
         complex, intent(inout)   :: dielecten(:,:)
         integer                  :: iDir, j 
@@ -182,7 +190,6 @@ contains
     subroutine dfpt_dielecten_final_old(fi, dielecten)
 
         !USE m_inv3
-        USE m_xmlOutput
         type(t_fleurinput), intent(in)    :: fi
         complex, intent(inout)   :: dielecten(:,:)
         integer                  :: iDir, j 

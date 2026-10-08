@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,13 +13,17 @@ MODULE m_nmat
    !     Part of the LDA+U package                   G.B., Oct. 2000
    !     Extension to multiple U per atom type by G.M. 2017
    !     ************************************************************
+   USE m_types_radfun
+   USE m_types_abc
+   USE m_constants
+   USE m_symMMPmat
+   USE m_types_atoms
+   USE m_types_sym
+   implicit none
+   PRIVATE
+   PUBLIC :: n_mat
    CONTAINS
    SUBROUTINE n_mat(atoms,radfun,sym,ne,we,abc,abc1,n_mmp,ntype,jsp,jsp1)
-      USE m_types_radfun
-      USE m_types_abc
-      USE m_types
-      USE m_constants
-      USE m_symMMPmat
 
       IMPLICIT NONE
       TYPE(t_sym),         INTENT(IN)     :: sym
@@ -65,7 +69,7 @@ MODULE m_nmat
                   DO i = 1,ne
                      DO j=1,size(abc%cof,3)
                         DO jj=1,size(abc1%cof,3)
-                        c_0 = c_0 +  we(i) *  conjg(abc%cof(i,lmp,j,natom))*abc%cof(i,lm,jj,natom)*radfun%integral(j, jj, l, jsp, jsp1)
+                        c_0 = c_0 +  we(i) *  conjg(abc%cof(i,lmp,j,natom))*abc1%cof(i,lm,jj,natom)*radfun%integral(j, jj, l, jsp, jsp1)
                         ENDDO
                      ENDDO
                   ENDDO      

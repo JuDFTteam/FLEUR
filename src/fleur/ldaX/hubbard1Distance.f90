@@ -1,9 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hubbard1Distance
 
-   USE m_types
    USE m_constants
+   USE m_types_misc
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hubbard1distance
 
    CONTAINS
    SUBROUTINE hubbard1Distance(n_mmp_in,n_mmp_out,results)

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -141,7 +141,6 @@ module m_hdf_accessprp
 
       FUNCTION hdf_access_prp(filename)
 
-      USE m_juDFT_internalParams
 
       !return the access_prp from the list
       character(len=*),intent(in) :: filename

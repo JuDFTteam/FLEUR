@@ -4,18 +4,26 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_outcdn
+   USE m_constants
+   USE m_angle
+   USE m_starf, ONLY: starf2, starf3
+   USE m_ylm
+   USE m_checkdopall
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
+   PRIVATE
+   PUBLIC :: outcdn
 
 CONTAINS
 
    SUBROUTINE outcdn(p, n, na, iv, iflag, jsp, l_potential, stars, vacuum, &
                      sphhar, atoms, sym, cell,   potDen, xdnout,lattvec_index)
-      USE m_types
-      USE m_constants
-      USE m_angle
-      USE m_starf, ONLY : starf2,starf3
-      USE m_ylm
-      USE m_checkdopall
 
 
       !--------------------------------------------------------------------------

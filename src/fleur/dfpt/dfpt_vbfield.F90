@@ -5,12 +5,19 @@
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_vbfield
    USE m_juDFT
+   USE m_constants
+   USE m_rotMMPmat
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_vbfield
 CONTAINS
   SUBROUTINE dfpt_vbfield(input,stars,noco,atoms,vTot)
     !This subroutine calculates the Zeeman field perturbation
-    USE m_types
-    USE m_constants
-    USE m_rotMMPmat
     
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)::input

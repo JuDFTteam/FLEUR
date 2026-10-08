@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_VYukawaFilm
 
   ! Computation of the film-case Yukawa potential for the preconditioning of the
@@ -31,6 +36,31 @@ module m_VYukawaFilm
   ! The constant is chosen such that the integral over the final potential is
   ! zero.
 
+   use m_constants
+   use m_psqpw
+   use m_vmts
+   use m_ExpSave
+   use m_intgr, only: intgz1Reverse
+   use m_qsf
+   use m_juDFT
+   use m_cfft
+   use m_lagrange3
+   use m_cdntot
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   implicit none
+   private
+   public :: vyukawafilm, vyukawafilmvacuumvariant1, vyukawafilminterstitialvariant1, vyukawafilmvacuumvariant2, &
+      vyukawafilminterstitialvariant2, vyukawamodify
   contains 
 
 
@@ -38,10 +68,6 @@ module m_VYukawaFilm
   subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
                           VYukawa )
 
-    use m_constants
-    use m_types
-    use m_psqpw
-    use m_vmts
     implicit none
 
     type(t_stars),      intent(in)    :: stars
@@ -127,11 +153,6 @@ module m_VYukawaFilm
     ! 1. part: Compute the contribution from the interstitial charge density to the vacuum potential as a function of q_xy and z (analytic expression for integral)
     ! 2. part: Compute the contribution from the vacuum charge density to the vacuum potential as a function of q_xy and z by numerical integration
 
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_intgr, only: intgz1Reverse
-    use m_qsf
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -297,12 +318,6 @@ module m_VYukawaFilm
     ! in a slightly larger region. -> 3. part
     ! 3. part: Interpolate the vacuum potential in a small region surrounding the slab
 
-    use m_juDFT
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_cfft
-    use m_lagrange3
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -495,11 +510,6 @@ module m_VYukawaFilm
     ! 1. part: Compute the contribution from the interstitial charge density to the vacuum potential as a function of q_xy and z (analytic expression for integral)
     ! 2. part: Compute the contribution from the vacuum charge density to the vacuum potential as a function of q_xy and z by numerical integration
 
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_intgr, only: intgz1Reverse
-    use m_qsf
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -687,12 +697,6 @@ module m_VYukawaFilm
     ! in a slightly larger region. -> 3. part
     ! 3. part: Interpolate the vacuum potential in a small region surrounding the slab
 
-    use m_juDFT
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_cfft
-    use m_lagrange3
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -910,12 +914,6 @@ module m_VYukawaFilm
     ! solve the differential equation subject to a boundary condition on the 
     ! film surface, in contrast to the basic Yukawa potential above. 
 
-    use m_constants
-    use m_types
-    use m_vmts
-    use m_constants
-    USE m_cdntot
-    use m_cfft
     implicit none
 
     type(t_stars),      intent(in)    :: stars
