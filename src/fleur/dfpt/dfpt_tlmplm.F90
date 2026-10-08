@@ -23,7 +23,7 @@ MODULE m_dfpt_tlmplm
    PRIVATE
    PUBLIC :: dfpt_tlmplm
 CONTAINS
-   SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,conj_V,iDtype_col)
+   SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1,conj_V,iDtype_col)
       !! Get the (lm) matrix elements for the perturbed potential, which differs slightly from the base
       !! case of tlmplm for V/H.
 
@@ -41,7 +41,7 @@ CONTAINS
       TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
       TYPE(t_hub1data),INTENT(INOUT)::hub1data
 
-      TYPE(t_potden), INTENT(IN) :: v1real, v1imag
+      TYPE(t_potden), INTENT(IN) :: v1
 
       LOGICAL, INTENT(IN) :: conj_V
 
@@ -52,7 +52,7 @@ CONTAINS
 
       REAL, ALLOCATABLE :: vr1(:, :)
 
-        ALLOCATE( vr1(SIZE(v1real%mt,1),0:SIZE(v1real%mt,2)-1))
+        ALLOCATE( vr1(SIZE(v1%mt,1),0:SIZE(v1%mt,2)-1))
 
         CALL timestart("tlmplm")
         CALL tdV1%init(atoms,input%jspins,.FALSE.)
@@ -63,7 +63,7 @@ CONTAINS
 
         !$OMP PARALLEL DO DEFAULT(NONE)&
         !$OMP PRIVATE(n,one,iSpinV1,iSpinPr,iSpin,iPart,vr1,j1,j2)&
-        !$OMP SHARED(noco,atoms,sym,sphhar,enpara,tdV1,vTot,v1real,v1imag,conj_V,nlims)&
+        !$OMP SHARED(noco,atoms,sym,sphhar,enpara,tdV1,vTot,v1,conj_V,nlims)&
         !$OMP SHARED(fmpi,input,hub1inp,hub1data)
         DO n = nlims(1), nlims(2)
             CALL tdV1%radfun(n)%generate_radial_functions(atoms,input,enpara,fmpi,vTot,n,hub1data)
@@ -75,20 +75,20 @@ CONTAINS
                     IF (.NOT.conj_V) THEN
                        IF (iPart.EQ.1) one = CMPLX(1.0, 0.0)
                        IF (iPart.EQ.2) one = CMPLX(0.0, 1.0)
-                       IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, iSpinV1)
-                       IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, iSpinV1)
+                       IF (iPart.EQ.1) vr1 = v1%mt(:, :, n, iSpinV1)
+                       IF (iPart.EQ.2) vr1 = v1%mtIm(:, :, n, iSpinV1)
                     ELSE
                        IF (iPart.EQ.1) one = CMPLX(1.0, 0.0)
                        IF (iPart.EQ.2) one = CMPLX(0.0,-1.0)
                        IF (iSpinV1==1.OR.iSpinV1==2) THEN
-                          IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, iSpinV1)
-                          IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, iSpinV1)
+                          IF (iPart.EQ.1) vr1 = v1%mt(:, :, n, iSpinV1)
+                          IF (iPart.EQ.2) vr1 = v1%mtIm(:, :, n, iSpinV1)
                        ELSE IF (iSpinV1==3) THEN
-                          IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, 4)
-                          IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, 4)
+                          IF (iPart.EQ.1) vr1 = v1%mt(:, :, n, 4)
+                          IF (iPart.EQ.2) vr1 = v1%mtIm(:, :, n, 4)
                        ELSE
-                          IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, 3)
-                          IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, 3)
+                          IF (iPart.EQ.1) vr1 = v1%mt(:, :, n, 3)
+                          IF (iPart.EQ.2) vr1 = v1%mtIm(:, :, n, 3)
                        END IF
                     END IF
                     CALL add_nonsph(tdV1,n,atoms,sym,sphhar,input,hub1inp,vr1,0,iSpinPr,iSpin,one)

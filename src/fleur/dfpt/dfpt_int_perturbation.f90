@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_get_int_perturbation
+MODULE m_dfpt_int_perturbation
     USE m_juDFT
     USE m_fft3d
     USE m_constants
@@ -22,7 +22,7 @@ MODULE m_get_int_perturbation
 CONTAINS
 
     SUBROUTINE get_int_local_perturbation(sym, stars, atoms, sphhar, &
-                                        & input, den, den1, den1im, starsq)
+                                        & input, den, den1, theta1_pw, phi1_pw, starsq)
 
 
         TYPE(t_input),  INTENT(IN)    :: input
@@ -31,25 +31,25 @@ CONTAINS
         TYPE(t_sphhar), INTENT(IN)    :: sphhar
         TYPE(t_atoms),  INTENT(IN)    :: atoms
         TYPE(t_potden), INTENT(IN)    :: den
-        TYPE(t_potden), INTENT(INOUT) :: den1, den1im
+        TYPE(t_potden), INTENT(INOUT) :: den1
+        COMPLEX, ALLOCATABLE, INTENT(OUT) :: theta1_pw(:), phi1_pw(:)
 
         INTEGER                       :: iden, jspin, ifft3
         INTEGER                       :: ityp, iri, imesh
         REAL                          :: rho_11, rho_22, m
         REAL                          :: rhotot, rho_up, rho_down, theta, phi
         COMPLEX                       :: m1, mx1, my1, mz1, n1, t1, p1, rho1_up, rho1_down
+        COMPLEX                       :: ch1, ch2, ch3, ch4
 
         REAL, ALLOCATABLE             :: ris(:,:), ris_real(:,:), ris_imag(:,:)
         REAL, ALLOCATABLE             :: fftwork(:)
 
         ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
 
-        !TODO: Make sure the indices for rho1 are 1,2,3,4 == n1,mx1,my1,mz1
         ALLOCATE (ris(ifft3,2),fftwork(ifft3))
         ALLOCATE (ris_real(ifft3,4),ris_imag(ifft3,4))
 
-        ALLOCATE(den1%phi_pw(ifft3),den1%theta_pw(ifft3))
-        ALLOCATE(den1im%phi_pw(ifft3),den1im%theta_pw(ifft3))
+        ALLOCATE(theta1_pw(ifft3),phi1_pw(ifft3))
 
         DO iden = 1, 2
             CALL fft3d(ris(:,iden),      fftwork,          den%pw(:,iden),  stars,  +1)
@@ -68,10 +68,15 @@ CONTAINS
             m       = rho_11 - rho_22
 
             ! Calculate perturbed total and magnetization density
-            n1  = ris_real(imesh,1) + Imagunit * ris_imag(imesh,1)
-            mx1 = ris_real(imesh,2) + Imagunit * ris_imag(imesh,2)
-            my1 = ris_real(imesh,3) + Imagunit * ris_imag(imesh,3)
-            mz1 = ris_real(imesh,4) + Imagunit * ris_imag(imesh,4)
+            ch1 = ris_real(imesh,1) + Imagunit * ris_imag(imesh,1)
+            ch2 = ris_real(imesh,2) + Imagunit * ris_imag(imesh,2)
+            ch3 = ris_real(imesh,3) + Imagunit * ris_imag(imesh,3)
+            ch4 = ris_real(imesh,4) + Imagunit * ris_imag(imesh,4)
+
+            n1  = ch1 + ch2
+            mz1 = ch1 - ch2
+            mx1 = ch3 + ch4
+            my1 = Imagunit * (ch3 - ch4)
 
             theta = den%theta_pw(imesh)
             phi = den%phi_pw(imesh)
@@ -99,10 +104,8 @@ CONTAINS
             ris_real(imesh,2) =  REAL(rho1_down)
             ris_imag(imesh,1) = AIMAG(rho1_up  )
             ris_imag(imesh,2) = AIMAG(rho1_down)
-            den1%theta_pw(imesh)   =  REAL(t1)
-            den1%phi_pw(imesh)     =  REAL(p1)
-            den1im%theta_pw(imesh) = AIMAG(t1)
-            den1im%phi_pw(imesh)   = AIMAG(p1)
+            theta1_pw(imesh) = t1
+            phi1_pw(imesh)   = p1
         END DO
 
         ! Fourier tranform the up- and down density perturbations back to reciprocal space:
@@ -111,12 +114,13 @@ CONTAINS
         END DO
     END SUBROUTINE get_int_local_perturbation
 
-    SUBROUTINE get_int_global_perturbation(stars,atoms,sym,input,den,den1,den1im,vTot,vTot1,starsq)
+    SUBROUTINE get_int_global_perturbation(stars,atoms,sym,input,den,den1,theta1_pw,phi1_pw,vTot,vTot1,starsq)
         TYPE(t_input), INTENT(IN)     :: input
         TYPE(t_sym),    INTENT(IN)    :: sym
         TYPE(t_stars),  INTENT(IN)    :: stars, starsq
         TYPE(t_atoms),  INTENT(IN)    :: atoms
-        TYPE(t_potden), INTENT(IN)    :: den, den1, den1im, vTot
+        TYPE(t_potden), INTENT(IN)    :: den, den1, vTot
+        COMPLEX, ALLOCATABLE, INTENT(IN) :: theta1_pw(:), phi1_pw(:)
         TYPE(t_potden), INTENT(INOUT) :: vTot1
 
         INTEGER                       :: imeshpt, ipot, jspin
@@ -153,8 +157,15 @@ CONTAINS
             v1up   = v1re(imeshpt,1) + ImagUnit * v1im(imeshpt,1)
             v1down = v1re(imeshpt,2) + ImagUnit * v1im(imeshpt,2)
 
-            t1 = den1%theta_pw(imeshpt) + ImagUnit * den1im%theta_pw(imeshpt)
-            p1 = den1%phi_pw(imeshpt) + ImagUnit * den1im%phi_pw(imeshpt)
+            t1 = theta1_pw(imeshpt)
+            p1 = phi1_pw(imeshpt)
+
+            ! TODO: Transverse (axis-rotation) response disabled on purpose for now.
+            !       Kept in step with the identical construction in
+            !       get_mt_global_perturbation - see the longer note there. Zeroing only
+            !       one of the two regions would leave them on different physical models.
+            t1 = CMPLX(0.0,0.0)
+            p1 = CMPLX(0.0,0.0)
 
             v1 = (v1up + v1down) / 2.0
             b1 = (v1up - v1down) / 2.0
@@ -184,20 +195,20 @@ CONTAINS
             vis_re(imeshpt, 3) =  REAL(v1mat21)
             vis_re(imeshpt, 4) =  REAL(v1mat12)
 
-            vis2_re(imeshpt, 1) =  REAL(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft(imeshpt-1))
-            vis2_re(imeshpt, 2) =  REAL(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft(imeshpt-1))
-            vis2_re(imeshpt, 3) =  REAL(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft(imeshpt-1))
-            vis2_re(imeshpt, 4) =  REAL(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft(imeshpt-1))
+            vis2_re(imeshpt, 1) =  REAL(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft1(imeshpt-1))
+            vis2_re(imeshpt, 2) =  REAL(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft1(imeshpt-1))
+            vis2_re(imeshpt, 3) =  REAL(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft1(imeshpt-1))
+            vis2_re(imeshpt, 4) =  REAL(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft1(imeshpt-1))
 
             vis_im(imeshpt, 1) = AIMAG(v1mat11)
             vis_im(imeshpt, 2) = AIMAG(v1mat22)
             vis_im(imeshpt, 3) = AIMAG(v1mat21)
             vis_im(imeshpt, 4) = AIMAG(v1mat12)
 
-            vis2_im(imeshpt, 1) = AIMAG(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft(imeshpt-1))
-            vis2_im(imeshpt, 2) = AIMAG(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft(imeshpt-1))
-            vis2_im(imeshpt, 3) = AIMAG(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft(imeshpt-1))
-            vis2_im(imeshpt, 4) = AIMAG(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft(imeshpt-1))
+            vis2_im(imeshpt, 1) = AIMAG(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft1(imeshpt-1))
+            vis2_im(imeshpt, 2) = AIMAG(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft1(imeshpt-1))
+            vis2_im(imeshpt, 3) = AIMAG(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft1(imeshpt-1))
+            vis2_im(imeshpt, 4) = AIMAG(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft1(imeshpt-1))
 
         END DO
 
@@ -207,4 +218,4 @@ CONTAINS
         END DO
 
     END SUBROUTINE get_int_global_perturbation
-END MODULE m_get_int_perturbation
+END MODULE m_dfpt_int_perturbation

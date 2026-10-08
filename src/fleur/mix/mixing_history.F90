@@ -111,7 +111,7 @@ CONTAINS
   END SUBROUTINE mixing_history_close
 
 
-  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inDenIm,outDenIm,inTau,outTau)
+  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inTau,outTau)
     implicit none
     INTEGER,INTENT(in)::imix,maxiter
     type(t_potden),intent(inout)::inden,outden
@@ -119,7 +119,6 @@ CONTAINS
     INTEGER,INTENT(out)::it
     INTEGER,INTENT(IN) :: nmzxyd
 
-    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
     type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau !MetaGGA kinetic energy densities
 
     INTEGER:: n
@@ -133,12 +132,12 @@ CONTAINS
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
-    IF (.NOT.PRESENT(inDenIm)) THEN
+    IF (.NOT.ALLOCATED(inDen%mtIm)) THEN
       CALL sm(it)%from_density(inDen,nmzxyd,tau=inTau)
       CALL fsm(it)%from_density(outDen,nmzxyd,tau=outTau)
     ELSE
-      CALL sm(it)%from_density(inDen,nmzxyd,denIm=inDenIm)
-      CALL fsm(it)%from_density(outDen,nmzxyd,denIm=outDenIm)
+      CALL sm(it)%from_density(inDen,nmzxyd)
+      CALL fsm(it)%from_density(outDen,nmzxyd)
     END IF
     !store the difference fsm - sm in fsm
     fsm(it) = fsm(it) - sm(it)
