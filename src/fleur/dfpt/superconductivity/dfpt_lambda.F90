@@ -29,6 +29,7 @@ module m_dfpt_lambda
    use m_inv3
    use m_dwigner
    use m_map_to_unit
+   use m_vacfun
    use m_types_abc
    use m_types_atoms
    use m_types_enpara
@@ -123,6 +124,19 @@ contains
          end if
       end do
 
+      if (fi_fullsym%input%film .neqv. fi%input%film) then
+         call juDFT_error("fullsym_ input and DFPT input disagree on film geometry.", calledby="dfpt_read_fullsym")
+      end if
+
+      ! The vacuum matching assumes operations that do not mix z with the plane.
+      if (fi%input%film) then
+         do isym = 1, sym_full%nop
+            if (any(sym_full%mrot(3, 1:2, isym) /= 0) .or. any(sym_full%mrot(1:2, 3, isym) /= 0) .or. abs(sym_full%tau(3, isym)) > 1e-9) then
+               call juDFT_error("fullsym_ film operation mixes z with the plane or carries a z translation.", calledby="dfpt_read_fullsym")
+            end if
+         end do
+      end if
+
       ! S k must be on the k mesh for every k and every operation.
       do isym = 1, sym_full%nsym
          call sym_full%get_sym_operation_int_coord(isym, mrot, invmrot, trans, l_trs)
@@ -178,7 +192,11 @@ contains
       integer, allocatable :: mapped_kpt_inv(:, :), ev_list(:)
       real,    allocatable :: eig_all(:)
 
-      integer :: ik, ikPrime, isym, i, itype, nv_kPrime, neig, nbands
+      integer, allocatable :: map2(:)
+      complex, allocatable :: avac(:, :), bvac(:, :)
+      real,    allocatable :: ddnv(:, :)
+
+      integer :: ik, ikPrime, isym, i, itype, nv_kPrime, neig, nbands, nv2
       integer :: mrot(3, 3), invmrot(3, 3)
       logical :: l_trs
       real    :: trans(3), rkpt(3)
@@ -284,6 +302,10 @@ contains
             zKPrime_c = zMatKPrime%data_c(1:nv_kPrime, 1:nbands)
          end if
 
+         if (fi%input%film) then
+            call vac_matching(fi, fmpi_serial, nococonv, stars, vTot, enpara%evac, lapw_kPrime, jsp, map2, nv2, avac, bvac, ddnv)
+         end if
+
          do isym = 1, sym_full%nsym
             ik = mapped_kpt_inv(ikPrime, isym)
 
@@ -310,11 +332,14 @@ contains
             call CPP_zgemm('N', 'N', nv_kPrime, nbands, nv_kPrime, cmplx_1, smat_is%data_c(1, 1), nv_kPrime, zRot_c(1, 1), nv_kPrime, cmplx_0, tmp_is(1, 1), nv_kPrime)
             call CPP_zgemm('C', 'N', nbands, nbands, nv_kPrime, cmplx_1, zKPrime_c(1, 1), nv_kPrime, tmp_is(1, 1), nv_kPrime, cmplx_1, lambda(1, 1, ik, isym), nbands)
 
+            if (fi%input%film) call vac_overlap(map2, nv2, avac, bvac, ddnv, zKPrime_c, zRot_c, lambda(:, :, ik, isym))
+
             call zMatK%free()
             call zMatRot%free()
          end do
 
          deallocate (zKPrime_c, zRot_c, tmp_is)
+         if (allocated(map2)) deallocate (map2, avac, bvac, ddnv)
          call smat_is%free()
          call hmat_dummy%free()
          call zMatKPrime%free()
@@ -547,7 +572,7 @@ contains
 
       lmaxd = fi%atoms%lmaxd
 
-      call gen_map_all_atoms(fi%atoms, sym_full, hybinp)
+      call gen_map_all_atoms(fi%atoms, sym_full, fi%input%film, hybinp)
 
       ! Wigner d matrices, l = 0..lmaxd, including the time-reversal half
       allocate (hybinp%d_wgn2(-lmaxd:lmaxd, -lmaxd:lmaxd, 0:lmaxd, sym_full%nsym))
@@ -608,7 +633,7 @@ contains
 
    end subroutine setup_rotation_data
 
-   subroutine gen_map_all_atoms(atoms, sym_full, hybinp)
+   subroutine gen_map_all_atoms(atoms, sym_full, l_film, hybinp)
       !! Atom map and lattice-vector table for `waveftrafo_gen_cmt`, searching all
       !! atoms rather than only the equivalents of one type. `t_hybinp%gen_map`
       !! restricts the search to `neq(itype)`.
@@ -617,10 +642,11 @@ contains
 
       type(t_atoms),  intent(in)    :: atoms
       type(t_sym),    intent(in)    :: sym_full
+      logical,        intent(in)    :: l_film
       type(t_hybinp), intent(inout) :: hybinp
 
       integer :: iatom, jatom, isym, iisym, ratom
-      real    :: rtaual(3), dist, minDist
+      real    :: rtaual(3), dvec(3), dist, minDist
 
       if (allocated(hybinp%map))  deallocate (hybinp%map)
       if (allocated(hybinp%tvec)) deallocate (hybinp%tvec)
@@ -637,7 +663,10 @@ contains
             ratom   = 0
             minDist = 1e33
             do jatom = 1, atoms%nat
-               dist = norm2(map_to_unit(rtaual - atoms%taual(:, jatom)))
+               dvec = map_to_unit(rtaual - atoms%taual(:, jatom))
+               ! a film is not periodic along z
+               if (l_film) dvec(3) = rtaual(3) - atoms%taual(3, jatom)
+               dist = norm2(dvec)
                if (dist < minDist) then
                   minDist = dist
                   ratom   = jatom
@@ -741,5 +770,114 @@ contains
       end do
 
    end subroutine mt_overlap
+
+   subroutine vac_matching(fi, fmpi, nococonv, stars, vTot, evac, lapw, jsp, map2, nv2, avac, bvac, ddnv)
+      !! Vacuum matching coefficients a, b of the LAPW basis at one k and
+      !! \(\langle\dot u|\dot u\rangle\) for both vacua, as set up in hsvac.
+
+      type(t_fleurinput),   intent(in)  :: fi
+      type(t_mpi),          intent(in)  :: fmpi
+      type(t_nococonv),     intent(in)  :: nococonv
+      type(t_stars),        intent(in)  :: stars
+      type(t_potden),       intent(in)  :: vTot
+      real,                 intent(in)  :: evac(:, :)
+      type(t_lapw),         intent(in)  :: lapw
+      integer,              intent(in)  :: jsp
+      integer, allocatable, intent(out) :: map2(:)                ! (nv): 2D index of each G
+      integer,              intent(out) :: nv2
+      complex, allocatable, intent(out) :: avac(:, :), bvac(:, :) ! (nv,ivac)
+      real,    allocatable, intent(out) :: ddnv(:, :)             ! (nv2,ivac)
+
+      integer :: nv, ikG, ikG2, ivac
+      integer :: nv2s(fi%input%jspins)
+      real    :: d2, gz, sgn, th, wronk
+      complex :: c_1
+      integer, allocatable :: kvac(:, :, :)
+      real,    allocatable :: uz(:, :), duz(:, :), udz(:, :), dudz(:, :), ddnvs(:, :)
+      complex, allocatable :: tuuv(:, :), tddv(:, :), tudv(:, :), tduv(:, :)
+
+      nv = lapw%nv(jsp)
+      d2 = sqrt(fi%cell%omtil/fi%cell%area)
+
+      ! nv bounds the number of distinct in-plane vectors
+      allocate (map2(nv), source=0)
+      allocate (kvac(2, nv, fi%input%jspins), source=0)
+      nv2 = 0
+      g_loop: do ikG = 1, nv
+         do ikG2 = 1, nv2
+            if (all(lapw%gvec(1:2, ikG, jsp) == kvac(1:2, ikG2, jsp))) then
+               map2(ikG) = ikG2
+               cycle g_loop
+            end if
+         end do
+         nv2 = nv2 + 1
+         kvac(1:2, nv2, jsp) = lapw%gvec(1:2, ikG, jsp)
+         map2(ikG) = nv2
+      end do g_loop
+      nv2s      = 0
+      nv2s(jsp) = nv2
+
+      allocate (uz(nv2, fi%input%jspins), duz(nv2, fi%input%jspins), udz(nv2, fi%input%jspins), source=0.0)
+      allocate (dudz(nv2, fi%input%jspins), ddnvs(nv2, fi%input%jspins), source=0.0)
+      allocate (tuuv(nv2, nv2), tddv(nv2, nv2), tudv(nv2, nv2), tduv(nv2, nv2))
+      allocate (avac(nv, 2), bvac(nv, 2), source=cmplx_0)
+      allocate (ddnv(nv2, 2), source=0.0)
+
+      do ivac = 1, 2
+         sgn = 3.0 - 2.0*ivac
+         call vacfun(fmpi, fi%vacuum, stars, fi%input, nococonv, jsp, jsp, fi%cell, ivac, evac, lapw%bkpt + lapw%qphon, &
+                     vTot%vac(:fi%vacuum%nmzxyd, 2:, :, :), vTot%vac(:, 1, :, :), kvac, nv2s, &
+                     tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnvs, wronk)
+         ddnv(:, ivac) = ddnvs(1:nv2, jsp)
+
+         do ikG = 1, nv
+            ikG2 = map2(ikG)
+            gz   = sgn*fi%cell%bmat(3, 3)*lapw%k3(ikG, jsp)
+            th   = gz*fi%cell%z1
+            c_1  = cmplx(cos(th), sin(th))/(d2*wronk)
+            avac(ikG, ivac) = -c_1*cmplx(dudz(ikG2, jsp), gz*udz(ikG2, jsp))
+            bvac(ikG, ivac) =  c_1*cmplx(duz(ikG2, jsp), gz*uz(ikG2, jsp))
+         end do
+      end do
+
+   end subroutine vac_matching
+
+   subroutine vac_overlap(map2, nv2, avac, bvac, ddnv, z_bra, z_ket, lam)
+      !! Adds the vacuum part of \(\langle z_{\rm bra}|z_{\rm ket}\rangle\) to `lam`,
+      !! both sets expanded in the basis `vac_matching` was set up for.
+
+      integer, intent(in)    :: map2(:), nv2
+      complex, intent(in)    :: avac(:, :), bvac(:, :)
+      real,    intent(in)    :: ddnv(:, :)
+      complex, intent(in)    :: z_bra(:, :), z_ket(:, :) ! (nv,nbands)
+      complex, intent(inout) :: lam(:, :)
+
+      complex, allocatable :: aBra(:, :), bBra(:, :), aKet(:, :), bKet(:, :)
+      integer :: nb, ivac, ikG, ikG2
+
+      nb = size(lam, 1)
+      allocate (aBra(nv2, nb), bBra(nv2, nb), aKet(nv2, nb), bKet(nv2, nb))
+
+      do ivac = 1, 2
+         aBra = cmplx_0
+         bBra = cmplx_0
+         aKet = cmplx_0
+         bKet = cmplx_0
+         do ikG = 1, size(map2)
+            ikG2 = map2(ikG)
+            aBra(ikG2, :) = aBra(ikG2, :) + avac(ikG, ivac)*z_bra(ikG, :)
+            bBra(ikG2, :) = bBra(ikG2, :) + bvac(ikG, ivac)*z_bra(ikG, :)
+            aKet(ikG2, :) = aKet(ikG2, :) + avac(ikG, ivac)*z_ket(ikG, :)
+            bKet(ikG2, :) = bKet(ikG2, :) + bvac(ikG, ivac)*z_ket(ikG, :)
+         end do
+         do ikG2 = 1, nv2
+            bKet(ikG2, :) = ddnv(ikG2, ivac)*bKet(ikG2, :)
+         end do
+
+         call CPP_zgemm('C', 'N', nb, nb, nv2, cmplx_1, aBra, nv2, aKet, nv2, cmplx_1, lam, nb)
+         call CPP_zgemm('C', 'N', nb, nb, nv2, cmplx_1, bBra, nv2, bKet, nv2, cmplx_1, lam, nb)
+      end do
+
+   end subroutine vac_overlap
 
 end module m_dfpt_lambda
