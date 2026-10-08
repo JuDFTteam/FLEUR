@@ -34,6 +34,7 @@ MODULE m_melem_coarse
    USE m_types_melem_window, ONLY: t_melem_window
    USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
+   USE m_types_vacuum
    USE m_types_matelements_soc, ONLY: t_matelements_soc
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
@@ -158,7 +159,7 @@ CONTAINS
    END SUBROUTINE melem_coarse_init
 
    SUBROUTINE melem_coarse_calc(this, request, window, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                stars, enpara, fmpi, vtot, eig_id, distk)
+                                stars, enpara, fmpi, vtot, eig_id, distk, vacuum)
       !> One pass over this rank's k-slice, building every requested operator through the
       !> factory. Spin channels that wannierise separately are a loop, not a second pass:
       !> what differs between one spinor and two channels is which index the result carries
@@ -179,6 +180,9 @@ CONTAINS
       TYPE(t_potden), INTENT(IN) :: vtot
       INTEGER, INTENT(IN) :: eig_id
       INTEGER, INTENT(IN) :: distk(:)   ! rank owner of each global k (distributes the loop)
+      !> Only a film has one, and only the spin operator needs it here: its four blocks are
+      !> overlaps over the whole cell, and on a film that is three regions and not two.
+      TYPE(t_vacuum), INTENT(IN), OPTIONAL :: vacuum
 
       TYPE(t_lapw) :: lapw
       TYPE(t_matelements_spin) :: spinop
@@ -261,7 +265,15 @@ CONTAINS
             !> Pauli components follow from them and are what the export wants; over two
             !> channels only the cross-spin block is wanted, since the combined 2N operator
             !> cannot be assembled until both channels have wannierised.
-            CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
+            IF (input%film) THEN
+               IF (.NOT.PRESENT(vacuum)) CALL judft_error( &
+                  'melem_coarse: the spin operator on a film needs the vacuum', &
+                  hint='pass vacuum down to melem_coarse_calc', calledby='melem_coarse_calc')
+               CALL spinop%init(atoms, stars, lapw, nococonv, input, noco, &
+                                vacuum=vacuum, cell=cell, enpara=enpara, vtot=vtot)
+            ELSE
+               CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
+            END IF
             CALL matrix_element_factory(spinop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)

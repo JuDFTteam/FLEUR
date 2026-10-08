@@ -26,6 +26,12 @@ MODULE m_types_matelements_spin
    USE m_types_lapw
    USE m_types_nococonv
    USE m_melem_overlap, ONLY: melem_overlap_interstitial
+  USE m_types_melem_vacabc, ONLY: t_melem_vacabc
+  USE m_melem_mmkb_vac, ONLY: melem_mmkb_vac
+  USE m_types_vacuum
+  USE m_types_cell
+  USE m_types_enpara
+  USE m_types_potden
    USE m_constants, ONLY: ImagUnit
    USE m_judft
    IMPLICIT NONE
@@ -36,6 +42,14 @@ MODULE m_types_matelements_spin
       TYPE(t_stars),    POINTER :: stars    => NULL()
       TYPE(t_lapw),     POINTER :: lapw     => NULL()
       TYPE(t_nococonv), POINTER :: nococonv => NULL()
+      !> Only a film has a third region. They are pointers and not copies for the same
+      !> reason the four above are, and l_film is what says they were handed over: a bulk
+      !> caller leaves them out and the vacuum half is then simply not there.
+      TYPE(t_vacuum),   POINTER :: vacuum   => NULL()
+      TYPE(t_cell),     POINTER :: cell     => NULL()
+      TYPE(t_enpara),   POINTER :: enpara   => NULL()
+      TYPE(t_potden),   POINTER :: vtot     => NULL()
+      LOGICAL                   :: l_film   = .FALSE.
       TYPE(t_spinor_layout)     :: layout
    CONTAINS
       PROCEDURE :: init                 => init
@@ -46,7 +60,8 @@ MODULE m_types_matelements_spin
 
 CONTAINS
 
-   SUBROUTINE init(this, atoms, stars, lapw, nococonv, input, noco)
+   SUBROUTINE init(this, atoms, stars, lapw, nococonv, input, noco, &
+                   vacuum, cell, enpara, vtot)
       CLASS(t_matelements_spin), INTENT(INOUT) :: this
       TYPE(t_atoms),    TARGET,  INTENT(IN)    :: atoms
       TYPE(t_stars),    TARGET,  INTENT(IN)    :: stars
@@ -54,6 +69,12 @@ CONTAINS
       TYPE(t_nococonv), TARGET,  INTENT(IN)    :: nococonv
       TYPE(t_input),             INTENT(IN)    :: input
       TYPE(t_noco),             INTENT(IN)     :: noco
+      !> What the vacuum expansion needs. Optional so that a bulk caller says nothing and
+      !> gets the two regions it has, rather than having to pass four unused objects.
+      TYPE(t_vacuum), TARGET, OPTIONAL, INTENT(IN) :: vacuum
+      TYPE(t_cell),   TARGET, OPTIONAL, INTENT(IN) :: cell
+      TYPE(t_enpara), TARGET, OPTIONAL, INTENT(IN) :: enpara
+      TYPE(t_potden), TARGET, OPTIONAL, INTENT(IN) :: vtot
 
       !> sigma couples the two spin channels, so the result is a 2x2 block matrix
       this%spinoroperator = .TRUE.
@@ -63,6 +84,20 @@ CONTAINS
       this%stars    => stars
       this%lapw     => lapw
       this%nococonv => nococonv
+
+      !> All four or none: a film that is missing one of them would silently lose the
+      !> vacuum half, which is exactly the failure this is meant to remove.
+      this%l_film = .FALSE.
+      IF (input%film) THEN
+         IF (.NOT.(PRESENT(vacuum) .AND. PRESENT(cell) .AND. PRESENT(enpara) .AND. PRESENT(vtot))) &
+            CALL judft_error('t_matelements_spin: on a film the spin operator needs the vacuum', &
+                             hint='pass vacuum, cell, enpara and vtot to init; without them the '// &
+                                  'four blocks would hold the muffin tins and the interstitial only', &
+                             calledby='types_matelements_spin%init')
+         this%vacuum => vacuum; this%cell => cell
+         this%enpara => enpara; this%vtot => vtot
+         this%l_film = .TRUE.
+      END IF
 
       !> The caller hands over a whole spinor either way: one 2N record when the
       !> Hamiltonian was non-collinear, two records stacked by the caller otherwise.
@@ -83,6 +118,8 @@ CONTAINS
       TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused, the radial integrals are in radfun
 
       COMPLEX, ALLOCATABLE :: oi(:,:,:,:)     ! (nb,nb,2,2) interstitial spin blocks
+      COMPLEX, ALLOCATABLE :: ov(:,:)         ! (nb,nb) one vacuum block at a time
+      TYPE(t_melem_vacabc) :: vacs(2)         ! the expansion of each spin channel
       COMPLEX :: loc(2,2), glo(2,2), cx, cy, cz, gx, gy, gz, trc
       REAL    :: ca, sa, cb, sb
       INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2
@@ -138,6 +175,29 @@ CONTAINS
          END DO
       END DO
       DEALLOCATE(oi)
+
+      ! ---- vacuum, the third region a film has ----
+      !> One expansion per spin channel, and a block is the bra channel against the ket
+      !> channel: o_ab = <phi^a|phi^b>_vac, the same pairing the interstitial above uses.
+      !> gb is zero because both sides are the same k.
+      !>
+      !> It accumulates in the same c_i conj(c_j) convention as the two halves above, so it
+      !> goes in BEFORE the single conjugation at the end of this routine, not after.
+      IF (this%l_film) THEN
+         ALLOCATE(ov(nb, nb))
+         CALL vacs(1)%calc(this%vacuum, this%cell, this%enpara, this%vtot, this%lapw, &
+                           radial_slot(radfun, 1), zmat(iu), nb, ioff=off_u)
+         CALL vacs(2)%calc(this%vacuum, this%cell, this%enpara, this%vtot, this%lapw, &
+                           radial_slot(radfun, 2), zmat(id), nb, ioff=off_d)
+         DO j1 = 1, 2
+            DO i1 = 1, 2
+               ov = CMPLX(0.0, 0.0)
+               CALL melem_mmkb_vac(vacs(i1), vacs(j1), [0, 0, 0], ov)
+               this%mat(i1,j1)%data_c(:,:) = this%mat(i1,j1)%data_c(:,:) + ov(:,:)
+            END DO
+         END DO
+         DEALLOCATE(ov)
+      END IF
 
       ! ---- muffin-tin, site by site, each rotated into the global frame ----
       DO j = 1, nb

@@ -73,15 +73,10 @@ CONTAINS
             hint='everything built from the neighbour overlaps does work on a film; these two '// &
                  'need the vacuum halves of the pair overlap and of the momentum', &
             calledby='wannierlib_main')
-         !> The spin operator sums the muffin tins and the interstitial. In a film there is a
-         !> third region carrying spin density and this layer does not reach it. The orbital
-         !> moment and the spin-orbit operator are muffin-tin quantities by construction, not
-         !> by omission, so they are unaffected.
-         IF (request%has_op('spin') .OR. request%has_op_r('spin')) CALL juDFT_error( &
-            'wannierlib: the spin operator has no vacuum contribution and cannot be asked for on a film', &
-            hint='it sums the muffin tins and the interstitial only; orbital and spin_orbit are '// &
-                 'muffin-tin quantities and do work on a film', &
-            calledby='wannierlib_main')
+         !> The spin operator does reach the vacuum: t_matelements_spin adds the third
+         !> region to each of its four blocks, one t_melem_vacabc per spin channel, in the
+         !> same pairing the interstitial uses. The orbital moment and the spin-orbit
+         !> operator never needed it, being muffin-tin quantities by construction.
       END IF
 
 

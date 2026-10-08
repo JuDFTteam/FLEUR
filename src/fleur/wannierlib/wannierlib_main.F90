@@ -149,7 +149,7 @@ CONTAINS
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
-                      stars, enpara, fmpi, vtot, eig_id, distk)
+                      stars, enpara, fmpi, vtot, eig_id, distk, vacuum=vacuum)
 
       !> wl, not this: wannierlib_main takes the input object as INTENT(IN), so the windows
       !> the derivation fills in live only in the copy. Handing w90 the original passes it
