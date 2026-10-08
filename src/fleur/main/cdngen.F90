@@ -16,6 +16,7 @@ MODULE m_cdngen
    USE m_types_dmdos
    USE m_constants
    USE m_juDFT
+   USE m_intgr, ONLY : intgr3
    USE m_cdnval
    USE m_plot
    USE m_cdn_io
@@ -28,7 +29,6 @@ MODULE m_cdngen
    USE m_resMoms
    USE m_cdncore
    USE m_make_dos
-   USE m_metagga
    USE m_denMultipoleExp
    USE m_slater
    USE m_greensfPostProcess
@@ -77,7 +77,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
-                  moessbauerParams)
+                  moessbauerParams,vTau)
 
    !*****************************************************
    !    Charge density generator
@@ -122,6 +122,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
    TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
+   TYPE(t_potden),INTENT(IN),OPTIONAL   :: vTau  !! MetaGGA V_tau of this iteration
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -153,6 +154,18 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error, Perform_metagga
+
+   ! MetaGGA: core kinetic energy density, kept apart for the core double counting
+   TYPE(t_potden)        :: core_tau
+   REAL                  :: dc_integrand(atoms%jmtd), dc_integral
+   INTEGER               :: iType_dc
+
+   ! MetaGGA: integrals of the kinetic energy density, reported per region
+   REAL                  :: tau_q(input%jspins), tau_qis(input%jspins)
+   REAL                  :: tau_qmt(atoms%ntype,input%jspins), tau_qvac(2,input%jspins)
+   REAL                  :: tau_qtot, tau_qistot
+   CHARACTER(LEN=20)     :: tau_names(4), tau_attrs(4)
+   INTEGER               :: tau_lengths(4,2)
 
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
@@ -204,7 +217,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,moessbauerParams,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart,dmdos=dmdos)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart,dmdos=dmdos, &
+                  l_kinEnergyDen=xcpot%is_MetaGGA(), kinEnergyDen=EnergyDen)
    END DO
    ! XAS is a postprocessing calculation under output/xas, like DOS/band output:
    ! it reuses the converged potential, eigenvalues, occupations, and MT basis.
@@ -215,11 +229,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
-   ! calculate kinetic energy density for MetaGGAs
-   if(xcpot%exc_is_metagga()) then
-      CALL calc_EnergyDen(eig_id, fmpi, kpts, noco, nococonv,input, banddos, cell, atoms, enpara, stars,&
-                             vacuum,  sphhar, sym, gfinp, hub1inp, vTot,   results, EnergyDen)
-   endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
       IF (fmpi%irank == 0) THEN
@@ -267,17 +276,52 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    !END IF
 
    CALL timestart("cdngen: cdncore")
-   if(xcpot%exc_is_MetaGGA()) then
-      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, EnergyDen)
+   if(xcpot%is_MetaGGA()) then
+      ! The core tau is collected separately: it is needed on its own for the core double counting
+      CALL core_tau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
+      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, kinEnergyDen=core_tau)
+      EnergyDen%mt = EnergyDen%mt + core_tau%mt
    else
-      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
+      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams)
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
+   ! MetaGGA core double counting (Doumont et al., PRB 105, 195138, Eq. 13): the core states
+   ! solve the auxiliary GGA potential enpara%vr_core and contain no V_tau, while totale
+   ! subtracts vTot and V_tau for the full density. The difference for the core,
+   !    int (v_mult - v_GGA) rho_core + int V_tau tau_core,
+   ! is evaluated here with the core density and core tau of this iteration.
+   results%te_core_mgga = 0.0
+   IF (xcpot%needs_MetaGGA_ham().AND.PRESENT(vTau).AND.PRESENT(core_den).AND.fmpi%irank==0) THEN
+      DO jspin = 1, input%jspins
+         DO iType_dc = 1, atoms%ntype
+            ! vTot%mt(:,0) and enpara%vr_core hold r*V_00/sqrt(4pi); densities are stored as r^2*rho_00
+            dc_integrand(:atoms%jri(iType_dc)) = (vTot%mt(:atoms%jri(iType_dc),0,iType_dc,jspin) &
+                 - enpara%vr_core(:atoms%jri(iType_dc),iType_dc,jspin))*sfp_const/atoms%rmsh(:atoms%jri(iType_dc),iType_dc) &
+                 * core_den%mt(:atoms%jri(iType_dc),0,iType_dc,jspin) &
+                 + vTau%mt(:atoms%jri(iType_dc),0,iType_dc,jspin)*core_tau%mt(:atoms%jri(iType_dc),0,iType_dc,jspin)
+            CALL intgr3(dc_integrand,atoms%rmsh(1,iType_dc),atoms%dx(iType_dc),atoms%jri(iType_dc),dc_integral)
+            results%te_core_mgga = results%te_core_mgga + atoms%neq(iType_dc)*dc_integral
+         END DO
+      END DO
+   END IF
+   IF (xcpot%is_MetaGGA().AND.fmpi%irank==0) THEN
+      ! Integral of the core tau per atom; equals the core kinetic energy up to relativistic corrections
+      DO jspin = 1, input%jspins
+         DO iType_dc = 1, atoms%ntype
+            CALL intgr3(core_tau%mt(:,0,iType_dc,jspin),atoms%rmsh(1,iType_dc),atoms%dx(iType_dc),atoms%jri(iType_dc),dc_integral)
+            WRITE (oUnit,'(a,i3,a,i2,a,f20.10)') ' core tau integral: atom type ',iType_dc,' spin ',jspin, &
+                                                 ' :', dc_integral*sfp_const
+         END DO
+      END DO
+   END IF
+
    CALL outDen%distribute(fmpi%mpi_comm)
+   ! The MT part of tau (valence and core) is only complete on rank 0
+   IF (xcpot%is_MetaGGA()) CALL EnergyDen%distribute(fmpi%mpi_comm)
 
    IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
@@ -310,12 +354,43 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
 
    IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcIS(input,atoms,fmpi,outDen)
 
-   Perform_metagga = Allocated(Energyden%Mt) &
-                   .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
+   Perform_metagga = Allocated(Energyden%Mt) .And. Xcpot%Is_MetaGGA()
    If(Perform_metagga) Then
      IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
-     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,core_den,inFilename='cdnc')
+
+     ! Integrate the kinetic energy density over the cell and report it per region.
+     ! EnergyDen uses exactly the conventions integrate_cdn expects (MT: l=0 only, r^2*f_00,
+     ! scaled by sfp_const; interstitial: plain star coefficients weighted with stars%nstr).
+     ! Skip while the "not loaded" sentinel still sits in the G=0 star, otherwise the
+     ! interstitial integral would simply report that marker.
+     IF (REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) THEN
+        CALL integrate_cdn(stars,nococonv,atoms,sym,vacuum,input,cell, EnergyDen, &
+                           tau_q, tau_qis, tau_qmt, tau_qvac, tau_qtot, tau_qistot, fmpi)
+        IF (fmpi%irank == 0) THEN
+           DO jspin = 1, input%jspins
+              tau_names(1) = 'spin'        ; WRITE(tau_attrs(1),'(i0)')    jspin
+              tau_lengths(1,1) = 4         ; tau_lengths(1,2) = 1
+              tau_names(2) = 'total'       ; WRITE(tau_attrs(2),'(f14.7)') tau_q(jspin)
+              tau_lengths(2,1) = 5         ; tau_lengths(2,2) = 14
+              tau_names(3) = 'interstitial'; WRITE(tau_attrs(3),'(f14.7)') tau_qis(jspin)
+              tau_lengths(3,1) = 12        ; tau_lengths(3,2) = 14
+              tau_names(4) = 'mtSpheres'   ; WRITE(tau_attrs(4),'(f14.7)') &
+                                                SUM(atoms%neq(:)*tau_qmt(:,jspin))
+              tau_lengths(4,1) = 9         ; tau_lengths(4,2) = 14
+              CALL writeXMLElementForm('kineticEnergyDensity',tau_names(1:4),tau_attrs(1:4),tau_lengths(1:4,:))
+           END DO
+
+           ! Iso-orbital indicator extrema, computed during potential generation. Note these
+           ! refer to the *input* density of this iteration, while the tau integrals above
+           ! refer to the output density just constructed.
+           CALL writeXMLElementFormPoly('isoOrbitalIndicator', &
+                (/'alphaMinMT','alphaMaxMT','alphaMinIR','alphaMaxIR'/), &
+                (/results%alphaMinMT,results%alphaMaxMT,results%alphaMinIR,results%alphaMaxIR/), &
+                reshape((/10,10,10,10,20,20,20,20/),(/4,2/)))
+        END IF
+     END IF
+
+     ! The mixed kinetic energy density is written after the mixing (fleur.F90)
    endif
 
 #ifdef CPP_MPI

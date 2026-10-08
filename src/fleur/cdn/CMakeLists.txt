@@ -5,6 +5,7 @@ src/fleur/cdn/cdnovlp.F90
 src/fleur/cdn/cdntot.F90
 src/fleur/cdn/cdnval.F90
 src/fleur/cdn/pwden.F90
+src/fleur/cdn/pwden_kinEnergyDen.F90
 src/fleur/cdn/pwint.f90
 src/fleur/cdn/pwint_sl.f90
 src/fleur/cdn/q_int_sl.F90

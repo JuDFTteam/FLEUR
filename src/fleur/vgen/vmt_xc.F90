@@ -16,7 +16,8 @@ MODULE m_vmt_xc
    USE m_libxc_postprocess_gga
    USE m_mt_tofrom_grid
    USE m_types_xcpot_inbuild
-   USE m_metagga
+   USE m_mgga_alpha
+   USE m_constants
    USE m_types_atoms
    USE m_types_xcpot
    USE m_types_input
@@ -47,7 +48,7 @@ MODULE m_vmt_xc
 
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc)
+                        den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc,vxc,vTau,alphaMin,alphaMax)
 
          IMPLICIT NONE
 
@@ -60,14 +61,17 @@ MODULE m_vmt_xc
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc,vxc
-         TYPE(t_kinED),INTENT(IN)       :: kinED
+         TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
+         !! MetaGGA diagnostic: running extrema of the iso-orbital indicator (muffin tins)
+         REAL,INTENT(INOUT),OPTIONAL    :: alphaMin, alphaMax
          !     ..
          !     .. Local Scalars ..
-         TYPE(t_gradients)     :: grad
+         TYPE(t_gradients)     :: grad, tmp_grad_ked
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
          REAL, ALLOCATABLE     :: ch(:,:),v_x(:,:),v_xc(:,:),e_xc(:,:)
-         INTEGER               :: n,nsp,nt,jr, loc_n
+         REAL, ALLOCATABLE     :: v_tau(:,:), ked_rs(:,:)
+         INTEGER               :: n,nsp,nt,jr
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
 
@@ -79,8 +83,10 @@ MODULE m_vmt_xc
          REAL,ALLOCATABLE:: xcl(:,:)
          LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
          !.....------------------------------------------------------------------
-         perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
-                         .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+         perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%is_MetaGGA()
+         ! EnergyDen%mt is allocated even before a kinetic energy density exists, so also reject
+         ! the "not loaded" sentinel rather than feeding it to libxc as tau.
+         IF (perform_MetaGGA) perform_MetaGGA = REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const
          lda_atom=.FALSE.; l_libxc=.FALSE.
          SELECT TYPE(xcpot)
          TYPE IS(t_xcpot_inbuild)
@@ -116,22 +122,38 @@ MODULE m_vmt_xc
          n_start=1
          n_stride=1
 #endif
-         loc_n = 0
          !TODO: MetaGGA
          DO n = n_start,atoms%ntype,n_stride
             ALLOCATE(ch(nsp*atoms%jri(n),input%jspins),v_x(nsp*atoms%jri(n),input%jspins),&
                      v_xc(nsp*atoms%jri(n),input%jspins),e_xc(nsp*atoms%jri(n),input%jspins))
+            IF (xcpot%vx_is_MetaGGA()) THEN
+               ALLOCATE(v_tau(nsp*atoms%jri(n),input%jspins)); v_tau = 0.0
+            ENDIF
             IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
-            loc_n = loc_n + 1
+            IF (perform_MetaGGA) THEN
+               ALLOCATE(ked_rs(nsp*atoms%jri(n), input%jspins))
+               CALL mt_to_grid(.FALSE., input%jspins, atoms, sym, sphhar, .TRUE., &
+                               EnergyDen%mt(:,0:,n,:), n, noco, tmp_grad_ked, ked_rs)
+            END IF
 
             CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch)
+
+            ! mt_to_grid divides by r^2 (chlh=rho/r**2), so ch and ked_rs are true rho and
+            ! tau here and alpha can be formed without any further rescaling.
+            IF (perform_MetaGGA .AND. PRESENT(alphaMin) .AND. PRESENT(alphaMax)) &
+               CALL mgga_alpha_extrema(input%jspins, ch, grad%sigma, ked_rs, alphaMin, alphaMax)
 
             !
             !         calculate the ex.-cor. potential
 #ifdef CPP_LIBXC
-            if(perform_MetaGGA .and. kinED%set) then
-              CALL xcpot%get_vxc(input%jspins,ch,v_xc&
-                   , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n))
+            if(perform_MetaGGA) then
+              if (xcpot%vx_is_MetaGGA()) then
+                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                     , v_x,grad, kinEnergyDen_KS=ked_rs, vtau=v_tau)
+              else
+                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                     , v_x,grad, kinEnergyDen_KS=ked_rs)
+              endif
             else
                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
                   , v_x,grad)
@@ -175,15 +197,22 @@ MODULE m_vmt_xc
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
+            ! Store V_tau for MetaGGA Hamiltonian contribution
+            IF (xcpot%vx_is_MetaGGA() .AND. ALLOCATED(v_tau)) THEN
+               IF (PRESENT(vTau)) THEN ! nested: vTau may be absent (e.g. the writeCFOutput path)
+                  CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_tau,vTau%mt(:,0:,n,:))
+               END IF
+            ENDIF
+
             IF (ALLOCATED(exc%mt)) THEN
                !
                !           calculate the ex.-cor energy density
                !
 #ifdef CPP_LIBXC
-               IF(perform_MetaGGA .and. kinED%set) THEN
+               IF(perform_MetaGGA) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
-                     kinEnergyDen_KS=kinED%mt(:,:,loc_n), mt_call=.True.)
+                     kinEnergyDen_KS=ked_rs, mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
@@ -209,6 +238,8 @@ MODULE m_vmt_xc
                CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
             IF (lda_atom(n)) DEALLOCATE(xcl)
+            IF (ALLOCATED(v_tau)) DEALLOCATE(v_tau)
+            IF (ALLOCATED(ked_rs)) DEALLOCATE(ked_rs)
             DEALLOCATE (ch,v_x,v_xc,e_xc)
          ENDDO
 
@@ -218,6 +249,18 @@ MODULE m_vmt_xc
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+         IF (xcpot%vx_is_MetaGGA()) THEN
+            ! Collective: PRESENT(vTau) is uniform across ranks, so no rank can skip this.
+            IF (PRESENT(vTau)) THEN
+               CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTau%mt,SIZE(vTau%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+            END IF
+         ENDIF
+         ! The atom loop above is strided over ranks, so each rank has only seen its own
+         ! atoms. Collective: PRESENT() is uniform across ranks at the call site.
+         IF (PRESENT(alphaMin).AND.PRESENT(alphaMax)) THEN
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE,alphaMin,1,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE,alphaMax,1,MPI_DOUBLE_PRECISION,MPI_MAX,fmpi%mpi_comm,ierr)
+         END IF
 #endif
          !
          RETURN

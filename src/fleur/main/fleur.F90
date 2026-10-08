@@ -51,7 +51,7 @@ MODULE m_fleur
    USE m_io_hybrid
    USE m_dwigner
    USE m_ylm
-   USE m_metagga
+   USE m_assign_enpara_potential
    USE m_plot
    USE m_usetup
    USE m_hubbard1_setup
@@ -121,14 +121,15 @@ CONTAINS
       TYPE(t_input) :: input_soc
 
       TYPE(t_field)    :: field2
-      TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc
+      TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc, vTau
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
+      TYPE(t_potden)   :: kinEDout ! MetaGGA: output kinetic energy density; EnergyDen holds the input one
       TYPE(t_hub1data) :: hub1data
       TYPE(t_moessbauerParams) :: moessbauerParams
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
-
+      CLASS(t_xcpot),allocatable::xcpot_iter
 
       ! response plotting debugging
       TYPE(t_stars)                   :: starsq
@@ -141,7 +142,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_lastIter, l_writehistory
+      LOGICAL :: l_lastIter, l_writehistory, l_exist, l_useAuxGGA
       CHARACTER(len=:), ALLOCATABLE :: scf_status
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
@@ -196,6 +197,51 @@ CONTAINS
       IF (fmpi%irank==0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen,b_constr=nococonv%b_con)
+      ! Reject the MetaGGA cases that are not implemented, before a long run rather than after.
+      ! pwden_kinEnergyDen reads only the first spinor block of zMat and the MT kinetic energy
+      ! density is built from denmatrix(jspin,jspin) only, so noco would give a wrong tau.
+      IF (xcpot%is_MetaGGA().AND.fi%noco%l_noco) &
+         CALL judft_error("MetaGGA is not implemented for non-collinear magnetism", calledby="fleur")
+      ! tau is never computed in the vacuum: EnergyDen%vac is allocated and zeroed but never
+      ! written, vacden has no tau path, and vvac_xc takes no tau argument. The vacuum would
+      ! therefore silently get the auxiliary GGA (or abort inside eval_vxc without one).
+      IF (xcpot%is_MetaGGA().AND.fi%input%film) &
+         CALL judft_error("MetaGGA is not implemented for film geometries (no tau in the vacuum)", &
+                          calledby="fleur", hint="Use a bulk geometry, or a non-MetaGGA functional.")
+      ! The core tau is built from the core states inside the spheres only, so a frozen core
+      ! or core tails in the interstitial would leave tau inconsistent with the core density.
+      IF (xcpot%is_MetaGGA().AND.fi%input%frcor) &
+         CALL judft_error("MetaGGA is not implemented with a frozen core", calledby="fleur", &
+                          hint="Set /calculationSetup/coreElectrons/@frcor to F.")
+      IF (xcpot%is_MetaGGA().AND.fi%input%ctail) &
+         CALL judft_error("MetaGGA is not implemented with core tails in the interstitial", calledby="fleur", &
+                          hint="Set /calculationSetup/coreElectrons/@ctail to F.")
+      ! Core and valence states see different potentials, and the force code has no V_tau terms
+      IF (xcpot%is_MetaGGA().AND.fi%input%l_f) &
+         CALL judft_error("Forces are not implemented for MetaGGA functionals", calledby="fleur", &
+                          hint="Set /calculationSetup/geometryOptimization/@l_f to F.")
+      ! Radial basis functions and core states are generated with the auxiliary GGA
+      IF (xcpot%needs_MetaGGA_ham().AND..NOT.xcpot%has_aux_gga()) &
+         CALL judft_error("A MetaGGA needs an auxiliary GGA for the radial basis and the core states", &
+                          calledby="fleur", hint='Add e.g. <AuxGGA exchange="117" correlation="130"/> '// &
+                          '(RPBE, recommended for SCAN and TPSS) to the xcFunctional element.')
+
+                                              ! Load persisted kinetic energy density for MetaGGA (if available)
+      IF (xcpot%is_MetaGGA()) THEN
+         CALL EnergyDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_EnergyDen)
+         IF (fmpi%irank==0) THEN
+            INQUIRE(FILE='kinED.hdf', EXIST=l_dummy)
+            INQUIRE(FILE='kinED', EXIST=l_exist)
+            IF (l_dummy .OR. l_exist) THEN
+               CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                             fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, &
+                             0, rdummy, rdummy, l_dummy, EnergyDen, inFilename='kinED')
+            ELSE 
+               EnergyDen%pw(1,:)=kinEnergyDenMarker_const ! very negative value: not loaded
+            ENDIF
+         ENDIF   
+         CALL EnergyDen%distribute(fmpi%mpi_comm)
+      END IF
       call mpi_bc(results%last_distance, 0, fmpi%mpi_comm)
 
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
@@ -224,6 +270,7 @@ CONTAINS
       CALL vx%init(stars,    fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vxc%init(stars,   fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL exc%init(stars,   fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      ! V_tau for MetaGGA: stores dE_xc/d(tau) in lattice harmonics / star coefficients
       CALL timestop("Initialize potentials")
 
       ! Initialize Green's function
@@ -303,6 +350,19 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
+         l_useAuxGGA = .FALSE.
+         ! create_from_aux aborts without an <AuxGGA> element, so only take this path when one
+         ! is actually configured (l_bj makes is_MetaGGA() true without implying an aux GGA).
+         IF (xcpot%is_MetaGGA().AND.xcpot%has_aux_gga()) THEN
+            IF (real(EnergyDen%pw(1,1)) < kinEnergyDenUnset_const) l_useAuxGGA = .TRUE.
+         ENDIF
+         if (l_useAuxGGA) then
+            ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part.
+            CALL xcpot%create_from_aux(xcpot_iter)
+            print *,"Using auxiliary GGA potential for the first iteration of MetaGGA calculation."
+         else
+            xcpot_iter = xcpot
+         endif
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
 
@@ -311,6 +371,14 @@ CONTAINS
             IF (.NOT.fi%sliceplot%slice) THEN
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                               fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+               IF (xcpot%is_MetaGGA()) THEN
+                  ! Only plot the kinetic energy density once it actually holds one; the test
+                  ! used to be inverted and plotted the "not set" sentinel instead.
+                  if (real(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) &
+                     CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
+                                    fi%noco, nococonv, EnergyDen, PLOT_ENERGYDEN, fi%sliceplot)
+               ENDIF
+                                 
             ELSE
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
@@ -331,10 +399,10 @@ CONTAINS
          !HF
          IF (fi%hybinp%l_hybrid) THEN
             hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
-            SELECT TYPE (xcpot)
+            SELECT TYPE (xcpot_iter)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                hybdat%results, xcpot, vTot, iter, iterHF)
+                                hybdat%results, xcpot_iter, vTot, iter, iterHF)
             END SELECT
 
 #ifdef CPP_MPI
@@ -358,11 +426,16 @@ CONTAINS
 
          CALL timestart("generation of potential")
          CALL moessbauerParams%init(fi%input, fi%noco, fi%atoms)
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, &
+         ! xcpot_iter, not xcpot: in the bootstrap iteration this is the auxiliary GGA, so the
+         ! XC potential is built from the same functional that eigen and totale then use,
+         ! instead of evaluating the MetaGGA against a kinetic energy density that does not
+         ! exist yet.
+         CALL vgen(hybdat, fi%field, fi%input, xcpot_iter, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, vTau, &
                    moessbauerParams)
          CALL timestop("generation of potential")
 
+     
          ! Scale the magnetization back.
          IF (ANY(fi%noco%l_unrestrictMT).AND.fi%noco%l_scaleMag) THEN
             CALL inDen%SpinsToChargeAndMagnetisation()
@@ -406,14 +479,17 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
+            CALL assign_enpara_potential(enpara, fmpi, fi%atoms, fi%input, vToT, &
+                                        xcpot_iter, vxc, inDen, sphhar, fi%sym, stars, &
+                                        fi%vacuum, fi%noco, EnergyDen)
             CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
             IF (fi%hybinp%l_hybrid) hybdat%results%te_hfex%valence = 0.0
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
-                          hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot_iter, forcetheo, enpara, nococonv,  &
+                          hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data, vTau=vTau)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          eig_idList(pc) = eig_id
@@ -525,8 +601,8 @@ CONTAINS
             CALL cdngen(eig_id, fmpi, input_soc, fi%xas, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc,&
-                        moessbauerParams)
+                        archiveType, xcpot, outDen, kinEDout, coreden,greensFunction, hub1data,vxc,exc,&
+                        moessbauerParams, vTau=vTau)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 
@@ -542,10 +618,10 @@ CONTAINS
             END IF
 
             IF (fi%input%l_rdmft) THEN
-               SELECT TYPE (xcpot)
+               SELECT TYPE (xcpot_iter)
                TYPE IS (t_xcpot_inbuild)
                   CALL rdmft(eig_id, fmpi, fi, enpara, stars, &
-                             sphhar, vTot, vCoul, nococonv, xcpot, mpdata, hybdat, &
+                             sphhar, vTot, vCoul, nococonv, xcpot_iter, mpdata, hybdat, &
                              results, archiveType, outDen)
                END SELECT
             END IF
@@ -584,7 +660,7 @@ CONTAINS
             !CRYSTAL FIELD OUTPUT
             IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
                CALL hub1data%mpi_bc(fmpi%mpi_comm)
-               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,outDen,hub1data,nococonv,enpara,fmpi)
+               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot_iter,EnergyDen,outDen,hub1data,nococonv,enpara,fmpi)
                CALL juDFT_end("Crystal Field Output written",fmpi%irank)
             END IF
 
@@ -593,7 +669,7 @@ CONTAINS
 ! !$             IF (disp) THEN
 ! !$                reap = .FALSE.
 ! !$                CALL timestart("generation of potential (total)")
-! !$                CALL vgen(fi%hybinp,reap,fi%input,xcpot, fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+! !$                CALL vgen(fi%hybinp,reap,fi%input,xcpot_iter, fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
 ! !$                     fi%cell, fi%sliceplot,fmpi, results,fi%noco,outDen,inDenRot,vTot,vx,vCoul)
 ! !$                CALL timestop("generation of potential (total)")
 ! !$
@@ -605,7 +681,7 @@ CONTAINS
             ! total energy
             CALL timestart('determination of total energy')
             CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell,   &
-                        xcpot, hybdat, vTot, vCoul, iter, inDen, results)
+                        xcpot_iter, hybdat, vTot, vCoul, iter, inDen, results)
             CALL timestop('determination of total energy')
          END DO forcetheoloop
 
@@ -620,9 +696,24 @@ CONTAINS
          CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, outDen, fmpi, .TRUE.)
          
          ! mix input and output densities
-         CALL mix_charge(field2, fmpi, stars, &
-                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
-                         archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         IF (xcpot%is_MetaGGA()) THEN
+            ! tau is mixed along with the density. Without an input tau (first iteration) the
+            ! output tau serves as input, so it passes the mixing unchanged.
+            IF (REAL(EnergyDen%pw(1,1)) < kinEnergyDenUnset_const) CALL EnergyDen%copyPotDen(kinEDout)
+            CALL mix_charge(field2, fmpi, stars, &
+                            fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
+                            archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot, &
+                            inTau=EnergyDen, outTau=kinEDout)
+            CALL EnergyDen%distribute(fmpi%mpi_comm)
+            ! Persist the mixed tau for a restart, like the mixed density
+            IF (fmpi%irank==0) CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, &
+                                                 CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, 0, -1.0, 0.0, -1.0, -1.0, &
+                                                 .FALSE., EnergyDen, inFilename='kinED')
+         ELSE
+            CALL mix_charge(field2, fmpi, stars, &
+                            fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
+                            archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         END IF
          IF (judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix)
          
          ! Rotating to the local MT frame
@@ -746,9 +837,13 @@ CONTAINS
          l_walltime = l_walltime .AND. .NOT. l_cont
       ELSE
          l_cont = l_cont .AND. (iter < fi%input%itmax)
-         ! MetaGGAs need a at least 2 iterations
+         ! MetaGGAs need at least 2 iterations: the first one runs on the auxiliary GGA
+         ! (or on no kinetic energy density at all), so stopping after it would mean never
+         ! evaluating the real functional. Must use the same predicate as the bootstrap
+         ! test in fleur_execute, or a potential-only MetaGGA takes the bootstrap without
+         ! getting the extra iteration.
          l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
-                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
+                                .OR. (xcpot%is_MetaGGA() .and. iter == 1))
          l_walltime = l_cont
          CALL check_time_for_next_iteration(iter, l_cont)
          l_walltime = l_walltime .AND. .NOT. l_cont

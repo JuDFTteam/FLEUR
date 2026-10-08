@@ -8,6 +8,7 @@ MODULE m_local_Hamiltonian
    USE m_constants
    USE m_intgr, ONLY: intgr3
    USE m_gaunt, ONLY: gaunt1
+   USE m_gradYlm, ONLY: Derivative
    USE m_types_atoms
    USE m_opc_setup
    USE m_types_enpara
@@ -18,6 +19,7 @@ MODULE m_local_Hamiltonian
    USE m_types_noco
    USE m_types_nococonv
    USE m_types_potden
+   USE m_types_radfun
    USE m_types_sphhar
    USE m_types_sym
    USE m_types_tlmplm
@@ -30,12 +32,15 @@ MODULE m_local_Hamiltonian
   !   h = V_nonsph + H_sph + DFT+U/OPC (for LOs)
   ! and the non-spherical LAPW block td%h_loc_nonsph used by hsmt_nonsph,
   ! shifted to be positive definite and Cholesky decomposed.
+  ! For MetaGGAs h also contains -1/2 div(V_tau grad), and td%h_sph_extra
+  ! the spherical terms for l>lnonsph that hsmt_sph adds.
   !*********************************************************************
 CONTAINS
    SUBROUTINE local_ham(sphhar,atoms,sym,noco,nococonv,enpara,&
-       fmpi,v,vx,inden,input,hub1inp,hub1data,td,alpha_hybrid,l_dfptmod,l_forces)
+       fmpi,v,vx,inden,input,hub1inp,hub1data,td,alpha_hybrid,l_dfptmod,l_forces,vTau)
       !! l_dfptmod: no Cholesky decomposition
       !! l_forces:  LAPW part up to lmax and without DFT+U (forces add it separately)
+      !! vTau:      MetaGGA potential dE_xc/dtau (collinear only)
 
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_noco),     INTENT(IN)    :: noco
@@ -51,6 +56,7 @@ CONTAINS
       TYPE(t_tlmplm),   INTENT(INOUT) :: td
       REAL,             INTENT(IN)    :: alpha_hybrid
       LOGICAL, INTENT(IN),OPTIONAL    :: l_dfptmod, l_forces
+      TYPE(t_potden),   INTENT(IN), OPTIONAL :: vTau
 
       INTEGER :: j1,j2,jsp,n,lh0
       COMPLEX :: one
@@ -59,6 +65,7 @@ CONTAINS
       CALL timestart("local_hamiltonian")
       IF (input%secvar) CALL judft_error("Second variation is not supported",calledby="local_ham")
       CALL td%init(atoms,input%jspins,PRESENT(l_forces))
+      td%l_sph_extra = PRESENT(vTau)
 
       !$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms,input,enpara,fmpi,v,hub1data,td)
       DO n = 1,atoms%ntype
@@ -73,11 +80,19 @@ CONTAINS
             one = MERGE(CONJG(one),one,j1<j2)
 
             !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(vr,lh0)&
-            !$OMP SHARED(atoms,sphhar,sym,enpara,j1,j2,jsp,v,vx,input,hub1inp,td,alpha_hybrid,one,noco)
+            !$OMP SHARED(atoms,sphhar,sym,enpara,j1,j2,jsp,v,vx,input,hub1inp,td,alpha_hybrid,one,noco,vTau)
             DO  n = 1,atoms%ntype
                IF (j1==j2.OR.noco%l_unrestrictMT(n).or.noco%l_constrained(n)) THEN
                   CALL nonsph_potential(atoms,enpara,v,vx,n,jsp,alpha_hybrid,vr,lh0)
-                  CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
+                  IF (PRESENT(vTau).AND.jsp<3) THEN
+                     ! lambda=0 carries V_tau and V_sph-enpara%vr: the radial functions solve the
+                     ! auxiliary GGA potential (Eq. 8 of Doumont et al., PRB 105, 195138)
+                     lh0 = 0
+                     CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one,vtau=vTau%mt(:,0:,n,jsp))
+                     CALL add_sph_extra(td,n,atoms,sym,sphhar,vr(:,0),vTau%mt(:,0,n,jsp),jsp)
+                  ELSE
+                     CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
+                  END IF
                END IF
                CALL extract_nonsph(td,atoms,n,j1,j2)
                IF (jsp<3) CALL add_sph(td,n,jsp,input%l_useapw)
@@ -118,8 +133,9 @@ CONTAINS
       END IF
    END SUBROUTINE
 
-   SUBROUTINE add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
+   SUBROUTINE add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one,vtau)
       !! td%h(:,:,n,j1,j2) += one * sum_lh <r_i^{l'} Y_{l'm'}|V_lh|r_j^l Y_lm> for all slots i,j
+      !! vtau (MetaGGA, needs lh0=0): also the elements of -1/2 div(V_tau grad), see vtau_integrals
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_sym),    INTENT(IN)    :: sym
@@ -129,6 +145,7 @@ CONTAINS
       REAL,           INTENT(IN)    :: vr(:,0:)
       INTEGER,        INTENT(IN)    :: n,lh0,j1,j2
       COMPLEX,        INTENT(IN)    :: one
+      REAL, OPTIONAL, INTENT(IN)    :: vtau(:,0:)
 
       REAL, ALLOCATABLE :: vint(:,:,:,:,:)
       COMPLEX :: cil
@@ -160,6 +177,10 @@ CONTAINS
       DO l = 0,lr
          IF (l_nonsph_removed(atoms,input,hub1inp,n,l)) vint(1:2,1:2,l,l,:) = 0.0
       END DO
+      IF (PRESENT(vtau)) THEN
+         IF (lh0/=0) CALL judft_bug("V_tau needs the lambda=0 lattice harmonic",calledby="add_nonsph")
+         CALL vtau_integrals(atoms,sphhar,rf,n,nsym,lr,j1,j2,vtau,vint)
+      END IF
 
       DO lp = 0,lr
          DO mp = -lp,lp
@@ -179,6 +200,91 @@ CONTAINS
                END DO
             END DO
          END DO
+      END DO
+      END ASSOCIATE
+   END SUBROUTINE
+
+   SUBROUTINE vtau_integrals(atoms,sphhar,rf,n,nsym,lr,j1,j2,vtau,vint)
+      !! vint(i,j,l',l,lh) += 1/2 int [D_i^{l'} D_j^l + a/r^2 r_i^{l'} r_j^l] V_tau,lh dr, the radial part of
+      !! 1/2 <grad(r_i^{l'} Y_{l'm'})|V_tau,lh Y_lh|grad(r_j^l Y_lm)>. D = dr/dr - r/r for the large and
+      !! small component; a = [l(l+1)+l'(l'+1)-lambda(lambda+1)]/2 comes from the angular gradients.
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      TYPE(t_radfun), INTENT(IN)    :: rf
+      INTEGER,        INTENT(IN)    :: n,nsym,lr,j1,j2
+      REAL,           INTENT(IN)    :: vtau(:,0:)
+      REAL,           INTENT(INOUT) :: vint(:,:,0:,0:,0:)
+
+      REAL, ALLOCATABLE :: d(:,:,:,:,:)
+      REAL    :: a,x
+      INTEGER :: jri,lh,lamda,lp,l,i,j,c,s,js(2)
+
+      jri = atoms%jri(n)
+      js  = [j1,j2]
+      ALLOCATE(d(jri,2,MAXVAL(rf%n_r),0:lr,2))
+      DO s = 1,2
+         DO l = 0,lr
+            DO i = 1,rf%n_r(l)
+               DO c = 1,2
+                  CALL Derivative(rf%r(:jri,c,i,l,js(s)),n,atoms,d(:,c,i,l,s))
+                  d(:,c,i,l,s) = d(:,c,i,l,s)-rf%r(:jri,c,i,l,js(s))/atoms%rmsh(:jri,n)
+               END DO
+            END DO
+         END DO
+      END DO
+
+      DO lh = 0,sphhar%nlh(nsym)
+         lamda = sphhar%llh(lh,nsym)
+         DO lp = 0,lr
+            DO l = 0,lr
+               IF (MOD(lamda+lp+l,2)==1 .OR. lamda<ABS(lp-l) .OR. lamda>lp+l) CYCLE
+               a = 0.5*REAL(l*(l+1)+lp*(lp+1)-lamda*(lamda+1))
+               DO j = 1,rf%n_r(l)
+                  DO i = 1,rf%n_r(lp)
+                     CALL intgr3((d(:,1,i,lp,1)*d(:,1,j,l,2)+d(:,2,i,lp,1)*d(:,2,j,l,2) &
+                                 +a*(rf%r(:jri,1,i,lp,j1)*rf%r(:jri,1,j,l,j2)+rf%r(:jri,2,i,lp,j1)*rf%r(:jri,2,j,l,j2)) &
+                                 /atoms%rmsh(:jri,n)**2)*vtau(:jri,lh),atoms%rmsh(:,n),atoms%dx(n),jri,x)
+                     vint(i,j,lp,l,lh) = vint(i,j,lp,l,lh)+0.5*x
+                  END DO
+               END DO
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE
+
+   SUBROUTINE add_sph_extra(td,n,atoms,sym,sphhar,vr0,vtau0,jsp)
+      !! MetaGGA, l>td%lrange(n): lambda=0 elements of V_sph-enpara%vr (vr0, as in nonsph_potential) and of
+      !! -1/2 div(V_tau grad) for u and udot, which hsmt_sph adds to its energy-parameter based setup.
+      !! Order in td%h_sph_extra: <u|u>, <u|udot>, <udot|u>, <udot|udot>.
+      TYPE(t_tlmplm), INTENT(INOUT) :: td
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sym),    INTENT(IN)    :: sym
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      REAL,           INTENT(IN)    :: vr0(:),vtau0(:)
+      INTEGER,        INTENT(IN)    :: n,jsp
+
+      REAL    :: d(atoms%jri(n),2,2),e(2,2),c0
+      INTEGER :: jri,nsym,l,i,j,c
+
+      jri  = atoms%jri(n)
+      nsym = sym%ntypsy(atoms%firstAtom(n))
+      ASSOCIATE(rf => td%radfun(n))
+      DO l = td%lrange(n)+1,atoms%lmax(n)
+         c0 = REAL(sphhar%clnu(1,0,nsym))*gaunt1(l,0,l,0,0,0,atoms%lmaxd)
+         DO i = 1,2
+            DO c = 1,2
+               CALL Derivative(rf%r(:jri,c,i,l,jsp),n,atoms,d(:,c,i))
+               d(:,c,i) = d(:,c,i)-rf%r(:jri,c,i,l,jsp)/atoms%rmsh(:jri,n)
+            END DO
+         END DO
+         DO j = 1,2
+            DO i = 1,2
+               CALL intgr3((rf%r(:jri,1,i,l,jsp)*rf%r(:jri,1,j,l,jsp)+rf%r(:jri,2,i,l,jsp)*rf%r(:jri,2,j,l,jsp)) &
+                           *(vr0(:jri)+0.5*REAL(l*(l+1))*vtau0(:jri)/atoms%rmsh(:jri,n)**2) &
+                           +0.5*(d(:,1,i)*d(:,1,j)+d(:,2,i)*d(:,2,j))*vtau0(:jri),atoms%rmsh(:,n),atoms%dx(n),jri,e(i,j))
+            END DO
+         END DO
+         td%h_sph_extra(:,l,n,jsp) = c0*[e(1,1),e(1,2),e(2,1),e(2,2)]
       END DO
       END ASSOCIATE
    END SUBROUTINE

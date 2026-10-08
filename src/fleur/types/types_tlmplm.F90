@@ -24,6 +24,8 @@ MODULE m_types_tlmplm
      INTEGER,ALLOCATABLE :: lrange(:)               !largest l of the LAPW part per type
      REAL,ALLOCATABLE    :: e_shift(:,:)
      TYPE(t_radfun),ALLOCATABLE :: radfun(:)        !radial basis of h
+     REAL,ALLOCATABLE    :: h_sph_extra(:,:,:,:)    !MetaGGA: lambda=0 elements (uu,ud,du,dd) for l>lnonsph, added by hsmt_sph (0:3,0:lmaxd,ntype,jspins)
+     LOGICAL             :: l_sph_extra = .FALSE.
      TYPE(t_rsoc)        :: rsoc
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
@@ -40,7 +42,7 @@ CONTAINS
     INTEGER :: n,l,m,lo,s,nb,sns
     INTEGER :: boff(0:atoms%lmaxd)
 
-    IF (ALLOCATED(td%h)) DEALLOCATE(td%h,td%h_loc_nonsph,td%ind,td%nbas,td%lrange,td%e_shift,td%radfun)
+    IF (ALLOCATED(td%h)) DEALLOCATE(td%h,td%h_loc_nonsph,td%ind,td%nbas,td%lrange,td%e_shift,td%radfun,td%h_sph_extra)
     td%lrange = MERGE(atoms%lmax,atoms%lnonsph,l_fulllmax)
     ALLOCATE(td%nbas(atoms%ntype))
     ALLOCATE(td%ind(MAXVAL([(atoms%num_radial_functions_per_l(n),n=1,atoms%ntype)]),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype),source=-1)
@@ -77,6 +79,8 @@ CONTAINS
     ALLOCATE(td%h_loc_nonsph(0:2*sns-1,0:2*sns-1,atoms%ntype,jspins,jspins),source=CMPLX(0.0,0.0))
     ALLOCATE(td%e_shift(atoms%ntype,jspins),source=0.0)
     ALLOCATE(td%radfun(atoms%ntype))
+    ALLOCATE(td%h_sph_extra(0:3,0:atoms%lmaxd,atoms%ntype,jspins),source=0.0)
+    td%l_sph_extra = .FALSE.
   END SUBROUTINE tlmplm_init
 
 END MODULE m_types_tlmplm

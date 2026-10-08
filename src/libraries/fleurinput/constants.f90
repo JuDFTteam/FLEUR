@@ -13,13 +13,14 @@ MODULE m_constants
   public :: pimach, c_light, read_xml_constants, mpi_bc_constants, t_constants, warp_factor, ounit, nostate_const, &
      corestate_const, valencestate_const, lmaxu_const, invs_matrix, zrfs_matrix, cmplx_0, cmplx_1, pi_const, tpi_const, &
      fpi_const, sfp_const, sqrt_2, imagunit, hartree_to_ev_const, bohr_to_angstrom_const, evac0default_const, &
-     version_const, version_const_max, inputfileversion_const, boltzmann_const, r0_const, potden_type_other, &
+     version_const, version_const_max, inputfileversion_const, boltzmann_const, r0_const, kinenergydenunset_const, &
+     kinenergydenmarker_const, potden_type_other, &
      potden_type_pottot, potden_type_potcoul, potden_type_potx, potden_type_potyuk, potden_type_energyden, &
      potden_type_crystalfield, potden_type_den, kpts_kind_unspecified, kpts_kind_mesh, kpts_kind_path, &
      kpts_kind_tria_bulk, kpts_kind_tria, kpts_kind_spex_mesh, kpts_kind_plane, kptskindstring_consts, &
      bzint_method_hist, bzint_method_gauss, bzint_method_tria, bzint_method_tetra, plot_inpden, plot_inpden_n_core, &
      plot_pot_tot, plot_pot_ext, plot_pot_cou, plot_pot_vxc, plot_outden_y_core, plot_mixden_y_core, &
-     plot_mixden_n_core, namat_const, corestatelist_const, corestatenumelecslist_const, corestatenprnclist_const, &
+     plot_mixden_n_core, plot_energyden, namat_const, corestatelist_const, corestatenumelecslist_const, corestatenprnclist_const, &
      corestatekappalist_const, nr_corestatelist_const, corestatetonrlist_const, atomicmasses_const, &
      massinelectronmasses, noblegasconfiglist_const, noblegasnumstateslist_const, tmatrix0, c_im, dirvecx, dirvecy, &
      dirvecz, id3x3, mat2ord
@@ -57,6 +58,12 @@ MODULE m_constants
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
   ! io/xml/inputSchema.h.backup, io/xml/outputSchema.h.backup, dropInputSchema.c, dropOutputSchema.c, inputSchema_old.h, outputSchema_old.h.
+  ! MetaGGA: marker written into EnergyDen%pw(1,:) when no kinetic energy density has been
+  ! read from a kinED file yet. Anything below kinEnergyDenUnset_const counts as "not set";
+  ! tau must never be handed to libxc while it carries this value.
+  REAL,             PARAMETER :: kinEnergyDenUnset_const = -1E98
+  REAL,             PARAMETER :: kinEnergyDenMarker_const = -1E99
+
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
   REAL, PARAMETER             :: r0_const = 0.0000236216 ! r_0 as in approximation of the nuclear radius R = r_0*A^(1/3), value in Bohr radii.
 
@@ -95,6 +102,7 @@ MODULE m_constants
    INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE=5
    INTEGER, PARAMETER :: PLOT_MIXDEN_Y_CORE=6
    INTEGER, PARAMETER :: PLOT_MIXDEN_N_CORE=11
+   INTEGER, PARAMETER :: PLOT_ENERGYDEN=7
 
   CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
        'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&

@@ -38,6 +38,7 @@ MODULE m_types_enpara
      LOGICAL, ALLOCATABLE :: llochg(:,:,:)
      REAL                 :: epara_min
      real,allocatable     :: vr(:,:,:) !store the potential used to generate the basis functions 
+     real,allocatable     :: vr_core(:,:,:) !spin-resolved spherical potential used for the core states
      LOGICAL              :: ready ! are the enpara's ok for calculation?
      LOGICAL              :: floating !floating energy parameters are relative to potential
    CONTAINS
@@ -67,6 +68,7 @@ CONTAINS
     ALLOCATE(this%el0(0:atoms%lmaxd,atoms%ntype,jspins),this%el1(0:atoms%lmaxd,atoms%ntype,jspins))
     ALLOCATE(this%ello0(atoms%nlod,atoms%ntype,jspins),this%ello1(atoms%nlod,atoms%ntype,jspins))
     ALLOCATE(this%vr(atoms%jmtd,atoms%ntype,jspins))
+    ALLOCATE(this%vr_core(atoms%jmtd,atoms%ntype,jspins))
     this%el0=-1E99
     this%ello0=-1E99
     this%evac0=-1E99
@@ -150,10 +152,7 @@ CONTAINS
        elo_lo_local = 0.0
        elo_up_local = 0.0
 
-      DO n=1,atoms%ntype
-         enpara%vr(:,n,jsp)=v%mt(:,0,n,jsp)
-         if (atoms%l_nonpolbas(n)) enpara%vr(:,n,jsp)=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
-      endDO
+       ! enpara%vr is set by assign_enpara_potential before this routine is called
 
        CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%ntype)
        !$OMP PARALLEL DO DEFAULT(none) &

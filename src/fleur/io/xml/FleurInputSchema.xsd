@@ -869,6 +869,11 @@
                <xsd:documentation>Settings for printing GGA-related quantities.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element maxOccurs="1" minOccurs="0" name="AuxGGA" type="AuxGGAType">
+            <xsd:annotation>
+               <xsd:documentation>Auxiliary GGA functional for computing radial basis functions in MetaGGA calculations. Specify LibXC IDs for the GGA exchange and correlation. Recommended for SCAN: RPBE exchange with PBE correlation, i.e. exchange=117 (XC_GGA_X_RPBE) correlation=130 (XC_GGA_C_PBE).</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
       </xsd:sequence>
       <xsd:attribute name="name" type="XCFunctionalEnum" use="required">
          <xsd:annotation>
@@ -878,6 +883,11 @@
       <xsd:attribute default="F" name="relativisticCorrections" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Enable relativistic corrections to the XC functional.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="BeckeJohnson" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Use Becke-Johnson exchange potential (Eq. 2, Tran et al., J. Phys.: Condens. Matter 19, 196208, 2007). Replaces the standard MetaGGA exchange with v_x^BJ = v_x^BR89 + (1/pi)*sqrt(5/12)*sqrt(2*tau/rho).</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>
@@ -989,6 +999,13 @@
             <xsd:documentation>LibXC correlation functional name for total energy evaluation. If not specified, uses the same as correlation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+   </xsd:complexType>
+   <xsd:complexType name="AuxGGAType">
+      <xsd:annotation>
+         <xsd:documentation>Auxiliary GGA functional (LibXC IDs) for radial basis functions in MetaGGA calculations.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="exchange"    type="xsd:integer" use="required"/>
+      <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
    </xsd:complexType>
    <xsd:complexType name="XCParamsType">
       <xsd:attribute name="igrd" type="xsd:integer" use="required">

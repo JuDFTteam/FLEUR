@@ -72,6 +72,13 @@ CONTAINS
        input%ctail = .FALSE.
     END IF
 
+    ! MetaGGA: the core kinetic energy density exists inside the spheres only, so fleur
+    ! rejects core tails in the interstitial
+    IF (xcpot%inbuild_name(1:5) == 'LibXC') THEN
+       IF (INDEX(xcpot%inbuild_name, 'AuxExchID') > 0 .OR. INDEX(xcpot%inbuild_name, 'mgga') > 0 &
+           .OR. INDEX(xcpot%inbuild_name, 'MGGA') > 0) input%ctail = .FALSE.
+    END IF
+
     IF (input%rkmax == 0.0) THEN
        input%rkmax = MAXVAL(atoms%lmax/atoms%rmt)
        input%rkmax = round_to_deci(input%rkmax, 1)

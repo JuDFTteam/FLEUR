@@ -1,0 +1,33 @@
+# Post-inpgen checklist for CuO
+
+1. Run `inpgen -f structure.inpgen` (or the equivalent aiida-fleur /
+   inpgen2 step) to produce `inp.xml`. Because the two Cu sites
+   carry opposite moments, make sure inpgen (or a manual edit of
+   `inp.xml`) keeps them as **two separate atom groups/species** rather
+   than merging them by symmetry-equivalence -- otherwise the AFM order
+   cannot be represented.
+2. Set opposite initial magnetic moments (`moment` or the relevant
+   per-atom-group magnetism attribute) on the two Cu atom groups,
+   e.g. +/-3.0 as a reasonable starting guess given the target of
+   0.57 muB.
+3. **TODO-VERIFY**: switch the XC functional to SCAN -- same caveat as
+   the ferromagnetic tests:
+
+   ```xml
+   <xcFunctional name="LibXC" relativisticCorrections="F">
+      <LibXCName exchange="mgga_x_scan" correlation="mgga_c_scan"/>
+   </xcFunctional>
+   ```
+
+4. These are insulating/semimetallic oxides -- SCF convergence with
+   meta-GGAs can be slow. The paper mentions using a "C-shift" method
+   [their Eq. (1)] to help meta-GGA SCF convergence for these AFM
+   oxides; if plain mixing struggles, look at what the `metaGGA` branch
+   offers along those lines (e.g. a core-level potential shift option)
+   before concluding the functional is broken.
+5. Use a converged k-mesh appropriate for an antiferromagnetic
+   insulator (denser than for a simple metal is usually not needed, but
+   check convergence explicitly).
+6. Compare the converged **muffin-tin spin moment on Cu** against
+   the 0.57 muB SCAN target (see the comparison-quantity caveat
+   above) and against the experimental value 0.65 (footnote j).

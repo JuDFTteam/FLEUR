@@ -62,7 +62,7 @@ MODULE m_eigen_hssetup
      !! 4. The vacuum part is added (in hsvac())
      !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
 SUBROUTINE eigen_hssetup(isp, fmpi, fi, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
-   td, v, lapw, nk, smat_final, hmat_final)
+   td, v, lapw, nk, smat_final, hmat_final, vTau)
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -79,10 +79,12 @@ TYPE(t_lapw), INTENT(IN)      :: lapw
 TYPE(t_potden), INTENT(IN)    :: den, v, vx
 integer, intent(in)          :: nk
 CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
+TYPE(t_potden), INTENT(IN), OPTIONAL :: vTau
 
 CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
 INTEGER :: i, j, nspins
 complex, allocatable :: vpw_wTemp(:,:)
+complex, allocatable :: vtau_wTemp(:,:)
 INTEGER :: tempI,tempJ
 
 TYPE(t_fjgj)   :: fjgj
@@ -112,7 +114,15 @@ CALL timestart("Interstitial part")
 !Generate interstitial part of Hamiltonian
 ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
 vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
+IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+   ! Nested, and an explicit error: an unallocated pw_w would be passed on as an *absent*
+   ! optional and hs_int would silently drop the V_tau term instead of failing.
+   IF (.NOT.ALLOCATED(vTau%pw_w)) CALL judft_error("MetaGGA: vTau%pw_w is not allocated", calledby="eigen_hssetup")
+   CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vTau%pw_w)
+ELSE
+   CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
+ENDIF
+   
 DEALLOCATE(vpw_wTemp)
 
 CALL timestop("Interstitial part")
@@ -176,7 +186,7 @@ CALL timestop("Matrix redistribution")
 END SUBROUTINE eigen_hssetup
 #else
    SUBROUTINE eigen_hssetup(isp, fmpi, fi,  results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
-      td, v, lapw, nk, smat_final, hmat_final)
+      td, v, lapw, nk, smat_final, hmat_final, vTau)
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -193,11 +203,13 @@ TYPE(t_lapw), INTENT(IN)      :: lapw
 TYPE(t_potden), INTENT(IN)    :: den, v, vx
 integer, intent(in)          :: nk
 CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
+TYPE(t_potden), INTENT(IN), OPTIONAL :: vTau
 
 TYPE(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
 TYPE(t_mpimat), ALLOCATABLE :: smat_mpi(:, :), hmat_mpi(:, :)
 INTEGER :: i, j, nspins
 complex, allocatable :: vpw_wTemp(:,:)
+complex, allocatable :: vtau_wTemp(:,:)
 INTEGER :: tempI,tempJ
 
 TYPE(t_fjgj)   :: fjgj
@@ -223,7 +235,14 @@ IF (fmpi%n_size == 1) THEN
    !Generate interstitial part of Hamiltonian
    ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
    vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-   CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
+
+   IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+      IF (.NOT.ALLOCATED(vTau%pw_w)) CALL judft_error("MetaGGA: vTau%pw_w is not allocated", calledby="eigen_hssetup")
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vTau%pw_w)
+   ELSE
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
+   ENDIF
+      
    DEALLOCATE(vpw_wTemp)
 
    CALL timestop("Interstitial part")
@@ -296,7 +315,13 @@ ELSE
    !Generate interstitial part of Hamiltonian
    ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
    vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-   CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi)
+   
+   IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+      IF (.NOT.ALLOCATED(vTau%pw_w)) CALL judft_error("MetaGGA: vTau%pw_w is not allocated", calledby="eigen_hssetup")
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi, vtau_pw_in=vTau%pw_w)
+   ELSE
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi)
+   ENDIF
    DEALLOCATE(vpw_wTemp)
 
    CALL timestop("Interstitial part")

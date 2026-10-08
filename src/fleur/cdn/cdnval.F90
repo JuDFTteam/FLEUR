@@ -45,6 +45,7 @@ MODULE m_cdnval
    use m_types_orbmom, only: t_orbmom
    use m_addContribsA21A12
    use m_nIJmat
+   use m_pwden_kinEnergyDen
    use m_types_sym
    use m_types_cell
 #ifdef CPP_MPI
@@ -84,7 +85,7 @@ CONTAINS
    SUBROUTINE cdnval(eig_id, fmpi, kpts, jspin, noco, nococonv, input, banddos, cell, atoms, enpara, stars, &
                      vacuum, sphhar, sym, vTot, cdnvalJob, den, dos, vacdos, results, &
                      moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart, &
-                     dmdos)
+                     dmdos, l_kinEnergyDen, kinEnergyDen)
 
       !************************************************************************************
       !     This is the FLEUR valence density generator
@@ -133,6 +134,8 @@ CONTAINS
       TYPE(t_jDOS), INTENT(INOUT) :: jDOS
       TYPE(t_greensfImagPart), OPTIONAL, INTENT(INOUT) :: greensfImagPart
       TYPE(t_dmdos), OPTIONAL, INTENT(INOUT) :: dmdos
+      LOGICAL, OPTIONAL, INTENT(IN)       :: l_kinEnergyDen
+      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: kinEnergyDen
 
       ! Scalar Arguments
       INTEGER, INTENT(IN)    :: eig_id, jspin
@@ -141,7 +144,7 @@ CONTAINS
       INTEGER :: ikpt, ikpt_i, jsp_start, jsp_end, ispin, jsp, max_length_k_list, nk
       INTEGER :: iErr, nbands, noccbd, iType, ispinpr, ispin123
       INTEGER :: skip_t, skip_tt, nbasfcn,abc_itype
-      LOGICAL :: l_real, l_corespec, l_empty
+      LOGICAL :: l_real, l_corespec, l_empty, l_doKED
       LOGICAL :: l_moessbauerHFF, l_dmdos
 
       ! Local Arrays
@@ -169,6 +172,8 @@ CONTAINS
 
       call timestart("init")
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
+      l_doKED = .FALSE.
+      IF (PRESENT(l_kinEnergyDen)) l_doKED = l_kinEnergyDen
 
       ! Klueppelberg (force level 3)
       IF (input%l_f .AND. (input%f_level .GE. 3)) THEN
@@ -378,6 +383,13 @@ CONTAINS
             
          END IF
          call timestop("valence density in the interstitial and vacuum region")
+         ! Interstitial kinetic energy density
+         IF (l_doKED) THEN
+            IF (.NOT. ((jspin .EQ. 2) .AND. noco%l_noco)) THEN
+               CALL pwden_kinEnergyDen(stars, kpts, input, cell, atoms, sym, &
+                                        ikpt, jspin, lapw, noccbd, we, kinEnergyDen, zMat)
+            END IF
+         END IF
          IF (input%l_sympsi .and. allocated(dos%jsym)) THEN
             CALL sympsi(lapw, jspin, sym, noccbd, cell, eig, noco, dos%jsym(:, ikpt, jspin), zMat)
          END IF
@@ -414,6 +426,11 @@ CONTAINS
             end do
          END DO
       END DO
+      IF (l_doKED) THEN
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, kinEnergyDen%pw(:, jspin), &
+                            size(kinEnergyDen%pw, 1), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, iErr)
+      END IF
+
       ! Reduce orbital moments: each rank accumulated clmom from its own k-points.
       ! Only reduce the spin components updated in this cdnval call (jsp_start:jsp_end),
       ! because cdnval is called once per jspin for non-mperp. Reducing the full array
@@ -476,6 +493,15 @@ CONTAINS
          END DO
          !$OMP END PARALLEL DO
          CALL timestop("denmatrix_to_full")
+         IF (l_doKED) THEN
+            CALL timestart("denmatrix_to_kinEnergyDen")
+            DO itype = 1, atoms%ntype
+               call denmatrix(jspin, jspin, itype)%to_kinetic_energy_density( &
+                    jspin, jspin, itype, input, sphhar, atoms, noco, sym, radfun(itype), &
+                    kinEnergyDen%mt)
+            END DO
+            CALL timestop("denmatrix_to_kinEnergyDen")
+         END IF
          call timestart("write mtCharges")
          IF (l_coreSpec) CALL corespec_ddscs(jspin, input%jspins)
          DO ispin = jsp_start, jsp_end

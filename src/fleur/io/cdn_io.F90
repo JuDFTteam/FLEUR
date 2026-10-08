@@ -390,7 +390,6 @@ CONTAINS
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
        relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm,b_constr)
-
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -843,7 +842,7 @@ CONTAINS
   END SUBROUTINE readPrevmmpDistances
 
   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
-
+    
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -916,7 +915,6 @@ CONTAINS
   END SUBROUTINE readCoreDensity
 
   SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints,filename)
-
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -1148,7 +1146,6 @@ CONTAINS
   END SUBROUTINE transform_by_moving_atoms
 
   SUBROUTINE writeStars(stars ,l_xcExtended,l_ExtData)
-
     TYPE(t_stars),INTENT(IN)   :: stars
      
     LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
@@ -1215,7 +1212,6 @@ CONTAINS
   END SUBROUTINE writeStars
 
   SUBROUTINE readStars(stars ,l_xcExtended,l_ExtData,l_error)
-
     TYPE(t_stars),INTENT(INOUT) :: stars
      
     LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
@@ -1334,7 +1330,6 @@ CONTAINS
   END SUBROUTINE readStars
 
   SUBROUTINE writeStepfunction(stars)
-
     TYPE(t_stars),INTENT(IN) :: stars
 
     INTEGER                  :: mode, ifftd, i
@@ -1378,7 +1373,6 @@ CONTAINS
   END SUBROUTINE writeStepfunction
 
   SUBROUTINE readStepfunction(stars, atoms, cell, vacuum, l_error)
-
     TYPE(t_stars),INTENT(INOUT)   :: stars
     TYPE(t_atoms), INTENT(IN)     :: atoms
     TYPE(t_cell), INTENT(IN)      :: cell
