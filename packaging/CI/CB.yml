@@ -62,11 +62,11 @@ perf-gpu:
   variables:
     BENCHER_TESTBED: GPU-iffcluster
     OMP_NUM_THREADS: 16
-    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
+    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/cuda/lib64:${LD_LIBRARY_PATH}
   before_script:
-    - set +e;source compiler-select nvhpc;set -e
+    - set +e;source compiler-select nvhpc-26.5;set -e
     - cd $CI_PROJECT_DIR
-    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/libblas.a"
+    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a"
     - cd build
     - make -j 12
     - wget https://github.com/bencherdev/bencher/releases/download/v0.4.1/bencher-v0.4.1-linux-x86-64
