@@ -762,8 +762,8 @@ contains
          do l = 0, fi%atoms%lmax(itype)
             nn = n_r(l, itype)
             do m = -l, l
-               call CPP_zgemm('N', 'N', nn, nbands, nn, cmplx_1, olapmt(1, 1, l, itype), maxn_r, ketT(lm + 1, 1), maxlmindx, cmplx_0, tmp(1, 1), maxn_r)
-               call CPP_zgemm('C', 'N', nbands, nbands, nn, cmplx_1, braT(lm + 1, 1), maxlmindx, tmp(1, 1), maxn_r, cmplx_1, lam(1, 1), nbands)
+               call CPP_zgemm('N', 'N', nn, nbands, nn, cmplx_1, olapmt(:, :, l, itype), maxn_r, ketT(lm + 1, 1), maxlmindx, cmplx_0, tmp(1, 1), maxn_r)
+               call CPP_zgemm('C', 'N', nbands, nbands, nn, cmplx_1, braT(lm + 1, 1), maxlmindx, tmp(1, 1), maxn_r, cmplx_1, lam, nbands)
                lm = lm + nn
             end do
          end do
