@@ -28,6 +28,7 @@ MODULE m_types_xcpot_libxc
 #define xc_f03_gga_exc xc_f90_gga_exc
 #define xc_f03_mgga_exc xc_f90_mgga_exc
 #define xc_f03_lda_fxc xc_f90_lda_fxc
+#define xc_f03_gga_fxc xc_f90_gga_fxc
 #endif
    USE xc_f03_lib_m
 #endif
@@ -685,8 +686,8 @@ CONTAINS
       ALLOCATE (vrho_dummy(SIZE(rh, 2), SIZE(rh, 1)))
 
       CALL check_fxc_available(xcpot%vxc_func_x)
-      CALL xc_f90_gga_vxc(xcpot%vxc_func_x, np, rh_t, sigma, vrho_dummy, vsigma)
-      CALL xc_f90_gga_fxc(xcpot%vxc_func_x, np, rh_t, sigma, v2rho2, v2rhosigma, v2sigma2)
+      CALL xc_f03_gga_vxc(xcpot%vxc_func_x, np, rh_t, sigma, vrho_dummy, vsigma)
+      CALL xc_f03_gga_fxc(xcpot%vxc_func_x, np, rh_t, sigma, v2rho2, v2rhosigma, v2sigma2)
 
       IF (xcpot%func_vxc_id_c > 0) THEN
          CALL check_fxc_available(xcpot%vxc_func_c)
@@ -694,8 +695,8 @@ CONTAINS
          ALLOCATE (v2rho2_c, mold=v2rho2)
          ALLOCATE (v2rhosigma_c, mold=v2rhosigma)
          ALLOCATE (v2sigma2_c, mold=v2sigma2)
-         CALL xc_f90_gga_vxc(xcpot%vxc_func_c, np, rh_t, sigma, vrho_dummy, vsigma_c)
-         CALL xc_f90_gga_fxc(xcpot%vxc_func_c, np, rh_t, sigma, v2rho2_c, v2rhosigma_c, v2sigma2_c)
+         CALL xc_f03_gga_vxc(xcpot%vxc_func_c, np, rh_t, sigma, vrho_dummy, vsigma_c)
+         CALL xc_f03_gga_fxc(xcpot%vxc_func_c, np, rh_t, sigma, v2rho2_c, v2rhosigma_c, v2sigma2_c)
          vsigma     = vsigma     + vsigma_c
          v2rho2     = v2rho2     + v2rho2_c
          v2rhosigma = v2rhosigma + v2rhosigma_c
@@ -883,12 +884,12 @@ CONTAINS
    SUBROUTINE check_fxc_available(xc_func)
       !! Stops with a readable message if the functional has no analytic second derivative.
       IMPLICIT NONE
-      TYPE(xc_f90_func_t),INTENT(IN) :: xc_func
-      TYPE(xc_f90_func_info_t)       :: xc_info
+      TYPE(xc_f03_func_t),INTENT(IN) :: xc_func
+      TYPE(xc_f03_func_info_t)       :: xc_info
 
-      xc_info = xc_f90_func_get_info(xc_func)
-      IF (IAND(xc_f90_func_info_get_flags(xc_info),XC_FLAGS_HAVE_FXC) == 0) THEN
-         CALL judft_error("The libxc functional '"//TRIM(xc_f90_func_info_get_name(xc_info))// &
+      xc_info = xc_f03_func_get_info(xc_func)
+      IF (IAND(xc_f03_func_info_get_flags(xc_info),XC_FLAGS_HAVE_FXC) == 0) THEN
+         CALL judft_error("The libxc functional '"//TRIM(xc_f03_func_info_get_name(xc_info))// &
                           "' provides no analytic second derivative and can not be used with DFPT.")
       END IF
    END SUBROUTINE check_fxc_available
