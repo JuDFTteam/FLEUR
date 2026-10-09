@@ -106,7 +106,7 @@ CONTAINS
             !Zeeman field
             call timestart("dfpt bfield")
             allocate(t_bfield :: bfield_obj)
-            call bfield_obj%init(fi,fi%dfpt%qvec)
+            call bfield_obj%init(fi,fi%dfpt%qvec_bfield)
             call sternheimerJob%init(fi,l_bfield=.true.)
             call bfield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)

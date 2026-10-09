@@ -167,7 +167,7 @@ module m_types_sternheimerJob
 
             ! One job per q point. The Zeeman field has no cartesian direction index;
             ! the field enters as a scalar (spin diagonal) perturbation.
-            jobSize = size(fi%dfpt%qvec,2)
+            jobSize = size(fi%dfpt%qvec_bfield,2)
 
             allocate(this%iJobList(jobSize))
             allocate(this%iQList(jobSize))

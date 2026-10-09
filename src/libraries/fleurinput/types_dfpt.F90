@@ -44,6 +44,7 @@ MODULE m_types_dfpt
       REAL, ALLOCATABLE :: qvec_interpolate(:,:) ! q vectors for interpolation
 
       REAL, ALLOCATABLE :: qvec_efield(:,:)
+      REAL, ALLOCATABLE :: qvec_bfield(:,:) 
 
       INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
 
@@ -92,6 +93,7 @@ CONTAINS
       CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
       CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
+      CALL mpi_bc(this%qvec_bfield, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_efield_scr, rank, mpi_comm)
@@ -125,7 +127,6 @@ CONTAINS
       TYPE(t_kpts) :: qpts_from_kpts , path_from_kpts
 
       REAL, ALLOCATABLE :: tmp_arr(:)
-      REAL, ALLOCATABLE :: tmp_qvec(:,:)
 
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt')
@@ -252,16 +253,7 @@ CONTAINS
         END IF
 
         ! bfield read-in
-        ! The Zeeman field perturbation gets its q vectors from its own tag, but stores
-        ! them in the same qvec as the phonon calculation, since only one of the two
-        ! perturbations defines the q set of a given scf run.
-        tmp_qvec=xml%read_q_list('/fleurInput/output/dfpt/bfield/qVectors')
-        IF (SIZE(tmp_qvec,2) > 0) THEN
-          IF (SIZE(this%qvec,2) > 0) CALL juDFT_error("Please give the q vectors either in the phonon or in the bfield tag, not in both.",calledby="types_dfpt.F90")
-          IF (ALLOCATED(this%qvec)) DEALLOCATE(this%qvec)
-          ALLOCATE(this%qvec(3,SIZE(tmp_qvec,2)))
-          this%qvec = tmp_qvec
-        END IF
+        this%qvec_bfield=xml%read_q_list('/fleurInput/output/dfpt/bfield/qVectors')
 
         ! efield read-in
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/efield')
@@ -403,16 +395,18 @@ CONTAINS
 
       if (this%l_bfield) then
         ! Default the Zeeman field perturbation to the Gamma point if no q vectors
-        ! were given. Only q = 0 is supported so far (see precheck_dfpt).
-        if (allocated(this%qvec)) then
-          if (size(this%qvec,2) == 0) deallocate(this%qvec)
+        ! were given.
+        if (allocated(this%qvec_bfield)) then
+          if (size(this%qvec_bfield,2) == 0) deallocate(this%qvec_bfield)
         end if
-        if (.not.allocated(this%qvec)) then
-          allocate(this%qvec(3,1))
-          this%qvec(:,1) = 0.0
+        if (.not.allocated(this%qvec_bfield)) then
+          allocate(this%qvec_bfield(3,1))
+          this%qvec_bfield(:,1) = 0.0
         end if
       end if
 
+      ! Only the phonon q vectors are shifted; the Zeeman field keeps the exact
+      ! Gamma point, where the Fermi level shift enters. Its stability in films is untested.
       if (input%film .and. allocated(this%qvec)) then
          if (size(this%qvec,2) > 1) THEN
             ! Due to stability we do not calculate the Gamma-Point in the case of 
@@ -450,7 +444,7 @@ CONTAINS
     CLASS(t_dfpt), INTENT(IN) :: this
     TYPE(t_xml), INTENT(INOUT)  :: xml 
 
-    INTEGER :: numberNodes, iq
+    INTEGER :: numberNodes
     CHARACTER(len=100) :: xPathA,valueString
     LOGICAL :: l_flag
 
@@ -466,19 +460,5 @@ CONTAINS
         if (size(this%qvec) .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_dfpt.F90")
       end if
     end if
-
-    if (this%l_bfield) then
-      ! The Zeeman field perturbation is constructed as a uniform field (see dfpt_vbfield),
-      ! i.e. only q = 0 is implemented. Reject finite q instead of silently calculating
-      ! the Gamma point response for it.
-      if (allocated(this%qvec)) then
-        do iq = 1, size(this%qvec,2)
-          if (norm2(this%qvec(:,iq)) .gt. 1e-8) then
-            call juDFT_error("Only q = 0 is implemented for the B-field perturbation at the moment.",calledby="types_dfpt.F90")
-          end if
-        end do
-      end if
-    end if
-
    END SUBROUTINE precheck_dfpt
 END MODULE m_types_dfpt

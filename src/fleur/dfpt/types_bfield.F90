@@ -17,7 +17,7 @@ module m_types_bfield
 
     type, extends(t_dfpt_scf) :: t_bfield
         private
-        complex :: magnetic_susc
+        complex, allocatable :: magnetic_susc(:) 
 
     contains
         procedure :: set_magnetic_susc, get_magnetic_susc
@@ -30,18 +30,20 @@ module m_types_bfield
 
 contains
 
-    subroutine set_magnetic_susc(this, in_susc)
+    subroutine set_magnetic_susc(this, iQ, in_susc)
         class(t_bfield), intent(inout) :: this
+        integer, intent(in)            :: iQ
         complex, intent(in)            :: in_susc
 
-        this%magnetic_susc = in_susc
+        this%magnetic_susc(iQ) = in_susc
     end subroutine set_magnetic_susc
 
-    subroutine get_magnetic_susc(this, out_susc)
+    subroutine get_magnetic_susc(this, iQ, out_susc)
         class(t_bfield), intent(in) :: this
+        integer, intent(in)         :: iQ
         complex, intent(out)        :: out_susc
 
-        out_susc = this%magnetic_susc
+        out_susc = this%magnetic_susc(iQ)
     end subroutine get_magnetic_susc
 
     subroutine init_child_bfield(this,fi,nqpts,dynMatNac)
@@ -51,6 +53,8 @@ contains
         integer, intent(in)            :: nqpts
         complex, optional, intent(in)  :: dynMatNac(:,:)
 
+        if (allocated(this%magnetic_susc)) deallocate(this%magnetic_susc)
+        allocate(this%magnetic_susc(nqpts))
         this%magnetic_susc = cmplx(0.0,0.0)
 
     end subroutine init_child_bfield
@@ -96,7 +100,7 @@ contains
         complex :: magnetic_susc_local
 
         call dfpt_magnetic_susc(fi,stars,starsq,sphhar,fmpi,den1,den1Im,magnetic_susc_local)
-        this%magnetic_susc = this%magnetic_susc + magnetic_susc_local
+        call this%set_magnetic_susc(q_list(iQ), magnetic_susc_local)
     end subroutine postprocessing_scf_bfield
 
     subroutine postprocessing_qpoint_bfield(this,fi,fmpi,dfpt,qpts,iQ,q_list)
@@ -118,11 +122,20 @@ contains
         type(t_dfpt),intent(in)      :: dfpt
 
         complex :: magnetic_susc
+        integer :: iQ
 
-        call this%get_magnetic_susc(magnetic_susc)
         if (fmpi%irank == 0) then
+            ! Same unit conversions as in dfpt_magnetic_susc, which writes the per-q details to the out file
             write(*,*) 'Scf calculation for Zeeman field perturbation finished'
-            write(*,*) 'Magnetic susceptibility in a.u. per unit cell: ', magnetic_susc
+            write(*,*) 'Magnetic susceptibility chi(q):'
+            write(*,'(a6,a36,4a20)') 'iQ', 'q (internal coordinates)', 'Re a.u./cell', 'Im a.u./cell', &
+                                     'Re SI per vol', 'Re cgs per mol'
+            do iQ = 1, size(this%magnetic_susc)
+                call this%get_magnetic_susc(iQ, magnetic_susc)
+                write(*,'(i6,3f12.6,4es20.10)') iQ, this%qVectors(:,iQ), real(magnetic_susc), aimag(magnetic_susc), &
+                                               6.6918e-4*real(magnetic_susc)/fi%cell%omtil, &
+                                               4.74891e-6*real(magnetic_susc)/fi%atoms%nat
+            end do
         end if
     end subroutine write_outfiles_bfield
 

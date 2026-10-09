@@ -36,6 +36,7 @@ CONTAINS
 
       INTEGER j1,j2,j3,mk1,mk2,mk3,iofile,ksfft,q,nk,nv,nv2
       INTEGER ispin,nvh(2),nv2h(2)
+      INTEGER nq_phon,nq_efield,nq_bfield
 
       REAL arltv1,arltv2,arltv3,rkm,rk2,r2,s(3),gmaxp,qss(3)
       REAL,ALLOCATABLE:: q_vectors(:,:)
@@ -67,15 +68,16 @@ CONTAINS
 
       !Determine the q-vector(s) to use
       IF (dfpt%l_dfpt) THEN
-         IF (dfpt%l_efield .OR. dfpt%l_borneffcharge) THEN
-            ALLOCATE(q_vectors(3,SIZE(dfpt%qvec_efield,2)+1))
-            q_vectors = 0.0
-            q_vectors(:,:size(dfpt%qvec_efield,2))=dfpt%qvec_efield
-         ElSE
-            ALLOCATE(q_vectors(3,SIZE(dfpt%qvec,2)+1))
-            q_vectors = 0.0 ! with this we force the gamma point to be within the dim search 
-            q_vectors(:,:size(dfpt%qvec,2))=dfpt%qvec
-         END IF
+         ! Use the union of the q lists of all perturbations of this run
+         nq_phon = 0; nq_efield = 0; nq_bfield = 0
+         IF (ALLOCATED(dfpt%qvec)) nq_phon = SIZE(dfpt%qvec,2) !this is not ideal at the moment as it is always true even for postprocessing 
+         IF (dfpt%l_efield .OR. dfpt%l_borneffcharge) nq_efield = SIZE(dfpt%qvec_efield,2)
+         IF (dfpt%l_bfield) nq_bfield = SIZE(dfpt%qvec_bfield,2)
+         ALLOCATE(q_vectors(3,nq_phon+nq_efield+nq_bfield+1))
+         q_vectors = 0.0 ! with this we force the gamma point to be within the dim search
+         IF (nq_phon > 0) q_vectors(:,1:nq_phon) = dfpt%qvec
+         IF (nq_efield > 0) q_vectors(:,nq_phon+1:nq_phon+nq_efield) = dfpt%qvec_efield
+         IF (nq_bfield > 0) q_vectors(:,nq_phon+nq_efield+1:nq_phon+nq_efield+nq_bfield) = dfpt%qvec_bfield
          q_vectors= 2*q_vectors ! To get right qvec in i.e. line 113 and bellow
       ELSE
          SELECT TYPE(forcetheo)

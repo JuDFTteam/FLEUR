@@ -3983,7 +3983,7 @@
          <xsd:all>
             <xsd:element maxOccurs="1" minOccurs="0" name="qVectors" type="QListType">
                <xsd:annotation>
-                  <xsd:documentation>List of q-vectors for the magnetic field perturbation. Only the Gamma point is supported so far; defaults to Gamma if omitted.</xsd:documentation>
+                  <xsd:documentation>List of q-vectors (internal coordinates) for the longitudinal magnetic field perturbation.</xsd:documentation>
                </xsd:annotation>
             </xsd:element>
          </xsd:all>

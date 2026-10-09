@@ -178,7 +178,7 @@ CONTAINS
       else if (sternheimerJob%l_bfield) then
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed, actually check that
-         CALL dfpt_vbfield(input,stars,noco,atoms,dfptvTot,dfptvTotimag)
+         CALL dfpt_vbfield(input,starsq,noco,atoms,sym,sphhar,cell,dfptvTot,dfptvTotimag)
          !CALL dfptvefield%copy_both_spin(dfptvTot)
          !CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
 
