@@ -4,18 +4,26 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_outcdn
+   USE m_constants
+   USE m_angle
+   USE m_starf, ONLY: starf2, starf3
+   USE m_ylm
+   USE m_checkdopall
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
+   PRIVATE
+   PUBLIC :: outcdn
 
 CONTAINS
 
    SUBROUTINE outcdn(p, n, na, iv, iflag, jsp, l_potential, stars, vacuum, &
-                     sphhar, atoms, sym, cell,   potDen, xdnout,potDenIm,lattvec_index)
-      USE m_types
-      USE m_constants
-      USE m_angle
-      USE m_starf, ONLY : starf2,starf3
-      USE m_ylm
-      USE m_checkdopall
+                     sphhar, atoms, sym, cell,   potDen, xdnout,lattvec_index)
 
 
       !--------------------------------------------------------------------------
@@ -47,7 +55,6 @@ CONTAINS
       LOGICAL, INTENT (IN) :: l_potential
 
       !for responses:
-      TYPE(t_potden), OPTIONAL, INTENT(IN)    :: potDenIm
       !TYPE(t_input), OPTIONAL ,   INTENT(IN) :: input
 
       INTEGER, OPTIONAL, INTENT(IN)       :: lattvec_index(3)
@@ -65,10 +72,7 @@ CONTAINS
 
       REAL :: lattvec(3)
       COMPLEX :: xd1, xd2,s
-      l_dfpt = .FALSE. 
-      IF (PRESENT(potDenIm)) THEN
-         l_dfpt = .TRUE.
-      END IF
+      l_dfpt = ALLOCATED(potDen%mtIm)
       ALLOCATE( sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2))
       ivac=iv
 
@@ -167,24 +171,24 @@ CONTAINS
          IF (l_potential) THEN
             xd1 = xd1 + potDen%mt(jr,lh,n,jsp)*s
             IF (l_dfpt) THEN
-               xd1 = xd1 + cmplx(0.0,1.0)*potDenIm%mt(jr,lh,n,jsp)*s
+               xd1 = xd1 + cmplx(0.0,1.0)*potDen%mtIm(jr,lh,n,jsp)*s
             END IF
          ELSE
             xd1 = xd1 + potDen%mt(jr,lh,n,jsp)*s/(atoms%rmsh(jr,n)**2)
             IF (l_dfpt) THEN
-               xd1 = xd1 + cmplx(0.0,1.0)*potDenIm%mt(jr,lh,n,jsp)*s/(atoms%rmsh(jr,n)**2)
+               xd1 = xd1 + cmplx(0.0,1.0)*potDen%mtIm(jr,lh,n,jsp)*s/(atoms%rmsh(jr,n)**2)
             END IF 
          END IF
          IF (jr.EQ.atoms%jri(n)) CYCLE
          IF (l_potential) THEN
             xd2 = xd2 + potDen%mt(jr+1,lh,n,jsp)*s
             IF (l_dfpt) THEN
-               xd2 = xd2 + cmplx(0.0,1.0)*potDenIm%mt(jr+1,lh,n,jsp)*s
+               xd2 = xd2 + cmplx(0.0,1.0)*potDen%mtIm(jr+1,lh,n,jsp)*s
             END IF
          ELSE
             xd2 = xd2 + potDen%mt(jr+1,lh,n,jsp)*s/(atoms%rmsh(jr+1,n)**2)
             IF (l_dfpt) THEN
-               xd2 = xd2 + cmplx(0.0,1.0)*potDenIm%mt(jr+1,lh,n,jsp)*s/(atoms%rmsh(jr+1,n)**2)
+               xd2 = xd2 + cmplx(0.0,1.0)*potDen%mtIm(jr+1,lh,n,jsp)*s/(atoms%rmsh(jr+1,n)**2)
             END IF
          END IF
       ENDDO

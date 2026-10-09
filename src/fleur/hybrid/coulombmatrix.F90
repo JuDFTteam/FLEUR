@@ -1,8 +1,8 @@
-!
-!     Calculates the Coulomb matrix
-!
-!     v      =  < M    | v | M    >
-!      k,IJ        k,I        k,J
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 !
 !     with the mixed-basis functions M (indices I and J).
 !
@@ -35,32 +35,52 @@ MODULE m_coulombmatrix
 #ifdef CPP_MPI
    use mpi
 #endif
-   use m_types
    USE m_intgrf, ONLY: intgrf, intgrf_init
    use m_sphbes, only: sphbes
    use m_glob_tofrom_loc
    USE m_trafo, ONLY: symmetrize_mpimat, symmetrize, bramat_trafo
    use m_gamma_double_gpt_loop
+   use m_work_package
+   use m_structureconstant
+   use m_structureconstant_2d, only: structureconstant_2d
+   use m_coulomb_vac_blocks, only: assemble_vac_blocks, assemble_mtvac_blocks
+   use m_irvac_2d, only: assemble_irvac_dense, copy_irvac_to_sparse
+   use m_types_mpimat
+   use m_types_mat
+   use m_types_hybdat
+   use m_juDFT
+   use m_constants
+   use m_util
+   use m_hsefunctional, only: change_coulombmatrix
+   use m_wrapper
+   use m_io_hybrid
+   use m_ylm
+   use m_calc_l_m_from_lm
+   use m_calc_mpsmat
+   use m_irir_2d, only: assemble_irir_3a_film
+   use m_copy_coul
+   use m_apply_inverse_olap
+   use m_trafo
+   use m_intgrf
+   use m_olap
+   use m_mtir_2d, only: mtir_film_2a_correction
+   use m_sphbessel_integral
+   use m_types_atoms
+   use m_types_cell
+   use m_types_fleurinput
+   use m_types_hybinp
+   use m_types_kpts
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_sym
+   use m_types_xcpot_inbuild
+   implicit none
+   private
+   public :: coulombmatrix, subtract_sphaverage, getnorm, loop_over_interst, perform_double_g_loop, &
+      collapse_ic_and_lm_loop, bessel_calculation, calc_num_mtmts
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
-      use m_work_package
-      use m_structureconstant
-      USE m_types
-      USE m_types_mpimat
-      use m_types_mat
-      USE m_types_hybdat
-      USE m_juDFT
-      USE m_constants
-      use m_util, only: primitivef
-      USE m_hsefunctional, ONLY: change_coulombmatrix
-      USE m_wrapper
-      USE m_io_hybrid
-      use m_ylm
-      use m_calc_l_m_from_lm
-      use m_calc_mpsmat
-      use m_copy_coul
-      use m_apply_inverse_olap
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -111,7 +131,6 @@ CONTAINS
       REAL, ALLOCATABLE   :: gridf(:, :)
       REAL                       :: facA(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facB(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
-      REAL                       :: facC(-1:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
       REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
 
@@ -137,19 +156,22 @@ CONTAINS
       fcoulfac = fpi_const/fi%cell%omtil
       maxfac = MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1)
 
-      facA(0) = 1                    !
-      facB(0) = 1                    ! Define:
-      facC(-1:0) = 1                    ! facA(i)    = i!
+      facA(0) = 1                    ! Define:
+      facB(0) = 1                    ! facA(i)    = i!
       DO i = 1, maxfac                       ! facB(i)   = sqrt(i!)
-         facA(i) = facA(i - 1)*i            ! facC(i) = (2i+1)!!
+         facA(i) = facA(i - 1)*i            !
          facB(i) = facB(i - 1)*SQRT(i*1.0) !
-         facC(i) = facC(i - 1)*(2*i + 1)   !
       END DO
 
       CALL intgrf_init(fi%atoms%ntype, fi%atoms%jmtd, fi%atoms%jri, fi%atoms%dx, fi%atoms%rmsh, gridf)
 
       !     Calculate the structure constant
+      IF (fi%input%film) THEN
+         ! films: 2D lattice sums
+         CALL structureconstant_2d(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, fmpi)
+      ELSE
       CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, fmpi)
+      END IF
 
       IF (fmpi%irank == 0) WRITE (oUnit, '(//A)') '### subroutine: coulombmatrix ###'
 
@@ -471,7 +493,7 @@ CONTAINS
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
             call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul(ikpt))
+                                   qnrm, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul(ikpt))
 
          END DO
 
@@ -485,6 +507,14 @@ CONTAINS
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
+         IF (fi%input%film) THEN
+            DO im = 1, size(fmpi%k_list)
+               ikpt = fmpi%k_list(im)
+               ! films: slab-restricted plane waves with the 2D kernel
+               call assemble_irir_3a_film(fi, mpdata, hybdat, fmpi, ikpt, ngptm1(ikpt), &
+                                          pgptm1(:, ikpt), coul(ikpt))
+            END DO
+         ELSE
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
 
@@ -524,6 +554,7 @@ CONTAINS
                endif
             END DO
          END DO
+         END IF
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
 
@@ -624,7 +655,8 @@ CONTAINS
          call timestop("coulomb matrix 3b")
 
          ! check if I own the gamma point
-         if(any(fmpi%k_list == 1)) then
+         ! bulk only: expansion of the 3D head 4 pi/q^2 (films: exact g = 0 terms, m_gamma_2d)
+         if(any(fmpi%k_list == 1) .and. .not. fi%input%film) then
             !     Add corrections from higher orders in (3b) to coulomb(:,1)
             ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
             call timestart("add corrections from higher orders")
@@ -807,7 +839,8 @@ CONTAINS
          !
       ELSE
          ! check for gamma
-         if(any(fmpi%k_list == 1)) then
+         ! bulk only: expansion of the 3D head 4 pi/q^2 (films: exact g = 0 terms, m_gamma_2d)
+         if(any(fmpi%k_list == 1) .and. .not. fi%input%film) then
             CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
                                     fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, coul(1))
          endif
@@ -815,6 +848,14 @@ CONTAINS
       
       ! transform Coulomb matrix to the biorthogonal set
       call timestop("gap 1:")
+      IF (fi%input%film) THEN
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
+            ! films: IR-VAC before apply_inverse_olaps, its IR index needs O^-1
+            call assemble_irvac_dense(fi, mpdata, hybdat, fmpi, coul(ikpt), ikpt)
+         END DO
+      END IF
+
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, coul(ikpt))
@@ -835,6 +876,18 @@ CONTAINS
          ! unpack coulomb into coulomb(ikpt)
          call copy_from_dense_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
       END DO ! ikpt
+
+      IF (fi%input%film) THEN
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
+            ! films: vacuum blocks directly in the compressed storage (no O^-1 for VAC)
+            call copy_irvac_to_sparse(fi, mpdata, hybdat, fmpi, coul(ikpt), ikpt)
+            if (hybdat%coul(ikpt)%l_participate) then
+               call assemble_vac_blocks(fi, mpdata, hybdat%coul(ikpt), ikpt)
+               call assemble_mtvac_blocks(fi, mpdata, hybdat%coul(ikpt), moment, ikpt)
+            endif
+         END DO
+      END IF
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix
@@ -844,13 +897,6 @@ CONTAINS
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
    SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, fmpi, nbasm1, gridf, coulomb)
 
-      USE m_types
-      USE m_constants
-      USE m_wrapper
-      USE m_trafo
-      USE m_util
-      use m_intgrf
-      USE m_olap
       IMPLICIT NONE
 
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -966,8 +1012,6 @@ CONTAINS
 
    !     Returns a list of (k+G) vector lengths in qnrm(1:nqnrm) and the corresponding pointer pqnrm(1:ngpt(ikpt),ikpt)
    SUBROUTINE getnorm(kpts, gpt, ngpt, pgpt, qnrm, nqnrm, pqnrm, cell)
-      USE m_types
-      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -1010,20 +1054,14 @@ CONTAINS
    END SUBROUTINE getnorm
 
    subroutine loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul)
-      use m_types
-      use m_juDFT
-      use m_ylm, only: ylm4
-      use m_constants, only: fpi_const, tpi_const
-      USE m_trafo, ONLY: symmetrize
-      use m_calc_l_m_from_lm
+                                qnrm, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul)
       implicit none
 
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
       type(t_mpdata), intent(in)        :: mpdata
       type(t_mpi), intent(in)           :: fmpi
-      REAL, intent(in)                  :: sphbesmoment(0:, :, :), qnrm(:), facC(-1:), gmat(:, :), moment(:, 0:, :), moment2(:, :)
+      REAL, intent(in)                  :: sphbesmoment(0:, :, :), qnrm(:), gmat(:, :), moment(:, 0:, :), moment2(:, :)
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
       complex, intent(in)               :: structconst(:, :, :, :)
@@ -1034,7 +1072,8 @@ CONTAINS
       integer  :: l2, m2, lm2, n, i, iatm, j_type, j_l, iy_start, j_m, j_lm, pe_ix, ix_loc
       real     :: q(3), qnorm, svol, tmp_vec(3)
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
-      complex  :: csum, csumf(9), cdum, cexp
+      complex  :: csum, cdum, cexp
+      logical  :: l_gamma_3d
       integer, allocatable :: lm_arr(:), ic_arr(:)
 
 
@@ -1042,6 +1081,9 @@ CONTAINS
       coul%data_c(:hybdat%n_mt,loc_from:) = 0 
 
       svol = SQRT(fi%cell%omtil)
+      ! Gamma terms of (2c) from the 3D head 4 pi/q^2; films have the 2D head, handled in
+      ! structureconstant_2d
+      l_gamma_3d = ikpt == 1 .AND. .NOT. fi%input%film
       ! start to loop over interstitial plane waves
       !DO igpt0 = 1, ngptm1(ikpt)
       do igpt0 = 1, ngptm1(ikpt)
@@ -1068,11 +1110,11 @@ CONTAINS
             call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
 
             !$OMP PARALLEL DO default(none) &
-            !$OMP private(ic, lm, itype, l, m, csum, csumf, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
+            !$OMP private(ic, lm, itype, l, m, csum, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
             !$OMP private(j_m, j_type, iy_start, l1, m1) &
             !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, svol) &
-            !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
-            !$OMP shared(igptp, niter, fmpi, pe_ix, coul, ix_loc) &
+            !$OMP shared(moment2, ix, igpt, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
+            !$OMP shared(igptp, niter, fmpi, pe_ix, coul, ix_loc, l_gamma_3d) &
             !$OMP schedule(dynamic)
             do i = 1,niter 
                ic = ic_arr(i)
@@ -1081,9 +1123,8 @@ CONTAINS
                itype = fi%atoms%itype(ic)
                call calc_l_m_from_lm(lm, l, m)
 
-               ! calculate sum over lm and centers for (2c) -> csum, csumf
+               ! calculate sum over lm and centers for (2c) -> csum
                csum = 0
-               csumf = 0
                do ic1 = 1, fi%atoms%nat
                   itype1 = fi%atoms%itype(ic1)
                   cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
@@ -1099,12 +1140,10 @@ CONTAINS
                      csum = csum - (-1)**(m1 + l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
                   END DO
 
-                  ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
-                  IF (ikpt == 1 .AND. l <= 2) THEN
+                  ! add contribution of (2c) to csum coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
+                  IF (l_gamma_3d .AND. l <= 2) THEN
                      cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
                               *gmat(lm, 1)*fpi_const/fi%cell%omtil
-                     csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
-                                 CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
                      IF (l == 0) THEN
                         IF (igpt /= 1) THEN
                            csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
@@ -1118,11 +1157,6 @@ CONTAINS
                      END IF
                   END IF
                END DO
-
-               ! add contribution of (2a) to csumf
-               IF (ikpt == 1 .AND. igpt == 1 .AND. l <= 2) THEN
-                  csumf(lm) = csumf(lm) + (fpi_const)**2*CMPLX(0.0, 1.0)**l/facC(l)
-               END IF
 
                ! finally define coulomb
                cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
@@ -1161,6 +1195,10 @@ CONTAINS
          endif !pe_ix
       END DO
 
+      ! films: slab correction of (2a)
+      IF (fi%input%film) CALL mtir_film_2a_correction(fi, hybdat, mpdata, fmpi, moment, &
+                                                      pgptm1(:, ikpt), ngptm1(ikpt), ikpt, coul)
+
       IF (fi%sym%invs) THEN
          call symmetrize_mpimat(fi, fmpi, coul%data_c, [1,hybdat%n_mt + 1], [hybdat%n_mt, hybdat%n_mt + mpdata%n_g(ikpt)],&
                                 1, .false., mpdata%num_radbasfn)
@@ -1168,9 +1206,6 @@ CONTAINS
    endsubroutine loop_over_interst
 
    subroutine perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,pqnrm,qnrm, nqnrm, ikpt, coulomb)
-      use m_juDFT
-      use m_constants, only: tpi_const,fpi_const
-      use m_sphbessel_integral
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
@@ -1245,7 +1280,6 @@ CONTAINS
    end subroutine perform_double_g_loop
 
    subroutine collapse_ic_and_lm_loop(atoms, lcutm1, niter, ic_arr, lm_arr)
-      use m_types
       implicit none 
       type(t_atoms), intent(in) :: atoms 
       integer, intent(in)       :: lcutm1(:)

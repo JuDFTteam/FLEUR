@@ -1,18 +1,37 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fleurinput_postprocess
-  USE m_types_fleurinput
+  USE m_juDFT
+  USE m_make_sym
+  USE m_chkmt
+  USE m_lapwdim
+  USE m_checks
+  USE m_relaxio
+  USE m_types_nococonv
+  USE m_constants
+  USE m_types_wannierlib
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_gfinp
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_xcpot
+   implicit none
+  PRIVATE
+  PUBLIC :: fleurinput_postprocess
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-    Banddos,hybinp ,Xcpot,Kpts,gfinp)
-    USE m_juDFT
-    USE m_types_fleurinput
-    use m_make_sym
-    USE m_chkmt
+    Banddos,hybinp ,Xcpot,Kpts,gfinp,wannierlib)
     !use m_make_xcpot
-    use m_lapwdim
-    use m_checks
-    USE m_relaxio
-    USE m_types_nococonv
-    USE m_constants
+    IMPLICIT NONE
 
     TYPE(t_cell),INTENT(INOUT)  ::cell
     TYPE(t_sym),INTENT(INOUT)   ::sym
@@ -22,6 +41,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_hybinp),INTENT(IN)   :: hybinp 
+    TYPE(t_wannierlib_wannierize),INTENT(INOUT) ::wannierlib
 
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_kpts),INTENT(INOUT)     ::kpts
@@ -33,6 +53,36 @@ CONTAINS
     call atoms%init(cell)
     CALL sym%init(cell,input%film)
     call vacuum%init(sym)
+
+    ! features not available with hybrid functionals
+    IF (hybinp%l_hybrid .OR. input%l_rdmft) THEN
+       IF (noco%l_noco) CALL juDFT_error( &
+          "Non-collinear magnetism is not implemented for HF/PBE0/HSE", &
+          calledby="fleurinput_postprocess", &
+          hint="run collinear, or use a semi-local functional")
+
+       IF (atoms%n_u + atoms%n_hia > 0) CALL juDFT_error( &
+          "LDA+U is not implemented for HF/PBE0/HSE", &
+          calledby="fleurinput_postprocess", &
+          hint="remove the U/J parameters, or use a semi-local functional")
+
+       IF (input%film .AND. hybinp%l_hse) CALL juDFT_error( &
+          "HSE is not implemented for films", &
+          calledby="fleurinput_postprocess", &
+          hint="use PBE0 or HF for films; hsefunctional.F90 assumes the 3D kernel")
+
+       IF (input%film) CALL juDFT_warn( &
+          "Hybrid functionals for films are still under development and experimental", &
+          calledby="fleurinput_postprocess", &
+          hint="check the results carefully, e.g. their convergence with dVac")
+
+       IF (ALLOCATED(atoms%l_geo)) THEN
+          IF (input%l_f .AND. ANY(atoms%l_geo)) CALL juDFT_warn( &
+             "Forces are not validated for HF/PBE0/HSE", &
+             calledby="fleurinput_postprocess", &
+             hint="the combination runs, but no force test covers it")
+       END IF
+    END IF
 
     CALL make_sym(sym,cell,atoms,noco ,input,gfinp)
     !call make_xcpot(xcpot,atoms,input)
@@ -74,6 +124,13 @@ CONTAINS
           END DO
        END DO
     END IF
+
+    input%l_useapw = .FALSE.
+    DO i = 1, atoms%ntype
+       DO l = 0, atoms%lmax(i)
+          input%l_useapw = input%l_useapw .OR. atoms%l_apw(l,i)
+       END DO
+    END DO
 
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
     ! Check muffin tin radii, only checking, dont use new parameters
@@ -121,6 +178,6 @@ CONTAINS
       END DO
    END IF
 !--------------------------------------------------------------------------
-
+  CALL wannierlib%init(atoms, noco)
   END SUBROUTINE fleurinput_postprocess
 END MODULE m_fleurinput_postprocess

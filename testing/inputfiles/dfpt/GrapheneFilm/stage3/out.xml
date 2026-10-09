@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-08-06T14:31:12" user="bornhake" host="iffcluster1810" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/bornhake/cluster/build/external/libxc-gi" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.1-195-g9d9df2efb" branch="develop" lastCommitHash="9d9df2efb12e3cf656331e7d00825102eb5a9a29"/>
+      <compilationInfo date="2026-10-02T11:39:24" user="wortmann" host="mb-wortmann" flag="-fopenmp -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero -fPIC -I/Users/wortmann/fleur/fleur-" link="Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libxml2.tbd;/Library/Developer/CommandLineTools/SDK"/>
+      <gitInfo version="MaX-R8.1-687-g9d9ef5784" branch="faster-tests" lastCommitHash="9d9ef578433068c8aca639f98c86b303dba6aee3"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/bornhake/cluster/build/fleur_MPI"/>
+      <programExecution commandLine="/Users/wortmann/fleur/fleur-develop/build/fleur_MPI -warn_only"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="131734196 kB"/>
+      <mem memoryPerNode="unknown"/>
    </parallelSetup>
-   <startDateAndTime date="2026/08/06" time="14:40:06" zone="+0200"/>
+   <startDateAndTime date="2026/10/02" time="13:53:20" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -73,15 +73,15 @@
      </atomSpecies>
      <atomGroups>
         <atomGroup species="C-1">
-           <filmPos label="                   1" wannier="F" alignToSpin="F">1.000/6.000 -1.000/6.000 .0000000000</filmPos>
+           <filmPos label="                   1" alignToSpin="F">1.000/6.000 -1.000/6.000 .0000000000</filmPos>
            <force calculate="T" relaxXYZ="TTT"/>
         </atomGroup>
         <atomGroup species="C-1">
-           <filmPos label="                   2" wannier="F" alignToSpin="F">-1.000/6.000 1.000/6.000 .0000000000</filmPos>
+           <filmPos label="                   2" alignToSpin="F">-1.000/6.000 1.000/6.000 .0000000000</filmPos>
            <force calculate="T" relaxXYZ="TTT"/>
         </atomGroup>
      </atomGroups>
-     <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+     <output dos="F" band="F" slice="F" coreSpec="F" eig66="F">
         <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
         <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" globalspin="F" jDOS="F" jointDOS="F" numberPoints="1321"/>
         <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
@@ -90,7 +90,7 @@
            <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
         </plotting>
         <dfpt l_dfpt="T" l_phonon="T" l_rm_qhdf="T">
-           <phonon gmaxzLocal="35.00" l_symVacLevel="F">
+           <phonon gmaxzLocal="20.00">
            <qVectors>
               <q> -1.0/24 2.0/24 0.0/16 </q>
            </qVectors>
@@ -175,12 +175,12 @@
          <phonon>
             <dynMat>
                <frequencies iqpt="1" q_x="-.04166667" q_y=".08333333" q_z=".00000000" unit="1/cm">
-                      -2808.3665217351    -2718.5741486896    -1259.7580235958     1153.5845103290     2880.8419501847
-                       6083.0671608961
+                      -2808.3409424705    -2718.5512715998    -1259.7143614291     1153.5843476719     2881.2954238940
+                       6082.4023219574
                </frequencies>
             </dynMat>
          </phonon>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/08/06" time="14:40:16" zone="+0200"/>
+   <endDateAndTime date="2026/10/02" time="13:53:24" zone="+0200"/>
 </fleurOutput>

@@ -1,13 +1,35 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_plot
-   USE m_types
    USE m_juDFT
    USE m_constants
+   USE m_fft2d
+   USE m_fft3d
+   USE m_outcdn
+   USE m_xsf_io
+   USE m_polangle
+   USE m_checkdopall
+   USE m_Relaxspinaxismagn
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_sliceplot
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
+   PRIVATE
 
 
    !-----------------------------------------------------------------------------
@@ -114,8 +136,6 @@ CONTAINS
 
    SUBROUTINE matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, factor, &
                           denmat, cden, mxden, myden, mzden)
-      USE m_fft2d
-      USE m_fft3d
   
       !--------------------------------------------------------------------------
       ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
@@ -359,8 +379,8 @@ CONTAINS
                   mz      = (rho_11-rho_22)
 
                   rvacxy(imesh,imz,ivac,1) = rhotot
-                  rvacxy(imesh,imz,ivac,2) = -mx
-                  rvacxy(imesh,imz,ivac,3) = -my
+                  rvacxy(imesh,imz,ivac,2) = mx
+                  rvacxy(imesh,imz,ivac,3) = my
                   rvacxy(imesh,imz,ivac,4) = mz
                END DO
                !$OMP END PARALLEL DO
@@ -380,8 +400,8 @@ CONTAINS
                mz      = (rho_11-rho_22)
 
                rht(imz,ivac,1) = rhotot
-               rht(imz,ivac,2) = -mx
-               rht(imz,ivac,3) = -my
+               rht(imz,ivac,2) = mx
+               rht(imz,ivac,3) = my
                rht(imz,ivac,4) = mz
             END DO
             !$OMP END PARALLEL DO
@@ -544,14 +564,7 @@ CONTAINS
    END SUBROUTINE matrixsplit
 
    SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
-                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,denf_im,name_string)
-      USE m_outcdn
-      USE m_xsf_io
-#ifdef CPP_MPI
-      USE mpi
-#endif
-      USE m_polangle
-      USE m_checkdopall
+                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,name_string)
 
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
@@ -595,7 +608,6 @@ CONTAINS
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA1
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
-      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denf_im
       character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       REAL    :: tec, qint, phi0, angss
@@ -603,7 +615,7 @@ CONTAINS
       INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
       LOGICAL :: twodim, cartesian, xsf, polar,unwind
 
-      TYPE(t_potden),     ALLOCATABLE :: den(:),denIm(:)
+      TYPE(t_potden),     ALLOCATABLE :: den(:)
       REAL,               ALLOCATABLE :: xdnout(:)
       REAL,               ALLOCATABLE :: tempResults(:,:,:,:)
       REAL,               ALLOCATABLE :: points(:,:,:,:)
@@ -642,11 +654,10 @@ CONTAINS
          den(2)          = denA1
          numInDen        = 2
          numOutFiles     = 2
-      ELSE IF (PRESENT(denf_im)) THEN
-         ALLOCATE(den(1),denIm(1))
+      ELSE IF (ALLOCATED(denf%mtIm)) THEN
+         ALLOCATE(den(1))
          print*,"Imaginary part"
          den(1)          = denf
-         denIm(1)        = denf_im
          l_dfpt          = .TRUE.
          numInDen        = 1
          numOutFiles     = 1
@@ -657,16 +668,15 @@ CONTAINS
          numOutFiles     = 1
       END IF
 
-      polar = sliceplot%polar
       xsf=sliceplot%format==PLOT_XSF_FORMAT
 
-      IF((polar).AND.(.NOT.noco%l_noco)) THEN
+      IF((sliceplot%polar).AND.(.NOT.noco%l_noco)) THEN
          CALL juDFT_warn("l_noco=F and making polar plots is not compatible.",calledby="plot.f90")
       END IF
 
-      IF (polar.AND.(numOutFiles==4)) THEN
-         numOutFiles = 7
-      END IF
+      ! Polar angles only for 4-component (density + magnetization) plots
+      polar = sliceplot%polar.AND.(numOutFiles==4)
+      IF (polar) numOutFiles = 7
 
       ALLOCATE(outFilenames(numOutFiles))
       ALLOCATE(xdnout(numOutFiles))
@@ -811,7 +821,7 @@ CONTAINS
 
          !WRITE (oUnit,*) "checkdopall in savxsf"
          ! find out what the problem ist
-         CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,denf,1,denf_im) 
+         CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,denf,1) 
          !print*,"sum(denf%pw)",sum(denf%pw)
          CALL timestart("loop over points")
          !print*, "loop over points", fmpi%irank
@@ -824,7 +834,7 @@ CONTAINS
          DO iz = strt,fin
             !$OMP PARALLEL DO DEFAULT(none) &
             !$OMP& SHARED(iz,grid,zero,vec1,vec2,vec3,twodim,input,cell ,numInDen,potnorm) &
-            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,denIm,l_dfpt,sliceplot,noco,points) &
+            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,l_dfpt,sliceplot,noco,points) &
             !$OMP& SHARED(unwind,polar,tempResults,tempVecs,nplo,qssc,xsf,NumOutFiles) &
             !$OMP& PRIVATE(ix,point,nt,na,pt,lattvec_index,iv,iflag,xdnout,angss,help,phi0)
             DO iy = 0, grid(2)-1
@@ -859,7 +869,7 @@ CONTAINS
                      IF (l_dfpt) THEN
                         CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                                  vacuum,sphhar,atoms,sym,cell ,&
-                                 den(i),xdnout(i),denIm(i),lattvec_index)
+                                 den(i),xdnout(i),lattvec_index)
                      ELSE
                         CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                         vacuum,sphhar,atoms,sym,cell ,&
@@ -1005,9 +1015,6 @@ CONTAINS
 
    SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
                          noco,nococonv, factor, score, potnorm, denmat, denName)
-#ifdef CPP_MPI
-      USE mpi
-#endif
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
       ! plane wave representation, splits it into two spinless ones, which are
       ! then passed on to the savxsf routine to get 2 .xsf files out.
@@ -1040,9 +1047,6 @@ CONTAINS
 
    SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
                          noco, nococonv,factor, score, potnorm, denmat, denName)
-#ifdef CPP_MPI
-      USE mpi
-#endif
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
       ! sphere/ plane wave representation and splits it into four spinless ones,
       ! which are then passed on to the savxsf routine to get 4 .xsf files out.
@@ -1074,14 +1078,11 @@ CONTAINS
    END SUBROUTINE matrixplot
 
    SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, fmpi , sym, cell, &
-                       noco, nococonv,denmat, plot_const,denmat_im,name_string)
+                       noco, nococonv,denmat, plot_const,name_string)
 
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
-#ifdef CPP_MPI
-      USE mpi
-#endif
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1097,7 +1098,6 @@ CONTAINS
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
-      TYPE(t_potden),    INTENT(IN), OPTIONAL    :: denmat_im
       character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       INTEGER            :: i
@@ -1115,7 +1115,7 @@ CONTAINS
             IF (PRESENT(name_string)) THEN
                denName = name_string
             ELSE
-               IF (PRESENT(denmat_im)) THEN
+               IF (ALLOCATED(denmat%mtIm)) THEN
                   denName = 'den1'
                ELSE 
                   denName = 'denIn'
@@ -1136,7 +1136,7 @@ CONTAINS
             END IF
          ELSE
             CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
-                        noco, nococonv,score, potnorm, denName, denmat,denf_im=denmat_im)
+                        noco, nococonv,score, potnorm, denName, denmat)
          END IF
       END IF
 
@@ -1254,7 +1254,7 @@ CONTAINS
          IF (PRESENT(name_string)) THEN
             denName = name_string
          ELSE
-            IF (PRESENT(denmat_im)) THEN
+            IF (ALLOCATED(denmat%mtIm)) THEN
                denName = 'vTot1'
             ELSE
                denName = 'vTot'
@@ -1274,7 +1274,7 @@ CONTAINS
             END IF
          ELSE
             CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,fmpi  , sym, cell, &
-                        noco, nococonv, score, potnorm, denName, denmat,denf_im=denmat_im)
+                        noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
 
@@ -1322,15 +1322,11 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, fmpi,   sym, cell, &
-                        noco, nococonv,denmat, plot_const, sliceplot,denmat_im,name_string)
-      USE m_Relaxspinaxismagn
+                        noco, nococonv,denmat, plot_const, sliceplot,name_string)
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there or an oldform is given. Both are outdated.
       ! If that is not the case, we start plotting.
-#ifdef CPP_MPI
-      USE mpi
-#endif
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1346,7 +1342,6 @@ CONTAINS
       TYPE(t_potden),    INTENT(INOUT) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: denmat_im
       character(len=20), INTENT(IN),OPTIONAL  :: name_string
       LOGICAL :: allowplot
       INTEGER :: ierr
@@ -1368,10 +1363,10 @@ CONTAINS
          CALL checkplotinp(fmpi)
          IF (PRESENT(name_string)) THEN
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
-                       noco, nococonv, denmat, plot_const,denmat_im,name_string)
+                       noco, nococonv, denmat, plot_const,name_string)
          ELSE
             CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
-            noco, nococonv, denmat, plot_const,denmat_im)
+            noco, nococonv, denmat, plot_const)
          END IF
          CALL toLocalSpinFrame(fmpi,vacuum, sphhar, stars, sym,   cell, noco, nococonv, input, atoms,.false., denmat,.true.)
       END IF

@@ -1,9 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mcdinit
+   USE m_nabla
+   USE m_dr2fdr
+   USE m_constants, ONLY: c_light
+   USE m_differ
+   USE m_types_mcd
+   USE m_judft
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_input
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mcd_init
 CONTAINS
   SUBROUTINE mcd_init(atoms,banddos,input,vr,g,f,mcd,itype,jspin)
 
@@ -15,13 +27,7 @@ CONTAINS
     !
     !-----------------------------------------------------------------------
 
-    USE m_nabla
-    USE m_dr2fdr
-    USE m_constants, ONLY : c_light
     !USE m_setcor
-    USE m_differ
-    USE m_types
-    use m_types_mcd
     IMPLICIT NONE
 
 

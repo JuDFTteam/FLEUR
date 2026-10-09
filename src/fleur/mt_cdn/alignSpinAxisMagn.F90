@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !------------------------------------------------------------------------------
@@ -11,13 +11,27 @@
 MODULE m_Relaxspinaxismagn
 
 USE m_magnMomFromDen
-USE m_types
-USE m_types_fleurinput
 USE m_flipcdn
 USE m_constants
 USE m_polangle
+   USE m_types_mixvector
+   USE m_magmoments
+   USE m_types_nococonv
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
 
 IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: initrelax, precond_noco, precond_noco_anglerotate, precond_noco_densitymatrix, curetoosmallangles, &
+      gimmeangles, tolocalspinframe, toglobalspinframe
 
 CONTAINS
 
@@ -49,7 +63,6 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
    END SUBROUTINE initRelax
 
    SUBROUTINE precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm)
-     use m_types_mixvector
      INTEGER,INTENT(IN)               :: it
      TYPE(t_input),     INTENT(IN)    :: input
      TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -80,8 +93,6 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
 
    !Preconditioner to control relaxation of the direction of the magnetic moment
    SUBROUTINE precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm)
-     use m_types_mixvector
-     use m_magmoments
      TYPE(t_input),     INTENT(IN)    :: input
      TYPE(t_atoms),     INTENT(IN)    :: atoms
      TYPE(t_noco),      INTENT(IN)    :: noco
@@ -176,7 +187,6 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
 
       !Preconditioner to control relaxation of the direction of the magnetic moment
    SUBROUTINE precond_noco_densitymatrix(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
-     use m_types_mixvector
      TYPE(t_input),     INTENT(IN)    :: input
      TYPE(t_atoms),     INTENT(IN)    :: atoms
      TYPE(t_noco),      INTENT(IN)    :: noco
@@ -234,7 +244,6 @@ END SUBROUTINE cureTooSmallAngles
 
 !Calculates angles from magnetization and assigns correct sign to be used in the rotation (flipcdn) routine properly.
 SUBROUTINE Gimmeangles(Input,Atoms,Noco,Vacuum,Sphhar,Stars,Den,Phitemp,Thetatemp)
-  use m_types_nococonv
    TYPE(t_input) ,INTENT(IN)     :: input
    TYPE(t_atoms) ,INTENT(IN)     :: atoms
    TYPE(t_noco)  ,INTENT(IN)     :: noco
@@ -257,7 +266,6 @@ END SUBROUTINE gimmeAngles
 !Rotates from global frame into current local frame
 SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
         ,sym ,cell,noco,nococonv,input,atoms,l_adjust,den,l_update_nococonv)
-   use m_constants
    TYPE(t_mpi),INTENT(IN)                :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms

@@ -1,6 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_efield
       USE m_juDFT
       USE m_constants
+      USE m_fft2d
+      USE m_starf, ONLY: starf2
+      USE m_types_atoms
+      USE m_types_cell
+      USE m_types_field
+      USE m_types_input
+      USE m_types_stars
+      USE m_types_sym
+      USE m_types_vacuum
       IMPLICIT NONE
       PRIVATE
       PUBLIC :: e_field
@@ -17,7 +31,6 @@
 !     modified and fixed 10-99
 !*********************************************************************
 
-      USE m_types
       !USE m_setcor, ONLY: setcor
       IMPLICIT NONE
 !     ..
@@ -300,7 +313,6 @@
       END SUBROUTINE read_efield
 
       SUBROUTINE read_shape (E, orig_str, nvac)
-        USE m_constants, ONLY : pimach
         TYPE(t_efield), INTENT(INOUT) :: E
         CHARACTER(*), INTENT(IN) :: orig_str
         INTEGER, INTENT(IN) :: nvac
@@ -755,8 +767,6 @@
         SUBROUTINE V_seg_EF(&
      &                      efield,&
      &                      vacuum, stars)
-          USE m_fft2d
-          use m_types
           ! Dummy variables:
           TYPE(t_efield), INTENT(INOUT) :: efield
           TYPE(t_vacuum), INTENT(IN) :: vacuum
@@ -806,7 +816,6 @@
      &                         efield, k1d, k2d, nvac, n2d, nop, nop2,&
      &                         nq2, kv2, mrot, symor, tau, invtab, area,&
      &                         nstr2, amat)
-          USE m_starf, ONLY: starf2
           ! Arguments
           TYPE(t_efield), INTENT(IN) :: efield
           INTEGER, INTENT(IN) :: k1d, k2d, nvac, n2d, nq2, nop, nop2
@@ -886,7 +895,6 @@
       END SUBROUTINE e_field
 
       SUBROUTINE read_namelist (iou, E, eV)
-        USE m_types, only: t_efield
         INTEGER, INTENT(IN) :: iou
         TYPE(t_efield), INTENT(INOUT) :: E
         LOGICAL, INTENT(INOUT) :: eV

@@ -1,7 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_calc_mpsmat
-   use m_types
    use m_judft
    use m_constants
+   use m_types_hybdat
+   use m_types_fleurinput
+   use m_types_mat
+   use m_types_mpdata
+   implicit none
+   private
+   public :: calc_mpsmat, calc_smat_elem
 contains
    subroutine calc_mpsmat(fi, mpdata, smat)
       implicit none

@@ -1,7 +1,28 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_checkdop
+   USE m_constants
+   USE m_juDFT
+   USE m_starf, ONLY: starf2, starf3
+   USE m_angle
+   USE m_ylm
+   USE m_fitchk
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: checkdop
       CONTAINS
         SUBROUTINE checkdop(p,np,n,na,ivac,iflag,jsp,atoms,sphhar,stars,sym,&
-                            vacuum,cell,potden,potdenIm,checkdopsave_string)
+                            vacuum,cell,potden,checkdopsave_string)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
           !     potential or valence charge density                    *
@@ -11,13 +32,6 @@
           ! YM:  this routine doesn't really work in the vacuum in 1D case yet
           ! ************************************************************
 
-          USE m_types
-          USE m_constants
-          USE m_juDFT
-          USE m_starf, ONLY : starf2,starf3
-          USE m_angle
-          USE m_ylm
-          USE m_fitchk
 
           IMPLICIT NONE
 
@@ -31,7 +45,6 @@
           TYPE(t_vacuum),INTENT(IN)    :: vacuum
           TYPE(t_cell),INTENT(IN)      :: cell
           TYPE(t_potden),INTENT(IN)    :: potden
-          TYPE(t_potden),INTENT(IN), OPTIONAL    :: potdenIm
           INTEGER, INTENT (IN) :: iflag,ivac,n,na,np,jsp
           !-odim
           !+odim
@@ -50,7 +63,7 @@
           COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
           REAL rcc(3),v1(SIZE(p,2)),v2(SIZE(p,2)),x(3),ri(3), v1Im(SIZE(p,2)), v2Im(SIZE(p,2))
           l_dfpt = .FALSE.
-          l_dfpt = PRESENT(potdenIm)
+          l_dfpt = ALLOCATED(potden%mtIm)
           l_save_npy = PRESENT(checkdopsave_string)
           l_cdn = .FALSE. ! By default we assume that the input is a potential.
           IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
@@ -197,7 +210,7 @@
                    s = s + REAL( sphhar%clnu(mem,lh,nd)* ylm(lm) )
                 ENDDO
                 help = help + potden%mt(atoms%jri(n),lh,n,jsp) * s
-                IF (l_dfpt) helpIm=helpIm + potdenIm%mt(atoms%jri(n),lh,n,jsp) * s
+                IF (l_dfpt) helpIm=helpIm + potden%mtIm(atoms%jri(n),lh,n,jsp) * s
              ENDDO
              v2(j) = help * ir2
              IF (l_dfpt) v2Im(j) = helpIm * ir2

@@ -1,8 +1,8 @@
-!     Calculates the HF exchange term
-!
-!                                          s          s*          s            s*
-!                                       phi    (r) phi     (r) phi     (r') phi    (r')
-!                         occ.             n_1k       n'k+q       n'k+q        n_2k
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 !     exchange(n,q)  =  - SUM  INT INT  ------------------------------------------- dr dr'
 !                         k,n'                           | r - r' |
 !
@@ -27,19 +27,32 @@ MODULE m_exchange_core
 #else
 #define CPP_zgemm zgemm
 #endif
+   use m_juDFT
+   use m_constants
+   use m_wavefproducts_aux
+   use m_util
+   use m_intgrf
+   use m_wrapper
+   use m_io_hybrid
+   use m_calc_cmt
+   use m_gaunt
+   use m_trafo
+   use m_types_atoms
+   use m_types_fleurinput
+   use m_types_hybmpi
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_misc
+   use m_types_sym
+   implicit none
+   private
+   public :: exchange_vccv1, exchange_cccc
 
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, fi, mpdata, hybdat, jsp, lapw, submpi,&
                              nsymop, nsest, indx_sest, a_ex, results, cmt, mat_ex)
-      use m_juDFT
-      USE m_types
-      USE m_constants
-      use m_wavefproducts_aux
-      USE m_util
-      use m_intgrf
-      USE m_wrapper
-      USE m_io_hybrid
-      use m_calc_cmt
       IMPLICIT NONE
       type(t_fleurinput), intent(in) :: fi
       TYPE(t_hybdat), INTENT(IN)     :: hybdat
@@ -80,7 +93,7 @@ CONTAINS
 
       call timestart("exchange_vccv1")
       ! read in mt wavefunction coefficients from file cmt
-      nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
+      nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco, jsp)
       
       call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
       allocate(fprod(fi%atoms%jmtd, 5), stat=ierr)
@@ -334,15 +347,6 @@ CONTAINS
 
    SUBROUTINE exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
 
-      USE m_types
-      USE m_constants
-      USE m_util
-      use m_intgrf
-      USE m_wrapper
-      USE m_gaunt
-      USE m_trafo
-      USE m_io_hybrid
-      use m_juDFT
 
       IMPLICIT NONE
 

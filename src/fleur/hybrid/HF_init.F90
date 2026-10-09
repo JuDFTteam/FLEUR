@@ -1,14 +1,23 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hf_init
    !
    !     preparations for HF and fi%hybinp functional calculation
    !
+   USE m_hybrid_core
+   USE m_util
+   USE m_intgrf
+   USE m_types_hybdat
+   USE m_types_fleurinput
+   USE m_types_mpdata
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hf_init
 CONTAINS
    SUBROUTINE hf_init(mpdata,fi, hybdat)
-      USE m_types
-      USE m_hybrid_core
-      USE m_util
-      use m_intgrf
-      USE m_types_hybdat
       IMPLICIT NONE
       TYPE(t_mpdata), intent(inout)     :: mpdata
       type(t_fleurinput), intent(in)    :: fi

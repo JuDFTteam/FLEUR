@@ -1,0 +1,10 @@
+AF CuO - tenorite (monoclinic), collinear AFM approximant
+&lattice latsys='mP', a0=1.8897259886, a=4.684, b=3.423, c=5.129, beta=99.54 /
+! Cu 4e / O 4e of C2/c parent, given here as the primitive (paramagnetic)
+! representative positions from Table I; real CuO order is an incommensurate
+! spiral - this is a common collinear AFM approximant, not exact.
+4
+29  0.25  0.25  0.0   ! Cu spin UP
+29  0.75  0.75  0.0   ! Cu spin DOWN (C-centering partner)
+8  0.0  0.4184  0.25   ! O
+8  0.5  0.9184  0.25   ! O (C-centering partner)

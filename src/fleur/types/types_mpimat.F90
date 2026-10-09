@@ -11,6 +11,10 @@ MODULE m_types_mpimat
 #ifdef CPP_MPI
    USE mpi
 #endif
+#ifdef CPP_SCALAPACK
+   USE mpi
+   USE iso_c_binding
+#endif
    IMPLICIT NONE
    PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
@@ -125,7 +129,6 @@ CONTAINS
    end subroutine mpimat_print_type
 
    SUBROUTINE mpimat_multiply(mat1, mat2, res, transA, transB)
-      use m_judft
       CLASS(t_mpimat), INTENT(INOUT)     :: mat1
       CLASS(t_mat), INTENT(IN)           :: mat2
       CLASS(t_mat), INTENT(INOUT), OPTIONAL :: res
@@ -134,27 +137,46 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       TYPE(t_mpimat)::m, r
       character(len=1)  :: transA_i, transB_i
+      integer           :: nrow, ncol, ninner
 
       transA_i = "N"
       if (present(transA)) transA_i = transA
       transB_i = "N"
       if (present(transB)) transB_i = transB
 
+      if (transA_i == "N") then
+         nrow = mat1%global_size1
+         ninner = mat1%global_size2
+      else
+         nrow = mat1%global_size2
+         ninner = mat1%global_size1
+      endif
+
       IF (.NOT. PRESENT(res)) CALL judft_error("BUG: in mpicase the multiply requires the optional result argument")
       SELECT TYPE (mat2)
       TYPE IS (t_mpimat)
+         if (transB_i == "N") then
+            if (ninner /= mat2%global_size1) call judft_error("BUG in mpimat%multiply: dimensions don't agree for matmul")
+            ncol = mat2%global_size2
+         else
+            if (ninner /= mat2%global_size2) call judft_error("BUG in mpimat%multiply: dimensions don't agree for matmul")
+            ncol = mat2%global_size1
+         endif
          SELECT TYPE (res)
          TYPE is (t_mpimat)
+            if (res%global_size1 /= nrow .or. res%global_size2 /= ncol) &
+               call judft_error("BUG in mpimat%multiply: res must be of the correct size")
+            !mat2 and res may live on a different BLACS grid than mat1, so work on copies sharing mat1's grid
             CALL m%init(mat1, mat2%global_size1, mat2%global_size2)
             CALL m%copy(mat2, 1, 1)
             CALL r%init(mat1, res%global_size1, res%global_size2)
             IF (mat1%l_real) THEN
-               CALL pdgemm(transA_i, transB_i, mat1%global_size1, m%global_size2, mat1%global_size2, 1.0, &
+               CALL pdgemm(transA_i, transB_i, nrow, ncol, ninner, 1.0, &
                            mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, &
                            m%data_r, 1, 1, m%blacsdata%blacs_desc, 0.0, &
                            r%data_r, 1, 1, r%blacsdata%blacs_desc)
             ELSE
-               CALL pzgemm(transA_i, transB_i, mat1%global_size1, m%global_size2, mat1%global_size2, cmplx_1, &
+               CALL pzgemm(transA_i, transB_i, nrow, ncol, ninner, cmplx_1, &
                            mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, &
                            m%data_c, 1, 1, m%blacsdata%blacs_desc, cmplx_0, &
                            r%data_c, 1, 1, r%blacsdata%blacs_desc)
@@ -213,9 +235,6 @@ CONTAINS
    END subroutine
 
    SUBROUTINE print_matrix(mat, fileno)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       CLASS(t_mpimat), INTENT(INOUT) ::mat
       INTEGER:: fileno
 
@@ -252,9 +271,6 @@ CONTAINS
    END SUBROUTINE print_matrix
 
    subroutine t_mpimat_l2u(mat)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       implicit none
       CLASS(t_mpimat), INTENT(INOUT) ::mat
 
@@ -311,9 +327,6 @@ CONTAINS
    end subroutine t_mpimat_l2u
 
    SUBROUTINE t_mpimat_u2l(mat)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       implicit none
       CLASS(t_mpimat), INTENT(INOUT) ::mat
 
@@ -534,7 +547,6 @@ CONTAINS
    end subroutine to_non_dist
 
    subroutine mpimat_save_npy(mat, filename)
-      use m_judft
       implicit NONE
       CLASS(t_mpimat), INTENT(IN)::mat
       character(len=*)         :: filename
@@ -699,9 +711,6 @@ CONTAINS
   !!
   !! The argument dist_type controls the kind of distribution used. See head of file for possible values
    SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, dist_type, nb_x, nb_y, mat_name)
-#ifdef CPP_MPI
-      use mpi
-#endif
       IMPLICIT NONE
       CLASS(t_mpimat)                      :: mat
       INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2, mpi_subcom
@@ -784,9 +793,6 @@ CONTAINS
    END SUBROUTINE mpimat_init_template
 
    SUBROUTINE priv_create_blacsgrid(mpi_subcom, dist_type, m1, m2, nbc, nbr, blacsdata, local_size1, local_size2)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: mpi_subcom
       INTEGER, INTENT(IN) :: m1, m2
@@ -1421,7 +1427,6 @@ CONTAINS
    end subroutine
 
    subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,offset1,offset2)
-      use iso_c_binding
       implicit none 
       class(t_mpimat),intent(in)   ::mat
       class(t_mpimat),intent(inout)::mat2d
@@ -1600,7 +1605,6 @@ CONTAINS
    END subroutine
    
    subroutine create_RMA_win(mat,offset1,np_row,my_row,blocksize,mpi_comm,win_handle)
-      use iso_c_binding
       implicit none
       type(t_mpimat),intent(in),target::mat !This is the sending matrix
       INTEGER,INTENT(IN)  :: offset1 ! The offsets of the target matrix

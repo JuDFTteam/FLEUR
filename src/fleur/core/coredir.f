@@ -1,4 +1,11 @@
       MODULE m_coredir
+      USE m_constants, ONLY: c_light
+      USE m_crtail
+      USE m_kernel1
+      USE m_kernel2
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: coredir
       CONTAINS
       SUBROUTINE coredir(mrad,e,l,xmj,iway,vv,bb,rc,dx,nmatch,nzero,
      +                   gc,fc,pow,qow,piw,qiw)
@@ -9,10 +16,6 @@ c   full relativistic spin-polarized case
 c   Ry units: in charge
 c_______________________________________________  a. shick KFA 1996
 
-      USE m_constants, ONLY : c_light
-      USE m_crtail
-      USE m_kernel1
-      USE m_kernel2
 
       IMPLICIT NONE
 c

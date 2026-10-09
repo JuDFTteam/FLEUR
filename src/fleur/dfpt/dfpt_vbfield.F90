@@ -5,11 +5,22 @@
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_vbfield
    USE m_juDFT
+   USE m_constants
+   USE m_rotMMPmat
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_vbfield
 CONTAINS
-  SUBROUTINE dfpt_vbfield(input,starsq,noco,atoms,sym,sphhar,cell,vTot,vTotIm)
+  SUBROUTINE dfpt_vbfield(input,starsq,noco,atoms,sym,sphhar,cell,vTot)
     !This subroutine calculates the Zeeman field perturbation
-    USE m_types
-    USE m_constants
+    USE m_types_sym
+    USE m_types_sphhar
+    USE m_types_cell
     USE m_sphbes
     USE m_phasy1
     USE m_dfpt_gradient
@@ -22,7 +33,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)  ::sym
     TYPE(t_sphhar),INTENT(IN)::sphhar
     TYPE(t_cell),INTENT(IN) ::cell
-    TYPE(t_potden),INTENT(INOUT)::vTot,vTotIm
+    TYPE(t_potden),INTENT(INOUT)::vTot
 
     INTEGER :: iType, iSpin, l, m, lm, ll1, i, imax, lmax
     REAL    :: bsign, qabs
@@ -42,7 +53,7 @@ CONTAINS
 
     vTot%pw(:,:)     = 0.0
     vTot%mt(:,:,:,:) = 0.0
-    vTotIm%mt(:,:,:,:) = 0.0
+    vTot%mtIm(:,:,:,:) = 0.0
 
     IF (l_afm) THEN
        IF (qabs.GT.1e-8) CALL judft_error("AFM B-field only implemented for q = 0",calledby="dfpt_vbfield")
@@ -89,7 +100,7 @@ CONTAINS
        DO iSpin = 1, 2
           bsign = MERGE(-1.0, 1.0, iSpin == 1)
           vTot%mt(:,:,:,iSpin)   = bsign * resultreal(:,:,:,1)/2.0
-          vTotIm%mt(:,:,:,iSpin) = bsign * resultimag(:,:,:,1)/2.0
+          vTot%mtIm(:,:,:,iSpin) = bsign * resultimag(:,:,:,1)/2.0
        END DO
     END IF
 

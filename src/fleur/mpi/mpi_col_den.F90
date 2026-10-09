@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,19 +18,31 @@ MODULE m_mpi_col_den
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_juDFT
+   use m_types_mcd
+   use m_types_slab
+   use m_types_orbcomp
+   use m_types_jDOS
+   use m_types_vacdos
+   use m_types_dmdos
+   use m_types_atoms
+   use m_types_dos
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_potden
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_vacuum
    implicit none
+   private
+   public :: mpi_col_den
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
-                         results,den,mcd,slab,orbcomp,jDOS)
+                         results,den,mcd,slab,orbcomp,jDOS,dmdos)
 
-    USE m_types
-    USE m_constants
-    USE m_juDFT
-    use m_types_mcd
-    use m_types_slab
-    use m_types_orbcomp
-    use m_types_jDOS
-    use m_types_vacdos
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -56,6 +68,7 @@ CONTAINS
     TYPE (t_slab),      OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp),   OPTIONAL, INTENT(INOUT) :: orbcomp
     TYPE (t_jDOS),      OPTIONAL, INTENT(INOUT) :: jDOS
+    TYPE (t_dmdos),     OPTIONAL, INTENT(INOUT) :: dmdos
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -116,6 +129,21 @@ CONTAINS
       CALL MPI_REDUCE(dos%qal(0:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
       IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qal(0:,:,:,:,jspin), 1)
       DEALLOCATE (r_b)
+
+      ! Spin off-diagonal slots 3,4 are not tied to a single jspin: collect them once
+      IF (jspin==1 .AND. SIZE(dos%qTot,3)>2) THEN
+         n = SIZE(dos%qTot(:,:,3:4))
+         ALLOCATE(r_b(n))
+         CALL MPI_REDUCE(dos%qTot(:,:,3:4),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank==0) CALL dcopy(n, r_b, 1, dos%qTot(:,:,3:4), 1)
+         DEALLOCATE (r_b)
+
+         n = SIZE(dos%qal(0:,:,:,:,3:4))
+         ALLOCATE(r_b(n))
+         CALL MPI_REDUCE(dos%qal(0:,:,:,:,3:4),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank==0) CALL dcopy(n, r_b, 1, dos%qal(0:,:,:,:,3:4), 1)
+         DEALLOCATE (r_b)
+      END IF
     END IF
     if (vacdos%l_initialized) then
       
@@ -204,9 +232,35 @@ CONTAINS
         IF(fmpi%irank.EQ.0) CALL dcopy(n,r_b,1,jDOS%occ,1)
         DEALLOCATE(r_b)
 
+        n = SIZE(jDOS%comp_jeff_d)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%comp_jeff_d,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%comp_jeff_d,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%comp_jeff_d_mj)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%comp_jeff_d_mj,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%comp_jeff_d_mj,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%occ_jeff_d)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%occ_jeff_d,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%occ_jeff_d,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%occ_jeff_d_mj)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%occ_jeff_d_mj,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%occ_jeff_d_mj,1)
+        DEALLOCATE(r_b)
+
       ENDIF
     ENDIF
     !-jDOS
+
+    IF (PRESENT(dmdos)) CALL dmdos%collect(fmpi,jspin)
 
     ! -> Collect force
     IF (input%l_f) THEN
@@ -244,6 +298,12 @@ CONTAINS
        CALL MPI_REDUCE(den%pw(:,3),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) THEN
           den%pw(:,3)=RESHAPE(c_b,(/n/))
+       ENDIF
+       IF (SIZE(den%pw,2).EQ.4) THEN !DFPT case 
+          CALL MPI_REDUCE(den%pw(:,4),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+          IF (fmpi%irank.EQ.0) THEN
+             den%pw(:,4)=RESHAPE(c_b,(/n/))
+          ENDIF
        ENDIF
        DEALLOCATE (c_b)
        !

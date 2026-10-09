@@ -1,18 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_dfpt_dynmat_eig
-  use m_types
+  use m_juDFT_stop
+  use m_constants
+  use m_xmlOutput
+  use m_types_atoms
   implicit none
+  private
+  public :: diagonalizedynmat, calculatefrequencies
 
   contains
 
   subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule,l_writeOutput)
 
-    USE m_juDFT_stop
-    USE m_constants
     implicit none
 
     ! Type parameters
@@ -166,15 +169,15 @@ module m_dfpt_dynmat_eig
       DEALLOCATE(dynmat0)
     END IF
 
-    write(*, '(a,3f9.3)') 'q =', qvec
-    write(*, '(a)')       '==================================='
-    write(*, '(a)')
-    write(*, '(a)') 'Original Dynamical Matrix [mass corrected]'
-    DO ii = 1, lda
-      write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
-    END DO
+    if (l_writeOutput) then
+      write(*, '(a,3f9.3)') 'q =', qvec
+      write(*, '(a)')       '==================================='
+      write(*, '(a)')
+      write(*, '(a)') 'Original Dynamical Matrix [mass corrected]'
+      DO ii = 1, lda
+        write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+      END DO
 
-    if (l_writeOutput) then 
       write(109, '(a,3f9.3)') 'q =', qvec
       write(109, '(a)')       '==================================='
       write(109, '(a)')
@@ -206,12 +209,12 @@ module m_dfpt_dynmat_eig
       CALL juDFT_error("Diagonalization failed.",calledby="DiagonalizeDynMat")
     end if
 
-    write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
+    if (l_writeOutput) write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
         iatom = iatom + 1
-        write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
         if (l_writeOutput) write(109, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
@@ -219,8 +222,8 @@ module m_dfpt_dynmat_eig
     if ( calcEv ) then
       !todo make the output nicer
       DO ii = 1, lda
-        write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
-        write(*, *)
+        if (l_writeOutput) write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+        if (l_writeOutput) write(*, *)
         if (l_writeOutput) write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
         if (l_writeOutput) write(109, *)
       END DO
@@ -234,9 +237,8 @@ module m_dfpt_dynmat_eig
 
   end subroutine diagonalizeDynMat
 
-  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec )
+  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec ,l_writeOutput)
 
-    USE m_xmlOutput
     implicit none
 
     ! Type parameter
@@ -250,6 +252,7 @@ module m_dfpt_dynmat_eig
     complex,          allocatable, intent(out) :: eigenFreqs(:)
     character(len=*), intent(in) :: add_tag
     real,             intent(in) :: qvec(3)
+    logical,          intent(in) :: l_writeOutput
 
     ! Scalar variables
     integer                                 :: itype
@@ -272,7 +275,7 @@ module m_dfpt_dynmat_eig
       write(filenameTemp, '("dynMatq=",i4)') iqpt
     end if
     if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
-    open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
+    if (l_writeOutput) open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
 
     allocate(eigenFreqs(3*atoms%nat))
     eigenFreqs = 0.
@@ -281,10 +284,12 @@ module m_dfpt_dynmat_eig
 
     convFact = 4.35974472220e-18 / (5.2918e-11)**2 / 9.1093837015e-31 
 
-    write(*, *)
-    write(*, '(a)') 'Eigenfrequencies in THz'
-    write(109, *)
-    write(109, '(a)') 'Eigenfrequencies in THz'
+    if (l_writeOutput) then
+      write(*, *)
+      write(*, '(a)') 'Eigenfrequencies in THz'
+      write(109, *)
+      write(109, '(a)') 'Eigenfrequencies in THz'
+    end if
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -298,16 +303,18 @@ module m_dfpt_dynmat_eig
             eigenFreqs((iatom - 1) * 3 + idir) = sqrt(eigenVals((iatom - 1) * 3 + idir) * convFact) / tpi_const * 1e-12
           end if
         end do ! idir
-        write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
 
 
-    write(*, *)
-    write(*, '(a)') 'Eigenfrequencies in 1/cm'
-    write(109, *)
-    write(109, '(a)') 'Eigenfrequencies in 1/cm'
+    if (l_writeOutput) then
+      write(*, *)
+      write(*, '(a)') 'Eigenfrequencies in 1/cm'
+      write(109, *)
+      write(109, '(a)') 'Eigenfrequencies in 1/cm'
+    end if
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -315,8 +322,8 @@ module m_dfpt_dynmat_eig
         do idir = 1, 3
           eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * 33
         end do ! idir
-        write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
     close( 109 )

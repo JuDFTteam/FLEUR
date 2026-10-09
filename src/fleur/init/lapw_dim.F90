@@ -1,11 +1,26 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_lapwdim
 
+   USE m_judft
+   USE m_types_forcetheo
+   USE m_types_lapw
+   USE m_types_nococonv
+   USE m_boxdim
+   USE m_types_forcetheo_extended
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_dfpt
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_noco
+   implicit none
+   PRIVATE
+   PUBLIC :: lapw_dim
 CONTAINS
 
    SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,forcetheo,atoms,nbasfcn,dfpt)
@@ -14,9 +29,6 @@ CONTAINS
       !     determines dimensions of the lapw basis set with |k+G|<rkmax.
       !  Generalization of the old apws_dim routine
       !*********************************************************************
-      USE m_boxdim
-      USE m_types_fleurinput
-      USE m_types_forcetheo_extended
       IMPLICIT NONE
       TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_cell),INTENT(IN)      :: cell
@@ -70,12 +82,12 @@ CONTAINS
       IF (dfpt%l_dfpt) THEN
          ! Use the union of the q lists of all perturbations of this run
          nq_phon = 0; nq_efield = 0; nq_bfield = 0
-         IF (ALLOCATED(dfpt%qvec)) nq_phon = SIZE(dfpt%qvec,2) !this is not ideal at the moment as it is always true even for postprocessing 
-         IF (dfpt%l_efield .OR. dfpt%l_borneffcharge) nq_efield = SIZE(dfpt%qvec_efield,2)
-         IF (dfpt%l_bfield) nq_bfield = SIZE(dfpt%qvec_bfield,2)
+         IF (ALLOCATED(dfpt%qvec%bk)) nq_phon = dfpt%qvec%nkpt !this is not ideal at the moment as it is always true even for postprocessing 
+         IF (dfpt%l_efield .OR. dfpt%l_borneffcharge) nq_efield = SIZE(dfpt%qvec_efield,2) !this will eventually also become a t_kpts
+         IF (dfpt%l_bfield) nq_bfield = SIZE(dfpt%qvec_bfield,2) 
          ALLOCATE(q_vectors(3,nq_phon+nq_efield+nq_bfield+1))
          q_vectors = 0.0 ! with this we force the gamma point to be within the dim search
-         IF (nq_phon > 0) q_vectors(:,1:nq_phon) = dfpt%qvec
+         IF (nq_phon > 0) q_vectors(:,1:nq_phon) = dfpt%qvec%bk(:,1:nq_phon)
          IF (nq_efield > 0) q_vectors(:,nq_phon+1:nq_phon+nq_efield) = dfpt%qvec_efield
          IF (nq_bfield > 0) q_vectors(:,nq_phon+nq_efield+1:nq_phon+nq_efield+nq_bfield) = dfpt%qvec_bfield
          q_vectors= 2*q_vectors ! To get right qvec in i.e. line 113 and bellow

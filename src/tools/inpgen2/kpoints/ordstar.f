@@ -1,5 +1,9 @@
       MODULE m_ordstar
       use m_juDFT
+      use m_kprep
+      implicit none
+      private
+      public :: ordstar
 c-----------------------------------------------------------------------
 c
 c --->   this program sorts
@@ -53,7 +57,6 @@ c    vkrep    : representative k-vector in irrBZ for each star
 c    nkrep    : index for each star;
 c               1 if representative k-vector vkrep has been found
 c-----------------------------------------------------------------------
-      USE m_kprep
       IMPLICIT NONE
 C
 C-----> PARAMETER STATEMENTS

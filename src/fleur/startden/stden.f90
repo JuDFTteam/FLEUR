@@ -1,5 +1,39 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_stden
 USE m_juDFT
+   USE m_juDFT_init
+   USE m_types_xcpot_inbuild
+   USE m_constants
+   USE m_qsf
+   USE m_checkdopall
+   USE m_cdnovlp
+   USE m_cdn_io
+   USE m_qfix
+   USE m_atom2
+   USE m_clebsch
+   USE m_rotMMPmat
+   USE m_RelaxSpinAxisMagn
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_field
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: stden, input_ellow, input_elup
   REAL,PARAMETER :: input_ellow=-2.0
   REAL,PARAMETER :: input_elup=1.0
 !     ************************************************************
@@ -16,19 +50,6 @@ CONTAINS
 
 SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco )
 
-   USE m_juDFT_init
-   USE m_types
-   USE m_types_xcpot_inbuild
-   USE m_constants
-   USE m_qsf
-   USE m_checkdopall
-   USE m_cdnovlp
-   USE m_cdn_io
-   USE m_qfix
-   USE m_atom2
-   USE m_clebsch
-   USE m_rotMMPmat
-   USE m_RelaxSpinAxisMagn
    IMPLICIT NONE
 
    TYPE(t_mpi),INTENT(IN)      :: fmpi

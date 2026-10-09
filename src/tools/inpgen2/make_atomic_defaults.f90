@@ -1,25 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_atomic_defaults
   USE m_judft
+  USE m_check_mt_radii
+  USE m_atompar
+  USE m_types_atoms
+  USE m_types_input
+  USE m_types_vacuum
+  USE m_types_cell
+  USE m_constants
+  USE m_types_enpara
+  USE m_types_profile
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: make_atomic_defaults
 
 CONTAINS
    SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell,atoms,enpara)
-      USE m_check_mt_radii
-      USE m_atompar
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_vacuum
-      USE m_types_cell
        
-      USE m_constants
-      USE m_types_enpara
-      USE m_types_profile
 
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_enpara),INTENT(OUT)    :: enpara
@@ -63,7 +65,7 @@ CONTAINS
       ALLOCATE(atoms%llo(99,atoms%ntype));atoms%llo=-1!will be redone later
 
       addLOs(:) = 0
-      atoms%lapw_l=0
+      atoms%lapw_l=-1
       atoms%speciesname=""
 
       atoms%nz(:) = floor(atoms%zatom(:))
@@ -166,6 +168,7 @@ CONTAINS
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       atoms%ulo_der=0
       ALLOCATE(atoms%l_relLO(atoms%nlod,atoms%ntype));atoms%l_relLO=.FALSE.
+      ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype),source=.FALSE.)
       ALLOCATE(atoms%nqn_relLO(atoms%nlod,atoms%ntype));atoms%nqn_relLO=0
       ALLOCATE(atoms%nRelLO(atoms%ntype));atoms%nRelLO=0
 

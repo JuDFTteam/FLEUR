@@ -1,0 +1,5 @@
+FM Fe - bcc (alpha-Fe), Im-3m (#229)
+! lattice constants in Angstrom, converted to bohr via a0
+&lattice latsys='cI', a0=1.8897259886, a=2.867, b=2.867, c=2.867 /
+1
+26  0.0  0.0  0.0

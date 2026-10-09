@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,36 +15,40 @@ MODULE m_winpXML
 !!!                                         GM'16
 !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   use m_types_input
+   use m_types_sym
+   use m_types_stars
+   use m_types_atoms
+   use m_types_vacuum
+   use m_types_kpts
+   use m_types_mpinp
+   use m_types_hybinp
+   use m_types_gfinp
+   use m_types_hub1inp
+   use m_types_cell
+   use m_types_banddos
+   use m_types_sliceplot
+   use m_types_xcpot
+   use m_types_xcpot_inbuild_nofunction
+   use m_libxc_xctyp
+   use m_types_noco
+   use m_types_enparaxml
+   use m_types_forcetheo
+   use m_types_dfpt
+   use m_juDFT
+   use m_constants
+   use m_xmlOutput
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: w_inpxml
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
 
-      use m_types_input
-      use m_types_sym
-      use m_types_stars
-      use m_types_atoms
-      use m_types_vacuum
-      use m_types_kpts
 
-      use m_types_mpinp
-      use m_types_hybinp
-      use m_types_gfinp
-      use m_types_hub1inp
-      use m_types_cell
-      use m_types_banddos
-      use m_types_sliceplot
-      USE m_types_xcpot
-      USE m_types_xcpot_inbuild_nofunction
-      USE m_types_noco
-      use m_types_enparaxml
-      USE m_types_forcetheo
-      USE m_types_dfpt
 
-      USE m_juDFT
-      USE m_constants
-      USE m_xmlOutput
 
       IMPLICIT NONE
 
@@ -118,8 +122,9 @@ CONTAINS
       INTEGER               :: idum
       CHARACTER(len=1)     ::  check
 
-      CHARACTER(len=50) :: xcpotName, xcName, xName, cName
-      INTEGER           :: xIndex, cIndex, commaIndex
+      CHARACTER(len=200) :: xcpotName, xName, cName
+      LOGICAL           :: l_libxcID, l_auxGGA
+      INTEGER           :: xID, cID, auxXID, auxCID
       CHARACTER(len=20) :: speciesName
       CHARACTER(len=150) :: format
       CHARACTER(len=20) :: mixingScheme
@@ -188,18 +193,34 @@ CONTAINS
       CLASS IS (t_xcpot_inbuild_nf)
          xcpotName = TRIM(ADJUSTL(xcpot%inbuild_name))
          IF (xcpotName(1:5).EQ.'LibXC'.or. l_dfptOpt) THEN
-            xcName = "LibXC"
-            xIndex = index(xcpotName, 'Exch:')
-            cIndex = index(xcpotName, 'Cor:')
-            commaIndex = index(xcpotName, ',')
-            xName = TRIM(ADJUSTL(xcpotName(xIndex+5:commaIndex-1)))
-            cName = TRIM(ADJUSTL(xcpotName(cIndex+4:LEN(TRIM(xcpotName) ))))
+            IF (xcpotName(1:5).EQ.'LibXC') THEN
+               CALL parse_libxc_xctyp(xcpotName, l_libxcID, xName, cName, xID, cID, l_auxGGA, auxXID, auxCID)
+            ELSE
+               l_libxcID = .FALSE.
+               l_auxGGA = .FALSE.
+            END IF
+            ! DFPT is only implemented for LDA, so it overrides the functional choice
+            IF (l_dfptOpt) THEN
+               l_libxcID = .FALSE.
+               l_auxGGA = .FALSE.
+               xName = 'lda_x'
+               cName = 'lda_c_vwn'
+            END IF
             WRITE (fileNum, '(a)') '      <xcFunctional name="LibXC" relativisticCorrections="F">'
-            !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/> 
-133         FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
-            IF (l_dfptOpt) xName = 'lda_x'
-            IF (l_dfptOpt) cName = 'lda_c_vwn'
-            WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
+            IF (l_libxcID) THEN
+!         <LibXCID exchange="645" correlation="642"/>
+132         FORMAT('         <LibXCID exchange="', i0, '" correlation="', i0, '"/>')
+               WRITE (fileNum, 132) xID, cID
+            ELSE
+               !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
+133            FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
+               WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
+            ENDIF
+            IF (l_auxGGA) THEN
+!         <AuxGGA exchange="101" correlation="130"/>
+134         FORMAT('         <AuxGGA exchange="', i0, '" correlation="', i0, '"/>')
+               WRITE (fileNum, 134) auxXID, auxCID
+            ENDIF
             WRITE (fileNum, '(a)') '      </xcFunctional>'
          ELSE
             !      <xcFunctional name="pbe" relativisticCorrections="F">
@@ -436,7 +457,12 @@ WRITE (fileNum, 242) fr(1.0)
 
 !         <atomicCutoffs lmax="8" lnonsphr="6"/>
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
-         WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+329      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '" lmaxAPW="', i0, '"/>')
+         IF (atoms%lapw_l(iAtomType)>=0) THEN
+            WRITE (fileNum, 329) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType), atoms%lapw_l(iAtomType)
+         ELSE
+            WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+         END IF
 
          WRITE (fileNum, '(a)') '         <electronConfig flipSpins="F">'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
@@ -500,6 +526,9 @@ WRITE (fileNum, 242) fr(1.0)
             END IF
             IF (atoms%l_relLO(ilo, iAtomType)) THEN
                loType = 'relLO'
+            END IF
+            IF (atoms%l_dulo(ilo, iAtomType)) THEN
+               loType = 'APW'
             END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')
@@ -638,10 +667,27 @@ WRITE (fileNum, 242) fr(1.0)
       ENDIF
 
       IF(l_explicit .OR. l_dfptOpt) THEN
-         WRITE (fileNum, '(a)') '      <dfpt l_dfpt="F" l_phonon="F" l_borneffcharge="F" l_efield="F" l_bfield="F">'
-         WRITE (fileNum, '(a)') '         <phonon l_sumrule="F" qptsListName="default-1"/>'
-         WRITE (fileNum, '(a)') '         <efield qlim="1.0/100"/>'
-         WRITE (fileNum, '(a)') '         <interpolation l_WSinterpol="T" qptsListName="default-1"/>'
+440      FORMAT('      <dfpt l_dfpt="', l1, '" l_scf="', l1, '" l_interpolate="', l1, &
+                '" l_postprocess="', l1, '" l_rm_qhdf="', l1, '" l_phonon="', l1, &
+                '" l_efield="', l1, '" l_borneffcharge="', l1, '" l_bfield="', l1, '">')
+         WRITE (fileNum, 440) dfpt%l_dfpt, dfpt%l_scf, dfpt%l_intp, dfpt%l_postprocess, dfpt%l_rm_qhdf, &
+                              dfpt%l_phonon, dfpt%l_efield, dfpt%l_borneffcharge, dfpt%l_bfield
+
+441      FORMAT('         <phonon l_sumrule="', l1, '" startq="', i0, '" qptsListName="', a, '"/>')
+         WRITE (fileNum, 441) dfpt%l_sumrule_scf, dfpt%startq, TRIM(ADJUSTL(kptsSelection(1)))
+
+443      FORMAT('         <efield l_efield_scr="', l1, '" qlim="', a, '"/>')
+         WRITE (fileNum, 443) dfpt%l_efield_scr, fr(dfpt%qlim)
+
+444      FORMAT('         <interpolation l_band="', l1, '" l_dos="', l1, '" l_sumrule="', l1, &
+                '" l_bornhuang="', l1, '" l_polar="', l1, '" qptsListName="', a, '"/>')
+         WRITE (fileNum, 444) dfpt%l_band, dfpt%l_dos, dfpt%l_sumrule_intp, dfpt%l_bornhuang, dfpt%l_polar, &
+                              TRIM(ADJUSTL(kptsSelection(1)))
+
+445      FORMAT('         <postprocess l_elph="', l1,  &
+                '" l_write_epw="', l1, '" epw_prefix="', a, '"/>')
+         WRITE (fileNum, 445) dfpt%l_elph, dfpt%l_write_epw, TRIM(dfpt%epw_prefix)
+
          WRITE (fileNum, '(a)') '      </dfpt>'
       ENDIF
 

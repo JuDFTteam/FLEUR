@@ -1,12 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_spgrot
     ! Perform the space group operations of the system.
     ! I.e. construct all G vectors (and optionally phases) of a star from
     ! its representative reciprocal lattice vector k in internal coordinates.
 
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: spgrot
 CONTAINS
     SUBROUTINE spgrot(nop, symor, mrot, tau, invtab, k, kr, phas)
 
-        USE m_constants
 
         IMPLICIT NONE
 

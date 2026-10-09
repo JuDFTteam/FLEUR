@@ -1,16 +1,25 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_cdnpot_io_hdf
-
    USE m_constants
    USE m_juDFT
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools
+#endif
+#ifdef CPP_HDF
+   USE m_types_stars
+   USE m_types_sphhar
+   USE m_types_input
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_vacuum
+   USE m_types_sym
+   USE m_types_potden
 #endif
    IMPLICIT NONE
 
@@ -232,7 +241,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePOTHeaderData
 
    SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, l_checkBroyd, l_storeAddMetadata)
-     use m_types_stars
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER,        INTENT(IN) :: starsIndex, structureIndex
@@ -386,7 +394,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStarsHDF
 
    SUBROUTINE readStarsHDF(fileID, starsIndex, stars)
-      use m_types_stars
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: starsIndex
@@ -567,7 +574,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekStarsHDF
 
    SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, structureIndex, stars, l_CheckBroyd)
-      use m_types_stars
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex, starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN)    :: stars
@@ -629,7 +635,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStepfunctionHDF
 
    SUBROUTINE readStepfunctionHDF(fileID, stepfunctionIndex, stars)
-      use m_types_stars
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex
       TYPE(t_stars),  INTENT(INOUT) :: stars
@@ -716,7 +721,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekStepfunctionHDF
 
    SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, structureIndex, latharms, l_CheckBroyd)
-      use m_types_sphhar
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex, structureIndex
       TYPE(t_sphhar), INTENT(IN)  :: latharms
@@ -798,7 +802,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeLatharmsHDF
 
    SUBROUTINE readLatharmsHDF(fileID, latharmsIndex, latharms)
-      use m_types_sphhar
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex
       TYPE(t_sphhar), INTENT(INOUT) :: latharms
@@ -890,12 +893,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekLatharmsHDF
 
    SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum,   sym, structureIndex, l_CheckBroyd)
-      use m_types_input
-      use m_types_atoms
-      use m_types_cell
-      use m_types_vacuum
 
-      use m_types_sym
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: structureIndex
@@ -1345,12 +1343,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStructureHDF
 
    SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum,   sym,structureIndex)
-      use m_types_input
-      use m_types_atoms
-      use m_types_cell
-      use m_types_vacuum
 
-      use m_types_sym
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER, INTENT(IN)           :: structureIndex
@@ -1766,9 +1759,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,denIm,b_constr)
-      use m_types_input
-      use m_types_potden
+                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,b_constr)
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: den
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -1782,7 +1773,6 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (IN)         :: mmpmatDistance, occDistance
       LOGICAL, INTENT (IN)         :: l_qfix
 
-      TYPE(t_potden), OPTIONAL, INTENT(IN) :: denIm
       REAL,OPTIONAL,INTENT(IN)             :: b_constr(:,:)
       INTEGER                      :: i, iVac
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
@@ -1954,14 +1944,10 @@ MODULE m_cdnpot_io_hdf
             CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
             CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
 
-            !dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
-            !CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            ! Note: The last dimension of den%mt (input%jspins) is temporary to
-            ! avoid segmentation faults if l_mperp is set to true but there
-            ! already is a data set with l_mperp=false. At the moment this is ok
-            ! since the offdiagonal parts are never read.
-            !CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,0:,:,:input%jspins))
-            !CALL h5dclose_f(frSetID, hdfError)
+            dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
+            CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,:input%jspins))
+            CALL h5dclose_f(frSetID, hdfError)
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
             CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
@@ -1986,7 +1972,7 @@ MODULE m_cdnpot_io_hdf
                CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),"pw",den%pw(:,3))
                CALL h5dclose_f(cdomSetID, hdfError)
 
-               IF (PRESENT(denIm)) THEN
+               IF (ALLOCATED(den%mtIm)) THEN
                   dimsInt(:2)=(/2,ng3/)
                   CALL h5dopen_f(groupID, 'cdom12', cdom12SetID, hdfError)
                   CALL io_write_complex1(cdom12SetID,(/-1,1/),dimsInt(:2),"pw12",den%pw(:,4))
@@ -2040,13 +2026,13 @@ MODULE m_cdnpot_io_hdf
             CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,:,:,:input%jspins))
             CALL h5dclose_f(frSetID, hdfError)
 
-            IF (PRESENT(denIm)) THEN
+            IF (ALLOCATED(den%mtIm)) THEN
                dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
                dimsInt = dims
                CALL h5screate_simple_f(4,dims(:4),frImSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "frIm", H5T_NATIVE_DOUBLE, frImSpaceID, frImSetID, hdfError)
                CALL h5sclose_f(frImSpaceID,hdfError)
-               CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,:,:,:input%jspins))
+               CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,:,:,:input%jspins))
                CALL h5dclose_f(frImSetID, hdfError)
             END IF
 
@@ -2059,13 +2045,13 @@ MODULE m_cdnpot_io_hdf
                CALL h5sclose_f(frOffSpaceID,hdfError)
                CALL io_write_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,:,:,3:4))
                CALL h5dclose_f(frOffSetID, hdfError)
-               IF (PRESENT(denIm)) THEN
+               IF (ALLOCATED(den%mtIm)) THEN
                   dims(:4)=(/jmtd,nlhd+1,ntype,2/)
                   dimsInt = dims
                   CALL h5screate_simple_f(4,dims(:4),frOffImSpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "froffIm", H5T_NATIVE_DOUBLE, frOffImSpaceID, frOffImSetID, hdfError)
                   CALL h5sclose_f(frOffImSpaceID,hdfError)
-                  CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,:,:,3:4))
+                  CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,:,:,3:4))
                   CALL h5dclose_f(frOffImSetID, hdfError)
                END IF
             END IF
@@ -2101,7 +2087,7 @@ MODULE m_cdnpot_io_hdf
                CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),"pw",den%pw(:,3))
                CALL h5dclose_f(cdomSetID, hdfError)
 
-               IF (PRESENT(denIm)) THEN
+               IF (ALLOCATED(den%mtIm)) THEN
                   dims(:2)=(/2,ng3/)
                   dimsInt = dims
                   CALL h5screate_simple_f(2,dims(:2),cdom12SpaceID,hdfError)
@@ -2198,13 +2184,13 @@ MODULE m_cdnpot_io_hdf
          if (present(b_constr)) call io_write_var(groupID,"b_con",b_constr)
          
 
-         IF (PRESENT(denIm)) THEN
+         IF (ALLOCATED(den%mtIm)) THEN
             dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             dimsInt = dims
             CALL h5screate_simple_f(4,dims(:4),frImSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "frIm", H5T_NATIVE_DOUBLE, frImSpaceID, frImSetID, hdfError)
             CALL h5sclose_f(frImSpaceID,hdfError)
-            CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,0:,:,:input%jspins))
+            CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,0:,:,:input%jspins))
             CALL h5dclose_f(frImSetID, hdfError)
          END IF
 
@@ -2217,13 +2203,13 @@ MODULE m_cdnpot_io_hdf
             CALL h5sclose_f(frOffSpaceID,hdfError)
             CALL io_write_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,3:4))
             CALL h5dclose_f(frOffSetID, hdfError)
-            IF (PRESENT(denIm)) THEN
+            IF (ALLOCATED(den%mtIm)) THEN
                dims(:4)=(/jmtd,nlhd+1,ntype,2/)
                dimsInt = dims
                CALL h5screate_simple_f(4,dims(:4),frOffImSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "froffIm", H5T_NATIVE_DOUBLE, frOffImSpaceID, frOffImSetID, hdfError)
                CALL h5sclose_f(frOffImSpaceID,hdfError)
-               CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,0:,:,3:4))
+               CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,0:,:,3:4))
                CALL h5dclose_f(frOffImSetID, hdfError)
             END IF
          END IF
@@ -2258,7 +2244,7 @@ MODULE m_cdnpot_io_hdf
             CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),"pw",den%pw(:,3))
             CALL h5dclose_f(cdomSetID, hdfError)
 
-            IF (PRESENT(denIm)) THEN
+            IF (ALLOCATED(den%mtIm)) THEN
                dims(:2)=(/2,ng3/)
                dimsInt = dims
                CALL h5screate_simple_f(2,dims(:2),cdom12SpaceID,hdfError)
@@ -2320,8 +2306,6 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
                                 iter,pot,fpw,l_noco,l_mtNoco)
-      use m_types_input
-      use m_types_potden
 
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: pot
@@ -2593,14 +2577,8 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum,  &
-                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm,b_constr)
-      use m_types_input
-      use m_types_stars
-      use m_types_sphhar
-      use m_types_atoms
-      use m_types_vacuum
+                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr)
 
-      use m_types_potden
 
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_stars),INTENT(IN)     :: stars
@@ -2618,7 +2596,6 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (INOUT)      :: lastDistance
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
-      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
       REAL,optional,INTENT(INOUT) :: b_constr(:,:)
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
@@ -2694,6 +2671,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
       CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
+      CALL h5gclose_f(generalGroupID, hdfError)
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -3023,14 +3001,14 @@ MODULE m_cdnpot_io_hdf
       frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
       DEALLOCATE(frTemp)
 
-      IF (PRESENT(denIm)) THEN
-         denIm%mt = 0.0
+      IF (ALLOCATED(den%mtIm)) THEN
+         den%mtIm = 0.0
          ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:jspins))
          dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
          CALL h5dopen_f(groupID, 'frIm', frImSetID, hdfError)
          CALL io_read_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"frImTemp",frTemp(:,:,:,:))
          CALL h5dclose_f(frImSetID, hdfError)
-         denIm%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
+         den%mtIm(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
          frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
          DEALLOCATE(frTemp)
       END IF
@@ -3044,13 +3022,13 @@ MODULE m_cdnpot_io_hdf
             frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
          DEALLOCATE(frTemp)
          
-         IF (PRESENT(denIm)) THEN
+         IF (ALLOCATED(den%mtIm)) THEN
             ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:2))
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
             CALL h5dopen_f(groupID, 'froffIm', frOffImSetID, hdfError)
             CALL io_read_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"frImTemp",frTemp(:,:,:,1:2))
             CALL h5dclose_f(frOffImSetID, hdfError)
-            denIm%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
+            den%mtIm(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
                frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
             DEALLOCATE(frTemp)
          END IF
@@ -3090,7 +3068,7 @@ MODULE m_cdnpot_io_hdf
          den%pw(1:ng3Out,3) = cdomTemp(1:ng3Out)
          DEALLOCATE(cdomTemp)
 
-         IF (PRESENT(denIm)) THEN
+         IF (ALLOCATED(den%mtIm)) THEN
             den%pw(:,4) = CMPLX(0.0,0.0)
             ALLOCATE(cdomTemp(ng3))
             dimsInt(:2)=(/2,ng3/)
@@ -3443,8 +3421,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekDensityEntryHDF
 
    SUBROUTINE writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
-      use m_types_atoms
-      use m_types_input
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input
 
@@ -3543,8 +3519,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeCoreDensityHDF
 
    SUBROUTINE readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
-      use m_types_atoms
-      use m_types_input
 
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input

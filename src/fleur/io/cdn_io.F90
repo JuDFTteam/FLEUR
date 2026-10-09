@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -16,7 +16,6 @@ MODULE m_cdn_io
 #ifdef CPP_MPI
   use mpi
 #endif
-  USE m_types
   USE m_juDFT
   USE m_loddop
   USE m_wrtdop
@@ -26,6 +25,20 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
   USE hdf5
 #endif
+  USE m_qfix
+  USE m_fix_by_gaussian
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_field
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_potden
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
 
   PRIVATE
@@ -136,7 +149,7 @@ CONTAINS
 
 
   SUBROUTINE readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,denIm,b_constr)
+       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,b_constr)
 
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -158,7 +171,6 @@ CONTAINS
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
-    TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
 
     ! local variables
     INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l, numLines, ioStatus, iofl
@@ -242,13 +254,13 @@ CONTAINS
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
          CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-               fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm=denIm,b_constr=b_constr)
+               fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr=b_constr)
 
           CALL closeCDNPOT_HDF(fileID)
 
           IF(l_DimChange) THEN
                 CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den,denIm=denIm)
+                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
           END IF
        ELSE
           INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -376,8 +388,7 @@ CONTAINS
   END SUBROUTINE readDensity
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm,b_constr)
-
+       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,b_constr)
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -399,7 +410,6 @@ CONTAINS
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
-    TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
     REAL, OPTIONAL, INTENT(IN) :: b_constr(:,:)
 
     TYPE(t_stars)        :: starsTemp
@@ -519,7 +529,7 @@ CONTAINS
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm=denIm)
+            occDistance,l_qfix,den%iter+relCdnIndex,den)
       endif          
 
        IF(l_storeIndices) THEN
@@ -531,7 +541,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write density to cdn.str file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        filename = 'cdn1'
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -771,7 +781,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'cdn.str not yet implemented!'
+       CALL judft_error('cdn.str not yet implemented!')
     ELSE
        l_error = .TRUE.
     END IF
@@ -822,7 +832,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'cdn.str not yet implemented!'
+       CALL judft_error('cdn.str not yet implemented!')
     ELSE
        l_error = .TRUE.
     END IF
@@ -830,7 +840,7 @@ CONTAINS
   END SUBROUTINE readPrevmmpDistances
 
   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
-
+    
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -903,7 +913,6 @@ CONTAINS
   END SUBROUTINE readCoreDensity
 
   SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints,filename)
-
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -933,7 +942,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write core density to cdn.str file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        iUnit = 17
        OPEN (iUnit,file='cdnc',form='unformatted',status='unknown')
@@ -1015,7 +1024,7 @@ CONTAINS
 #endif
        ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
           ! Write stars to stars file
-          STOP 'CDN_STREAM_MODE not yet implemented!'
+          CALL judft_error('CDN_STREAM_MODE not yet implemented!')
        ELSE
           ! In direct access mode no structure information is written to any file.
        END IF
@@ -1026,10 +1035,6 @@ CONTAINS
   END SUBROUTINE storeStructureIfNew
 
   SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum,cell,field,sym,sphhar,input,noco,nococonv)
-    USE m_types
-    USE m_constants
-    USE m_qfix
-    USE m_fix_by_gaussian
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -1139,7 +1144,6 @@ CONTAINS
   END SUBROUTINE transform_by_moving_atoms
 
   SUBROUTINE writeStars(stars ,l_xcExtended,l_ExtData)
-
     TYPE(t_stars),INTENT(IN)   :: stars
      
     LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
@@ -1176,7 +1180,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write stars to stars file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        !         OPEN (51,file='stars',form='unformatted',status='unknown')
        !         WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
@@ -1206,7 +1210,6 @@ CONTAINS
   END SUBROUTINE writeStars
 
   SUBROUTINE readStars(stars ,l_xcExtended,l_ExtData,l_error)
-
     TYPE(t_stars),INTENT(INOUT) :: stars
      
     LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
@@ -1267,7 +1270,7 @@ CONTAINS
     IF(mode.EQ.CDN_STREAM_MODE) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF (l_exist) THEN
-          STOP 'cdn.str code path not yet implemented!'
+          CALL judft_error('cdn.str code path not yet implemented!')
        END IF
        IF (.NOT.l_exist) THEN
           mode = CDN_DIRECT_MODE
@@ -1325,7 +1328,6 @@ CONTAINS
   END SUBROUTINE readStars
 
   SUBROUTINE writeStepfunction(stars)
-
     TYPE(t_stars),INTENT(IN) :: stars
 
     INTEGER                  :: mode, ifftd, i
@@ -1355,7 +1357,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write stars to stars file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        !         OPEN (14,file='wkf2',form='unformatted',status='unknown')
 
@@ -1369,7 +1371,6 @@ CONTAINS
   END SUBROUTINE writeStepfunction
 
   SUBROUTINE readStepfunction(stars, atoms, cell, vacuum, l_error)
-
     TYPE(t_stars),INTENT(INOUT)   :: stars
     TYPE(t_atoms), INTENT(IN)     :: atoms
     TYPE(t_cell), INTENT(IN)      :: cell
@@ -1427,7 +1428,7 @@ CONTAINS
     IF(mode.EQ.CDN_STREAM_MODE) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF (l_exist) THEN
-          STOP 'cdn.str code path not yet implemented!'
+          CALL judft_error('cdn.str code path not yet implemented!')
        END IF
        IF (.NOT.l_exist) THEN
           mode = CDN_DIRECT_MODE
@@ -1511,7 +1512,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        WRITE(*,*) 'Explicit setting of starting density in direct access mode'
        WRITE(*,*) 'not implemented.'
@@ -1620,7 +1621,7 @@ CONTAINS
           WRITE(*,*) "No cdn.hdf file found. No density entry deleted."
        END IF
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        WRITE(*,*) 'Explicit deletion of densities in direct access mode'
        WRITE(*,*) 'not implemented.'
@@ -1724,7 +1725,7 @@ CONTAINS
     IF ((mode.EQ.CDN_STREAM_MODE).OR.(mode.EQ.CDN_HDF5_MODE)) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF(l_exist) THEN
-          STOP 'Not yet implemented!'
+          CALL judft_error('Not yet implemented!')
           RETURN
        END IF
     END IF

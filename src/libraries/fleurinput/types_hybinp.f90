@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,11 +7,21 @@
 MODULE m_types_hybinp
    USE m_judft
    USE m_types_fleurinput_base
+   USE m_mpi_bc_tool
+   USE m_types_xml
+   USE m_dwigner
+   USE m_types_xcpot
+   USE m_types_sym
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_cell
+   USE m_map_to_unit
    IMPLICIT NONE
    PRIVATE
 
    TYPE, EXTENDS(t_fleurinput_base):: t_hybinp
       LOGICAL                ::  l_hybrid = .false.
+      LOGICAL                ::  l_hse = .false.
       INTEGER                ::  ewaldlambda = 3
       INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
@@ -34,21 +44,7 @@ MODULE m_types_hybinp
 
 CONTAINS
 
-   !> Refuse film (2D) setups for the hybrid-functional
-   SUBROUTINE check_film_hybrid(input)
-      USE m_types_input
-      IMPLICIT NONE
-      TYPE(t_input), INTENT(IN) :: input
-
-      IF (input%film) THEN
-         CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
-                          calledby="types_hybinp", &
-                          hint="Use a 3D supercell with enough vacuum, or a semi-local functional")
-      END IF
-   END SUBROUTINE check_film_hybrid
-
    SUBROUTINE mpi_bc_hybinp(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_hybinp), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -58,6 +54,7 @@ CONTAINS
       ELSE
          rank = 0
       END IF
+      call mpi_bc(this%l_hse, rank, mpi_comm)
       CALL mpi_bc(this%l_hybrid, rank, mpi_comm)
       CALL mpi_bc(this%ewaldlambda, rank, mpi_comm)
       CALL mpi_bc(this%lexp, rank, mpi_comm)
@@ -72,7 +69,6 @@ CONTAINS
    END SUBROUTINE mpi_bc_hybinp
 
    SUBROUTINE read_xml_hybinp(this, xml)
-      USE m_types_xml
       CLASS(t_hybinp), INTENT(INout):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
@@ -121,16 +117,11 @@ CONTAINS
       else
          this%l_hybrid = .False.
       endif
+      this%l_hse = (trim(xc_name) == "hse")
    END SUBROUTINE read_xml_hybinp
 
    SUBROUTINE init_hybinp(self, atoms, cell, input,   sym, xcpot)
-      USE m_dwigner
-      use m_types_xcpot
-      use m_types_sym
-      use m_types_atoms
        
-      use m_types_input
-      use m_types_cell
 
       implicit none
       class(t_hybinp), intent(inout) :: self
@@ -144,8 +135,6 @@ CONTAINS
       integer :: isym, iisym, l, m2, m1
 
       IF (xcpot%is_hybrid() .OR. input%l_rdmft) THEN
-         CALL check_film_hybrid(input)
-
          !             IF( ANY( atoms%l_geo  ) )&
          !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
          !                  &                    calledby ="fleur")
@@ -175,11 +164,7 @@ CONTAINS
    END SUBROUTINE init_hybinp
 
    SUBROUTINE gen_map_hybinp(hybinp, atoms, sym)
-      use m_types_atoms
-      use m_types_sym
        
-      USE m_juDFT
-      use m_map_to_unit
       IMPLICIT NONE
       CLASS(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_atoms), INTENT(IN)      :: atoms

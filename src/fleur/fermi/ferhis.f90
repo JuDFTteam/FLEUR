@@ -5,7 +5,17 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_ferhis
+   USE m_constants
+   USE m_efnewton
+   USE m_xmlOutput
+   USE m_types_cell
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_misc
    implicit none
+   PRIVATE
+   PUBLIC :: ferhis
 CONTAINS
   SUBROUTINE ferhis(input_tkb,kpts,fmpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
                     nstef,ws,spindg,weight,energies,ne,we, noco,cell,ef,seigv,w_iks,results,spinDepTS,l_output)
@@ -51,10 +61,6 @@ CONTAINS
     !                                      r.pentcheva, kfa, may  1996
     !
     !***********************************************************************
-    USE m_types
-    USE m_constants
-    USE m_efnewton
-    USE m_xmlOutput
 
     IMPLICIT NONE
 

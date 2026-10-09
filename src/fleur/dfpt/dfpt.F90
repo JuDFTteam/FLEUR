@@ -6,24 +6,47 @@
 MODULE m_dfpt
    USE m_juDFT
    USE m_constants
-   USE m_types
+   USE m_juDFT_stop, ONLY: juDFT_error
+   USE m_eig66_io, ONLY: open_eig, close_eig
+   USE m_dfpt_check
+   USE m_dfpt_interpolation
+   USE m_types_dfpt_scf
+   USE m_types_phonon
+   USE m_types_efield
+   USE m_types_BEC
+   USE m_types_bfield
+   USE m_dfpt_postprocess_pot
+   USE m_desymmetrizer
+   USE m_outcdn
+   USE m_plot
+   USE m_fleur_init
+   USE m_types_lapw
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_hybdat
+   USE m_types_kpts
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_xcpot
+#ifdef CPP_MPI
+   USE mpi
+#endif
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt, dfpt_desym
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
                  & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
 
-      USE m_juDFT_stop, only : juDFT_error
-      USE m_eig66_io, only : open_eig,close_eig
-      USE m_dfpt_check
-      USE m_dfpt_interpolation
-      use m_types_dfpt_scf
-      use m_types_phonon
-      use m_types_efield
-      use m_types_BEC
-      use m_types_bfield
-      use m_dfpt_postprocess_pot
       
 
 
@@ -139,7 +162,7 @@ CONTAINS
             allocate(t_phonon :: phonon_obj)
             call timestart("dfpt phonons")
             ! Do a scf calculation with atom displacements as the perturbation
-            call phonon_obj%init(fi,fi%dfpt%qvec)
+            call phonon_obj%init(fi,fi%dfpt%qvec%bk)
             call sternheimerJob%init(fi,l_phonon=.true.)
             call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
@@ -163,7 +186,7 @@ CONTAINS
          ! Construct the matrix element from converged potentials
          if (fi%dfpt%l_elph) then 
             call timestart("construction of el-ph matrix elements")
-            call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
             call timestop("construction of el-ph matrix elements")
          end if 
       end if 
@@ -183,12 +206,8 @@ CONTAINS
 
    END SUBROUTINE dfpt
 
-   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,wann_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
+   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
                          fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
-      USE m_desymmetrizer
-      USE m_outcdn
-      USE m_plot
-      USE m_fleur_init
 
       TYPE(t_mpi),        INTENT(INOUT) :: fmpi_nosym
       TYPE(t_fleurinput), INTENT(INOUT) :: fi_nosym
@@ -197,7 +216,6 @@ CONTAINS
       TYPE(t_nococonv),   INTENT(INOUT) :: nococonv_nosym
       TYPE(t_enpara),     INTENT(INOUT) :: enpara_nosym
       TYPE(t_results),    INTENT(INOUT) :: results_nosym
-      TYPE(t_wann),       INTENT(INOUT) :: wann_nosym
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat_nosym
       TYPE(t_mpdata),     INTENT(INOUT) :: mpdata_nosym
 
@@ -222,7 +240,7 @@ CONTAINS
       REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new!, atom_shift(3)
       LOGICAL :: test_desym
       CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
-                        enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
+                        enpara_nosym, xcpot_nosym, results_nosym, hybdat_nosym, mpdata_nosym, &
                         inp_pref)
 
       CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN)

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,9 @@
 MODULE m_types_noco
   USE m_judft
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_types_atoms
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_fleurinput_base):: t_noco
@@ -48,7 +51,6 @@ MODULE m_types_noco
 
  CONTAINS
    SUBROUTINE mpi_bc_noco(this,mpi_comm,irank)
-     USE m_mpi_bc_tool
      CLASS(t_noco),INTENT(INOUT)::this
      INTEGER,INTENT(IN):: mpi_comm
      INTEGER,INTENT(IN),OPTIONAL::irank
@@ -85,7 +87,6 @@ MODULE m_types_noco
    END SUBROUTINE mpi_bc_noco
 
    SUBROUTINE read_xml_noco(this,xml)
-     USE m_types_xml
      CLASS(t_noco),INTENT(inout):: this
      TYPE(t_xml),INTENT(INOUT) ::xml
 
@@ -194,7 +195,6 @@ MODULE m_types_noco
     END SUBROUTINE read_xml_noco
 
    SUBROUTINE read_xml_noco_old(this,xml)
-     USE m_types_xml
      CLASS(t_noco),INTENT(inout):: this
      TYPE(t_xml),INTENT(INOUT) ::xml
 
@@ -270,7 +270,6 @@ MODULE m_types_noco
     END SUBROUTINE read_xml_noco_old
 
   SUBROUTINE init_noco(noco,atoms,l_spinoffd_ldau)
-     USE m_types_atoms
      CLASS(t_noco),INTENT(inout):: noco
      TYPE(t_atoms),INTENT(in)   :: atoms
      LOGICAL, INTENT(in)        :: l_spinoffd_ldau

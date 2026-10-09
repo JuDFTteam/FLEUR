@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_tetrahedronInit
 
    !------------------------------------------------------------------------------------
@@ -20,6 +25,11 @@ MODULE m_tetrahedronInit
    USE m_types_kpts
    USE m_types_input
    USE m_juDFT
+   USE m_differentiate
+   USE m_tetsrt
+   USE m_tetraWeight
+   USE m_resWeight
+   USE m_bloechl
 
    IMPLICIT NONE
 
@@ -119,7 +129,6 @@ MODULE m_tetrahedronInit
 
    SUBROUTINE getWeightEnergyMesh(kpts,input,ikpt,eig,neig,eMesh,weights,resWeights,bounds,dos)
 
-      USE m_differentiate
 
       TYPE(t_kpts),     INTENT(IN)    :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
@@ -333,10 +342,6 @@ MODULE m_tetrahedronInit
       ! efficient in all cases
       !--------------------------------------------------------------
 
-      USE m_tetsrt
-      USE m_tetraWeight
-      USE m_resWeight
-      USE m_bloechl
 
       REAL,             INTENT(IN)     :: eMesh(:)    !Energy points, where the weights are calculated
       REAL,             INTENT(IN)     :: etetra(:)   !Eigenvalues at the corners of the tetrahedron

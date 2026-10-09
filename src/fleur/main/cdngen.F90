@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,29 +7,16 @@ MODULE m_cdngen
 #ifdef CPP_MPI
    USE mpi
 #endif
-   implicit none
-CONTAINS
-
-SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
-                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
-                  enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
-                  moessbauerParams)
-
-   !*****************************************************
-   !    Charge density generator
-   !    calls cdnval to generate the valence charge and the
-   !    core routines for the core contribution
-   !*****************************************************
-   use m_types_vacdos
-   use m_types_mcd
-   use m_types_slab
-   use m_types_orbcomp
-   use m_types_jdos
-   use m_types_jointdos
-   USE m_types
+   USE m_types_vacdos
+   USE m_types_mcd
+   USE m_types_slab
+   USE m_types_orbcomp
+   USE m_types_jdos
+   USE m_types_jointdos
+   USE m_types_dmdos
    USE m_constants
    USE m_juDFT
+   USE m_intgr, ONLY : intgr3
    USE m_cdnval
    USE m_plot
    USE m_cdn_io
@@ -42,19 +29,65 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_resMoms
    USE m_cdncore
    USE m_make_dos
-   !USE m_Ekwritesl
-   !USE m_banddos_io
-   USE m_metagga
-   !USE m_unfold_band_kpts
    USE m_denMultipoleExp
-   use m_slater
+   USE m_slater
    USE m_greensfPostProcess
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
+   USE m_rixs_driver, ONLY: rixs_run_driver
+   USE m_xas_driver, ONLY: xas_run_driver
    USE m_types_moessbauerParams
+   USE m_force_sf
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cdnval
+   USE m_types_cell
+   USE m_types_corespecinput
+   USE m_types_enpara
+   USE m_types_field
+   USE m_types_gfinp
+   USE m_types_greensf
+   USE m_types_greensfcoeffs
+   USE m_types_hub1data
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xas
+   USE m_types_xcpot
+#ifdef CPP_HDF
+   USE hdf5
+#endif
+   implicit none
+   PRIVATE
+   PUBLIC :: cdngen, write_output_struct_xsf, initialize_eigdos_types
+CONTAINS
 
-   USE m_force_sf ! Klueppelberg (force level 3)
+SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
+                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
+                  enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
+                  moessbauerParams,vTau)
+
+   !*****************************************************
+   !    Charge density generator
+   !    calls cdnval to generate the valence charge and the
+   !    core routines for the core contribution
+   !*****************************************************
+   !USE m_Ekwritesl
+   !USE m_banddos_io
+   !USE m_unfold_band_kpts
+
 
    IMPLICIT NONE
 
@@ -65,6 +98,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
     
    TYPE(t_enpara),INTENT(INOUT)     :: enpara
    TYPE(t_banddos),INTENT(IN)       :: banddos
+   TYPE(t_xas),INTENT(IN)           :: xas
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
@@ -88,6 +122,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
    TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
+   TYPE(t_potden),INTENT(IN),OPTIONAL   :: vTau  !! MetaGGA V_tau of this iteration
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -101,6 +136,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_orbcomp),TARGET         :: orbcomp
    TYPE(t_jDOS),TARGET            :: jDOS
    TYPE(t_jointDOS),TARGET       :: jointDOS
+   TYPE(t_dmdos),TARGET          :: dmdos
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den
@@ -117,7 +153,19 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error,Perform_metagga
+   LOGICAL               :: l_error, Perform_metagga
+
+   ! MetaGGA: core kinetic energy density, kept apart for the core double counting
+   TYPE(t_potden)        :: core_tau
+   REAL                  :: dc_integrand(atoms%jmtd), dc_integral
+   INTEGER               :: iType_dc
+
+   ! MetaGGA: integrals of the kinetic energy density, reported per region
+   REAL                  :: tau_q(input%jspins), tau_qis(input%jspins)
+   REAL                  :: tau_qmt(atoms%ntype,input%jspins), tau_qvac(2,input%jspins)
+   REAL                  :: tau_qtot, tau_qistot
+   CHARACTER(LEN=20)     :: tau_names(4), tau_attrs(4)
+   INTEGER               :: tau_lengths(4,2)
 
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
@@ -125,8 +173,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
    
    if (banddos%dos.or.banddos%band.or.input%cdinf) then
-     CALL initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
-                                   input, atoms, kpts, banddos, noco, results, cell)
+     CALL initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, dmdos, &
+                                   input, atoms, kpts, banddos, noco, results, cell, sym)
    endif
 
 
@@ -164,21 +212,23 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
    CALL timestart("cdngen: cdnval")
-   DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
+   DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS.OR.(dmdos%l_initialized.AND.noco%l_noco))
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,moessbauerParams,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart,dmdos=dmdos, &
+                  l_kinEnergyDen=xcpot%is_MetaGGA(), kinEnergyDen=EnergyDen)
    END DO
+   ! XAS is a postprocessing calculation under output/xas, like DOS/band output:
+   ! it reuses the converged potential, eigenvalues, occupations, and MT basis.
+   IF (xas%l_xas) CALL xas_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
+                                      enpara, vTot, results)
+   IF (xas%l_rixs) CALL rixs_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
+                                        enpara, vTot, results)
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
-   ! calculate kinetic energy density for MetaGGAs
-   if(xcpot%exc_is_metagga()) then
-      CALL calc_EnergyDen(eig_id, fmpi, kpts, noco, nococonv,input, banddos, cell, atoms, enpara, stars,&
-                             vacuum,  sphhar, sym, gfinp, hub1inp, vTot,   results, EnergyDen)
-   endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
       IF (fmpi%irank == 0) THEN
@@ -207,7 +257,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
-   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf) THEN
+   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf.or.xas%l_xas.or.xas%l_rixs) THEN
       CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)
    END IF
 
@@ -226,17 +276,52 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !END IF
 
    CALL timestart("cdngen: cdncore")
-   if(xcpot%exc_is_MetaGGA()) then
-      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, EnergyDen)
+   if(xcpot%is_MetaGGA()) then
+      ! The core tau is collected separately: it is needed on its own for the core double counting
+      CALL core_tau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
+      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, kinEnergyDen=core_tau)
+      EnergyDen%mt = EnergyDen%mt + core_tau%mt
    else
-      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
+      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams)
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
+   ! MetaGGA core double counting (Doumont et al., PRB 105, 195138, Eq. 13): the core states
+   ! solve the auxiliary GGA potential enpara%vr_core and contain no V_tau, while totale
+   ! subtracts vTot and V_tau for the full density. The difference for the core,
+   !    int (v_mult - v_GGA) rho_core + int V_tau tau_core,
+   ! is evaluated here with the core density and core tau of this iteration.
+   results%te_core_mgga = 0.0
+   IF (xcpot%needs_MetaGGA_ham().AND.PRESENT(vTau).AND.PRESENT(core_den).AND.fmpi%irank==0) THEN
+      DO jspin = 1, input%jspins
+         DO iType_dc = 1, atoms%ntype
+            ! vTot%mt(:,0) and enpara%vr_core hold r*V_00/sqrt(4pi); densities are stored as r^2*rho_00
+            dc_integrand(:atoms%jri(iType_dc)) = (vTot%mt(:atoms%jri(iType_dc),0,iType_dc,jspin) &
+                 - enpara%vr_core(:atoms%jri(iType_dc),iType_dc,jspin))*sfp_const/atoms%rmsh(:atoms%jri(iType_dc),iType_dc) &
+                 * core_den%mt(:atoms%jri(iType_dc),0,iType_dc,jspin) &
+                 + vTau%mt(:atoms%jri(iType_dc),0,iType_dc,jspin)*core_tau%mt(:atoms%jri(iType_dc),0,iType_dc,jspin)
+            CALL intgr3(dc_integrand,atoms%rmsh(1,iType_dc),atoms%dx(iType_dc),atoms%jri(iType_dc),dc_integral)
+            results%te_core_mgga = results%te_core_mgga + atoms%neq(iType_dc)*dc_integral
+         END DO
+      END DO
+   END IF
+   IF (xcpot%is_MetaGGA().AND.fmpi%irank==0) THEN
+      ! Integral of the core tau per atom; equals the core kinetic energy up to relativistic corrections
+      DO jspin = 1, input%jspins
+         DO iType_dc = 1, atoms%ntype
+            CALL intgr3(core_tau%mt(:,0,iType_dc,jspin),atoms%rmsh(1,iType_dc),atoms%dx(iType_dc),atoms%jri(iType_dc),dc_integral)
+            WRITE (oUnit,'(a,i3,a,i2,a,f20.10)') ' core tau integral: atom type ',iType_dc,' spin ',jspin, &
+                                                 ' :', dc_integral*sfp_const
+         END DO
+      END DO
+   END IF
+
    CALL outDen%distribute(fmpi%mpi_comm)
+   ! The MT part of tau (valence and core) is only complete on rank 0
+   IF (xcpot%is_MetaGGA()) CALL EnergyDen%distribute(fmpi%mpi_comm)
 
    IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
@@ -269,12 +354,43 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcIS(input,atoms,fmpi,outDen)
 
-   Perform_metagga = Allocated(Energyden%Mt) &
-                   .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
+   Perform_metagga = Allocated(Energyden%Mt) .And. Xcpot%Is_MetaGGA()
    If(Perform_metagga) Then
      IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
-     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,core_den,inFilename='cdnc')
+
+     ! Integrate the kinetic energy density over the cell and report it per region.
+     ! EnergyDen uses exactly the conventions integrate_cdn expects (MT: l=0 only, r^2*f_00,
+     ! scaled by sfp_const; interstitial: plain star coefficients weighted with stars%nstr).
+     ! Skip while the "not loaded" sentinel still sits in the G=0 star, otherwise the
+     ! interstitial integral would simply report that marker.
+     IF (REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) THEN
+        CALL integrate_cdn(stars,nococonv,atoms,sym,vacuum,input,cell, EnergyDen, &
+                           tau_q, tau_qis, tau_qmt, tau_qvac, tau_qtot, tau_qistot, fmpi)
+        IF (fmpi%irank == 0) THEN
+           DO jspin = 1, input%jspins
+              tau_names(1) = 'spin'        ; WRITE(tau_attrs(1),'(i0)')    jspin
+              tau_lengths(1,1) = 4         ; tau_lengths(1,2) = 1
+              tau_names(2) = 'total'       ; WRITE(tau_attrs(2),'(f14.7)') tau_q(jspin)
+              tau_lengths(2,1) = 5         ; tau_lengths(2,2) = 14
+              tau_names(3) = 'interstitial'; WRITE(tau_attrs(3),'(f14.7)') tau_qis(jspin)
+              tau_lengths(3,1) = 12        ; tau_lengths(3,2) = 14
+              tau_names(4) = 'mtSpheres'   ; WRITE(tau_attrs(4),'(f14.7)') &
+                                                SUM(atoms%neq(:)*tau_qmt(:,jspin))
+              tau_lengths(4,1) = 9         ; tau_lengths(4,2) = 14
+              CALL writeXMLElementForm('kineticEnergyDensity',tau_names(1:4),tau_attrs(1:4),tau_lengths(1:4,:))
+           END DO
+
+           ! Iso-orbital indicator extrema, computed during potential generation. Note these
+           ! refer to the *input* density of this iteration, while the tau integrals above
+           ! refer to the output density just constructed.
+           CALL writeXMLElementFormPoly('isoOrbitalIndicator', &
+                (/'alphaMinMT','alphaMaxMT','alphaMinIR','alphaMaxIR'/), &
+                (/results%alphaMinMT,results%alphaMaxMT,results%alphaMinIR,results%alphaMaxIR/), &
+                reshape((/10,10,10,10,20,20,20,20/),(/4,2/)))
+        END IF
+     END IF
+
+     ! The mixed kinetic energy density is written after the mixing (fleur.F90)
    endif
 
 #ifdef CPP_MPI
@@ -296,7 +412,6 @@ END SUBROUTINE cdngen
 
 SUBROUTINE write_output_struct_xsf(atoms,nococonv,outDen)
 
-   USE m_types
 
    IMPLICIT NONE
 
@@ -368,21 +483,12 @@ SUBROUTINE write_output_struct_xsf(atoms,nococonv,outDen)
 
 END SUBROUTINE write_output_struct_xsf
 
-SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
-                                    input, atoms, kpts, banddos, noco, results, cell)
+SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, dmdos, &
+                                    input, atoms, kpts, banddos, noco, results, cell, sym)
    !*****************************************************
    ! Initialize all eigenvalue/DOS types and populate
    ! the eigdos pointer array
    !*****************************************************
-   USE m_types_eigdos
-   USE m_types_dos
-   USE m_types_jointdos
-   USE m_types_vacdos
-   USE m_types_mcd
-   USE m_types_slab
-   USE m_types_orbcomp
-   USE m_types_jdos
-   use m_types
    
    IMPLICIT NONE
    
@@ -395,6 +501,7 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    TYPE(t_slab), TARGET, INTENT(INOUT)             :: slab
    TYPE(t_orbcomp), TARGET, INTENT(INOUT)          :: orbcomp
    TYPE(t_jDOS), TARGET, INTENT(INOUT)             :: jDOS
+   TYPE(t_dmdos), TARGET, INTENT(INOUT)            :: dmdos
    TYPE(t_input), INTENT(IN)                       :: input
    TYPE(t_atoms), INTENT(IN)                       :: atoms
    TYPE(t_kpts), INTENT(IN)                        :: kpts
@@ -402,10 +509,11 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    TYPE(t_noco), INTENT(IN)                        :: noco
    TYPE(t_results), INTENT(IN)                     :: results
    TYPE(t_cell), INTENT(IN)                        :: cell
+   TYPE(t_sym), INTENT(IN)                         :: sym
    
    ! Local variables
    INTEGER :: n, num_types
-   LOGICAL :: type_flags(7)
+   LOGICAL :: type_flags(8)
    
    ! Determine which types need to be initialized
    type_flags(1) = banddos%dos .OR. banddos%band .OR. input%cdinf
@@ -415,6 +523,7 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    type_flags(5) = banddos%l_slab
    type_flags(6) = banddos%l_orb
    type_flags(7) = banddos%l_jDOS
+   type_flags(8) = banddos%l_dm .AND. (banddos%dos .OR. banddos%band)
    
    ! Count number of types to allocate
    num_types = COUNT(type_flags)
@@ -462,6 +571,12 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    IF (banddos%l_jdos) THEN
       CALL jDOS%init(input, banddos, atoms, kpts, results%eig)
       eigdos(n)%p => jDOS
+      n = n + 1
+   END IF
+
+   IF (type_flags(8)) THEN
+      CALL dmdos%init(input, atoms, kpts, banddos, noco, sym, cell, results%eig)
+      eigdos(n)%p => dmdos
    END IF
    
 END SUBROUTINE initialize_eigdos_types

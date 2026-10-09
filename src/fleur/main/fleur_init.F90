@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,44 +7,59 @@ MODULE m_fleur_init
 #ifdef CPP_MPI
    use mpi
 #endif
-   IMPLICIT NONE
-CONTAINS
-   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add)
-      USE m_types
-      USE m_test_performance
-      use m_store_load_hybrid
-      USE m_fleurinput_read_xml
-      USE m_fleurinput_mpi_bc
-      USE m_types_mpinp
-      USE m_judft
-      USE m_juDFT_init
-      USE m_init_wannier_defaults
-      USE m_dwigner
-      USE m_ylm
-      !USE m_InitParallelProcesses
-      USE m_xmlOutput
-      USE m_constants
-      USE m_writeOutParameters
-      USE m_setupMPI
-      USE m_cdn_io
-      USE m_fleur_info
-      USE m_mixing_history
-      USE m_checks
-      USE m_writeOutHeader
-      !USE m_fleur_init_old
-      USE m_types_xcpot_inbuild
-      USE m_make_stars
-      USE m_make_sphhar
-      USE m_convn
-      USE m_efield
-      USE m_fleurinput_postprocess
-      USE m_make_forcetheo
-      USE m_lapwdim
-      use m_make_xcpot
-      USE m_gaunt, ONLY: gaunt_init
+   use m_test_performance
+   use m_store_load_hybrid
+   use m_fleurinput_read_xml
+   use m_fleurinput_mpi_bc
+   use m_types_mpinp
+   use m_judft
+   use m_juDFT_init
+   use m_dwigner
+   use m_ylm
+   use m_xmlOutput
+   use m_constants
+   use m_writeOutParameters
+   use m_setupMPI
+   use m_cdn_io
+   use m_fleur_info
+   use m_mixing_history
+   use m_checks
+   use m_writeOutHeader
+   use m_types_xcpot_inbuild
+   use m_make_stars
+   use m_make_sphhar
+   use m_convn
+   use m_efield
+   use m_fleurinput_postprocess
+   use m_make_forcetheo
+   use m_lapwdim
+   use m_make_xcpot
+   use m_gaunt, only: gaunt_init
 #ifdef CPP_HDF
-      USE m_hdf_tools
+   use m_hdf_tools
 #endif
+   use m_types_lapw
+   use m_types_enpara
+   use m_types_enparaxml
+   use m_types_fleurinput
+   use m_types_forcetheo
+   use m_types_forcetheo_data
+   use m_types_hybdat
+   use m_types_kpts
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_xcpot
+   IMPLICIT NONE
+   private
+   public :: fleur_init
+CONTAINS
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, hybdat, mpdata, filename_add, l_skip_setupmpi)
+      !USE m_InitParallelProcesses
+      !USE m_fleur_init_old
       IMPLICIT NONE
       !     Types, these variables contain a lot of data!
 
@@ -55,13 +70,13 @@ CONTAINS
       TYPE(t_enpara), INTENT(OUT):: enpara
       CLASS(t_xcpot), ALLOCATABLE, INTENT(OUT):: xcpot
       TYPE(t_results), INTENT(OUT):: results
-      TYPE(t_wann), INTENT(OUT):: wann
       CLASS(t_forcetheo), ALLOCATABLE, INTENT(OUT)::forcetheo
       TYPE(t_nococonv), INTENT(OUT) :: nococonv
       type(t_hybdat), intent(out) :: hybdat
       type(t_mpdata), intent(out):: mpdata
 
       CHARACTER(len=100), OPTIONAL, INTENT(IN) :: filename_add
+      LOGICAL, OPTIONAL, INTENT(IN) :: l_skip_setupmpi
 
       TYPE(t_enparaXML)::enparaXML
       TYPE(t_forcetheo_data)::forcetheo_data
@@ -73,7 +88,7 @@ CONTAINS
       REAL, ALLOCATABLE             :: xmlCoreOccs(:, :, :)
       LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:, :)
       !     .. Local Scalars ..
-      INTEGER    :: i, n, l, m1, m2, isym, iisym, numSpecies, pc, iAtom, iType, minneigd, outxmlFileID
+      INTEGER    :: i, n, l, m1, m2, isym, iisym, numSpecies, minneigd, outxmlFileID
       INTEGER    :: nbasfcn
       COMPLEX    :: cdum
       CHARACTER(len=4)              :: namex
@@ -83,8 +98,9 @@ CONTAINS
       CHARACTER(LEN=40)             :: kptsSelection(3)
       CHARACTER(LEN=300)            :: line
       REAL                          :: a1(3), a2(3), a3(3)
-      REAL                          :: dtild, phi_add
+      REAL                          :: dtild
       LOGICAL                       :: l_found, l_kpts, l_exist, l_krla, l_timeReversalCheck
+      LOGICAL                       :: l_skip_setupmpi_loc
 
 #ifdef CPP_MPI
       INTEGER ierr(3)
@@ -93,6 +109,8 @@ CONTAINS
 #else
       fmpi%irank = 0; fmpi%isize = 1; fmpi%mpi_comm = 1
 #endif
+      l_skip_setupmpi_loc = .FALSE.
+      IF (PRESENT(l_skip_setupmpi)) l_skip_setupmpi_loc = l_skip_setupmpi
       CALL check_command_line(fmpi)
 #ifdef CPP_HDF
       CALL hdf_init()
@@ -144,16 +162,18 @@ CONTAINS
       !Only PE==0 reads the fi%input and does basic postprocessing
       IF (fmpi%irank .EQ. 0) THEN
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
-                                  sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
-                                  wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
+                                  sliceplot=fi%sliceplot, banddos=fi%banddos, xas=fi%xas, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
+                                  wannierlib=fi%wannierlib, &
+                                  xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, dfpt=fi%dfpt)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp, fi%wannierlib)
+         CALL check_apw(fi%atoms, fi%input, fi%noco, fi%banddos, fi%hybinp, fi%gfinp, fi%dfpt, fi%wannierlib)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
-                             fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
-                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt)
+                             fi%sliceplot, fi%banddos, fi%xas, fi%mpinp, fi%hybinp,   fi%coreSpecInput, &
+                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt, wannierlib=fi%wannierlib)
       !Remaining init is done using all PE
       !Checks that emit a warning and continue must run here, not in fleurinput_postprocess above: see check_input_switches_all_pe.
       CALL check_input_switches_all_pe(fi%input, fi%hybinp, fi%mpinp)
@@ -169,9 +189,10 @@ CONTAINS
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
-      CALL fi%dfpt%init(fi%cell,fi%input) ! This is needed for the dim of lapw basis 
+      CALL fi%dfpt%init(fi%cell,fi%input,fi%sym,fi%noco) ! This is needed for the dim of lapw basis
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%dfpt)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
+     
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN
@@ -202,7 +223,7 @@ CONTAINS
       END IF
 
       !Finalize the fmpi setup
-      CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
+      IF (.NOT. l_skip_setupmpi_loc) CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
 
       !Collect some usage info
       CALL add_usage_data("A-Types", fi%atoms%ntype)
@@ -248,90 +269,5 @@ CONTAINS
 #ifdef CPP_MPI
       CALL MPI_BARRIER(fmpi%mpi_comm, ierr(1))
 #endif
-   CONTAINS
-      SUBROUTINE init_wannier()
-         ! Initializations for Wannier functions (start)
-         IF (fmpi%irank .EQ. 0) THEN
-            wann%l_gwf = wann%l_ms .OR. wann%l_sgwf .OR. wann%l_socgwf
-
-            IF (wann%l_gwf) THEN
-               WRITE (*, *) 'running HDWF-extension of FLEUR code'
-               WRITE (*, *) 'with l_sgwf =', wann%l_sgwf, ' and l_socgwf =', wann%l_socgwf
-
-               IF (wann%l_socgwf .AND. .NOT. fi%noco%l_soc) THEN
-                  CALL juDFT_error("set l_soc=T if l_socgwf=T", calledby="fleur_init")
-               END IF
-
-               IF ((wann%l_ms .OR. wann%l_sgwf) .AND. .NOT. (fi%noco%l_noco .AND. fi%noco%l_ss)) THEN
-                  CALL juDFT_error("set l_noco=l_ss=T for l_sgwf.or.l_ms", calledby="fleur_init")
-               END IF
-
-               IF ((wann%l_ms .OR. wann%l_sgwf) .AND. wann%l_socgwf) THEN
-                  CALL juDFT_error("(l_ms.or.l_sgwf).and.l_socgwf", calledby="fleur_init")
-               END IF
-
-               INQUIRE (FILE=wann%param_file, EXIST=l_exist)
-               IF (.NOT. l_exist) THEN
-                  CALL juDFT_error("where is param_file"//TRIM(wann%param_file)//"?", calledby="fleur_init")
-               END IF
-               OPEN (113, file=wann%param_file, status='old')
-               READ (113, *) wann%nparampts, wann%scale_param
-               CLOSE (113)
-            ELSE
-               wann%nparampts = 1
-               wann%scale_param = 1.0
-            END IF
-         END IF
-
-         ALLOCATE (wann%param_vec(3, wann%nparampts))
-         ALLOCATE (wann%param_alpha(fi%atoms%ntype, wann%nparampts))
-
-         IF (fmpi%irank .EQ. 0) THEN
-            IF (wann%l_gwf) THEN
-               OPEN (113, file=wann%param_file, status='old')
-               READ (113, *)!header
-               WRITE (oUnit, *) 'parameter points for HDWFs generation:'
-               IF (wann%l_sgwf .OR. wann%l_ms) THEN
-                  WRITE (oUnit, *) '      q1       ', '      q2       ', '      q3'
-               ELSE IF (wann%l_socgwf) THEN
-                  WRITE (oUnit, *) '      --       ', '     phi       ', '    theta'
-               END IF
-
-               DO pc = 1, wann%nparampts
-                  READ (113, '(3(f14.10,1x))') wann%param_vec(1, pc), wann%param_vec(2, pc), wann%param_vec(3, pc)
-                  wann%param_vec(:, pc) = wann%param_vec(:, pc)/wann%scale_param
-                  WRITE (oUnit, '(3(f14.10,1x))') wann%param_vec(1, pc), wann%param_vec(2, pc), wann%param_vec(3, pc)
-                  IF (wann%l_sgwf .OR. wann%l_ms) THEN
-                     iAtom = 1
-                     DO iType = 1, fi%atoms%ntype
-                        phi_add = tpi_const*(wann%param_vec(1, pc)*fi%atoms%taual(1, iAtom) + &
-                                             wann%param_vec(2, pc)*fi%atoms%taual(2, iAtom) + &
-                                             wann%param_vec(3, pc)*fi%atoms%taual(3, iAtom))
-                        wann%param_alpha(iType, pc) = nococonv%alph(iType) + phi_add
-                        iAtom = iAtom + fi%atoms%neq(iType)
-                     END DO
-                  END IF
-               END DO
-
-               IF (ANY(wann%param_vec(1, :) .NE. wann%param_vec(1, 1))) wann%l_dim(1) = .TRUE.
-               IF (ANY(wann%param_vec(2, :) .NE. wann%param_vec(2, 1))) wann%l_dim(2) = .TRUE.
-               IF (ANY(wann%param_vec(3, :) .NE. wann%param_vec(3, 1))) wann%l_dim(3) = .TRUE.
-
-               CLOSE (113)
-
-               IF (wann%l_dim(1) .AND. wann%l_socgwf) THEN
-                  CALL juDFT_error("do not specify 1st component if l_socgwf", calledby="fleur_init")
-               END IF
-            END IF!(wann%l_gwf)
-         END IF!(fmpi%irank.EQ.0)
-
-#ifdef CPP_MPI
-         CALL MPI_BCAST(wann%param_vec, 3*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
-         CALL MPI_BCAST(wann%param_alpha, fi%atoms%ntype*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
-         CALL MPI_BCAST(wann%l_dim, 3, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr(1))
-#endif
-
-         ! Initializations for Wannier functions (end)
-      END SUBROUTINE init_wannier
    END SUBROUTINE fleur_init
 END MODULE m_fleur_init

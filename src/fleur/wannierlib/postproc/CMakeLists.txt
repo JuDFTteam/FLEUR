@@ -1,0 +1,20 @@
+set(fleur_F90 ${fleur_F90}
+src/fleur/wannierlib/postproc/types_wgauge_manifold.F90
+src/fleur/wannierlib/postproc/types_wgauge_domains.F90
+src/fleur/wannierlib/postproc/types_wgauge_bmesh.F90
+src/fleur/wannierlib/postproc/wgauge_ft.F90
+src/fleur/wannierlib/postproc/wgauge_io.F90
+src/fleur/wannierlib/postproc/wgauge_bands_io.F90
+src/fleur/wannierlib/postproc/wgauge_hamk.F90
+src/fleur/wannierlib/postproc/wgauge_coeff_a.F90
+src/fleur/wannierlib/postproc/wgauge_coeff_tensor.F90
+src/fleur/wannierlib/postproc/wgauge_coeff_b.F90
+src/fleur/wannierlib/postproc/wgauge_operators_r.F90
+src/fleur/wannierlib/postproc/wgauge_spin_collinear.F90
+src/fleur/wannierlib/postproc/wgauge_interp_util.F90
+src/fleur/wannierlib/postproc/wgauge_interpolate_ham.F90
+src/fleur/wannierlib/postproc/wgauge_interpolate_op.F90
+src/fleur/wannierlib/postproc/wgauge_interpolate_velocity.F90
+src/fleur/wannierlib/postproc/wgauge_interpolate_eigenstates.F90
+src/fleur/wannierlib/postproc/wgauge_run.F90
+)

@@ -1,11 +1,25 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_eigdos
   USE m_juDFT
   use m_constants
+  use m_smooth
+  use m_types_banddos
+  use m_types_kpts
+  use m_types_cell
+  use m_gnuplot_BS
+  use m_types_input
+  use m_dosbin
+  use m_ptdos
+  use m_tetra_dos
+  use m_dostetra
+#ifdef CPP_HDF
+  use HDF5
+  use m_banddos_io
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_eigdos,t_eigdos_list,t_eigdos_make_dos
@@ -28,7 +42,7 @@ MODULE m_types_eigdos
     procedure          :: get_dos_grid
     procedure          :: make_dos=>t_eigdos_make_dos
     procedure          :: smooth=>dosdata_smooth
-    procedure          :: write_raw   !should be implemented later to allow eig66 functionality
+    procedure          :: write_extra !output that does not fit the scalar weights
     procedure          :: write_dos
     procedure          :: write_band
     procedure          :: write_EVData
@@ -143,8 +157,6 @@ CONTAINS
   END function
 
 subroutine dosdata_smooth(eigdos,banddos)
-  use m_smooth
-  use m_types_banddos
   class(t_eigdos),INTENT(INOUT)  :: eigdos
   type(t_banddos),INTENT(IN)     :: banddos
 
@@ -171,28 +183,30 @@ subroutine dosdata_smooth(eigdos,banddos)
   ENDDO
 END subroutine
 
-subroutine write_dos(eigdos,hdf_id)
-#ifdef CPP_HDF
-    use HDF5
-    use m_banddos_io
-#endif
+subroutine write_dos(eigdos,hdf_id,l_dfpt)
     class(t_eigdos),INTENT(INOUT):: eigdos
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
 #else
     integer,       intent(in) ::hdf_id
 #endif
+    logical,       intent(in) ::l_dfpt
     integer:: jspin,i,ind,id, n
     character(len=100)::filename
     real,allocatable:: dos_grid(:)
     LOGICAL l_printTextDOS
+    real :: prefactor, conversion
+
+    prefactor = 1.0
+    conversion = 1.0 
+    if (l_dfpt) prefactor = 0.5
+    if (l_dfpt) conversion = 1e-3 ! stored DOS as states/meV
 
     l_printTextDOS = .TRUE.
 
 #ifdef CPP_HDF
     DO n=1,eigdos%get_num_weights()
-      print *, "writedos:",n,eigdos%get_num_weights()
-      call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),eigdos%dos(:,:,n))
+      call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),conversion*prefactor*eigdos%dos(:,:,n))
     enddo
     IF(eigdos%get_num_weights().GT.40) THEN
        WRITE(*,*) 'Number of weights in ', TRIM(ADJUSTL(eigdos%name_of_dos)),' DOS too large for simple text output.'
@@ -211,7 +225,7 @@ subroutine write_dos(eigdos,hdf_id)
       write(*,"(999a21)") filename,(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
       dos_grid=eigdos%get_dos_grid()
       DO i=1,size(dos_grid)
-        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id)/hartree_to_ev_const,id=1,eigdos%get_num_weights())
+        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(prefactor*eigdos%dos(i,jspin,id)/hartree_to_ev_const,id=1,eigdos%get_num_weights())
       ENDDO
       close(999)
       write(*,*) "done:",filename
@@ -219,14 +233,6 @@ subroutine write_dos(eigdos,hdf_id)
   END subroutine
 
   subroutine write_band(eigdos,kpts,title,cell,hdf_id,efermi,banddos)
-    use m_types_kpts
-    use m_types_cell
-    use m_gnuplot_BS
-    use m_types_banddos
-#ifdef CPP_HDF
-     use HDF5
-     use m_banddos_io
-#endif
     class(t_eigdos),INTENT(INOUT):: eigdos
     type(t_kpts),intent(in)      :: kpts
     type(t_banddos),INTENT(IN)   :: banddos
@@ -281,10 +287,6 @@ subroutine write_dos(eigdos,hdf_id)
   end subroutine
 
   subroutine write_EVData(eigdos,hdf_id)
-#ifdef CPP_HDF
-     use HDF5
-     use m_banddos_io
-#endif
      class(t_eigdos),INTENT(INOUT):: eigdos
 #ifdef CPP_HDF
      integer(HID_T),intent(in) ::hdf_id
@@ -301,13 +303,6 @@ subroutine write_dos(eigdos,hdf_id)
   end subroutine
 
   subroutine t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)
-    use m_types_banddos
-    use m_types_input
-    use m_dosbin
-    use m_ptdos
-    use m_tetra_dos
-    use m_dostetra
-    use m_types_kpts
 
     class(t_eigdos),intent(inout):: eigdos
     type(t_banddos),intent(in)   :: banddos
@@ -331,7 +326,6 @@ subroutine write_dos(eigdos,hdf_id)
     ENDDO
 
     DO n=1,eigdos%get_num_weights()
-      print *,eigdos%name_of_dos,n,eigdos%get_num_weights()
       SELECT CASE(input%bz_integration)
 
       CASE(BZINT_METHOD_HIST, BZINT_METHOD_GAUSS)
@@ -352,11 +346,13 @@ subroutine write_dos(eigdos,hdf_id)
 
 
 
-  subroutine write_raw(this,id)
+  subroutine write_extra(this,hdf_id)
     class(t_eigdos),INTENT(IN):: this
-    INTEGER,INTENT(IN)        :: id
-
-
+#ifdef CPP_HDF
+    integer(HID_T),intent(in) ::hdf_id
+#else
+    integer,       intent(in) ::hdf_id
+#endif
   end subroutine
 
 

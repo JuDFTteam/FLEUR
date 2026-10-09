@@ -1,7 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 #define POTENTIAL
       MODULE param
       USE m_constants
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: au2a, ha2ev, pi, jnlout, ftable, fdebug, fxcrysd, fwarn, zab_v1, zab_v2, a, alpha_1, beta_1, beta_2, &
+         beta_3, beta_4, beta_h, gamma_h, kappa_revpbe, kappa_pbe, mu
 !
 
       REAL,PARAMETER   :: au2A =0.529177249
@@ -40,6 +48,9 @@
       MODULE nonlocal_data
 
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: zab, nx, ny, nz, n_grid, n_k, r_max, q_alpha, phi, d2phi_dk2, n_gvectors, g_cut, g, g_ind, a1, a2, a3, &
+         b1, b2, b3, n_alpha, q_cut, m_c, omega, tpibya, lambda, dk, time1, time2
 !
       REAL             ::  Zab             ! This is the Zab really used. Zab_v1
                                                ! is the default. Can be switched to
@@ -81,6 +92,12 @@
 !
       MODULE driver_fft
 !
+   USE m_juDFT
+   USE param, ONLY: jnlout
+   USE nonlocal_data, ONLY: nx, ny, nz, n_grid
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: inplfft
  CONTAINS
 !
 !==========================================================================================
@@ -90,9 +107,6 @@
 !     transform. At the moment it is designed to use fftw3.
 
       SUBROUTINE inplfft( fftin, idir )
-      USE m_juDFT
-      USE param,        ONLY: jnlout
-      USE nonlocal_data,ONLY: nx,ny,nz,n_grid
 
       implicit none
 
@@ -123,7 +137,7 @@
 
         write(jnlout,*) 'ERROR during FFT: neither FORWARD &
                          nor BACKWARD FFT was chosen.'
-        STOP 'Error in FFT'
+        CALL judft_error('Error in FFT: neither FORWARD nor BACKWARD FFT was chosen', calledby='inplfft')
 
       endif
 #else
@@ -135,17 +149,19 @@
 !
       MODULE functionals
 !
+   USE param, ONLY: Ha2eV, pi, jnlout, beta_H, gamma_H, A, alpha_1, beta_1, beta_2, beta_3, beta_4, mu, kappa_PBE, &
+      kappa_revPBE
+   USE nonlocal_data, ONLY: n_grid, omega, n_gvectors, G, G_ind
+   USE driver_fft
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: calc_pbe_correlation, calc_gga_exchange, calc_ehartree
  CONTAINS
 !
 !================================================================================
 !
       SUBROUTINE calc_PBE_correlation(n,grad_n,Ec_PBE,Ec_LDA,e_cLDA,e_cSL)
 !
-      USE param,        ONLY: Ha2eV,pi,        &
-                              jnlout,             &
-                              beta_H,gamma_H,     &                        ! Parameters for LDA_c
-                              A,alpha_1,beta_1,beta_2,beta_2,beta_3,beta_4 ! Parameters for LDA_c
-      USE nonlocal_data,ONLY: n_grid,omega
 !
       IMPLICIT NONE
 !
@@ -257,9 +273,6 @@
 !
       SUBROUTINE calc_GGA_exchange(n,grad_n,Ex_PBE,Ex_revPBE,Ex_PW86,Ex_LDA)
 !
-      USE param,        ONLY: pi, &
-                              mu,kappa_PBE,kappa_revPBE  ! Param. for PBE_ex
-      USE nonlocal_data,ONLY: n_grid,omega
 !
       IMPLICIT NONE
 !
@@ -338,12 +351,6 @@
 !==========================================================================================
 !
       SUBROUTINE calc_ehartree(n)
-      USE param,        ONLY: Ha2ev,pi,       &
-                              jnlout
-      USE nonlocal_data,ONLY: n_grid,n_gvectors, &
-                              omega,             &
-                              G,G_ind
-      USE driver_fft
 !
       IMPLICIT NONE
 !
@@ -395,15 +402,17 @@
 !
       MODULE plot_functions
 !
+   USE param, ONLY: au2A, fxcrysd
+   USE nonlocal_data, ONLY: nx, ny, nz, n_grid, a1, a2, a3, n_alpha
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: write_xcrysden_lda, write_xcrysden_nl
  CONTAINS
 !
 !==========================================================================================
 !
       SUBROUTINE write_xcrysden_LDA(file_name,ene_dens)
 !
-      USE param,        ONLY: au2A,fxcrysd
-      USE nonlocal_data,ONLY: nx,ny,nz,n_grid, &
-                              a1,a2,a3
 !
       IMPLICIT NONE
 !
@@ -468,10 +477,6 @@
 !
       SUBROUTINE write_xcrysden_NL(file_name,ene_dens)
 !
-      USE param,        ONLY: au2A,fxcrysd
-      USE nonlocal_data,ONLY: nx,ny,nz,       &
-                              n_grid,n_alpha, &
-                              a1,a2,a3
 !
       IMPLICIT NONE
 !
@@ -530,6 +535,13 @@
       END MODULE plot_functions
 !
       MODULE nonlocal_funct
+      USE param, ONLY: Ha2eV, au2A, jnlout, pi, ftable, A, alpha_1, beta_1, beta_2, beta_3, beta_4
+      USE nonlocal_data, ONLY: n_grid, n_alpha, omega, q_alpha, phi, G, G_ind, time1, time2, n_k, r_max, q_cut, dk, &
+         d2phi_dk2, nx, ny, nz, n_gvectors, G_cut, b1, b2, b3, a1, a2, a3, m_c, Zab, lambda
+      USE functionals
+      USE driver_fft
+      USE plot_functions
+      IMPLICIT NONE
       PRIVATE
       PUBLIC :: soler
 !
@@ -538,15 +550,6 @@
 !========================================================================================
 !
       SUBROUTINE soler(n, Ecnl, v_nl)
-      USE param,        ONLY: Ha2eV,au2A,jnlout
-      USE nonlocal_data,ONLY: n_grid,n_alpha, &
-                              omega,          &
-                              q_alpha,phi,    &
-                              G,G_ind,        &
-                              time1,time2
-      USE functionals
-      USE driver_fft
-      USE plot_functions
 !
       IMPLICIT NONE
 !
@@ -778,10 +781,6 @@
 !     read the kernel thus is also taken from there.
 
       SUBROUTINE read_kernel()
-      USE param,        ONLY: pi,ftable,jnlout
-      USE nonlocal_data,ONLY: n_alpha,n_k,          &
-                              r_max,q_cut,dk,       &
-                              q_alpha,phi,d2phi_dk2
       implicit none
 
       character(len=30)    :: double_format = '(1p4e23.14)'
@@ -831,10 +830,6 @@
 !==========================================================================================
 !
       SUBROUTINE setup_g_vectors()
-      USE param,        ONLY: jnlout
-      USE nonlocal_data,ONLY: nx,ny,nz,n_gvectors,n_grid, &
-                              G_cut,b1,b2,b3,             &
-                              G,G_ind
       implicit none
 !
       integer             :: igx,igy,igz
@@ -920,10 +915,6 @@
 !==========================================================================================
 !
       SUBROUTINE calc_gradient(n,grad_n)
-      USE param,        ONLY: jnlout
-      USE nonlocal_data,ONLY: n_grid,n_gvectors,nx,ny,nz, &
-                              a1,a2,a3,G,G_ind
-      USE driver_fft
 !
       implicit none
 !
@@ -984,9 +975,6 @@
 !     following eqn. 7 of Soler
 !
       SUBROUTINE calc_q0(n, grad_n, q_0)
-      USE param,        ONLY: pi, &
-                              A,alpha_1,beta_1,beta_2,beta_2,beta_3,beta_4 ! Parameters for LDA_c
-      USE nonlocal_data,ONLY: n_grid,q_cut,m_c,Zab
 !
       implicit none
 !
@@ -1068,7 +1056,6 @@
 !
       SUBROUTINE calc_theta_i(n, q_alpha, q_0, theta_alpha)
 
-      USE nonlocal_data,ONLY: n_grid, n_alpha
 !
       implicit none
 !
@@ -1099,11 +1086,6 @@
 !==========================================================================================
 !
       SUBROUTINE calc_ecnl(Ecnl, theta_alpha, u_a, e_cNL)
-      USE param        ,ONLY: pi,jnlout
-      USE nonlocal_data,ONLY: nx,ny,nz,n_grid,n_alpha,n_gvectors, &
-                              omega,time1,time2,                  &
-                              G, G_ind
-      USE driver_fft
 !
       implicit none
 !
@@ -1193,7 +1175,6 @@
       SUBROUTINE make_q_alpha(q_alpha)
 
 
-      USE nonlocal_data,ONLY: n_alpha,q_cut,lambda ! n_alpha: number of q points, q_cut: maximum
                                                    ! q value, lambda: parameter for logarithmic
                                                    ! mesh.
       implicit none
@@ -1226,7 +1207,6 @@
       SUBROUTINE splint( x_i, x, p_iofx  )
 
 
-      USE nonlocal_data,ONLY: n_grid, n_alpha
 !
       implicit none
 !
@@ -1302,7 +1282,6 @@
       SUBROUTINE setup_spline(x_i,d2y_dx2)
 
 
-      USE nonlocal_data,ONLY: n_alpha
 !
       implicit none
 !
@@ -1362,7 +1341,6 @@
       SUBROUTINE interpolate_kernel(k, phi_k)
 
 
-      USE nonlocal_data,ONLY: n_alpha, dk, n_k, phi, d2phi_dk2
 !
       implicit none
 !
@@ -1421,9 +1399,6 @@
 
       subroutine calc_dq0(n, grad_n, dq0_dn, dq0_dgrad_n)
 
-      USE param,        ONLY: pi, &
-                              A,alpha_1,beta_1,beta_2,beta_2,beta_3,beta_4 ! Parameters for LDA_c
-      USE nonlocal_data,ONLY: n_grid,q_cut,m_c,Zab
 
 
       implicit none
@@ -1522,9 +1497,7 @@
       subroutine calc_potential(v_nl, u_a, q_0, dq0_dn, dq0_dgrad_n, n, grad_n)
 
 
-      use nonlocal_data, only : n_grid, n_alpha, q_alpha, q_cut, nx, ny, nz, G, G_ind, n_gvectors
 
-      USE driver_fft
 
       implicit none
 
@@ -1668,7 +1641,6 @@
 #endif
 
       SUBROUTINE timing ( time )
-      USE param,ONLY: jnlout
 !
       implicit none
 !

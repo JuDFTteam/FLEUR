@@ -1,18 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_bfield
    USE m_juDFT
+   USE m_constants
+   USE m_rotMMPmat
+   USE m_types_atoms
+   USE m_types_field
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: bfield
 CONTAINS
   SUBROUTINE bfield(input,stars,noco,atoms,field,vTot,nococonv)
     !This subroutine adds a Zeeman-field to the potential
     !field%b_field is the field applied everywhere
     !field%b_field_mt is the field specific to the MT-sphere of a single atom type
-    USE m_types
-    USE m_constants
-    USE m_rotMMPmat
     
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)::input

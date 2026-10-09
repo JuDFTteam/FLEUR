@@ -1,19 +1,32 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_dfpt_eigen_hssetup
+   USE m_types_mpimat
+   USE m_dfpt_hs_int
+   USE m_dfpt_hsmt
+   USE m_dfpt_hsvac
+   USE m_eigen_redist_matrix
+   USE m_types_mat
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_tlmplm
+   USE m_judft
+   implicit none
+   PRIVATE
+   PUBLIC :: dfpt_eigen_hssetup
 CONTAINS
    SUBROUTINE dfpt_eigen_hssetup(sternheimerJob, isp, fmpi, fi, enpara, nococonv, starsq, &
-                            ud, td, tdV1, vTot, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
-      USE m_types
-      USE m_types_mpimat
-      USE m_dfpt_hs_int
-      USE m_dfpt_hsmt
-      USE m_dfpt_hsvac
-      USE m_eigen_redist_matrix
+                            td, tdV1, vTot, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       
 
       IMPLICIT NONE
@@ -25,7 +38,6 @@ CONTAINS
       TYPE(t_stars),      INTENT(IN)     :: starsq
       TYPE(t_enpara),     INTENT(IN)     :: enpara
       TYPE(t_nococonv),   INTENT(IN)     :: nococonv
-      TYPE(t_usdus),      INTENT(IN)     :: ud
       TYPE(t_tlmplm),     INTENT(IN)     :: td, tdV1
       TYPE(t_lapw),       INTENT(IN)     :: lapw, lapwq
       TYPE(t_potden),     INTENT(IN)     :: vTot, vTot1
@@ -67,7 +79,7 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j),smat(i,j))
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
-      CALL dfpt_hsmt(sternheimerJob, fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, ud, td, tdV1, hmat, smat, nk, killcont(4:6))
+      CALL dfpt_hsmt(sternheimerJob, fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, td, tdV1, hmat, smat, nk, killcont(4:6))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exist data delete(hmat(i,j),smat(i,j))
@@ -97,7 +109,7 @@ CONTAINS
 
       CALL timestart("Matrix redistribution")
       CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat, smat_final,lapwq=lapwq)
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final,lapwq=lapwq)
       CALL timestop("Matrix redistribution")
 
    END SUBROUTINE dfpt_eigen_hssetup

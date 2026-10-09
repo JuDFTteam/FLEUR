@@ -1,5 +1,9 @@
       MODULE m_grdrsvac
       use m_juDFT
+      use m_constants, only: pimach
+      implicit none
+      private
+      public :: grdrsvac, df3, df4, df5, df6
 c----------------------------------------------------------------------
 c     for a function defined on a vacuum layer
 c     the in-plane derivatives are evaluated in real space
@@ -27,7 +31,6 @@ c   (d ro / d x) , (d ro /d y)  in non-internal coordinates
 c       
 c----------------------------------------------------------------------
 c
-      USE m_constants, ONLY : pimach
       IMPLICIT NONE 
 c     ..
 c     .. Scalar arguments ..

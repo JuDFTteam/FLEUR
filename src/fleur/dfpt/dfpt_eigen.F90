@@ -17,24 +17,38 @@ MODULE m_dfpt_eigen
 #else
 #define CPP_zgemv zgemv
 #endif
+   USE m_constants
+   USE m_dfpt_eigen_hssetup
+   USE m_pot_io
+   USE m_util
+   USE m_eig66_io, ONLY: write_eig, read_eig
+   USE m_xmlOutput
+   USE m_types_mpimat
+   USE m_dfpt_tlmplm
+   USE m_local_hamiltonian
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_hub1data
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_tlmplm
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_eigen
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen(sternheimerJob,fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
+   SUBROUTINE dfpt_eigen(sternheimerJob,fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1, vTot, inden, bqpt, &
                              eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_eig_id2)
 
-      USE m_types
-      USE m_constants
-      USE m_dfpt_eigen_hssetup
-      USE m_pot_io
-      USE m_util
-      USE m_eig66_io, ONLY : write_eig, read_eig
-      USE m_xmlOutput
-      USE m_types_mpimat
-      USE m_dfpt_tlmplm
-      USE m_local_hamiltonian
       
 
       IMPLICIT NONE
@@ -47,7 +61,7 @@ CONTAINS
       TYPE(t_enpara),INTENT(IN) :: enpara
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_stars),INTENT(IN)     :: starsq
-      TYPE(t_potden),INTENT(IN)    :: inden, v1real, v1imag, vTot
+      TYPE(t_potden),INTENT(IN)    :: inden, v1, vTot
       REAL,         INTENT(IN)     :: bqpt(3)
       INTEGER,      INTENT(IN)     :: eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont(6)
       LOGICAL,      INTENT(IN)     :: l_real, sh_den
@@ -67,7 +81,6 @@ CONTAINS
       TYPE(t_tlmplm) :: td, tdV1
       TYPE(t_potden) :: vx
       TYPE(t_hub1data) :: hub1data
-      TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw, lapwq
       CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, zMat1, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
@@ -79,16 +92,15 @@ CONTAINS
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), eigBuffer(:,:,:)
 
 
-#ifndef _OPENACC  
-!newer nvhpc versions fail here with ICE
+#if !defined(_OPENACC) && !defined(__NVCOMPILER)
+!nvhpc fails here with ICE
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
 
       ! Get the (lm) matrix elements for V1 and H0
-      CALL ud%init(fi%atoms,fi%input%jspins)
-      CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
+      CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1,.FALSE.)
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=0.0,l_dfptmod=.TRUE.)
       
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       eigBuffer = 0.0
@@ -143,7 +155,7 @@ CONTAINS
 
             ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
             CALL timestart("Setup of matrix perturbations")
-            CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+            CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,td,tdV1,vTot,v1,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
             CALL timestop("Setup of matrix perturbations")
 
             IF (fmpi%n_size == 1) THEN
@@ -417,7 +429,9 @@ CONTAINS
             END IF
          END DO  k_loop
       END DO ! spin loop ends
-#endif  
+#else
+      CALL juDFT_error("DFPT is not available in builds with the NVIDIA compiler", calledby="dfpt_eigen.F90")
+#endif
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results1%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)

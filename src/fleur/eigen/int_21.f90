@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_int21
   !-----------------------------------------------------------
   !
@@ -7,12 +12,15 @@ MODULE m_int21
   ! dependet on the (f,g) combination used. 
   !
   !-----------------------------------------------------------
+   USE m_intgr, ONLY: intgr3
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: int_21
 CONTAINS
 
   SUBROUTINE int_21(f,g,atoms,ityp,l,uu21n,ud21n,du21n,dd21n)
     
-    USE m_intgr, ONLY : intgr3
-    USE m_types_setup
 
     IMPLICIT NONE
 

@@ -1,12 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_misc
 
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_kpts
+   USE m_types_lapw
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: zmat_init, results_init, reset_results, t_energy_hf, t_results, t_zmat, t_hamovlp
 
    !*************************************************************
    !     This module contains definitions for all kind of types
@@ -23,12 +30,17 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: force_vdw(:,:)   !< vdw-Forces calculated on all atoms (for each spin)
       REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
       REAL                 :: ef        !<Fermie energy
+      REAL                 :: dos_ef=0.0 !<DOS at the Fermi energy (states/Htr, both spins) on the coarse k-mesh, Gaussian smearing input%tkb
       REAL                 :: seigc     !<sum of the core eigenvalues
       REAL                 :: seigv     !<weighted sum of the occupied valence eigenvalues
       REAL                 :: ts        !<entropy contribution to the free energy
       REAL                 :: te_vcoul  !<charge density-coulomb potential integral
       REAL                 :: te_veff   !<charge density-effective potential integral
       REAL                 :: te_exc    !<charge density-ex-corr.energy density integral
+      REAL                 :: te_vtau   !<MetaGGA: kinetic energy density-V_tau integral
+      REAL                 :: te_core_mgga !<MetaGGA: core double counting correction (core states use the auxiliary GGA)
+      REAL                 :: alphaMinMT, alphaMaxMT !<MetaGGA: iso-orbital indicator extrema, muffin tins
+      REAL                 :: alphaMinIR, alphaMaxIR !<MetaGGA: iso-orbital indicator extrema, interstitial
       REAL                 :: e_ldau    !<total energy contribution of LDA+U
       REAL                 :: e_ldaopc    !<total energy contribution of LDA+OP
       REAL                 :: e_vdw=0.0
@@ -44,7 +56,9 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: w_iksRDMFT(:,:,:)
       REAL, ALLOCATABLE    :: eig(:,:,:)
       REAL, ALLOCATABLE    :: M(:)
-      INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
+      INTEGER, ALLOCATABLE :: neig(:,:)    ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
+      COMPLEX, ALLOCATABLE :: U_mat(:,:,:,:) ! rotation matrix for wannier gauge (nwann,nwann,nkpt,jspins)
+      COMPLEX, ALLOCATABLE :: U_dis(:,:,:,:) ! disentanglement matrix (nbands,nwann,nkpt,jspins); only when nbands>nwann
       REAL :: tkb_loc
 
    CONTAINS
@@ -98,11 +112,6 @@ CONTAINS
 
    SUBROUTINE results_init(thisResults,input,atoms,kpts,noco)
 
-     USE m_types_atoms
-     USE m_types_input
-     USE m_types_noco
-     USE m_types_kpts
-     USE m_types_lapw
       IMPLICIT NONE
 
       CLASS(t_results),      INTENT(INOUT) :: thisResults
@@ -122,6 +131,12 @@ CONTAINS
       thisResults%te_vcoul        = 0.0
       thisResults%te_veff         = 0.0
       thisResults%te_exc          = 0.0
+      thisResults%te_vtau         = 0.0
+      thisResults%te_core_mgga    = 0.0
+      thisResults%alphaMinMT      = 0.0
+      thisResults%alphaMaxMT      = 0.0
+      thisResults%alphaMinIR      = 0.0
+      thisResults%alphaMaxIR      = 0.0
       thisResults%te_hfex%valence = 0.0
       thisResults%te_hfex%core    = 0.0
       thisResults%te_hfex_loc     = 0.0
@@ -132,6 +147,7 @@ CONTAINS
       thisResults%last_occdistance    = -1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
+      thisResults%dos_ef          = 0.0
       thisResults%tkb_loc         = 0.0
 
       neigd2 = MIN(input%neig,lapw_dim_nbasfcn)
@@ -159,7 +175,6 @@ CONTAINS
    END SUBROUTINE results_init
 
    SUBROUTINE reset_results(thisResults, input)
-      USE m_types_input
 
       IMPLICIT NONE
 
@@ -175,6 +190,12 @@ CONTAINS
       thisResults%te_vcoul        = 0.0
       thisResults%te_veff         = 0.0
       thisResults%te_exc          = 0.0
+      thisResults%te_vtau         = 0.0
+      thisResults%te_core_mgga    = 0.0
+      thisResults%alphaMinMT      = 0.0
+      thisResults%alphaMaxMT      = 0.0
+      thisResults%alphaMinIR      = 0.0
+      thisResults%alphaMaxIR      = 0.0
       thisResults%te_hfex%valence = 0.0
       thisResults%te_hfex%core    = 0.0
       thisResults%te_hfex_loc     = 0.0
@@ -185,6 +206,7 @@ CONTAINS
       thisResults%last_occdistance    = -1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
+      thisResults%dos_ef          = 0.0
 
       thisResults%force = 0.0
       thisResults%force_old = 0.0

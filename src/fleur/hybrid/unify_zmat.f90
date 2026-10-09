@@ -1,5 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_unify_zmat
-   use m_types
+   use m_legendre_poly
+   use m_constants
+   use m_types_mat
+   implicit none
+   private
+   public :: unify_zmat, unify_group, set_sin_targ, proj_r, proj_c, mod_gram_schmidt, linspace, make_groups
 contains
 
    subroutine unify_zmat(eigval, z)
@@ -20,7 +30,6 @@ contains
    end subroutine unify_zmat
 
    subroutine unify_group(beg_group, end_group, z)
-      use m_legendre_poly
       implicit none
       integer, intent(in)        :: beg_group, end_group
       type(t_mat), intent(inout) :: z 
@@ -63,7 +72,6 @@ contains
    end subroutine
 
    subroutine set_sin_targ(targ)
-      use m_constants
       implicit none 
       type(t_mat), intent(inout) :: targ 
       integer :: i 

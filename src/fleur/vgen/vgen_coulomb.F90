@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,10 +10,37 @@ module m_vgen_coulomb
 #ifdef CPP_MPI
   use mpi
 #endif
+  use m_constants
+  use m_vmts
+  use m_intnv
+  use m_vvac
+  use m_vvacis
+  use m_vvacxy
+  use m_vintcz
+  use m_checkdopall
+  use m_convol
+  use m_psqpw
+  use m_cfft
+  use m_types_atoms
+  use m_types_cell
+  use m_types_dfpt
+  use m_types_field
+  use m_types_input
+  use m_types_mpi
+  use m_types_potden
+  use m_types_misc
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_sternheimerjob
+  use m_types_sym
+  use m_types_vacuum
+  implicit none
+  private
+  public :: vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
+             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -24,18 +51,6 @@ contains
     ! resides.
     !----------------------------------------------------------------------------
 
-    use m_constants
-    use m_types
-    use m_vmts
-    use m_intnv
-    use m_vvac
-    use m_vvacis
-    use m_vvacxy
-    use m_vintcz
-    use m_checkdopall
-    use m_convol
-    use m_psqpw
-    use m_cfft
     
     implicit none
 
@@ -60,8 +75,7 @@ contains
     type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
     type(t_dfpt),     optional,     intent(in) :: dfpt
 
-    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
-    TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptden0
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
@@ -112,11 +126,11 @@ contains
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
     ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
-    !     ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
+    !     ! in den%mtIm and results in the same component for the Coulomb potential later on.
     !     ! Also, the ionic qlm behave differently.
     call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
           &  den, ispin, .false., vCoul%potdenType, psq, sternheimerJob,&
-          & dfptdenimag, stars2, iDtype, iDir, dfptden0, iDir2 )
+          & stars2, iDtype, iDir, dfptden0, iDir2 )
     call timestop( "psqpw" )
 
     ! VACUUM POTENTIAL
@@ -285,10 +299,8 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-
-    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul%pw(:,ispin), &
-               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), ispin, sternheimerJob, &
-               dfptdenimag, dfptvCoulimag, iDtype, iDir, iDir2 )
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul, den, &
+               ispin, sternheimerJob, iDtype=iDtype, iDir=iDir, iDir2=iDir2 )
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
