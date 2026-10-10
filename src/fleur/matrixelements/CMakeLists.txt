@@ -15,6 +15,7 @@ src/fleur/matrixelements/melem_uhu_dress.F90
 src/fleur/matrixelements/melem_uhu_gaunt.F90
 src/fleur/matrixelements/melem_uhu.F90
 src/fleur/matrixelements/melem_nabla_int.F90
+src/fleur/matrixelements/melem_nabla_vac.F90
 src/fleur/matrixelements/melem_nabla_sph.F90
 src/fleur/matrixelements/melem_spin.F90
 src/fleur/matrixelements/melem_check.F90

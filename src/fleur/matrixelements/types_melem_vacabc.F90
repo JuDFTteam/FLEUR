@@ -31,6 +31,8 @@ MODULE m_types_melem_vacabc
    USE m_types
    USE m_vacuz
    USE m_vacudz
+   USE m_constants, ONLY: oUnit
+   USE m_differentiate, ONLY: difcub
    IMPLICIT NONE
    PRIVATE
 
@@ -38,12 +40,28 @@ MODULE m_types_melem_vacabc
    !> ac/bc, so it belongs to the type and not to a caller.
    REAL, PARAMETER, PUBLIC :: MELEM_VAC_WRONK = 2.0
 
+   !> How far the five-point derivative may sit from the boundary value vacuz returns,
+   !> relative. Loose on purpose: what it has to catch is a wrong convention or a mesh that
+   !> cannot carry a stencil, not the last digits. The measured value is printed either way.
+   REAL, PARAMETER :: MELEM_VAC_DDZ_TOL = 5.0e-2
+   LOGICAL, SAVE :: l_said = .FALSE.
+
    TYPE, PUBLIC :: t_melem_vacabc
       COMPLEX, ALLOCATABLE :: ac(:, :, :)   !< (nv2, nbnd, 2) resolved by slot
       COMPLEX, ALLOCATABLE :: bc(:, :, :)   !< (nv2, nbnd, 2)
       REAL, ALLOCATABLE :: u(:, :, :)       !< (nmz, nv2, nvac) the decaying solution
       REAL, ALLOCATABLE :: ue(:, :, :)      !< (nmz, nv2, nvac) its energy derivative
+      !> The z derivatives of the two solutions, on the same mesh. The pair overlap does not
+      !> need them; the momentum does, and it is the only operator that does. They are the
+      !> derivative with respect to DISTANCE FROM THE BOUNDARY, so a consumer working on the
+      !> mirrored slot multiplies by slot_sign to get d/dz.
+      REAL, ALLOCATABLE :: du(:, :, :)      !< (nmz, nv2, nvac)
+      REAL, ALLOCATABLE :: due(:, :, :)     !< (nmz, nv2, nvac)
       INTEGER, ALLOCATABLE :: kvac(:, :)    !< (2, nv2) the distinct parallel G
+      !> k_par + G_par in CARTESIAN units, z component zero. The in-plane momentum is just
+      !> multiplication by this, so it is built here where cell and lapw are both in scope
+      !> rather than passed to every consumer. Same order as kvac.
+      REAL, ALLOCATABLE :: qpar(:, :)       !< (3, nv2)
       INTEGER :: nv2 = 0
       INTEGER :: nmz = 0
       !> The z mesh and the geometry the expansion was built on. They travel with the data
@@ -80,10 +98,14 @@ CONTAINS
       INTEGER :: nmz, nvac, nv, off, ikG, ik2, ivac, islot, n
       INTEGER, ALLOCATABLE :: map2(:)
       REAL :: vz0, ev, sc, zks, arg, sgn, v(3), const
-      REAL, ALLOCATABLE :: vz(:), t(:), dt(:), te(:), dte(:), tei(:)
+      REAL, ALLOCATABLE :: vz(:), t(:), dt(:), te(:), dte(:), tei(:), zmsh(:)
       COMPLEX :: c_1, av, bv
+      REAL :: dworst, dsample(4), dabs, dmax
 
       CALL timestart('melem_vacabc')
+      dsample = 0.0
+      dabs = 0.0
+      dmax = 0.0
 
       !> An instance is reused: the ket side is expanded once per neighbour, so everything
       !> here is freed first. t_abc's own calc_abc does the same for the muffin-tin
@@ -92,7 +114,10 @@ CONTAINS
       IF (ALLOCATED(this%bc)) DEALLOCATE (this%bc)
       IF (ALLOCATED(this%u)) DEALLOCATE (this%u)
       IF (ALLOCATED(this%ue)) DEALLOCATE (this%ue)
+      IF (ALLOCATED(this%du)) DEALLOCATE (this%du)
+      IF (ALLOCATED(this%due)) DEALLOCATE (this%due)
       IF (ALLOCATED(this%kvac)) DEALLOCATE (this%kvac)
+      IF (ALLOCATED(this%qpar)) DEALLOCATE (this%qpar)
 
       nmz = vacuum%nmz
       nvac = vacuum%nvac
@@ -124,11 +149,17 @@ CONTAINS
       this%area = cell%area
       this%bmat33 = cell%bmat(3, 3)
       ALLOCATE (this%u(nmz, this%nv2, nvac), this%ue(nmz, this%nv2, nvac))
+      ALLOCATE (this%du(nmz, this%nv2, nvac), this%due(nmz, this%nv2, nvac))
+      ALLOCATE (this%qpar(3, this%nv2), source=0.0)
       ALLOCATE (this%ac(this%nv2, nbnd, 2), this%bc(this%nv2, nbnd, 2))
       this%ac = CMPLX(0.0, 0.0)
       this%bc = CMPLX(0.0, 0.0)
       ALLOCATE (t(this%nv2), dt(this%nv2), te(this%nv2), dte(this%nv2), tei(this%nv2))
-      ALLOCATE (vz(nmz))
+      ALLOCATE (vz(nmz), zmsh(nmz))
+      !> La malla del vacio, explicita porque difcub la necesita punto a punto.
+      DO ik2 = 1, nmz
+         zmsh(ik2) = cell%z1 + (ik2 - 1)*vacuum%delz
+      END DO
 
       ! ---- two slots always, whether or not the second side is stored ----
       this%slot_vac(1) = 1
@@ -160,6 +191,35 @@ CONTAINS
             dte(ik2) = sc*dte(ik2)
             tei(ik2) = sc*tei(ik2)
             this%ue(:, ik2, ivac) = sc*this%ue(:, ik2, ivac)
+
+            !> The derivatives the momentum needs, and the check that makes them safe: vacuz
+            !> and vacudz already return du/dz AT THE BOUNDARY, so the first point of the
+            !> stencil has an exact value to be measured against. Worst case over every G
+            !> and both sides is reported once per run, and a gross disagreement stops it --
+            !> a wrong derivative would show up nowhere else, because the momentum has no
+            !> other reference.
+            CALL melem_vac_ddz(this%u(:, ik2, ivac), zmsh, this%du(:, ik2, ivac))
+            CALL melem_vac_ddz(this%ue(:, ik2, ivac), zmsh, this%due(:, ik2, ivac))
+            !> CONTRA -dt, NO CONTRA dt. vacuz y vacudz devuelven la derivada de frontera
+            !> con el signo OPUESTO al de la malla, que corre hacia fuera del film. Medido el
+            !> 9-oct-2026 en la lamina Pt(100) de 3 capas: du(1) = -7.139452E-01 frente a
+            !> dt = +7.139537E-01, y due(1) = +2.573875E+00 frente a dte = -2.574232E+00.
+            !> Los modulos casan a 1.2e-5, asi que el estarcido es bueno y lo unico distinto
+            !> era el convenio. Lo que se guarda es d/d(distancia a la frontera), que es lo
+            !> que el momento necesita junto con slot_sign.
+            !>
+            !> El error se mide en ABSOLUTO y se normaliza al final con la mayor derivada de
+            !> todo el juego. Medirlo en relativo G a G no sirve: los G paralelos altos
+            !> decaen tanto que su solucion en z es cero numerico, y ahi un relativo compara
+            !> dos ceros -- la primera version de esta comprobacion daba un 3.3 % que resulto
+            !> venir de un G con dt = 0.0 exacto.
+            dabs = MAX(dabs, ABS(this%du(1, ik2, ivac) + dt(ik2)), &
+                             ABS(this%due(1, ik2, ivac) + dte(ik2)))
+            dmax = MAX(dmax, ABS(dt(ik2)), ABS(dte(ik2)))
+            IF (ivac == 1 .AND. ik2 == 1) dsample = [this%du(1, 1, 1), -dt(1), &
+                                                     this%due(1, 1, 1), -dte(1)]
+
+            IF (ivac == 1) this%qpar(:, ik2) = MATMUL(v, cell%bmat)
          END DO
 
          !> Both slots are filled here when only one side is stored: they share these z
@@ -189,8 +249,56 @@ CONTAINS
          END DO
       END DO
 
-      DEALLOCATE (map2, vz, t, dt, te, dte, tei)
+      !> El numero se imprime SIEMPRE y antes de cualquier aborto: si la comprobacion falla,
+      !> lo que hace falta es el valor, no la noticia de que fallo.
+      dworst = dabs/MAX(dmax, 1.0e-30)
+      IF (.NOT. l_said) THEN
+         l_said = .TRUE.
+         WRITE (oUnit, '(a,es11.3)') &
+            'melem_vacabc: d/dz on the mesh vs the boundary value, worst / largest ', dworst
+         WRITE (oUnit, '(a,4es14.6)') &
+            'melem_vacabc:   du(1), -dt, due(1), -dte at the first G: ', dsample
+         WRITE (oUnit, '(a,2es13.5)') &
+            'melem_vacabc:   worst absolute, and the largest derivative in the set: ', dabs, dmax
+      END IF
+      IF (dworst > MELEM_VAC_DDZ_TOL) CALL juDFT_error( &
+         'melem_vacabc: the z derivative on the mesh does not match the boundary value '// &
+         'vacuz returns', hint='see the two lines above in out for the measured values; a '// &
+         'clean sign flip means d/dz is taken the other way round', calledby='melem_vacabc_calc')
+
+      DEALLOCATE (map2, vz, zmsh, t, dt, te, dte, tei)
       CALL timestop('melem_vacabc')
    END SUBROUTINE melem_vacabc_calc
+
+   !>  d f / dz on the vacuum mesh, the way the rest of FLEUR differentiates on a mesh:
+   !>  difcub, the derivative of the cubic Lagrange interpolant through four points. It is
+   !>  the same construction and the same end handling that uhu/d2fdz2cmplx.F uses for the
+   !>  second derivative in the vacuum, so our momentum and the classic uHu agree on what a
+   !>  z derivative means rather than each having its own.
+   !>
+   !>  What makes it safe is not the stencil but the caller: vacuz and vacudz already return
+   !>  du/dz AT THE BOUNDARY, and the first point of this is checked against it.
+   SUBROUTINE melem_vac_ddz(f, z, df)
+      REAL, INTENT(IN) :: f(:)
+      REAL, INTENT(IN) :: z(:)
+      REAL, INTENT(OUT) :: df(:)
+      INTEGER :: n, i
+
+      n = SIZE(f)
+      IF (n < 4) THEN
+         df = 0.0
+         RETURN
+      END IF
+      !> Rodajas de cuatro y no elementos sueltos: difcub declara f(0:3) de forma explicita,
+      !> y pasarle un elemento de un array de forma asumida es lo que d2fdz2cmplx.F puede
+      !> hacer (sus argumentos son de forma explicita) y aqui no -- error #8284.
+      df(1) = difcub(z(1:4), f(1:4), z(1))
+      DO i = 2, n - 2
+         df(i) = difcub(z(i - 1:i + 2), f(i - 1:i + 2), z(i))
+      END DO
+      df(n - 1) = difcub(z(n - 3:n), f(n - 3:n), z(n - 1))
+      df(n) = difcub(z(n - 3:n), f(n - 3:n), z(n))
+   END SUBROUTINE melem_vac_ddz
+
 
 END MODULE m_types_melem_vacabc

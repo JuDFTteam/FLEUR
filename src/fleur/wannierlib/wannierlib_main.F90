@@ -254,13 +254,13 @@ CONTAINS
          IF (request%has_op_r('fmn')) &
             CALL wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
-                                vtot, fmpi, distk, u_matrix, u_opt, f0_loc)
+                                vtot, vacuum, fmpi, distk, u_matrix, u_opt, f0_loc)
          !> C asks for what F asks -- the gauge at two neighbours at once -- and for the
          !> eigenvalues of the bra on top, so it lives here for the same reason.
          IF (request%has_op_r('cmn')) &
             CALL wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
-                                vtot, fmpi, distk, u_matrix, u_opt, c0_loc)
+                                vtot, vacuum, fmpi, distk, u_matrix, u_opt, c0_loc)
          CALL wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
                         mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))

@@ -42,6 +42,7 @@ MODULE m_wannierlib_cf
   USE m_melem_nablaujugaunt, ONLY: melem_nablaujugaunt
   USE m_melem_nabla_int, ONLY: melem_nabla_int
   USE m_melem_nabla_sph, ONLY: melem_nabla_sph
+  USE m_melem_nabla_vac, ONLY: melem_nabla_vac
   USE m_melem_uhu, ONLY: melem_uhu_states
   USE m_matrix_element_factory, ONLY: matrix_element_states, matrix_element_release_anchor
   USE m_eig66_io, ONLY: read_eig
@@ -61,6 +62,8 @@ MODULE m_wannierlib_cf
   USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
   USE m_types_enpara
   USE m_types_potden
+  USE m_types_vacuum
+  USE m_types_melem_vacabc, ONLY: t_melem_vacabc
   USE m_types_mpi
   IMPLICIT NONE
   PRIVATE
@@ -69,8 +72,8 @@ CONTAINS
 
   !> F on this rank's k-slice, in the Wannier gauge.
   SUBROUTINE wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
-                            radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, fmpi, &
-                            distk, u_matrix, u_opt, f0)
+                            radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, &
+                            vacuum, fmpi, distk, u_matrix, u_opt, f0)
     TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
     TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -87,6 +90,7 @@ CONTAINS
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_enpara), INTENT(IN) :: enpara
     TYPE(t_potden), INTENT(IN) :: vtot
+    TYPE(t_vacuum), INTENT(IN) :: vacuum
     TYPE(t_mpi), INTENT(IN) :: fmpi
     INTEGER, INTENT(IN) :: distk(:)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)   !> (nw,nw,nk)
@@ -94,14 +98,14 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: f0(:, :, :, :, :)  !> (nw,nw,3,3,nk_loc)
 
     CALL cf_contract(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, radfun, &
-                     jspin, l_spinors, eig_id, stars, enpara, vtot, fmpi, distk, u_matrix, &
-                     u_opt, .FALSE., f0)
+                     jspin, l_spinors, eig_id, stars, enpara, vtot, vacuum, fmpi, distk, &
+                     u_matrix, u_opt, .FALSE., f0)
   END SUBROUTINE wannierlib_uiu
 
   !> C on this rank's k-slice, in the Wannier gauge.
   SUBROUTINE wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
-                            radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, fmpi, &
-                            distk, u_matrix, u_opt, c0)
+                            radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, &
+                            vacuum, fmpi, distk, u_matrix, u_opt, c0)
     TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
     TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -118,6 +122,7 @@ CONTAINS
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_enpara), INTENT(IN) :: enpara
     TYPE(t_potden), INTENT(IN) :: vtot
+    TYPE(t_vacuum), INTENT(IN) :: vacuum
     TYPE(t_mpi), INTENT(IN) :: fmpi
     INTEGER, INTENT(IN) :: distk(:)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)
@@ -125,8 +130,8 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: c0(:, :, :, :, :)
 
     CALL cf_contract(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, radfun, &
-                     jspin, l_spinors, eig_id, stars, enpara, vtot, fmpi, distk, u_matrix, &
-                     u_opt, .TRUE., c0)
+                     jspin, l_spinors, eig_id, stars, enpara, vtot, vacuum, fmpi, distk, &
+                     u_matrix, u_opt, .TRUE., c0)
   END SUBROUTINE wannierlib_uhu
 
   !> The contraction both share. l_ham decides whether the Hamiltonian sits between the
@@ -137,8 +142,8 @@ CONTAINS
   !> differences than pairs. Both spin components accumulate into the same result when the
   !> states are spinors.
   SUBROUTINE cf_contract(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
-                         radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, fmpi, &
-                         distk, u_matrix, u_opt, l_ham, o0)
+                         radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, vacuum, &
+                         fmpi, distk, u_matrix, u_opt, l_ham, o0)
     TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
     TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -155,6 +160,7 @@ CONTAINS
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_enpara), INTENT(IN) :: enpara
     TYPE(t_potden), INTENT(IN) :: vtot
+    TYPE(t_vacuum), INTENT(IN) :: vacuum
     TYPE(t_mpi), INTENT(IN) :: fmpi
     INTEGER, INTENT(IN) :: distk(:)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)
@@ -164,9 +170,9 @@ CONTAINS
 
     COMPLEX, ALLOCATABLE :: vgauge(:, :, :), ujp(:, :, :, :, :, :), nujp(:, :, :, :, :, :, :)
     REAL, ALLOCATABLE :: kdp(:, :)
-    INTEGER :: npair, nb, nw, nkl, k, kl, jcomp, jrad, lo, hi, jeig, kdiag
+    INTEGER :: npair, nb, nw, nkl, k, kl, jcomp, jrad, lo, hi, jeig, kdiag, i
     LOGICAL :: l_uhu, l_here
-    REAL :: diag(4)
+    REAL :: diag(22)
 
     CALL timestart(MERGE("wannierlib_uhu", "wannierlib_uiu", l_ham))
     nb = manifold%num_bands
@@ -215,7 +221,7 @@ CONTAINS
         IF (l_here) kdiag = k
         CALL cf_one_k(manifold, bmesh, k, kl, kpts, ujp, nujp, kdp, npair, atoms, cell, &
                       input, sym, noco, nococonv, jcomp, jrad, jeig, eig_id, stars, &
-                      enpara, vtot, fmpi, l_ham, vgauge, radfun, l_here, diag, o0)
+                      enpara, vtot, vacuum, fmpi, l_ham, vgauge, radfun, l_here, diag, o0)
       END DO
       DEALLOCATE (ujp, nujp)
     END DO
@@ -224,6 +230,22 @@ CONTAINS
     !> this holds a state by pointer, so the slot goes back to the pool.
     CALL matrix_element_release_anchor()
     IF (l_uhu .AND. fmpi%irank == 0 .AND. diag(2) > 0.0) CALL cf_report(kdiag, diag)
+    !> La hermiticidad del momento no cuesta nada y se mide siempre que haya momento: es el
+    !> unico test exacto del signo de la mitad de vacio, y callarlo cuando esta ahi seria
+    !> volver a la situacion en la que un signo equivocado no lo delata nada.
+    IF (l_ham .AND. fmpi%irank == 0 .AND. MAXVAL(diag(20:22)) > 0.0) THEN
+      WRITE (oUnit, '(/,a)') 'wannierlib: the momentum at b1 = b2, where it must be hermitian'
+      WRITE (oUnit, '(a,3es12.4)') '   interstitial only,     x y z  ', &
+         (diag(16 + i)/MAX(diag(19 + i), 1.0e-30), i=1, 3)
+      WRITE (oUnit, '(a,3es12.4)') '   MT+int only,           x y z  ', &
+         (diag(10 + i)/MAX(diag(13 + i), 1.0e-30), i=1, 3)
+      WRITE (oUnit, '(a,3es12.4)') '   with the vacuum,       x y z  ', &
+         (diag(4 + i)/MAX(diag(7 + i), 1.0e-30), i=1, 3)
+      WRITE (oUnit, '(a)') '   All three regions at once. The vacuum half alone is NOT hermitian'
+      WRITE (oUnit, '(a)') '   -- restricting p to a region leaves a boundary term -- so this'
+      WRITE (oUnit, '(a)') '   only closes if the vacuum enters with the right sign. x and y'
+      WRITE (oUnit, '(a)') '   test the ket wavevector, z tests the derivative and its sign.'
+    END IF
     DEALLOCATE (vgauge, kdp)
     CALL timestop(MERGE("wannierlib_uhu", "wannierlib_uiu", l_ham))
   END SUBROUTINE cf_contract
@@ -246,8 +268,8 @@ CONTAINS
   !> by pointer would be overwritten by the third k asked for.
   SUBROUTINE cf_one_k(manifold, bmesh, nk, nk_local, kpts, ujug_pair, nujug_pair, &
                       kdiff_pair, npair, atoms, cell, input, sym, noco, nococonv, jspin, &
-                      jspin_rad, jeig, eig_id, stars, enpara, vtot, fmpi, l_ham, vgauge, &
-                      radfun, l_diag, diag, o0)
+                      jspin_rad, jeig, eig_id, stars, enpara, vtot, vacuum, fmpi, l_ham, &
+                      vgauge, radfun, l_diag, diag, o0)
     TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
     TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     INTEGER, INTENT(IN) :: nk, nk_local
@@ -269,6 +291,7 @@ CONTAINS
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_enpara), INTENT(IN) :: enpara
     TYPE(t_potden), INTENT(IN) :: vtot
+    TYPE(t_vacuum), INTENT(IN) :: vacuum
     TYPE(t_mpi), INTENT(IN) :: fmpi
     LOGICAL, INTENT(IN) :: l_ham
     COMPLEX, INTENT(IN) :: vgauge(:, :, :)
@@ -281,6 +304,11 @@ CONTAINS
     TYPE(t_abc), POINTER :: abc_a(:, :), abc_b(:, :)
     TYPE(t_lapw) :: lapw_a, lapw_b
     TYPE(t_spinor_layout) :: layout_a, layout_b
+    !> The vacuum half of the pair overlap. Empty (nv2 = 0) when there is no vacuum to
+    !> expand, and melem_overlap_states skips it on that alone, so they are handed over
+    !> unconditionally and the caller never branches on the geometry.
+    TYPE(t_melem_vacabc) :: vac_a, vac_b
+    LOGICAL :: l_vac
     COMPLEX, ALLOCATABLE :: ovl(:, :), pnk(:, :, :), ham(:, :), tmp(:, :), mw(:, :)
     COMPLEX, ALLOCATABLE :: hud(:, :)
     REAL, ALLOCATABLE :: ea(:)
@@ -294,6 +322,13 @@ CONTAINS
     ev_list = [(i, i = manifold%min_band, manifold%max_band)]
     irec = MERGE(1, jspin, noco%l_noco)
     ALLOCATE (ovl(nb, nb), tmp(nb, nw), mw(nw, nw))
+    !> Both halves or neither. C is built from the identity
+    !> <u_{k+b1}|H_k|u_{k+b2}> = E.M - b1.P - (b1^2/2).M, which replaces H by the eigenvalue
+    !> of the bra and therefore holds only for the integral over the WHOLE cell: it does not
+    !> split by region. An M that carried the vacuum next to a P that did not would be wrong
+    !> by exactly b1.P_vac, and silently. Now that melem_nabla_vac exists the two go together,
+    !> and the one flag is what keeps them that way.
+    l_vac = input%film
     IF (l_ham) ALLOCATE (pnk(nb, nb, 3), ham(nb, nb), ea(input%neig))
     IF (l_diag) ALLOCATE (hud(nb, nb))
 
@@ -305,6 +340,8 @@ CONTAINS
                                  l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), &
                                  kpts=kpts, l_anchor=.TRUE.)
       CALL layout_a%init(input, noco, lapw_a, atoms)
+      IF (l_vac) CALL vac_a%calc(vacuum, cell, enpara, vtot, lapw_a, jspin_rad, &
+                                 zmat_a(irec), nb, ioff=layout_a%row_offset(jspin))
 
       IF (l_ham) THEN
         !> The eigenvalues of the bra, which is the side the Hamiltonian is resolved on.
@@ -328,6 +365,8 @@ CONTAINS
                                    l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), &
                                    kpts=kpts)
         CALL layout_b%init(input, noco, lapw_b, atoms)
+        IF (l_vac) CALL vac_b%calc(vacuum, cell, enpara, vtot, lapw_b, jspin_rad, &
+                                   zmat_b(irec), nb, ioff=layout_b%row_offset(jspin))
 
         IF (l_ham) b2c = MATMUL(bmesh%shell_vector(kpts%bkf, nk, b2), cell%bmat)
 
@@ -337,7 +376,8 @@ CONTAINS
                                   kpts%bkf(:, ka), kpts%bkf(:, kb), gpar, &
                                   ujug_pair, kdiff_pair, npair, &
                                   ioff_a=layout_a%row_offset(jspin), &
-                                  ioff_b=layout_b%row_offset(jspin), ovl=ovl)
+                                  ioff_b=layout_b%row_offset(jspin), ovl=ovl, &
+                                  vac_a=vac_a, vac_b=vac_b)
 
         IF (l_ham) THEN
           !> Conjugated here and folded into the MATMUL on the other branch: the two are
@@ -348,9 +388,46 @@ CONTAINS
                                zmat_a(irec), zmat_b(irec), kpts%bkf(:, kb), gpar, pnk, &
                                ioff=layout_a%row_offset(jspin), &
                                ioff_b=layout_b%row_offset(jspin))
-          CALL melem_nabla_sph(atoms, abc_a(jspin, :), abc_b(jspin, :), &
+          !> Solo el intersticio, antes de que el muffin-tin entre.
+          IF (b1 == b2) THEN
+            DO a = 1, 3
+              diag(16 + a) = MAX(diag(16 + a), &
+                                 MAXVAL(ABS(pnk(:, :, a) - CONJG(TRANSPOSE(pnk(:, :, a))))))
+              diag(19 + a) = MAX(diag(19 + a), MAXVAL(ABS(pnk(:, :, a))))
+            END DO
+          END IF
+
+          CALL melem_nabla_sph(atoms, sym, cell, abc_a(jspin, :), abc_b(jspin, :), &
                                kpts%bkf(:, kb), gpar, kpts%bkf(:, ka), &
                                nujug_pair, kdiff_pair, npair, pnk)
+          !> MT+intersticio. Segunda de las tres fotos, y las tres se toman AQUI, antes del
+          !> CONJG y antes de la correccion -b2c*ovl: medirlas en puntos distintos del cauce
+          !> hacia que ni siquiera coincidieran en volumen, donde no hay vacio que sumar.
+          IF (b1 == b2) THEN
+            DO a = 1, 3
+              diag(10 + a) = MAX(diag(10 + a), &
+                                 MAXVAL(ABS(pnk(:, :, a) - CONJG(TRANSPOSE(pnk(:, :, a))))))
+              diag(13 + a) = MAX(diag(13 + a), MAXVAL(ABS(pnk(:, :, a))))
+            END DO
+          END IF
+
+          !> Before the CONJG, like the two halves above it: melem_nabla_vac is written in
+          !> the same unconjugated-bra convention they are.
+          IF (l_vac) CALL melem_nabla_vac(vac_a, vac_b, gpar, pnk)
+
+          !> Y las tres regiones. Lo que la comparacion de las tres filas separa: el
+          !> intersticio es anti-hermitico por su cuenta -- su parte anti-hermitica es un
+          !> termino de superficie -- y en una celda periodica en x,y las unicas superficies
+          !> que ve son las esferas, asi que en el plano lo tiene que cancelar el MT, haya
+          !> vacio o no. Si x e y no cierran ya en la segunda fila, lo que falta no esta en
+          !> la tercera region.
+          IF (b1 == b2) THEN
+            DO a = 1, 3
+              diag(4 + a) = MAX(diag(4 + a), &
+                                MAXVAL(ABS(pnk(:, :, a) - CONJG(TRANSPOSE(pnk(:, :, a))))))
+              diag(7 + a) = MAX(diag(7 + a), MAXVAL(ABS(pnk(:, :, a))))
+            END DO
+          END IF
           pnk = CONJG(pnk)
 
           !> p_psi -> p_u + k. One term, and it depends on the pair.

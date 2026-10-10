@@ -60,19 +60,18 @@ CONTAINS
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
                         this%op_r_name, this%ops%name, this%ops%total, &
                         op_r_needs, op_needs, this%l_ws_distance)
-      !> On a film, refuse by name rather than as a whole. The pair overlap has its vacuum
-      !> half now, so the wannierization itself works and with it everything built from mmn:
-      !> hamiltonian, eigenstates, position, velocity, bmn. Three quantities still stop at
-      !> the interstitial and would come out short without saying so.
+      !> On a film the three regions are all covered now: the pair overlap, the spin
+      !> operator and the momentum each have their vacuum half, so nothing is refused by
+      !> geometry any more. What used to stand here was fmn and cmn, and the note is kept
+      !> because the reason they were refused is the reason they are not any more:
+      !>
+      !>   F is the pair overlap contracted with the gauge, so the vacuum expansions were
+      !>   all it ever needed. C needs those AND a momentum; and adding one without the
+      !>   other would not have been a partial fix but a wrong answer, because
+      !>   <u_{k+b1}|H_k|u_{k+b2}> = E.M - b1.P - (b1^2/2).M replaces H by the eigenvalue of
+      !>   the bra and so holds only over the whole cell. An M reaching the vacuum next to a
+      !>   P that did not would have been off by exactly b1.P_vac, with nothing to say so.
       IF (input%film) THEN
-         !> wannierlib_uiu and wannierlib_uhu ask melem_overlap_states for the pair overlap
-         !> without the vacuum expansions, and C also needs a momentum that has no vacuum
-         !> part at all.
-         IF (request%has_op_r('fmn') .OR. request%has_op_r('cmn')) CALL juDFT_error( &
-            'wannierlib: fmn and cmn have no vacuum contribution and cannot be asked for on a film', &
-            hint='everything built from the neighbour overlaps does work on a film; these two '// &
-                 'need the vacuum halves of the pair overlap and of the momentum', &
-            calledby='wannierlib_main')
          !> The spin operator does reach the vacuum: t_matelements_spin adds the third
          !> region to each of its four blocks, one t_melem_vacabc per spin channel, in the
          !> same pairing the interstitial uses. The orbital moment and the spin-orbit
