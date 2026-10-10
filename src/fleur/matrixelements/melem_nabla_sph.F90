@@ -15,6 +15,9 @@ MODULE m_melem_nabla_sph
    USE m_types_abc
    USE m_types_atoms
    USE m_constants, ONLY: tpi_const
+   USE m_types_sym
+   USE m_types_cell
+   USE m_melem_symrot, ONLY: melem_rot_polar
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_nabla_sph
@@ -24,8 +27,10 @@ CONTAINS
    !>
    !> kdiff has to hold the difference the two sides span, exactly as for the overlap: the
    !> table is indexed by it and a missing entry is a stop rather than a guess.
-   SUBROUTINE melem_nabla_sph(atoms, abc, abc_b, bbpt, gb, bkpt, nujug, kdiff, nntot, pnk)
+   SUBROUTINE melem_nabla_sph(atoms, sym, cell, abc, abc_b, bbpt, gb, bkpt, nujug, kdiff, nntot, pnk)
       TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_sym),   INTENT(IN) :: sym
+      TYPE(t_cell),  INTENT(IN) :: cell
       TYPE(t_abc), INTENT(IN) :: abc(:)
       TYPE(t_abc), INTENT(IN) :: abc_b(:)
       REAL, INTENT(IN) :: bbpt(3)
@@ -40,7 +45,8 @@ CONTAINS
       REAL :: rph, cph, th
       REAL :: bpt(3)
       COMPLEX :: phasefac
-      COMPLEX, ALLOCATABLE :: sph(:, :, :)
+      COMPLEX, ALLOCATABLE :: sph(:, :, :), loc(:, :, :)
+      REAL :: rc(3, 3)
       COMPLEX :: hlp(3, -1:1)
       COMPLEX, PARAMETER :: img = CMPLX(0.0, 1.0)
       REAL :: s2
@@ -55,7 +61,15 @@ CONTAINS
       IF (nene == nntot + 1) CALL juDFT_error("cannot find matching nearest neighbor k", &
                                               calledby="melem_nabla_sph")
 
-      ALLOCATE (sph(nbnd, nbnd, -1:1), source=CMPLX(0.0, 0.0))
+      ALLOCATE (sph(nbnd, nbnd, -1:1), loc(nbnd, nbnd, 3))
+
+      !> Spherical to cartesian, and the -i of the momentum. Hoisted out of the loop because
+      !> it does not depend on the atom; what does depend on it is the rotation below.
+      s2 = 1.0/SQRT(2.0)
+      hlp = CMPLX(0.0, 0.0)
+      hlp(1, -1) = CMPLX(s2, 0.0);   hlp(1, 1) = CMPLX(-s2, 0.0)
+      hlp(2, -1) = -img*s2;          hlp(2, 1) = -img*s2
+      hlp(3, 0) = CMPLX(1.0, 0.0)
 
       DO n = 1, atoms%ntype
          DO nn = 1, atoms%neq(n)
@@ -65,6 +79,12 @@ CONTAINS
             cph = 2.0*tpi_const*SIN(th)
             phasefac = CMPLX(rph, cph)
 
+            !> Per atom now, not accumulated over them: the three components that come
+            !> out of the contraction are a VECTOR in THIS atom's local frame, and vectors
+            !> in different frames cannot be added. Summing first and converting once was
+            !> the bug: with equivalent atoms related by inversion the two contributions
+            !> cancelled instead of adding, and the muffin-tin term vanished.
+            sph = CMPLX(0.0, 0.0)
             lm = atoms%lmax(n)*(atoms%lmax(n) + 2)
             DO mu = -1, 1
                DO r1 = 1, MAXVAL(abc(n)%n_r)
@@ -79,30 +99,28 @@ CONTAINS
                   END DO
                END DO
             END DO
+            !> The closing is conjugated because the contraction above is, and the -i of
+            !> the momentum becomes +i for the same reason. Done HERE, in the local frame,
+            !> because what follows has to act on cartesian components.
+            DO a = 1, 3
+               loc(:, :, a) = img*(CONJG(hlp(a, -1))*sph(:, :, -1) &
+                                   + CONJG(hlp(a, 0))*sph(:, :, 0) &
+                                   + CONJG(hlp(a, 1))*sph(:, :, 1))
+            END DO
+
+            !> Local frame -> global, with THIS atom's operation. p is a POLAR vector, so it
+            !> is plain R; the orbital moment is axial and would need det(R) R instead, which
+            !> is why m_melem_symrot offers the two and not one.
+            rc = melem_rot_polar(sym, cell, na)
+            DO a = 1, 3
+               DO mu = 1, 3
+                  pnk(:, :, a) = pnk(:, :, a) + rc(a, mu)*loc(:, :, mu)
+               END DO
+            END DO
          END DO
       END DO
 
-      !> Spherical to cartesian, and the -i of the momentum. Same matrix momentum_matrix
-      !> closes with, written out so the component it belongs to is visible.
-      !>
-      !> The closing is conjugated because the contraction above is: it is the one the
-      !> plain overlap does, which conjugates the ket side and leaves the result conjugated
-      !> for whoever collects it. sph therefore holds the conjugate of the gradient, and
-      !> the interstitial half returns its own in the same convention, so both have to be
-      !> closed the same way to be added.
-      s2 = 1.0/SQRT(2.0)
-      hlp = CMPLX(0.0, 0.0)
-      hlp(1, -1) = CMPLX(s2, 0.0);   hlp(1, 1) = CMPLX(-s2, 0.0)
-      hlp(2, -1) = -img*s2;          hlp(2, 1) = -img*s2
-      hlp(3, 0) = CMPLX(1.0, 0.0)
-
-      DO a = 1, 3
-         pnk(:, :, a) = pnk(:, :, a) + img*(CONJG(hlp(a, -1))*sph(:, :, -1) &
-                                            + CONJG(hlp(a, 0))*sph(:, :, 0) &
-                                            + CONJG(hlp(a, 1))*sph(:, :, 1))
-      END DO
-
-      DEALLOCATE (sph)
+      DEALLOCATE (sph, loc)
       CALL timestop("melem_nabla_sph")
    END SUBROUTINE melem_nabla_sph
 

@@ -28,6 +28,19 @@ MODULE m_types_matelements
         COMPLEX, ALLOCATABLE :: comp(:, :, :)
         INTEGER :: n_alpha = 1  !> Cartesian extents the operator declared; 1 means comp is unused
         INTEGER :: n_beta  = 1
+        !> Which frame the operator wants its basis matching coefficients in.
+        !>
+        !> abcof expands them about the LOCAL frame of each atom -- it rotates k+G by
+        !> transpose(mrot(:,:,invtab(ngopr(na)))) -- so that every atom of a type can share
+        !> one radial set. An operator that contracts those coefficients against a quantity
+        !> stored in the same local frame wants exactly that, and most do.
+        !>
+        !> Spin-orbit does not: its angular table rsoc%soangl is built in the GLOBAL frame
+        !> and carries no atom index, so local-frame coefficients would be contracted
+        !> against a table that knows nothing of the rotation. Such an operator sets this
+        !> and the factory hands it a second set expanded about the global frame, which is
+        !> what secvar_soc arranges for its own call by forcing sym%ngopr = 1.
+        LOGICAL :: l_global_frame = .FALSE.
     CONTAINS
         PROCEDURE :: init_mat    !> provide the result matrix with the dimensions implied by the spinor flags
         PROCEDURE :: add         !> accumulate the matrix elements of another object: this = this + other

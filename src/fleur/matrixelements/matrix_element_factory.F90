@@ -45,6 +45,10 @@ MODULE m_matrix_element_factory
         !needs that shape; one that contracts record by record uses zmat.
         TYPE(t_mat), ALLOCATABLE :: zmat_spinor(:)  !(1)
         TYPE(t_abc), ALLOCATABLE :: abc(:,:)        !(2,ntype) matching coefficients
+        !The same coefficients expanded about the global frame, for an operator that asks
+        !for it. Built on first demand, so a run without such an operator never pays.
+        TYPE(t_abc), ALLOCATABLE :: abc_glob(:,:)   !(2,ntype)
+        INTEGER              :: n_comp = -1         !spin components the coefficients hold
         INTEGER              :: eig_id = -1, ikpt = -1
         INTEGER              :: nrec = -1           !record layout it was filled with
         INTEGER, ALLOCATABLE :: list(:)             !band selection; unallocated = all bands
@@ -98,8 +102,9 @@ CONTAINS
         IF (ALLOCATED(sl%zmat))        DEALLOCATE(sl%zmat)
         IF (ALLOCATED(sl%zmat_spinor)) DEALLOCATE(sl%zmat_spinor)
         IF (ALLOCATED(sl%abc))         DEALLOCATE(sl%abc)
+        IF (ALLOCATED(sl%abc_glob))    DEALLOCATE(sl%abc_glob)
         IF (ALLOCATED(sl%list))        DEALLOCATE(sl%list)
-        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1
+        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1; sl%n_comp = -1
         sl%valid  = .FALSE.
         sl%stamp  = 0
     END SUBROUTINE clear_slot
@@ -340,6 +345,7 @@ CONTAINS
                 !components must never be equated.
                 IF (n_comp == 1) kslot(is)%abc(2,n) = kslot(is)%abc(1,n)
             END DO
+            kslot(is)%n_comp = n_comp
 
             kslot(is)%eig_id = eig_id
             kslot(is)%ikpt   = ikpt
@@ -351,6 +357,47 @@ CONTAINS
     END SUBROUTINE ensure_slot
 
     !> Evaluate one operator at one k-point.
+    !> The matching coefficients of a slot expanded about the GLOBAL frame, built once and
+    !> only when an operator asks for them.
+    !>
+    !> abcof rotates k+G by transpose(mrot(:,:,invtab(ngopr(na)))) before expanding, so that
+    !> every atom of a type can share one radial set. Forcing ngopr = 1 switches that off and
+    !> gives the expansion about the global frame directly -- the same thing secvar_soc does
+    !> to its own copy of sym, and for the same reason.
+    SUBROUTINE ensure_global_abc(is, input, atoms, sym, cell, lapw, noco, nococonv)
+        INTEGER,          INTENT(IN) :: is
+        TYPE(t_input),    INTENT(IN) :: input
+        TYPE(t_atoms),    INTENT(IN) :: atoms
+        TYPE(t_sym),      INTENT(IN) :: sym
+        TYPE(t_cell),     INTENT(IN) :: cell
+        TYPE(t_lapw),     INTENT(IN) :: lapw
+        TYPE(t_noco),     INTENT(IN) :: noco
+        TYPE(t_nococonv), INTENT(IN) :: nococonv
+
+        TYPE(t_sym) :: sym_g
+        INTEGER :: n, jsp, jsp_rad, num_bands
+
+        IF (ALLOCATED(kslot(is)%abc_glob)) RETURN
+        IF (.NOT.ALLOCATED(kslot(is)%abc)) CALL judft_bug( &
+            'ensure_global_abc: the local-frame coefficients are not there yet')
+        num_bands = SIZE(kslot(is)%abc(1,1)%cof, 1)
+
+        sym_g = sym
+        sym_g%ngopr = 1
+
+        ALLOCATE(kslot(is)%abc_glob(2, atoms%ntype))
+        DO n = 1, atoms%ntype
+            DO jsp = 1, kslot(is)%n_comp
+                jsp_rad = radial_slot(radfun_store, jsp)
+                CALL kslot(is)%abc_glob(jsp,n)%init(input, atoms, num_bands, n)
+                CALL kslot(is)%abc_glob(jsp,n)%calc_abc(input, atoms, sym_g, cell, lapw, &
+                                               num_bands, usdus_store, noco, nococonv, &
+                                               jsp_rad, n, kslot(is)%zmat(MIN(jsp, kslot(is)%nrec)))
+            END DO
+            IF (kslot(is)%n_comp == 1) kslot(is)%abc_glob(2,n) = kslot(is)%abc_glob(1,n)
+        END DO
+    END SUBROUTINE ensure_global_abc
+
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
                                       noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
                                       l_both_spinors, kpts)
@@ -373,9 +420,19 @@ CONTAINS
         TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
 
         INTEGER :: is, num_bands
+        TYPE(t_abc), POINTER :: abc_use(:,:)
 
         CALL ensure_slot(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, enpara, &
                          lapw, vtot, fmpi, is, num_bands, ev_list, l_both_spinors, kpts)
+
+        !Which frame the operator declared. Most contract against local-frame quantities and
+        !take the set the slot already holds; one that says so gets the global-frame set.
+        IF (matel%l_global_frame) THEN
+            CALL ensure_global_abc(is, input, atoms, sym, cell, lapw, noco, nococonv)
+            abc_use => kslot(is)%abc_glob
+        ELSE
+            abc_use => kslot(is)%abc
+        END IF
 
         !An operator whose result carries Cartesian components keeps them in a store
         !that has no distributed counterpart, so the two cannot be combined. Say so here
@@ -404,10 +461,10 @@ CONTAINS
         !spin channels. The abc coefficients stay per record either way, since each is
         !contracted with its own component.
         IF (ALLOCATED(kslot(is)%zmat_spinor)) THEN
-            CALL matel%calc_matrix_elements(kslot(is)%zmat_spinor, kslot(is)%abc, &
+            CALL matel%calc_matrix_elements(kslot(is)%zmat_spinor, abc_use, &
                                             radfun_store, usdus_store)
         ELSE
-            CALL matel%calc_matrix_elements(kslot(is)%zmat, kslot(is)%abc, &
+            CALL matel%calc_matrix_elements(kslot(is)%zmat, abc_use, &
                                             radfun_store, usdus_store)
         END IF
 
