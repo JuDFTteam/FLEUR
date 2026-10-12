@@ -112,7 +112,7 @@ contains
 
       do iQ = 1, qvec_full%nkpt
          if (any(abs(qvec_full%bk(:, iQ) - fi%dfpt%qvec%bk(:, iQ)) > 1e-7)) then
-            call juDFT_error("fullsym_ q mesh ordering differs from dfpt%qvec; the q<iQ>_* and dynMatq=<iQ> file names would be mismatched.", calledby="dfpt_read_fullsym")
+            call juDFT_error("fullsym_ q mesh ordering differs from dfpt%qvec; the q<iQ>_* files and the dynmat.hdf q-indices would be mismatched.", calledby="dfpt_read_fullsym")
          end if
       end do
 

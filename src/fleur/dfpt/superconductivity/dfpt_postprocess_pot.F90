@@ -16,6 +16,7 @@ module m_dfpt_postprocess_pot
     USE m_cdn_io
     USE m_make_stars
     USE m_dfpt_dynmat_eig
+    USE m_dfpt_dynmat_io
     USE m_eigen
     USE m_dfpt_vgen
     USE m_dfpt_elph_mat
@@ -40,7 +41,7 @@ module m_dfpt_postprocess_pot
     
     implicit none
     PRIVATE
-    PUBLIC :: dfpt_postprocess_elph, read_dynmats
+    PUBLIC :: dfpt_postprocess_elph
 
 
 contains 
@@ -147,7 +148,7 @@ contains
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
-                call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
+                call read_dynmat_q("dynmat.hdf", iQ, dynMats(:,:,iQ))
                 call timestop("dynMat IO")
             end if 
 
@@ -263,49 +264,6 @@ contains
         end if
 
     end subroutine dfpt_postprocess_elph
-
-
-    subroutine read_dynmats(natoms,iQ,dynMat)
-
-        integer, intent(in) :: natoms
-        integer, intent(in)  :: iQ
-        complex, intent(out) :: dynMat(:,:) 
-
-        integer :: iread 
-        character(len=100) :: trash 
-        real,allocatable    :: numbers(:,:)
-
-        allocate(numbers(3*natoms,6*natoms))
-        numbers = 0.0
-        if (iQ<=9) then
-            open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
-        else if (iQ<=99) then  
-            open( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-        else if (iQ<=999) then
-            open( 3001, file="dynMatq=0"//int2str(iQ), status="old")
-        else 
-            open( 3001, file="dynMatq="//int2str(iQ), status="old")
-        end if 
-
-        
-        do iread = 1, 3 + 3*natoms !Loop over dynmat rows
-            if (iread<4) then
-                read( 3001,*) trash
-            else
-                read( 3001,*) numbers(iread-3,:)
-                dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
-            end if
-        end do ! iread
-        close(3001)
-
-
-
-    end subroutine read_dynmats
-
-
-
-
-
 
 
 end module m_dfpt_postprocess_pot

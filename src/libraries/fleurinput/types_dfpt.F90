@@ -59,7 +59,6 @@ MODULE m_types_dfpt
 
       INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
 
-      LOGICAL :: calcEigenVec    = .TRUE.
    CONTAINS
       PROCEDURE :: read_xml => read_xml_dfpt
       PROCEDURE :: mpi_bc => mpi_bc_dfpt
