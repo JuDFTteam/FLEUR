@@ -484,8 +484,8 @@ CONTAINS
       isat = -1
       IF (ALLOCATED(sym%invsat)) isat = sym%invsat(na)
       rl = REAL(sym%mrot(:, :, nap))
-      !> mrot esta en coordenadas de RED. Un vector cartesiano se transforma con
-      !> amat . mrot . amat^-1, y amat lleva los vectores de red como COLUMNAS.
+      !> mrot is in LATTICE coordinates. A cartesian vector transforms with
+      !> amat . mrot . amat^-1, and amat carries the lattice vectors as COLUMNS.
       ainv = inverse3(cell%amat)
       rc = MATMUL(cell%amat, MATMUL(rl, ainv))
       det = rc(1,1)*(rc(2,2)*rc(3,3) - rc(2,3)*rc(3,2)) &

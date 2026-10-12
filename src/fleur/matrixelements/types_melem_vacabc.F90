@@ -156,7 +156,7 @@ CONTAINS
       this%bc = CMPLX(0.0, 0.0)
       ALLOCATE (t(this%nv2), dt(this%nv2), te(this%nv2), dte(this%nv2), tei(this%nv2))
       ALLOCATE (vz(nmz), zmsh(nmz))
-      !> La malla del vacio, explicita porque difcub la necesita punto a punto.
+      !> The vacuum mesh, written out because difcub needs it point by point.
       DO ik2 = 1, nmz
          zmsh(ik2) = cell%z1 + (ik2 - 1)*vacuum%delz
       END DO
@@ -200,19 +200,19 @@ CONTAINS
             !> other reference.
             CALL melem_vac_ddz(this%u(:, ik2, ivac), zmsh, this%du(:, ik2, ivac))
             CALL melem_vac_ddz(this%ue(:, ik2, ivac), zmsh, this%due(:, ik2, ivac))
-            !> CONTRA -dt, NO CONTRA dt. vacuz y vacudz devuelven la derivada de frontera
-            !> con el signo OPUESTO al de la malla, que corre hacia fuera del film. Medido el
-            !> 9-oct-2026 en la lamina Pt(100) de 3 capas: du(1) = -7.139452E-01 frente a
-            !> dt = +7.139537E-01, y due(1) = +2.573875E+00 frente a dte = -2.574232E+00.
-            !> Los modulos casan a 1.2e-5, asi que el estarcido es bueno y lo unico distinto
-            !> era el convenio. Lo que se guarda es d/d(distancia a la frontera), que es lo
-            !> que el momento necesita junto con slot_sign.
+            !> AGAINST -dt, NOT AGAINST dt. vacuz and vacudz return the boundary derivative
+            !> with the sign OPPOSITE to the mesh, which runs outwards from the film. Measured
+            !> on the three-layer Pt(100) slab: du(1) = -7.139452E-01 against
+            !> dt = +7.139537E-01, and due(1) = +2.573875E+00 against dte = -2.574232E+00.
+            !> The magnitudes agree to 1.2e-5, so the stencil is sound and the convention was
+            !> the only difference. What is kept is d/d(distance from the boundary), which is
+            !> what the momentum needs together with slot_sign.
             !>
-            !> El error se mide en ABSOLUTO y se normaliza al final con la mayor derivada de
-            !> todo el juego. Medirlo en relativo G a G no sirve: los G paralelos altos
-            !> decaen tanto que su solucion en z es cero numerico, y ahi un relativo compara
-            !> dos ceros -- la primera version de esta comprobacion daba un 3.3 % que resulto
-            !> venir de un G con dt = 0.0 exacto.
+            !> The error is taken in ABSOLUTE terms and normalised at the end by the largest
+            !> derivative of the whole set. Measuring it relative, G by G, does not work: the
+            !> high parallel G decay so far that their solution in z is numerically zero, and
+            !> there a relative measure compares two zeros -- the first version of this check
+            !> reported 3.3 %, which came from a single G with dt = 0.0 exactly.
             dabs = MAX(dabs, ABS(this%du(1, ik2, ivac) + dt(ik2)), &
                              ABS(this%due(1, ik2, ivac) + dte(ik2)))
             dmax = MAX(dmax, ABS(dt(ik2)), ABS(dte(ik2)))
@@ -249,8 +249,8 @@ CONTAINS
          END DO
       END DO
 
-      !> El numero se imprime SIEMPRE y antes de cualquier aborto: si la comprobacion falla,
-      !> lo que hace falta es el valor, no la noticia de que fallo.
+      !> The number is printed ALWAYS and before any abort: when the check fails, what is
+      !> needed is the value, not the news that it failed.
       dworst = dabs/MAX(dmax, 1.0e-30)
       IF (.NOT. l_said) THEN
          l_said = .TRUE.
@@ -289,9 +289,9 @@ CONTAINS
          df = 0.0
          RETURN
       END IF
-      !> Rodajas de cuatro y no elementos sueltos: difcub declara f(0:3) de forma explicita,
-      !> y pasarle un elemento de un array de forma asumida es lo que d2fdz2cmplx.F puede
-      !> hacer (sus argumentos son de forma explicita) y aqui no -- error #8284.
+      !> Slices of four rather than single elements: difcub declares f(0:3) with explicit
+      !> shape, and handing it one element of an assumed-shape array is what d2fdz2cmplx.F
+      !> may do (its own arguments have explicit shape) and this may not -- error #8284.
       df(1) = difcub(z(1:4), f(1:4), z(1))
       DO i = 2, n - 2
          df(i) = difcub(z(i - 1:i + 2), f(i - 1:i + 2), z(i))

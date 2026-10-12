@@ -230,9 +230,9 @@ CONTAINS
     !> this holds a state by pointer, so the slot goes back to the pool.
     CALL matrix_element_release_anchor()
     IF (l_uhu .AND. fmpi%irank == 0 .AND. diag(2) > 0.0) CALL cf_report(kdiag, diag)
-    !> La hermiticidad del momento no cuesta nada y se mide siempre que haya momento: es el
-    !> unico test exacto del signo de la mitad de vacio, y callarlo cuando esta ahi seria
-    !> volver a la situacion en la que un signo equivocado no lo delata nada.
+    !> The hermiticity of the momentum costs nothing and is measured whenever there is a
+    !> momentum: it is the only exact test of the sign of the vacuum half, and keeping quiet
+    !> about it would be a return to the state where a wrong sign went unreported.
     IF (l_ham .AND. fmpi%irank == 0 .AND. MAXVAL(diag(20:22)) > 0.0) THEN
       WRITE (oUnit, '(/,a)') 'wannierlib: the momentum at b1 = b2, where it must be hermitian'
       WRITE (oUnit, '(a,3es12.4)') '   interstitial only,     x y z  ', &
@@ -388,7 +388,7 @@ CONTAINS
                                zmat_a(irec), zmat_b(irec), kpts%bkf(:, kb), gpar, pnk, &
                                ioff=layout_a%row_offset(jspin), &
                                ioff_b=layout_b%row_offset(jspin))
-          !> Solo el intersticio, antes de que el muffin-tin entre.
+          !> The interstitial alone, before the muffin tin joins it.
           IF (b1 == b2) THEN
             DO a = 1, 3
               diag(16 + a) = MAX(diag(16 + a), &
@@ -400,9 +400,10 @@ CONTAINS
           CALL melem_nabla_sph(atoms, sym, cell, abc_a(jspin, :), abc_b(jspin, :), &
                                kpts%bkf(:, kb), gpar, kpts%bkf(:, ka), &
                                nujug_pair, kdiff_pair, npair, pnk)
-          !> MT+intersticio. Segunda de las tres fotos, y las tres se toman AQUI, antes del
-          !> CONJG y antes de la correccion -b2c*ovl: medirlas en puntos distintos del cauce
-          !> hacia que ni siquiera coincidieran en volumen, donde no hay vacio que sumar.
+          !> MT + interstitial. Second of the three snapshots, and all three are taken HERE,
+          !> before the CONJG and before the -b2c*ovl correction: taking them at different
+          !> points of the pipeline made them disagree even in bulk, where there is no vacuum
+          !> to add.
           IF (b1 == b2) THEN
             DO a = 1, 3
               diag(10 + a) = MAX(diag(10 + a), &
@@ -415,12 +416,11 @@ CONTAINS
           !> the same unconjugated-bra convention they are.
           IF (l_vac) CALL melem_nabla_vac(vac_a, vac_b, gpar, pnk)
 
-          !> Y las tres regiones. Lo que la comparacion de las tres filas separa: el
-          !> intersticio es anti-hermitico por su cuenta -- su parte anti-hermitica es un
-          !> termino de superficie -- y en una celda periodica en x,y las unicas superficies
-          !> que ve son las esferas, asi que en el plano lo tiene que cancelar el MT, haya
-          !> vacio o no. Si x e y no cierran ya en la segunda fila, lo que falta no esta en
-          !> la tercera region.
+          !> And all three regions. What comparing the three rows separates: the interstitial
+          !> is anti-hermitian on its own -- that part of it is a surface term -- and in a cell
+          !> periodic in x and y the only surfaces it sees are the spheres, so in the plane the
+          !> muffin tin has to cancel it, vacuum or no vacuum. If x and y do not close already
+          !> in the second row, what is missing is not in the third region.
           IF (b1 == b2) THEN
             DO a = 1, 3
               diag(4 + a) = MAX(diag(4 + a), &
