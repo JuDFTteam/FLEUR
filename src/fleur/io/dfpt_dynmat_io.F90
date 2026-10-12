@@ -57,7 +57,7 @@ contains
    end subroutine init_dynmat_file
 
    subroutine write_dynmat_q(filename, iQ, qvec, weight, eigVals, freqs, dynMat, eigVecs, label)
-      !! Writes all data of one q-point into /qpoints/q_<iQ>, replacing an existing group.
+      !! Writes all data of one q-point into /qpoints/q_NNNNNN, replacing an existing group.
       !! freqs are in 1/cm; the THz values are derived from them.
 
       character(len=*),           intent(in) :: filename
@@ -75,7 +75,7 @@ contains
       character(len=:), allocatable :: gname
 
       call open_checked(filename, size(eigVals), H5F_ACC_RDWR_F, fid)
-      gname = '/qpoints/q_'//int2str(iQ)
+      gname = '/qpoints/'//qgroup_name(iQ)
       if (io_groupexists(fid, gname)) call io_gdelete(fid, gname)
 
       call io_gcreate(fid, gname, gid)
@@ -111,7 +111,7 @@ contains
       real, allocatable             :: buf(:,:,:)
 
       call open_checked(filename, size(dynMat, 1), H5F_ACC_RDONLY_F, fid)
-      gname = '/qpoints/q_'//int2str(iQ)
+      gname = '/qpoints/'//qgroup_name(iQ)
       if (.not. io_groupexists(fid, gname)) call judft_error("q-point "//int2str(iQ)//" missing in "//trim(filename), calledby="read_dynmat_q")
       call io_gopen(fid, gname, gid)
       if (.not. io_dataexists(gid, 'dynmat')) call judft_error("No dynmat stored for q-point "//int2str(iQ)//" in "//trim(filename), calledby="read_dynmat_q")
@@ -237,6 +237,16 @@ contains
       end if
       call io_gclose(gid)
    end subroutine write_header
+
+   function qgroup_name(iQ) result(name)
+      !! Zero-padded group name q_NNNNNN, so that alphabetical and numerical order agree.
+
+      integer, intent(in) :: iQ
+      character(len=8)    :: name
+
+      if (iQ < 0 .or. iQ > 999999) call judft_error("q-point index "//int2str(iQ)//" out of range for the dynmat file.", calledby="qgroup_name")
+      write(name, '(a,i6.6)') 'q_', iQ
+   end function qgroup_name
 
    function split_cmplx1(c) result(r)
       complex, intent(in) :: c(:)

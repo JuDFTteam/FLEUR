@@ -153,7 +153,7 @@ def read_phonon_hdf(filename):
     Read all q-point data of a FLEUR DFPT dynmat HDF5 file.
 
     Works for `dynmat.hdf`, `dynmat_band.hdf` and `dynmat_dos.hdf`. The
-    groups /qpoints/q_<iQ> are sorted by their `iQ` attribute and stacked.
+    groups /qpoints/q_NNNNNN are sorted by their `iQ` attribute and stacked.
 
     Parameters
     ----------
