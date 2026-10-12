@@ -283,6 +283,8 @@ SUBROUTINE read_xml_input(this,xml)
    IF (xml%versionNumber < 39) THEN
       IF (this%fixed_moment.EQ.0.0) this%isFixedMomentCalc = .FALSE. 
    END IF
+   IF (this%isFixedMomentCalc.AND.this%jspins==1) CALL juDFT_error("Fixed moment only in calculations with two spins", &
+                                                                   hint="Set jspins=2 or remove the fixed_moment attribute", calledby='types_input%read_xml_input')
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
