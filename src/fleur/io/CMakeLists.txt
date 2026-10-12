@@ -29,6 +29,7 @@ src/fleur/io/hubbard1_io.f90
 src/fleur/io/generic_txtio.f90
 src/fleur/io/cfOutput_hdf.F90
 src/fleur/io/writeCFOutput.F90
+src/fleur/io/dfpt_dynmat_io.F90
 )
 if (FLEUR_USE_HDF5)
 set(fleur_F90 ${fleur_F90}
