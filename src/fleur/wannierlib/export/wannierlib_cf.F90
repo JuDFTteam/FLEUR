@@ -68,6 +68,11 @@ MODULE m_wannierlib_cf
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wannierlib_uiu, wannierlib_uhu
+  !> C at (1,b2) and at (b2,1), summed over the spin components, at one k-point. One row
+  !> and one column of the pair table is all the check below needs, and holding more than
+  !> that is what runs a large case out of memory.
+  COMPLEX, ALLOCATABLE :: pair_row(:, :, :), pair_col(:, :, :)
+
 CONTAINS
 
   !> F on this rank's k-slice, in the Wannier gauge.
@@ -172,7 +177,9 @@ CONTAINS
     REAL, ALLOCATABLE :: kdp(:, :)
     INTEGER :: npair, nb, nw, nkl, k, kl, jcomp, jrad, lo, hi, jeig, kdiag, i
     LOGICAL :: l_uhu, l_here
-    REAL :: diag(22)
+    REAL :: diag(26)
+    REAL :: dpair, nrmp, wa
+    INTEGER :: ia, ic, ik
 
     CALL timestart(MERGE("wannierlib_uhu", "wannierlib_uiu", l_ham))
     nb = manifold%num_bands
@@ -200,6 +207,10 @@ CONTAINS
     END DO
 
     CALL bmesh%pair_diffs(kpts%bkf, kdp, npair)
+
+    IF (l_ham .AND. fmpi%irank == 0) &
+      ALLOCATE (pair_row(nb, nb, bmesh%nntot), pair_col(nb, nb, bmesh%nntot), &
+                source=CMPLX(0.0, 0.0))
 
     lo = MERGE(1, jspin, l_spinors)
     hi = MERGE(2, jspin, l_spinors)
@@ -245,6 +256,70 @@ CONTAINS
       WRITE (oUnit, '(a)') '   -- restricting p to a region leaves a boundary term -- so this'
       WRITE (oUnit, '(a)') '   only closes if the vacuum enters with the right sign. x and y'
       WRITE (oUnit, '(a)') '   test the ket wavevector, z tests the derivative and its sign.'
+    END IF
+    IF (ALLOCATED(pair_row)) THEN
+      !> C(1,b) and C(b,1) are the same matrix element read the other way round, so one has
+      !> to be the adjoint of the other. This is the only check here that exercises b1 /= b2,
+      !> which is what C is built from: the b1 = b2 hermiticity above cannot stand in for it,
+      !> because there both sides of the identity vanish and what is left survives
+      !> Pi -> -Pi and Pi -> lambda Pi.
+      !>
+      !> IT DOES NOT CLOSE, AND THAT IS NOT A FAULT. The identity resolves H against the
+      !> eigenvalue of the bra, which is exact only for an exact eigenfunction; a variational
+      !> solution is one only inside its own basis. Writing 1 = P + Q for the basis at k+b1,
+      !> what is left over is <u(k+b1)| H Q |u(k+b2)>, the Hamiltonian reaching the part of
+      !> the ket outside the bra's basis. At b1 = b2 the two bases coincide, Q|u> = 0, and
+      !> the term vanishes identically.
+      !>
+      !> Measured on Fe bcc: the departure falls with the basis, 9.7e-2 at 49 basis functions
+      !> to 3.5e-2 at 141, roughly as 1/N. What reaches the assembled tensor is some fifty
+      !> times smaller; see the check that follows.
+      !>
+      !> What it CANNOT see: a correction whose coefficient is symmetric in b1 and b2. The
+      !> gauge term enters C as (b1.b2) M, and a symmetric scalar cancels between the two
+      !> orders, so removing it altogether leaves this number unchanged.
+      WRITE (oUnit, '(/,a)') 'wannierlib: C at (1,b2) against C at (b2,1), one the adjoint of the other'
+      WRITE (oUnit, '(a)')   '        b2     |dC|          |C|        relative'
+      dpair = 0.0
+      DO i = 1, bmesh%nntot
+        nrmp = MAXVAL(ABS(pair_row(:, :, i)))
+        wa = MAXVAL(ABS(pair_row(:, :, i) - CONJG(TRANSPOSE(pair_col(:, :, i)))))
+        WRITE (oUnit, '(i10,3es14.5)') i, wa, nrmp, wa/MAX(nrmp, 1.0e-30)
+        dpair = MAX(dpair, wa/MAX(nrmp, 1.0e-30))
+      END DO
+      !> the worst PER PAIR, not max|dC|/max|C|: taking the two maxima separately divides a
+      !> large numerator from one pair by a large denominator from another and understates
+      WRITE (oUnit, '(a,es12.4)') '   worst per pair                  ', dpair
+      DEALLOCATE (pair_row, pair_col)
+    END IF
+    !> HOW MUCH OF THE NON-ADJOINT PART OF C REACHES O, which is the question the check
+    !> above leaves open: its departure is in matrix elements, and what matters is what
+    !> survives the weighted sum over pairs and bands.
+    !>
+    !> Symmetrising C over the pair swap -- ham(b1,b2) -> [ham(b1,b2) + ham(b2,b1)+]/2 --
+    !> is EXACTLY the same as O(a,c) -> [O(a,c) + O(c,a)+]/2, because relabelling b1 <-> b2
+    !> in the weighted sum swaps the cartesian indices. So the impact costs no storage at
+    !> all: it is the departure of the assembled tensor from that symmetry.
+    !>
+    !> Measured on Fe bcc: 1.9e-3 at the production basis against 9.4e-2 in the matrix
+    !> elements, a suppression of fifty, and it converges as about N^-2.4 against the N^-1
+    !> of the departure itself -- the cancellation improves as the basis grows.
+    IF (l_ham .AND. fmpi%irank == 0 .AND. SIZE(o0, 5) > 0) THEN
+      wa = 0.0; nrmp = 0.0
+      DO ik = 1, SIZE(o0, 5)
+        DO ia = 1, 3
+          DO ic = 1, 3
+            wa = MAX(wa, MAXVAL(ABS(o0(:, :, ia, ic, ik) &
+                                    - CONJG(TRANSPOSE(o0(:, :, ic, ia, ik))))))
+            nrmp = MAX(nrmp, MAXVAL(ABS(o0(:, :, ia, ic, ik))))
+          END DO
+        END DO
+      END DO
+      WRITE (oUnit, '(/,a)') 'wannierlib: how much of the non-adjoint part of C reaches O'
+      WRITE (oUnit, '(a,2es13.5)') '   max|O(a,c) - O(c,a)+|   max|O|   ', wa, nrmp
+      WRITE (oUnit, '(a,es13.5)')  '   relative                        ', wa/MAX(nrmp, 1.0e-30)
+      WRITE (oUnit, '(a)') '   This is what symmetrising C would change in the assembled'
+      WRITE (oUnit, '(a)') '   tensor, and therefore the consequence of the pair residue.'
     END IF
     DEALLOCATE (vgauge, kdp)
     CALL timestop(MERGE("wannierlib_uhu", "wannierlib_uiu", l_ham))
@@ -461,6 +536,33 @@ CONTAINS
             diag(2) = diag(2) + SUM(ABS(ham)**2)
             diag(3) = diag(3) + SUM(ABS(hud)**2)
             diag(4) = MAX(diag(4), asym)
+            !> The DIAGONAL pair kept apart from the rest.
+            !>
+            !> At b1 = b2 the identity is EXACT -- bra and ket come from the same LAPW basis,
+            !> so resolving H against the bra is legitimate and the residue is 1e-16. The
+            !> direct uHu therefore has a machine-precision target there, one that assumes
+            !> nothing about b1 /= b2, which is the case under question. What is left over is
+            !> exactly what the direct route is still missing: the interstitial, the
+            !> non-spherical potential and the local orbitals.
+            !>
+            !> Mixed over all pairs, as diag(1..3) does it, the number cannot be read: the
+            !> 0.863 measured so far averages a case with a known answer together with one
+            !> whose answer is the open question.
+            IF (b1 == b2) THEN
+              diag(23) = diag(23) + REAL(SUM(CONJG(ham)*hud))
+              diag(24) = diag(24) + SUM(ABS(ham)**2)
+              diag(25) = diag(25) + SUM(ABS(hud)**2)
+              diag(26) = MAX(diag(26), asym)
+            END IF
+          END IF
+
+          !> ACCUMULATED over the spin components, not assigned: for a spinor the overlap of
+          !> one component alone is not the identity, and the identity below holds for the
+          !> whole state and not component by component. Reading one component on its own
+          !> reports a 20 % departure that has nothing to do with the matrix elements.
+          IF (l_ham .AND. fmpi%irank == 0 .AND. nk_local == 1) THEN
+            IF (b1 == 1) pair_row(:, :, b2) = pair_row(:, :, b2) + ham
+            IF (b2 == 1) pair_col(:, :, b1) = pair_col(:, :, b1) + ham
           END IF
 
           tmp = MATMUL(ham, vgauge(:, :, kb))
@@ -502,6 +604,16 @@ CONTAINS
     WRITE (oUnit, '(a,es12.4)') '   largest R_MT surface term      ', diag(4)
     WRITE (oUnit, '(a)') '   Muffin-tin sphere and spherical potential only: the sign of the'
     WRITE (oUnit, '(a)') '   projection is the result, its magnitude is not.'
+    !> The diagonal pairs on their own; see the call site for why they are worth separating.
+    IF (diag(24) > 0.0) THEN
+      WRITE (oUnit, '(/,a)')      '   only the DIAGONAL pairs b1 = b2, where the identity is exact'
+      WRITE (oUnit, '(a,f12.6)')  '   Re <C_id|C_uHu> / <C_id|C_id>  ', diag(23)/diag(24)
+      WRITE (oUnit, '(a,f12.6)')  '   |C_uHu| / |C_id|               ', SQRT(diag(25)/diag(24))
+      WRITE (oUnit, '(a,es12.4)') '   largest R_MT surface term      ', diag(26)
+      WRITE (oUnit, '(a)') '   Here the identity carries no error of its own, so the shortfall'
+      WRITE (oUnit, '(a)') '   is what the direct route still leaves out: interstitial,'
+      WRITE (oUnit, '(a)') '   non-spherical potential and local orbitals.'
+    END IF
   END SUBROUTINE cf_report
 
 END MODULE m_wannierlib_cf
