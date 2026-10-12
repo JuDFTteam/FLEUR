@@ -46,7 +46,7 @@ MODULE m_dfpt_eigen
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen(sternheimerJob,fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
+   SUBROUTINE dfpt_eigen(sternheimerJob,fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1, vTot, inden, bqpt, &
                              eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_eig_id2)
 
       
@@ -61,7 +61,7 @@ CONTAINS
       TYPE(t_enpara),INTENT(IN) :: enpara
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_stars),INTENT(IN)     :: starsq
-      TYPE(t_potden),INTENT(IN)    :: inden, v1real, v1imag, vTot
+      TYPE(t_potden),INTENT(IN)    :: inden, v1, vTot
       REAL,         INTENT(IN)     :: bqpt(3)
       INTEGER,      INTENT(IN)     :: eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont(6)
       LOGICAL,      INTENT(IN)     :: l_real, sh_den
@@ -99,7 +99,7 @@ CONTAINS
       vx%pw_w = vTot%pw_w
 
       ! Get the (lm) matrix elements for V1 and H0
-      CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
+      CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1,.FALSE.)
       CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=0.0,l_dfptmod=.TRUE.)
       
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
@@ -155,7 +155,7 @@ CONTAINS
 
             ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
             CALL timestart("Setup of matrix perturbations")
-            CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+            CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,td,tdV1,vTot,v1,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
             CALL timestop("Setup of matrix perturbations")
 
             IF (fmpi%n_size == 1) THEN

@@ -1,0 +1,16 @@
+AF CoO - type-II AFM rock salt, rhombohedral magnetic cell
+! primitive vectors given explicitly in units of the cubic lattice
+! constant a = 4.254 Angstrom (a0 converts Angstrom -> bohr)
+&lattice latsys='hR', a0=1.8897259886, a=5.210065, alpha=33.5573 /
+! NB: 'a' above is the rhombohedral edge length a_cubic*sqrt(3/2);
+! alpha = arccos(5/6) = 33.5573 deg is the ideal (undistorted) angle.
+! If your inpgen build does not accept latsys='hR' with (a,alpha),
+! use the explicit primitive vectors instead (in units of a_cubic=4.254):
+!   a1 = (0.5, 0.5, 1.0)
+!   a2 = (1.0, 0.5, 0.5)
+!   a3 = (0.5, 1.0, 0.5)
+4
+27  0.00  0.00  0.00   ! Co spin UP
+27  0.50  0.50  0.50   ! Co spin DOWN
+8  0.25  0.25  0.25   ! O
+8  0.75  0.75  0.75   ! O

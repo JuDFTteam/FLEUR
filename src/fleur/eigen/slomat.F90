@@ -115,7 +115,8 @@ CONTAINS
          ! ov_ud(:,lo) = (O v_lo)(u,udot), ov_lolo(lop,lo) = v_lop^T O v_lo (same l only)
          ALLOCATE(v(SIZE(rf%integral,1),atoms%nlo(ntyp)),ov_ud(2,atoms%nlo(ntyp)),ov_lolo(atoms%nlo(ntyp),atoms%nlo(ntyp)),source=0.0)
          DO lo = 1,atoms%nlo(ntyp)
-            v(1,lo) = alo1(lo); v(2,lo) = blo1(lo); v(atoms%slot_of_lo(lo,ntyp),lo) = clo1(lo)
+            v(1,lo) = alo1(lo); v(2,lo) = blo1(lo)
+            v(atoms%slot_of_lo(lo,ntyp),lo) = v(atoms%slot_of_lo(lo,ntyp),lo) + clo1(lo)
          END DO
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)

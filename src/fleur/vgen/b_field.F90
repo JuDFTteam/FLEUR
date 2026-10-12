@@ -32,8 +32,8 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT)::vtot
     TYPE(t_nococonv):: nococonv
     INTEGER :: iType
-    COMPLEX :: bOffdiag
-    REAL :: bExternal(4)
+    COMPLEX :: bOffdiag, bOff
+    REAL :: bExternal(4), bvec(3), bz, n_soc(3)
     LOGICAL :: l_afm
 
     l_afm = .FALSE.
@@ -41,22 +41,36 @@ CONTAINS
     IF (.NOT.field%l_b_field.and..not.any(noco%l_fixedMoment)) RETURN !no B-field specified
 
     IF (input%jspins.NE.2) CALL judft_error("B-fields can only be used in spin-polarized calculations")
-    !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
-    
+
+    !Field in potential convention: V11=V+Bz, V22=V-Bz, V21=Bx+iBy
+    IF (noco%l_noco) THEN
+       bvec = -field%b_field/2.0*field%b_dir()
+    ELSE IF (noco%l_soc) THEN
+       !Collinear SOC: only the projection on the quantization axis is meaningful
+       n_soc = [SIN(nococonv%theta)*COS(nococonv%phi),SIN(nococonv%theta)*SIN(nococonv%phi),COS(nococonv%theta)]
+       bvec = [0.0,0.0,-field%b_field/2.0*DOT_PRODUCT(field%b_dir(),n_soc)]
+    ELSE
+       bvec = [0.0,0.0,-field%b_field/2.0]
+    END IF
+    bz = bvec(3)
+    bOff = CMPLX(bvec(1),bvec(2))
+
     !Interstitial: only for FM case
     IF (.NOT. l_afm) THEN
-       vTot%pw_w(:,1)=vTot%pw_w(:,1)-(field%b_field/2.0)*stars%ustep(:)
-       vTot%pw_w(:,2)=vTot%pw_w(:,2)+(field%b_field/2.0)*stars%ustep(:)
+       vTot%pw_w(:,1)=vTot%pw_w(:,1)+bz*stars%ustep(:)
+       vTot%pw_w(:,2)=vTot%pw_w(:,2)-bz*stars%ustep(:)
+       IF (noco%l_noco) vTot%pw_w(:,3)=vTot%pw_w(:,3)+bOff*stars%ustep(:)
     END IF
 
     !MT-spheres
     DO iType = 1, atoms%ntype
        bExternal = 0.0
-       bOffdiag = 0.0
-       bExternal(1) = -field%b_field / 2
-       bExternal(2) = field%b_field / 2
+       bExternal(1) = bz
+       bExternal(2) = -bz
 
        IF (noco%l_noco) THEN
+          !Rotate into the local frame of the atom
+          bOffdiag = bOff
           CALL nococonv%rotdenmat(nococonv%alph(iType), nococonv%beta(iType), bExternal(1), bExternal(2), bOffdiag, .FALSE.)
           bExternal(3) = REAL(bOffdiag)
           bExternal(4) = AIMAG(bOffdiag)
@@ -65,7 +79,7 @@ CONTAINS
        vTot%mt(:atoms%jri(iType),0,iType,1) = vTot%mt(:atoms%jri(iType),0,iType,1) + sfp_const * (bExternal(1) * 2.0 - field%b_field_mt(iType)-nococonv%b_con(3,iType)) / 2.0
        vTot%mt(:atoms%jri(iType),0,iType,2) = vTot%mt(:atoms%jri(iType),0,iType,2) + sfp_const * (bExternal(2) * 2.0 + field%b_field_mt(iType)+nococonv%b_con(3,iType)) / 2.0
 
-       IF (noco%l_noco) THEN
+       IF (SIZE(vTot%mt,4)==4) THEN
           vTot%mt(:atoms%jri(iType),0,iType,3) = vTot%mt(:atoms%jri(iType),0,iType,3) + sfp_const * bExternal(3)
           vTot%mt(:atoms%jri(iType),0,iType,4) = vTot%mt(:atoms%jri(iType),0,iType,4) + sfp_const * bExternal(4)
        END IF
@@ -80,8 +94,9 @@ CONTAINS
     END IF
     !Vacuum
     IF (input%film) THEN
-       vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.0
-       vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)+field%b_field/2.0
+       vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)+bz
+       vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)-bz
+       IF (noco%l_noco) vTot%vac(:,1,:,3)=vTot%vac(:,1,:,3)+bOff
     END IF
   END SUBROUTINE bfield
 END MODULE m_bfield

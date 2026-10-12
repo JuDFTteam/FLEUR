@@ -28,11 +28,15 @@ Testset: Basic
 | +   | Bulk Fe, Kerker preconditioner               | basic/Fe_Kerker          | bulk                  |                    |                 | 2   |
 | +   | Bulk Fe fcc with relativistic core solver    | basic/Fe_fcc_kcrel       |                       |                    |                 | 2   |
 | +   | Si with LOs                                  | basic/SiLO               | bulk                  |                    |                 | 2   |
+| +   | Cu with APW+lo, LAPW and APW channels        | basic/CuAPWlo            | bulk                  |                    |                 | 2   |
+| +   | Cu with APW+lo and DFT+U on the APW+lo d     | basic/CuAPWlo_U          | bulk,ldau             |                    |                 | 2   |
+| +   | Fe with APW+lo, SOC 2nd variation            | basic/FeAPWlo_SOC2       | bulk,soc              |                    |                 | 2   |
 | +   | Bulk PTO                                     | basic/PTO                | bulk                  |                    |                 | 2   |
 | +   | Bulk PTO, SOC                                | basic/PTO-SOC            | bulk,soc              |                    |                 | 2   |
 | +   | Bulk Fe, Tetrahedon method                   | basic/Fe_Tetra_noSYM     | bulk                  |                    |                 | 2   |
 |     | LDA+U with AMF double counting and magnetism | basic/NiOldaUAMF         | bulk,ldau             | LDA+U AMF disabled |                 | 2   |
 | +   | LDA+U with LF double counting and magnetism  | basic/NiOldaUFLL         | bulk,ldau             |                    |                 | 2   |
+| +   | DFT+V between two atom types                 | basic/GaAsLdaV           | bulk,ldau             |                    |                 | 2   |
 | +   | Crystal field output                         | basic/CrystalFieldOutput | bulk                  |                    |                 | 2   |
 
 Testset: Films
@@ -56,6 +60,7 @@ Testset: Forces
 | --- | -------------------------------------------- | ----------------------- | --------- | ------- | ------- | --- |
 | +   | Bulk GaAs, Relaxation, LDA+U                 | forces/GaAsMultiUForce  | bulk,ldau |         |         | 2   |
 | +   | Bulk VO2, Relaxation                         | forces/VO2_forces       | bulk      |         |         | 2   |
+| +   | Si displaced, APW+lo forces                  | forces/SiAPWlo_force    | bulk      |         |         | 2   |
 | +   | Bulk VO2, Relaxation, different force levels | forces/VO2_force_levels | bulk      |         |         | 2   |
 | +   | Bulk H2O, Relaxtion using BFGS               | forces/H2ORelaxBFGS     | bulk      |         |         | 2   |
 
@@ -87,6 +92,7 @@ Testset: Noco
 | +   | Noco, one atom, mag. in y direction           | noco/1aty               | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, one atom, mag. in z direction           | noco/1atz               | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, one atom, mag. in non-sym direction     | noco/1at                | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, B-field along moment          | noco/1atBfield          | bulk,hdf                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in x direction       | noco/1atSOCx            | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc,hdf                 |                   |         | 2   |
@@ -104,6 +110,9 @@ Testset: Noco
 | +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X, coretails       | noco/MnFilm_ctail       | film                         |                   |         | 2   |
 | +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk,hdf                     |                   |         | 2   |
+| +   | Noco APW+lo, two Fe atoms, canted             | noco/FeAPWlo_noco       | bulk                         |                   |         | 2   |
+| +   | Noco APW+lo, Fe bcc flat spin spiral          | noco/FeAPWlo_ss         | bulk,spinspiral              |                   |         | 2   |
+| +   | Noco APW+lo, Fe bcc, SOC 1st variation        | noco/FeAPWlo_SOC1       | bulk,soc                     |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
@@ -126,6 +135,8 @@ Testset: Experimental
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |
 | +   | Hubbard1 without sym                           | extra/Gd_Hubbard1_noSYM | bulk,edsolver |                           |         | 2   |
 |     | diamond for one k-point with scan              | extra/Diamond_SCAN      | bulk,libxc    | SCAN has to be refactored |         | 2   |
+| +   | diamond, self-consistent SCAN (V_tau in H)     | extra/MetaGGA_SCAN      | bulk,libxc,metagga | exercises the MetaGGA V_tau interstitial+MT Hamiltonian and the tau*V_tau double counting |         | 2   |
+| +   | bcc V, self-consistent SCAN with semicore LOs  | extra/MetaGGA_SCAN_LO   | bulk,libxc,metagga | exercises the V_tau contribution to the local-orbital blocks of the local Hamiltonian |         | 2   |
 | +   | 3D vector plots of the magnetization           | extra/PlotOnlyMT        | bulk,plot,hdf |                           |         | 2   |
 | +   | density and potential plots, vector plots      | extra/PlotDenandPot     | bulk,plot,hdf |                           |         | 2   |
 

@@ -10,14 +10,56 @@ module m_dfpt_gradient
     use m_constants
     use m_gaunt, only: gaunt1
     use m_types_atoms
+    use m_types_cell
+    use m_types_potden
     use m_types_sphhar
+    use m_types_stars
     use m_types_sym
 
     implicit none
     private
-    public :: mt_gradient_lh, derivative_loc, sh_to_lh
+    public :: pw_gradient, mt_gradient_lh, derivative_loc, sh_to_lh
 
 contains
+
+    subroutine pw_gradient(stars, cell, l_noco, rho, grRho3)
+
+      type(t_stars),               intent(in)    :: stars
+      type(t_cell),                intent(in)    :: cell
+      logical,                     intent(in)    :: l_noco
+      type(t_potden),              intent(in)    :: rho
+      type(t_potden),              intent(inout) :: grRho3(3)
+
+      integer                                  :: xInd, yInd, zInd
+      integer                                  :: iStar, iStarM, iDir, nch0
+      real                                     :: gvec(3)
+
+      nch0 = size(rho%pw, 2)
+
+      do zInd = -stars%mx3, stars%mx3
+         do yInd = -stars%mx2, stars%mx2
+            do xInd = -stars%mx1, stars%mx1
+               iStar = stars%ig(xInd, yInd, zInd)
+               if (iStar.eq.0) cycle
+               gvec = matmul(real([xInd, yInd, zInd]), cell%bmat)
+               do iDir = 1, 3
+                  grRho3(iDir)%pw(iStar,:nch0) = rho%pw(iStar,:nch0) * cmplx(0.0, gvec(iDir))
+               end do
+            end do
+         end do
+      end do
+
+      if (.not.l_noco) return
+
+      do iStar = 1, stars%ng3
+         iStarM = stars%ig(-stars%kv3(1,iStar), -stars%kv3(2,iStar), -stars%kv3(3,iStar))
+         if (iStarM.eq.0) call judft_bug("star set not closed under inversion", calledby="pw_gradient")
+         do iDir = 1, 3
+            grRho3(iDir)%pw(iStar,4) = conjg(grRho3(iDir)%pw(iStarM,3))
+         end do
+      end do
+
+    end subroutine pw_gradient
 
     subroutine mt_gradient_lh(atoms, sphhar, sym, r2FlhMt, GrFshMt)
 

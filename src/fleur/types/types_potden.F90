@@ -28,6 +28,8 @@ MODULE m_types_potden
      COMPLEX,ALLOCATABLE :: pw(:,:),pw_w(:,:)
      !                      mt(radial_grid, sphhar, atom, spin)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
+     !Imaginary part of mt; allocated only for DFPT since the density response is complex.
+     REAL,ALLOCATABLE    :: mtIm(:,:,:,:)
      COMPLEX,ALLOCATABLE :: vac(:,:,:,:)
      !For angles of density/potential in noco case
      REAL,ALLOCATABLE  :: theta_pw(:)
@@ -92,6 +94,14 @@ CONTAINS
     ELSE
        CALL MPI_REDUCE(this%mt,this%mt,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
     END IF
+    !mtIm
+    IF (ALLOCATED(this%mtIm)) THEN
+       IF (irank==0) THEN
+          CALL MPI_REDUCE(MPI_IN_PLACE,this%mtIm,size(this%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       ELSE
+          CALL MPI_REDUCE(this%mtIm,this%mtIm,size(this%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       END IF
+    END IF
     IF (PRESENT(the_other)) THEN
        !mt
        IF (irank==0) THEN
@@ -137,6 +147,7 @@ CONTAINS
     call mpi_bc(this%pw,0,fmpi_comm)
     IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,fmpi_comm)
     CALL mpi_bc(this%mt ,0,fmpi_comm)
+    IF (ALLOCATED(this%mtIm)) CALL mpi_bc(this%mtIm,0,fmpi_comm)
     IF (ALLOCATED(this%vac)) CALL mpi_bc(this%vac,0,fmpi_comm)
     IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,fmpi_comm)
     IF (ALLOCATED(this%nIJ_llp_mmp)) CALL mpi_bc(this%nIJ_llp_mmp,0,fmpi_comm)
@@ -144,18 +155,25 @@ CONTAINS
   end subroutine distribute
 
   SUBROUTINE sum_both_spin(this,that)
+    USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(INOUT)   :: this
     TYPE(t_potden),INTENT(INOUT),OPTIONAL :: that
 
     IF (PRESENT(that)) THEN
+       IF (ALLOCATED(this%mtIm).NEQV.ALLOCATED(that%mtIm)) &
+          CALL judft_bug("mtIm allocation mismatch between this and that",calledby="sum_both_spin")
+       IF (SIZE(this%pw,2).NE.SIZE(that%pw,2)) &
+          CALL judft_bug("pw channel count mismatch between this and that",calledby="sum_both_spin")
        IF (SIZE(this%pw,2)>1) THEN
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
+          IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)+this%mtIm(:,0:,:,2)
           that%pw(:,1)=this%pw(:,1)+this%pw(:,2)
           that%vac(:,:,:,1)=this%vac(:,:,:,1)+this%vac(:,:,:,2)
           IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)+this%pw_w(:,2)
        ELSE
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
+          IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)
           that%pw(:,1)=this%pw(:,1)
           that%vac(:,:,:,1)=this%vac(:,:,:,1)
           IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
@@ -163,6 +181,7 @@ CONTAINS
     ELSE
        IF (SIZE(this%pw,2)>1) THEN
           this%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
+          IF (ALLOCATED(this%mtIm)) this%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)+this%mtIm(:,0:,:,2)
           this%pw(:,1)=this%pw(:,1)+this%pw(:,2)
           this%vac(:,:,:,1)=this%vac(:,:,:,1)+this%vac(:,:,:,2)
           IF (ALLOCATED(this%pw_w)) this%pw_w(:,1)=this%pw_w(:,1)+this%pw_w(:,2)
@@ -171,17 +190,25 @@ CONTAINS
   END SUBROUTINE sum_both_spin
 
   SUBROUTINE copy_both_spin(this,that)
+    USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(IN)   :: this
     TYPE(t_potden),INTENT(INOUT) :: that
 
+    IF (ALLOCATED(this%mtIm).NEQV.ALLOCATED(that%mtIm)) &
+       CALL judft_bug("mtIm allocation mismatch between this and that",calledby="copy_both_spin")
+    IF (SIZE(this%pw,2).NE.SIZE(that%pw,2)) &
+       CALL judft_bug("pw channel count mismatch between this and that",calledby="copy_both_spin")
+
     that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
+    IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)
     that%pw(:,1)=this%pw(:,1)
     that%vac(:,:,:,1)=this%vac(:,:,:,1)
     IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
 
     IF (SIZE(that%mt,4)>1) THEN
        that%mt(:,0:,:,2)=this%mt(:,0:,:,1)
+       IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,2)=this%mtIm(:,0:,:,1)
        that%pw(:,2)=this%pw(:,1)
        that%vac(:,:,:,2)=this%vac(:,:,:,1)
        IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2)=this%pw_w(:,1)
@@ -223,6 +250,7 @@ CONTAINS
   end subroutine
 
   subroutine addPotDen( PotDen3, PotDen1, PotDen2 )
+    use m_judft
     implicit none
     class(t_potden), intent(in)    :: PotDen1
     class(t_potden), intent(in)    :: PotDen2
@@ -234,6 +262,19 @@ CONTAINS
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
 
+    if (allocated(PotDen1%mtIm).neqv.allocated(PotDen2%mtIm)) &
+       call judft_bug("mtIm allocation mismatch between operands",calledby="addPotDen")
+
+    if (size(PotDen1%pw,2).ne.size(PotDen2%pw,2)) &
+       call judft_bug("pw channel count mismatch between operands",calledby="addPotDen")
+
+    if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
+      if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
+      PotDen3%mtIm     = PotDen1%mtIm + PotDen2%mtIm
+    else if (allocated(PotDen3%mtIm)) then
+      deallocate(PotDen3%mtIm)
+    end if
+
     PotDen3%mt         = PotDen1%mt + PotDen2%mt
     PotDen3%pw         = PotDen1%pw + PotDen2%pw
     PotDen3%vac      = PotDen1%vac + PotDen2%vac
@@ -244,6 +285,7 @@ CONTAINS
   end subroutine
 
   subroutine subPotDen( PotDen3, PotDen1, PotDen2 )
+    use m_judft
     implicit none
     class(t_potden), intent(in)    :: PotDen1
     class(t_potden), intent(in)    :: PotDen2
@@ -257,6 +299,19 @@ CONTAINS
     
     ! The following allocates are countermeasures to valgrind complaints
     if(.not. allocated(PotDen3%vac)) allocate(PotDen3%vac, mold=PotDen1%vac)
+
+    if (allocated(PotDen1%mtIm).neqv.allocated(PotDen2%mtIm)) &
+       call judft_bug("mtIm allocation mismatch between operands",calledby="subPotDen")
+
+    if (size(PotDen1%pw,2).ne.size(PotDen2%pw,2)) &
+       call judft_bug("pw channel count mismatch between operands",calledby="subPotDen")
+
+    if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
+      if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
+      PotDen3%mtIm     = PotDen1%mtIm - PotDen2%mtIm
+    else if (allocated(PotDen3%mtIm)) then
+      deallocate(PotDen3%mtIm)
+    end if
 
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
     PotDen3%pw         = PotDen1%pw - PotDen2%pw
@@ -282,6 +337,13 @@ CONTAINS
     ! The following allocates are countermeasures to valgrind complaints
     if(.not. allocated(PotDenCopy%vac)) allocate(PotDenCopy%vac, mold=PotDen%vac)
 
+    if (allocated(PotDen%mtIm)) then
+      if(.not. allocated(PotDenCopy%mtIm)) allocate(PotDenCopy%mtIm, mold=PotDen%mtIm)
+      PotDenCopy%mtIm     = PotDen%mtIm
+    else if (allocated(PotDenCopy%mtIm)) then
+      deallocate(PotDenCopy%mtIm)
+    end if
+
     PotDenCopy%mt         = PotDen%mt
     PotDenCopy%pw         = PotDen%pw
     PotDenCopy%vac        = PotDen%vac
@@ -305,34 +367,31 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
     LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
 
-    LOGICAL :: do_dfpt
-
-    do_dfpt = .FALSE.
-    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
          atoms%n_denmat,atoms%n_vPairs,jspins,noco%l_noco,noco%l_mperp,potden_type,&
-         vacuum%nmzd,vacuum%nmzxyd,stars%ng2,do_dfpt)
+         vacuum%nmzd,vacuum%nmzxyd,stars%ng2,l_dfpt=l_dfpt)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,do_dfpt)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,l_dfpt)
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
     INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,potden_type
     LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
-    LOGICAL,OPTIONAL,INTENT(IN) :: do_dfpt
+    LOGICAL,OPTIONAL,INTENT(IN) :: l_dfpt
 
-    INTEGER:: err(3)
-    LOGICAL :: l_dfpt
+    INTEGER:: err(4)
+    LOGICAL :: do_dfpt
 
-    l_dfpt = .FALSE.
-    IF (PRESENT(do_dfpt)) l_dfpt = do_dfpt
+    do_dfpt = .FALSE.
+    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt
 
     err=0
     pd%iter=0
     pd%potdenType=potden_type
     IF(ALLOCATED(pd%pw)) DEALLOCATE (pd%pw)
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
+    IF(ALLOCATED(pd%mtIm)) DEALLOCATE (pd%mtIm)
     IF(ALLOCATED(pd%vac)) DEALLOCATE (pd%vac)
     IF(ALLOCATED(pd%qint)) DEALLOCATE (pd%qint)
     IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
@@ -340,12 +399,14 @@ CONTAINS
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
     IF(ALLOCATED(pd%nIJ_llp_mmp)) DEALLOCATE (pd%nIJ_llp_mmp)
 
-    IF (l_dfpt) THEN
-      ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1))
+    IF (do_dfpt) THEN
+      ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1)) !needed since hermicity is no longer applicable
+      ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraDim)),stat=err(2))
+      ALLOCATE (pd%mtIm(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraDim)),stat=err(4))
     ELSE
       ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
+      ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     END IF
-    ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vac(nmzd,n2d,2,MERGE(3,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%qint(ntype,jspins))
     ALLOCATE (pd%tec(ntype,jspins))
@@ -357,6 +418,7 @@ CONTAINS
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
+    IF (ALLOCATED(pd%mtIm)) pd%mtIm=0.0
     pd%vac=CMPLX(0.0,0.0)
     pd%qint = 0.0
     pd%tec = 0.0
@@ -552,6 +614,7 @@ CONTAINS
     pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
     pd%nIJ_llp_mmp = CMPLX(0.0,0.0)
+    IF (ALLOCATED(pd%mtIm)) pd%mtIm=0.0
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
 
@@ -562,6 +625,7 @@ CONTAINS
     CLASS(t_potden),INTENT(INOUT) :: pd
 
     IF (ALLOCATED(pd%mt)) DEALLOCATE(pd%mt)
+    IF (ALLOCATED(pd%mtIm)) DEALLOCATE(pd%mtIm)
     IF (ALLOCATED(pd%pw)) DEALLOCATE(pd%pw)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE reset_dfpt

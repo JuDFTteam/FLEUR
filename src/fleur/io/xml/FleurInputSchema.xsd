@@ -274,7 +274,23 @@
          <xsd:annotation>
             <xsd:documentation>
                Magnetic field applied to whole unit cell (simple Zeeman term).
-               Note: Only affects MT spheres, not included in total energy integrals.
+               Note: Not included in total energy integrals.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.0" name="b_theta" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Polar angle (in radians) of the direction of b_field (same convention as soc/@theta).
+               Arbitrary directions require l_noco=T; in collinear SOC calculations the field
+               must be parallel to the spin quantization axis.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.0" name="b_phi" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Azimuthal angle (in radians) of the direction of b_field (same convention as soc/@phi).
             </xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
@@ -869,6 +885,11 @@
                <xsd:documentation>Settings for printing GGA-related quantities.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element maxOccurs="1" minOccurs="0" name="AuxGGA" type="AuxGGAType">
+            <xsd:annotation>
+               <xsd:documentation>Auxiliary GGA functional for computing radial basis functions in MetaGGA calculations. Specify LibXC IDs for the GGA exchange and correlation. Recommended for SCAN: RPBE exchange with PBE correlation, i.e. exchange=117 (XC_GGA_X_RPBE) correlation=130 (XC_GGA_C_PBE).</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
       </xsd:sequence>
       <xsd:attribute name="name" type="XCFunctionalEnum" use="required">
          <xsd:annotation>
@@ -878,6 +899,11 @@
       <xsd:attribute default="F" name="relativisticCorrections" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Enable relativistic corrections to the XC functional.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="BeckeJohnson" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Use Becke-Johnson exchange potential (Eq. 2, Tran et al., J. Phys.: Condens. Matter 19, 196208, 2007). Replaces the standard MetaGGA exchange with v_x^BJ = v_x^BR89 + (1/pi)*sqrt(5/12)*sqrt(2*tau/rho).</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>
@@ -989,6 +1015,13 @@
             <xsd:documentation>LibXC correlation functional name for total energy evaluation. If not specified, uses the same as correlation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+   </xsd:complexType>
+   <xsd:complexType name="AuxGGAType">
+      <xsd:annotation>
+         <xsd:documentation>Auxiliary GGA functional (LibXC IDs) for radial basis functions in MetaGGA calculations.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="exchange"    type="xsd:integer" use="required"/>
+      <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
    </xsd:complexType>
    <xsd:complexType name="XCParamsType">
       <xsd:attribute name="igrd" type="xsd:integer" use="required">
@@ -1492,7 +1525,7 @@
       </xsd:attribute>
       <xsd:attribute name="lmaxAPW" type="xsd:nonNegativeInteger" use="optional">
          <xsd:annotation>
-            <xsd:documentation>If present, enables APW+lo approach. Cutoff defining lmax up to which LAPWs are used if no APW+lo LO is defined.</xsd:documentation>
+            <xsd:documentation>If present, all l above lmaxAPW use APW basis functions (matched in value only). Up to lmaxAPW LAPWs are used, except for l with an APW local orbital.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>
@@ -1933,7 +1966,7 @@
       </xsd:annotation>
       <xsd:attribute name="type" type="EParamSelectionEnum" use="required">
          <xsd:annotation>
-            <xsd:documentation>Type of local orbital: SCLO for semicore, HELO for high-energy, relLO for a relativistic local orbital (j=l-1/2 branch, requires l=1,2 or 3 and eDeriv=0).</xsd:documentation>
+            <xsd:documentation>Type of local orbital: SCLO for semicore, HELO for high-energy, relLO for a relativistic local orbital (j=l-1/2 branch, requires l=1,2 or 3 and eDeriv=0), APW for the local orbital of APW+lo (a*u+b*udot at the energy parameter of l, zero at the sphere boundary; switches this l to APW, requires eDeriv=0, at most one per l).</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l" type="AngularMomentumNumberType" use="required">
@@ -1970,6 +2003,7 @@
          <xsd:enumeration value="SCLO"/>
          <xsd:enumeration value="HELO"/>
          <xsd:enumeration value="relLO"/>
+         <xsd:enumeration value="APW"/>
       </xsd:restriction>
    </xsd:simpleType>
 

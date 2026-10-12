@@ -49,7 +49,7 @@ CONTAINS
 
 SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
+                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
@@ -79,7 +79,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    TYPE(t_potden),        INTENT(IN)    :: vTot
    TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob, cdnvalJob1
    TYPE(t_results),       INTENT(INOUT) :: resultsdummy, resultsdummy1
-   TYPE(t_potden),        INTENT(INOUT) :: den, denIm
+   TYPE(t_potden),        INTENT(INOUT) :: den
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin, iDtype, iDir
@@ -94,6 +94,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
    ! Local Scalars
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,ispinpr,jsp,itype,ikG,iqdir
+   INTEGER :: sp_noco,isp_nv,nv_offs !NOCO basis index switch
    INTEGER :: iErr,nbands,noccbd,nbands1,iLo,l,imLo,ikLo,ikGLo,nbands1m
    INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq,nbasfcnmq
    REAL    :: gExt(3), q_loop(3), bkpt(3)
@@ -220,13 +221,17 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
       ! TODO: Implement correct spin logic here! Only collinear operational for now!
       if (sternheimerJob%l_IBScorrection) then
-         DO ikG = 1, lapw%nv(jsp)
-            gExt = MATMUL(lapw%vk(:, ikG, jsp),cell%bmat)
-            IF (zMat%l_real) THEN
-               zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)
-            ELSE
-               zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
-            END IF
+         DO sp_noco = 1, MERGE(2,1,noco%l_noco) ! effective noco switch
+            isp_nv = MERGE(sp_noco,jsp,noco%l_noco) ! spin index for lapw
+            nv_offs = (sp_noco-1)*(lapw%nv(1)+atoms%nlotot) ! band offset
+            DO ikG = 1, lapw%nv(isp_nv)
+               gExt = MATMUL(lapw%vk(:, ikG, isp_nv),cell%bmat)
+               IF (zMat%l_real) THEN
+                  zMatPref%data_c(nv_offs+ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(nv_offs+ikG, :)
+               ELSE
+                  zMatPref%data_c(nv_offs+ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(nv_offs+ikG, :)
+               END IF
+            END DO
          END DO
       endif
       ! TODO: LOs matching coefficients are unperturbed for now, because they derailed
@@ -324,7 +329,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
          DO ispin = jsp_start, jsp_end
             DO ispinpr = ispin,ispin
                call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
-                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=denIm%mt)
+                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=den%mtIm)
             ENDDO               
          enddo
       END DO      
@@ -332,8 +337,6 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    END IF
 
 
-   call den%distribute(fmpi%mpi_comm)
-   call denIm%distribute(fmpi%mpi_comm)
 
    CALL timestop("dfpt_cdnval")
 

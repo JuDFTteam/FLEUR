@@ -24,7 +24,7 @@ contains
     type(t_mixvector),INTENT(OUT)  :: fsm_mag
 
     integer         ::js
-    REAL            :: dist(6) !1:up,2:down,3:spinoff,4:total,5:magnet,6:noco
+    REAL            :: dist(5) !1:up,2:down,3:spinoff,4:total,5:magnet
     TYPE(t_mixvector)::fmMet
     character(len=100)::attributes(2)
     logical           :: l_noco
@@ -123,7 +123,7 @@ contains
 8030  FORMAT (10i10)
   end SUBROUTINE distance
 
-   SUBROUTINE dfpt_distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,indenIm,outdenIm,results,fsm_mag)
+   SUBROUTINE dfpt_distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,results,fsm_mag)
 
       IMPLICIT NONE
 
@@ -131,7 +131,7 @@ contains
       REAL,    INTENT(IN) :: vol
 
       TYPE(t_mixvector), INTENT(IN)    :: fsm
-      TYPE(t_potden),    INTENT(INOUT) :: inden,outden,indenIm,outdenIm
+      TYPE(t_potden),    INTENT(INOUT) :: inden,outden
       TYPE(t_results),   INTENT(INOUT) :: results
       TYPE(t_mixvector), INTENT(OUT)   :: fsm_mag
 
@@ -139,13 +139,16 @@ contains
       REAL    :: dist(7,2)
 
       TYPE(t_mixvector) :: fmMet
+      logical           :: l_noco
+
+      l_noco=SIZE(outden%pw,2)>2
 
       CALL fmMet%alloc()
       IF (jspins==2) THEN
          CALL fsm_mag%alloc()
          ! calculate Magnetisation-difference
-         CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.,denIm=outDenIm)
-         CALL fmMet%from_density(inden,nmzxyd,swapspin=.TRUE.,denIm=inDenIm)
+         CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.)
+         CALL fmMet%from_density(inden,nmzxyd,swapspin=.TRUE.)
          fsm_mag=fsm_mag-fmMet
       END IF
 
@@ -156,8 +159,9 @@ contains
       DO js = 1,jspins
          CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),js,dist(js,:))
       END DO
-      IF (SIZE(outden%pw,2)>2) THEN
-         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),3,dist(6,:),dist(7,:))
+      IF (l_noco) THEN
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),3,dist(6,:))
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),4,dist(7,:))
       END IF
       IF (jspins.EQ.2) THEN
          CALL fmMet%dfpt_multiply_dot_mask(fsm_mag,(/.TRUE.,.TRUE.,.TRUE./),1,dist(3,:))
@@ -174,7 +178,7 @@ contains
          WRITE (oUnit,FMT=7901) js,inDen%iter,1000*SQRT(ABS(dist(js,2)/vol))
       END DO
 
-      IF (SIZE(outden%pw,2)>2) THEN
+      IF (l_noco) THEN
          WRITE (oUnit,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6,1)/vol))
          WRITE (oUnit,FMT=7901) 3,inDen%iter,1000*SQRT(ABS(dist(6,2)/vol))
          WRITE (oUnit,FMT=7900) 4,inDen%iter,1000*SQRT(ABS(dist(7,1)/vol))

@@ -9,6 +9,8 @@ MODULE m_setabc1lo
    ! Calculates the (lower case) a, b and c coefficients of the local
    ! orbitals: the LO basis function a*u + b*udot + c*ulo has zero value
    ! and zero derivative at the muffin-tin boundary and is normalized.
+   ! An APW LO (l_dulo) lives on the udot slot, a*u + c*udot, and only
+   ! its value vanishes at the boundary.
    !*********************************************************************
    USE m_judft
    USE m_types_atoms
@@ -26,21 +28,26 @@ CONTAINS
       REAL    :: ws,v(SIZE(rf%integral,1))
       INTEGER :: l,lo,i
 
-      IF (ANY(atoms%l_dulo(:atoms%nlo(ntyp),ntyp))) CALL judft_bug("l_dulo not implemented",calledby="setabc1lo")
       DO lo = 1,atoms%nlo(ntyp)
          l = atoms%llo(lo,ntyp)
          i = atoms%slot_of_lo(lo,ntyp)
          ASSOCIATE(b => rf%bnd(:,:,l,usp))
-            ! a*b(:,1) + b*b(:,2) = -b(:,i)
-            ws   = b(1,2)*b(2,1) - b(1,1)*b(2,2)
             v    = 0.0
-            v(1) = (b(2,2)*b(1,i) - b(1,2)*b(2,i))/ws
-            v(2) = (b(1,1)*b(2,i) - b(2,1)*b(1,i))/ws
-            v(i) = 1.0
+            IF (atoms%l_dulo(lo,ntyp)) THEN
+               ! a*b(1,1) + b(1,2) = 0
+               v(1) = -b(1,2)/b(1,1)
+               v(2) = 1.0
+            ELSE
+               ! a*b(:,1) + b*b(:,2) = -b(:,i)
+               ws   = b(1,2)*b(2,1) - b(1,1)*b(2,2)
+               v(1) = (b(2,2)*b(1,i) - b(1,2)*b(2,i))/ws
+               v(2) = (b(1,1)*b(2,i) - b(2,1)*b(1,i))/ws
+               v(i) = 1.0
+            END IF
          END ASSOCIATE
          clo1(lo,usp) = 1.0/SQRT(DOT_PRODUCT(v,MATMUL(rf%integral(:,:,l,usp,usp),v)))
          alo1(lo,usp) = v(1)*clo1(lo,usp)
-         blo1(lo,usp) = v(2)*clo1(lo,usp)
+         blo1(lo,usp) = MERGE(0.0,v(2)*clo1(lo,usp),atoms%l_dulo(lo,ntyp))
       END DO
    END SUBROUTINE setabc1lo
 END MODULE m_setabc1lo

@@ -24,7 +24,7 @@ MODULE m_hsmt_mtNocoPot_offdiag
   PRIVATE
   PUBLIC :: hsmt_mtnocopot_offdiag
 CONTAINS
-  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
+  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat,lapwq,fjgjq)
     !!Calculate the contribution from the local-spin-offdiagonal potential
     !!The following idea is used:
     !!Calculate the matrix by using non-spherical algorithm. This is done only once, since
@@ -44,6 +44,8 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     INTEGER,INTENT(IN)            :: igSpinPr,igSpin
+    TYPE(t_lapw),OPTIONAL,INTENT(IN) :: lapwq
+    TYPE(t_fjgj),OPTIONAL,INTENT(IN) :: fjgjq
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n
@@ -52,8 +54,8 @@ CONTAINS
 
     chi_one=1.0
     !The spin2,1 matrix is calculated(real part of potential)
-    CALL hsmt_nonsph(n,fmpi,sym,atoms,2,1,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
-    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
+    CALL hsmt_nonsph(n,fmpi,sym,atoms,2,1,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
+    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,PRESENT(lapwq),.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
     !call hmat_tmp%u2l()
     CALL hsmt_spinor(4,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
@@ -61,8 +63,8 @@ CONTAINS
 
     !The spin1,2 matrix is calculated(imag part of potential)
     !chi_one=CMPLX(0.,1.)
-    CALL hsmt_nonsph(n,fmpi,sym,atoms,1,2,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
-    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
+    CALL hsmt_nonsph(n,fmpi,sym,atoms,1,2,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
+    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,PRESENT(lapwq),.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
     !call hmat_tmp%u2l()
 
     CALL hsmt_spinor(3,n,nococonv,chi)

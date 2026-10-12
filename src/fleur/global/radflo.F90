@@ -143,7 +143,6 @@ CONTAINS
        END DO
        CALL intgr0(ulo, atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%uulon(ilo,ntyp,jsp))
        CALL intgr0(dulo,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%dulon(ilo,ntyp,jsp))
-       IF (atoms%l_dulo(ilo,ntyp)) usdus%dulon(ilo,ntyp,jsp) = 0.0
        IF (loutput) THEN
           WRITE (oUnit,FMT=8010) ilo,atoms%llo(ilo,ntyp),ello(ilo,ntyp),&
                usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp),nodelo,usdus%uulon(ilo,ntyp,jsp),&

@@ -15,7 +15,6 @@ MODULE m_types_force
    TYPE t_force
      COMPLEX, ALLOCATABLE :: f_a12(:,:)
      COMPLEX, ALLOCATABLE :: f_a21(:,:)
-     COMPLEX, ALLOCATABLE :: f_b4(:,:)
      COMPLEX, ALLOCATABLE :: f_b8(:,:)
 
      COMPLEX, ALLOCATABLE :: e1cof(:,:,:)
@@ -48,18 +47,15 @@ CONTAINS
     IF (input%l_f) THEN
        ALLOCATE (thisForce%f_a12(3,atoms%ntype))
        ALLOCATE (thisForce%f_a21(3,atoms%ntype))
-       ALLOCATE (thisForce%f_b4(3,atoms%ntype))
        ALLOCATE (thisForce%f_b8(3,atoms%ntype))
     ELSE
        ALLOCATE (thisForce%f_a12(1,1))
        ALLOCATE (thisForce%f_a21(1,1))
-       ALLOCATE (thisForce%f_b4(1,1))
        ALLOCATE (thisForce%f_b8(1,1))
     END IF
 
     thisForce%f_a12 = CMPLX(0.0,0.0)
     thisForce%f_a21 = CMPLX(0.0,0.0)
-    thisForce%f_b4 = CMPLX(0.0,0.0)
     thisForce%f_b8 = CMPLX(0.0,0.0)
 
   END SUBROUTINE force_init1

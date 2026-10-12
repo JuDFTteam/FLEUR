@@ -83,7 +83,7 @@ module m_types_dfpt_scf
 
     interface 
         subroutine postprocessing_scf(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
             import :: t_dfpt_scf, t_sternheimerjob, t_fleurinput, t_stars, t_sphhar, t_xcpot, t_nococonv, &
                       t_hybdat, t_mpi, t_kpts, t_enpara, t_results, t_dfpt, t_potden
             class(t_dfpt_scf),intent(inout)       :: this
@@ -103,8 +103,8 @@ module m_types_dfpt_scf
             type(t_results),intent(inout)     :: results, results1
             logical,intent(in)                :: l_real
             type(t_dfpt),intent(in)         :: dfpt
-            type(t_potden),intent(in)         :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
-            type(t_potden),intent(inout)      :: vC1,vC1Im         
+            type(t_potden),intent(in)         :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1
+            type(t_potden),intent(inout)      :: vC1
         end subroutine postprocessing_scf
     end interface 
 
@@ -184,7 +184,7 @@ contains
         type(t_potden)   :: grRho3(3),grVtot3(3),grVc3(3),grVext3(3),grgrVext3x3(3,3)
 
         ! scf variables 
-        type(t_potden) :: den1, den1Im, vTot1, vTot1Im, vC1,vC1Im , vTot1m, vTot1mIm
+        type(t_potden) :: den1, vTot1, vC1, vTot1m
         type(t_kpts) :: kqpts, kmqpts , qpts 
         type(t_stars)  :: starsq, starsmq
 
@@ -293,16 +293,12 @@ contains
             ! reset arrays 
             call starsq%reset_stars()
             call den1%reset_dfpt()
-            call den1Im%reset_dfpt()
             call vTot1%reset_dfpt()
-            call vTot1Im%reset_dfpt()
             call vC1%reset_dfpt()
-            call vC1Im%reset_dfpt()
             call results1%reset_results(fi%input)
             if (l_minusq) then 
                 call starsmq%reset_stars()
                 call vTot1m%reset_dfpt()
-                call vTot1mIm%reset_dfpt()
                 call results1m%reset_results(fi%input)
                 ! I am unsure why there is no vC1m 
             end if    
@@ -316,21 +312,21 @@ contains
                 call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
                                     rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                    den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
-                                    starsmq, resultsqm, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
+                                    den1, vTot1, vC1, &
+                                    starsmq, resultsqm, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m)
                 call timestop("Sternheimer with -q")
             else
                 call timestart("Sternheimer")
                 call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
                                     rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                    den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
+                                    den1, vTot1, vC1)
                 call timestop("Sternheimer")
             end if 
 
             
             call this%postprocessing_scf(sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
 
             if (fmpi%irank == 0 .and. dfpt%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
             

@@ -37,6 +37,10 @@ MODULE m_types_misc
       REAL                 :: te_vcoul  !<charge density-coulomb potential integral
       REAL                 :: te_veff   !<charge density-effective potential integral
       REAL                 :: te_exc    !<charge density-ex-corr.energy density integral
+      REAL                 :: te_vtau   !<MetaGGA: kinetic energy density-V_tau integral
+      REAL                 :: te_core_mgga !<MetaGGA: core double counting correction (core states use the auxiliary GGA)
+      REAL                 :: alphaMinMT, alphaMaxMT !<MetaGGA: iso-orbital indicator extrema, muffin tins
+      REAL                 :: alphaMinIR, alphaMaxIR !<MetaGGA: iso-orbital indicator extrema, interstitial
       REAL                 :: e_ldau    !<total energy contribution of LDA+U
       REAL                 :: e_ldaopc    !<total energy contribution of LDA+OP
       REAL                 :: e_vdw=0.0
@@ -127,6 +131,12 @@ CONTAINS
       thisResults%te_vcoul        = 0.0
       thisResults%te_veff         = 0.0
       thisResults%te_exc          = 0.0
+      thisResults%te_vtau         = 0.0
+      thisResults%te_core_mgga    = 0.0
+      thisResults%alphaMinMT      = 0.0
+      thisResults%alphaMaxMT      = 0.0
+      thisResults%alphaMinIR      = 0.0
+      thisResults%alphaMaxIR      = 0.0
       thisResults%te_hfex%valence = 0.0
       thisResults%te_hfex%core    = 0.0
       thisResults%te_hfex_loc     = 0.0
@@ -180,6 +190,12 @@ CONTAINS
       thisResults%te_vcoul        = 0.0
       thisResults%te_veff         = 0.0
       thisResults%te_exc          = 0.0
+      thisResults%te_vtau         = 0.0
+      thisResults%te_core_mgga    = 0.0
+      thisResults%alphaMinMT      = 0.0
+      thisResults%alphaMaxMT      = 0.0
+      thisResults%alphaMinIR      = 0.0
+      thisResults%alphaMaxIR      = 0.0
       thisResults%te_hfex%valence = 0.0
       thisResults%te_hfex%core    = 0.0
       thisResults%te_hfex_loc     = 0.0

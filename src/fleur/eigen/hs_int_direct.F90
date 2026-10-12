@@ -13,7 +13,7 @@ MODULE m_hs_int_direct
    PUBLIC :: hs_int_direct
 CONTAINS
    SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
-                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt)
+                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw)
       ! Calculates matrix elements of the form
       ! <\phi_{k'G'}|M|\phi_{kG}>
       ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -51,6 +51,8 @@ CONTAINS
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
 
       COMPLEX, OPTIONAL, INTENT(IN) :: theta_alt(:)
+      ! Optional V_tau star coefficients for MetaGGA interstitial contribution
+      COMPLEX, OPTIONAL, INTENT(IN) :: vtau_pw(:)
 
       INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd, gShift(3), gBound(3)
       COMPLEX :: th, ts, phase
@@ -61,7 +63,7 @@ CONTAINS
 
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
       !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, gShift, gBound) &
-      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt) &
+      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, gPrG, gInd, th, ts, phase, bvecPr, bvec, r2)
       DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
@@ -98,6 +100,14 @@ CONTAINS
                ELSE
                   th = th + phase * r2 * stars%ustep(gInd)
                END IF
+
+               ! MetaGGA V_tau interstitial contribution:
+               ! H_tau(G',G) = (1/2) V_tau(G'-G) * (k+G') . bbmat . (k+G)
+               IF (PRESENT(vtau_pw)) THEN
+                  th = th + phase * 0.5 * DOT_PRODUCT(MATMUL(bvecPr, bbmat), bvec) * vtau_pw(gInd)
+               END IF
+               ! No V_tau in the spin off-diagonal case: hs_int only passes vtau_pw for
+               ! iSpinPr == iSpin, which always implies iTkin > 0.
             END IF
 
             IF (l_smat) THEN

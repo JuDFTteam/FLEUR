@@ -168,6 +168,7 @@ CONTAINS
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, dfpt=fi%dfpt)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
                                      fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp, fi%wannierlib)
+         CALL check_apw(fi%atoms, fi%input, fi%noco, fi%banddos, fi%hybinp, fi%gfinp, fi%dfpt, fi%wannierlib)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
@@ -176,6 +177,7 @@ CONTAINS
       !Remaining init is done using all PE
       !Checks that emit a warning and continue must run here, not in fleurinput_postprocess above: see check_input_switches_all_pe.
       CALL check_input_switches_all_pe(fi%input, fi%hybinp, fi%mpinp)
+      CALL check_bfield(fi%field, fi%noco, fi%atoms, fi%sym, fi%cell)
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
       if (fi%noco%l_noco.and..not.xcpot%vxc_is_LDA()) call judft_warn("Noco should be used only with LDA",hint="GGA calculations and l_noco=T can be very error prone due.")
       CALL nococonv%init(fi%noco)

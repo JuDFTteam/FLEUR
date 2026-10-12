@@ -25,7 +25,7 @@ USE m_judft
    PUBLIC :: dfpt_vmt_xc, mt_gradient_ftgrid
 
 CONTAINS
-   SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,den1im,xcpot,input,sym,noco,vTot,dfptvTotimag)
+   SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,xcpot,input,sym,noco,vTot)
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -34,9 +34,9 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)         :: sym
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
-      TYPE(t_potden),INTENT(IN)      :: den, den1, den1im
+      TYPE(t_potden),INTENT(IN)      :: den, den1
       TYPE(t_noco), INTENT(IN)       :: noco
-      TYPE(t_potden),INTENT(INOUT)   :: vTot, dfptvTotimag
+      TYPE(t_potden),INTENT(INOUT)   :: vTot
       !     ..
       !     .. Local Scalars ..
       TYPE(t_gradients)     :: gradRho, gradRho1, gradRho1Im
@@ -76,7 +76,7 @@ CONTAINS
       n_stride=fmpi%isize
       IF (fmpi%irank>0) THEN
          vTot%mt=0.0
-         dfptvTotimag%mt=0.0
+         vTot%mtIm=0.0
       ENDIF
 #else
       n_start=1
@@ -95,7 +95,7 @@ CONTAINS
 
          CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den%mt(:,0:,n,:),n,noco_loco,gradRho,ch)
          CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den1%mt(:,0:,n,:),n,noco_loco,gradRho1,ch1)
-         CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den1im%mt(:,0:,n,:),n,noco_loco,gradRho1Im,ch1Im)
+         CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den1%mtIm(:,0:,n,:),n,noco_loco,gradRho1Im,ch1Im)
 
          IF (xcpot%needs_grad()) THEN
             ALLOCATE(drivsigma(n_sigma,npoints),driv2rho2(nfxc,npoints))
@@ -143,7 +143,7 @@ CONTAINS
          END IF
 
          CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1,vTot%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1Im,dfptvTotimag%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1Im,vTot%mtIm(:,0:,n,:))
 
          DEALLOCATE (ch,ch1,ch1Im,v_xc1,v_xc1Im)
       ENDDO
@@ -151,7 +151,7 @@ CONTAINS
       CALL finish_mt_grid()
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dfptvTotimag%mt,SIZE(dfptvTotimag%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mtIm,SIZE(vTot%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       !
       RETURN

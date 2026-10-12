@@ -109,6 +109,9 @@ if (FLEUR_USE_MPI)
    endif()
 endif ()
 
+if (FLEUR_USE_LIBXC AND FLEUR_LIBXC_TARGETS)
+   target_link_libraries(fleur ${FLEUR_LIBXC_TARGETS})
+endif()
 target_link_libraries(fleur ${FLEUR_LIBRARIES})
 target_link_libraries(fleur ${FLEUR_LINK_LIBRARIES})
 

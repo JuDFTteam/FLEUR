@@ -96,7 +96,12 @@ CONTAINS
               !This is for collinear calculations: the (1,1) element of the matrices is all
               !that is needed and allocated
 
-              CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),td%radfun(n),fjgj,smat(1,1),hmat(1,1),.FALSE.,.FALSE.)
+              IF (td%l_sph_extra) THEN
+                 CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),td%radfun(n),fjgj,smat(1,1),hmat(1,1),.FALSE.,.FALSE.,&
+                               h_sph_extra=td%h_sph_extra(:,:,n,ilSpinPr))
+              ELSE
+                 CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),td%radfun(n),fjgj,smat(1,1),hmat(1,1),.FALSE.,.FALSE.)
+              END IF
               CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1),.FALSE.)
               CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,.FALSE.,.FALSE.,smat=smat(1,1))
             ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN

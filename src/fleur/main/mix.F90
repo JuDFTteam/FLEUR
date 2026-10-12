@@ -50,10 +50,10 @@ MODULE m_mix
    PUBLIC :: mix_charge
 contains
 
-  SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
+  SUBROUTINE mix_charge( field,   fmpi,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
-         inDenIm, outDenIm, dfpt_tag)
+         dfpt_tag, inTau, outTau)
 
     implicit none
 
@@ -77,13 +77,13 @@ contains
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType
     integer,           intent(inout) :: iteration
-    LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
-    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
     
     type(t_potden), OPTIONAL , intent(inout) :: coreDen
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
+    ! MetaGGA kinetic energy densities: mixed with the coefficients of the density (passive)
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
@@ -124,7 +124,10 @@ contains
 
     CALL timestart("Reading of distances")
     IF (iteration==1) CALL mixvector_reset(.TRUE.)
-    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
+    ! History files do not contain tau, so a run that mixes tau never continues an old history
+    IF (iteration==1 .AND. PRESENT(inTau)) CALL mixing_history_reset(fmpi)
+    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt,&
+                        l_tau=PRESENT(inTau))
     CALL timestart("read history")
     IF (.NOT.l_dfpt) THEN
       CALL mixing_history_open(fmpi,input%maxiter)
@@ -135,17 +138,17 @@ contains
     CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
     IF (.NOT.l_dfpt) THEN
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inTau=inTau,outTau=outTau)
     ELSE
       IF (iteration==1) CALL dfpt_mixing_history_reset()
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inDenIm,outDenIm)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
     END IF
 
     IF (.NOT.l_dfpt) THEN
       CALL distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,results,fsm_Mag)
     ELSE
       ! TODO: For now dfpt_distance handles Re/Im separately. Maybe that is not all to necessary.
-      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,inDenIm,outDenIm,results,fsm_Mag)
+      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,results,fsm_Mag)
     END IF
     CALL timestop("Reading of distances")
 
@@ -211,14 +214,21 @@ contains
     CALL timestart("Postprocessing")
     !extracte mixed density
     inDen%pw=0.0;inDen%mt=0.0
-    IF (l_dfpt) inDenIm%mt=0.0
+    IF (l_dfpt) inDen%mtIm=0.0
     IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     IF (ALLOCATED(inDen%nIJ_llp_mmp).AND.l_densitymatrixV) inden%nIJ_llp_mmp(:,:,:,:)=CMPLX(0.0,0.0)
+    IF (PRESENT(inTau)) THEN
+      ! to_density collects by summation over the PEs
+      inTau%pw=0.0; inTau%mt=0.0
+      IF (ALLOCATED(inTau%vac)) inTau%vac=0.0
+      IF (ALLOCATED(inTau%mmpMat)) inTau%mmpMat=0.0
+      IF (ALLOCATED(inTau%nIJ_llp_mmp)) inTau%nIJ_llp_mmp=CMPLX(0.0,0.0)
+    END IF
     IF (.NOT.l_dfpt) THEN
-      CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd,tau=inTau)
     ELSE
-      CALL sm(it)%to_density(inDen,vacuum%nmzxyd,inDenIm)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
     END IF
 
     IF (atoms%n_u>0.AND.l_firstItU) THEN
@@ -290,7 +300,7 @@ contains
           INQUIRE(file=trim(dfpt_tag)//".hdf", exist=l_exist)
           IF (l_exist) CALL system("mv "//trim(dfpt_tag)//".hdf "//trim(dfpt_tag)//"_old.hdf")
           CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
-               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag)
           IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
        END IF
     END IF
@@ -308,12 +318,6 @@ contains
 #endif
     call timestop("Density output")
     inDen%iter = inDen%iter + 1
-
-    IF (.NOT.l_dfpt) THEN
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
-    ELSE
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi,dfpt_tag)
-    END IF
 
     CALL timestop("Postprocessing")
     CALL timestop("Charge Density Mixing")

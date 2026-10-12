@@ -6,7 +6,8 @@
 
 module m_types_radfun
    !! Radial basis functions of one atom type in the unified slot basis:
-   !! per l, slot 1=u, 2=udot, 3.. = LOs of that l in atoms%llo order (atoms%slot_of_lo).
+   !! per l, slot 1=u, 2=udot, 3.. = LOs of that l in atoms%llo order (atoms%slot_of_lo);
+   !! an APW LO (atoms%l_dulo) is a*u+b*udot and has no slot of its own.
    !! Each slot solves H r_i = e_i r_i + P r_i inside the sphere (P u = 0, P udot = u,
    !! P ulo = filo for energy-derivative LOs), except relLOs which are Dirac solutions.
    use m_judft
@@ -36,6 +37,7 @@ module m_types_radfun
       procedure, pass :: generate_radial_functions
       procedure, pass :: reset
       procedure, pass :: hsph
+      procedure, pass :: hsurf
       procedure, pass :: to_usdus
       procedure, pass :: from_usdus
    end type
@@ -80,8 +82,6 @@ contains
 
       !data is cached per itype only; call reset when the potential or energy parameters change
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
-         if (input%l_useapw) call judft_bug("APW not implemented")
-         if (any(atoms%l_dulo(:atoms%nlo(itype),itype))) call judft_bug("l_dulo not implemented in t_radfun")
          call this%reset()
          call this%init(atoms, input, itype)
          call usdus%init(atoms,input%jspins)
@@ -100,6 +100,7 @@ contains
                this%R( 1:atoms%jri(itype), 1:2, 2,l, ispin) = g(1:atoms%jri(itype), 1:2, l)
             end do
             do lo = 1, atoms%nlo(itype)
+               if (atoms%l_dulo(lo,itype)) cycle ! APW LO: slot 2 already holds udot
                this%R( 1:atoms%jri(itype), 1:2, atoms%slot_of_lo(lo,itype),atoms%llo(lo,itype), ispin) = flo(1:atoms%jri(itype), 1:2, lo)
             end do
          end do
@@ -130,6 +131,7 @@ contains
                this%ipred(:this%n_r(l),2,l,ispin) = this%integral(:this%n_r(l),1,l,ispin,ispin)
             end do
             do lo = 1, atoms%nlo(itype)
+               if (atoms%l_dulo(lo,itype)) cycle
                l = atoms%llo(lo,itype)
                i = atoms%slot_of_lo(lo,itype)
                this%bnd(:,i,l,ispin) = [usdus%ulos(lo,itype,ispin), usdus%dulos(lo,itype,ispin)]
@@ -139,7 +141,7 @@ contains
                this%ipred(1,i,l,ispin) = usdus%uuilon(lo,itype,ispin)
                this%ipred(2,i,l,ispin) = usdus%duilon(lo,itype,ispin)
                do jlo = 1, atoms%nlo(itype)
-                  if (atoms%llo(jlo,itype) /= l) cycle
+                  if (atoms%llo(jlo,itype) /= l .or. atoms%l_dulo(jlo,itype)) cycle
                   this%ipred(atoms%slot_of_lo(jlo,itype),i,l,ispin) = usdus%ulouilopn(jlo,lo,itype,ispin)
                end do
             end do
@@ -173,6 +175,22 @@ contains
       end associate
       h = wi*(a + 0.5*w) + transpose(wi)*(transpose(a) - 0.5*w)
    end function
+
+   function hsurf(this, l, ispin) result(s)
+      !! kinetic surface term in slot space, 1/4 R^2 (r_i(R) r_j'(R) + r_i'(R) r_j(R)):
+      !! turns the hermitian average of hsph into the gradient form 1/2 <grad r_i|grad r_j>
+      !! used for APW (derivative kink at R_MT) together with the Dirac form in the interstitial
+      class(t_radfun), intent(in) :: this
+      integer, intent(in)         :: l, ispin
+      real, allocatable           :: s(:,:)
+
+      integer :: n
+
+      n = this%n_r(l)
+      associate(b => this%bnd(:,:n,l,ispin))
+         s = 0.25*this%rmt**2*(spread(b(1,:),2,n)*spread(b(2,:),1,n) + spread(b(2,:),2,n)*spread(b(1,:),1,n))
+      end associate
+   end function hsurf
 
    subroutine to_usdus(this, atoms, usdus)
       !! fill the legacy t_usdus entries of this atom type
@@ -241,6 +259,7 @@ contains
             this%integral(2,2,l,ispin,ispin) = usdus%ddn(l,itype,ispin)
          end do
          do lo = 1, atoms%nlo(itype)
+            if (atoms%l_dulo(lo,itype)) cycle ! APW LO: slot 2 is set from uds/duds/ddn
             l = atoms%llo(lo,itype)
             i = atoms%slot_of_lo(lo,itype)
             this%bnd(:,i,l,ispin) = [usdus%ulos(lo,itype,ispin), usdus%dulos(lo,itype,ispin)]
@@ -251,7 +270,7 @@ contains
             this%ipred(1,i,l,ispin) = usdus%uuilon(lo,itype,ispin)
             this%ipred(2,i,l,ispin) = usdus%duilon(lo,itype,ispin)
             do jlo = 1, atoms%nlo(itype)
-               if (atoms%llo(jlo,itype) /= l) cycle
+               if (atoms%llo(jlo,itype) /= l .or. atoms%l_dulo(jlo,itype)) cycle
                this%integral(atoms%slot_of_lo(jlo,itype),i,l,ispin,ispin) = usdus%uloulopn(jlo,lo,itype,ispin)
                this%ipred(atoms%slot_of_lo(jlo,itype),i,l,ispin) = usdus%ulouilopn(jlo,lo,itype,ispin)
             end do

@@ -111,7 +111,7 @@ MODULE m_intgr
         yr(i) = r(i)*y(i)
       ENDDO
       DO j = 1,n0 - 1
-        z = z + h*ddot(7,a(1,j),1,yr,1)/60480.
+        z = z + h*dot_product(a(:,j),yr)/60480.
       ENDDO
     ENDIF
     r(1) = r(n0)
@@ -167,7 +167,7 @@ MODULE m_intgr
       rr = dr*rr
     ENDDO
     DO j = 1,nr - 2
-      z(j+1) = z(j) + h*ddot(7,a(1,j),1,yr,1)/60480.
+      z(j+1) = z(j) + h*dot_product(a(:,j),yr)/60480.
     ENDDO
     !
     !--->    simpson integration, j>nr-1
@@ -217,7 +217,7 @@ MODULE m_intgr
       yr(i) = rmsh(i)*y(i)
     ENDDO
     DO j = 1,nr - 2
-      z(j+1) = z(j) + h*ddot(7,a(1,j),1,yr,1)/60480.
+      z(j+1) = z(j) + h*dot_product(a(:,j),yr)/60480.
     ENDDO
     !
     !--->    simpson integration, j>nr-1
@@ -387,7 +387,7 @@ END SUBROUTINE intgr3_modern
     yl = 0.0
     IF (n0.GT.1) THEN
       DO j = 1, n0 - 1
-        yl = yl + ddot(7,a(1,j),1,y,1)
+        yl = yl + dot_product(a(:,j),y(1:7))
       ENDDO
       yl = h*yl/60480.
     END IF
@@ -444,7 +444,7 @@ END SUBROUTINE intgr3_modern
     !
     DO j = 1,nr - 2
       yl = 0
-      yl = yl + ddot(7,a(1,j),1,y,1)
+      yl = yl + dot_product(a(:,j),y(1:7))
       z(j+1) = z(j) + h*yl/60480.
     ENDDO
     !
@@ -582,7 +582,7 @@ END SUBROUTINE intgr3_modern
             END DO
             z1 = 0.
             DO j = 1, n0 - 1
-               z1 = z1 + ddot(7,a(1,j),1,yr,1)
+               z1 = z1 + dot_product(a(:,j),yr)
             END DO
             z = z + z1 * h / 60480.
          END IF
@@ -624,7 +624,7 @@ END SUBROUTINE intgr3_modern
         END DO
 
         DO j = 1,nr - 2
-            z(j+1) = z(j) + h*ddot(7,a(1,j),1,yr,1)/60480.
+            z(j+1) = z(j) + h*dot_product(a(:,j),yr)/60480.
         END DO
 
         DO i = 1,nr

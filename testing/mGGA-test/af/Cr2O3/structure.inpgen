@@ -1,0 +1,12 @@
+AF Cr2O3 - corundum, AFM along c
+&lattice latsys='hex', a0=1.8897259886, a=4.953, c=13.588 /
+! Wyckoff 12c metal + 18e O of corundum (R-3c parent), hexagonal setting.
+! Rhombohedral (R,3) centering translations (0,0,0)+(2/3,1/3,1/3)+(1/3,2/3,2/3)
+! are applied by inpgen's symmetry/centering handling - give only the
+! primitive (rhombohedral) representative atoms below and let inpgen expand,
+! OR expand all 12+18 atoms by hand if your inpgen does not auto-centre 'hex'+R.
+4
+24  0.0  0.0  0.34750   ! Cr spin UP
+24  0.0  0.0  0.84750   ! Cr spin DOWN
+8  0.3058  0.0  0.25   ! O
+8  0.0  0.3058  0.25   ! O (symmetry-equivalent, spelled out)

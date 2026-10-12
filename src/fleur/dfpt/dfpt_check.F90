@@ -36,7 +36,7 @@ CONTAINS
         IF (fi%input%ctail) CALL judft_error("Coretails are not supported. Please consider moving the problematic states to LOs",calledby="dfpt_check.F90")
 
         !Noco
-        IF (fi%noco%l_noco) CALL judft_error("dfpt doesn't do non-collinear systems yet.",calledby="dfpt_check.F90")
+        !IF (fi%noco%l_noco) CALL judft_error("dfpt doesn't do non-collinear systems yet.",calledby="dfpt_check.F90")
 
         ! compiled with libxc ? 
 #ifndef CPP_LIBXC

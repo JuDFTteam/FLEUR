@@ -8,7 +8,6 @@ List of features that need to be tested
 - eels
 - MCD
 - FFN
-- apw+LO
 - DMI
 - efield
 - vdW

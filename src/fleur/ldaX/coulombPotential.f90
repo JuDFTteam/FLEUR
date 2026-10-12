@@ -112,9 +112,10 @@ module m_coulombPotential
                     IF(ispin < 3) THEN
                         interaction_energy = interaction_energy + REAL(potential(m,mp,ispin)*density(m,mp,ispin))
                     ELSE
+                        ! spin-offdiagonal exchange, same sign as the potential
                         DO p = -ldau%l,ldau%l
                             DO q = -ldau%l,ldau%l
-                                interaction_energy = interaction_energy + umatrix(m,p,q,mp) *&
+                                interaction_energy = interaction_energy - umatrix(m,p,q,mp) *&
                                                 REAL( density(m,mp,ispin)*conjg(density(q,p,ispin)) &
                                                 + conjg(density(mp,m,ispin))*density(p,q,ispin) )
                             ENDDO
