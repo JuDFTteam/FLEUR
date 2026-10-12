@@ -69,8 +69,7 @@ MODULE m_wannierlib_cf
   PRIVATE
   PUBLIC :: wannierlib_uiu, wannierlib_uhu
   !> C at (1,b2) and at (b2,1), summed over the spin components, at one k-point. One row
-  !> and one column of the pair table is all the check below needs, and holding more than
-  !> that is what runs a large case out of memory.
+  !> and one column of the pair table, which is what the adjoint check needs.
   COMPLEX, ALLOCATABLE :: pair_row(:, :, :), pair_col(:, :, :)
 
 CONTAINS
@@ -259,21 +258,15 @@ CONTAINS
     END IF
     IF (ALLOCATED(pair_row)) THEN
       !> C(1,b) and C(b,1) are the same matrix element read the other way round, so one has
-      !> to be the adjoint of the other. This is the only check here that exercises b1 /= b2,
-      !> which is what C is built from: the b1 = b2 hermiticity above cannot stand in for it,
-      !> because there both sides of the identity vanish and what is left survives
-      !> Pi -> -Pi and Pi -> lambda Pi.
+      !> to be the adjoint of the other. The pairs with b1 /= b2 are what C is built from,
+      !> and this is what constrains them.
       !>
-      !> IT DOES NOT CLOSE, AND THAT IS NOT A FAULT. The identity resolves H against the
-      !> eigenvalue of the bra, which is exact only for an exact eigenfunction; a variational
-      !> solution is one only inside its own basis. Writing 1 = P + Q for the basis at k+b1,
-      !> what is left over is <u(k+b1)| H Q |u(k+b2)>, the Hamiltonian reaching the part of
-      !> the ket outside the bra's basis. At b1 = b2 the two bases coincide, Q|u> = 0, and
-      !> the term vanishes identically.
-      !>
-      !> Measured on Fe bcc: the departure falls with the basis, 9.7e-2 at 49 basis functions
-      !> to 3.5e-2 at 141, roughly as 1/N. What reaches the assembled tensor is some fifty
-      !> times smaller; see the check that follows.
+      !> IT DOES NOT CLOSE, AND THAT IS NOT A FAULT. Resolving H against the eigenvalue of
+      !> the bra is exact only for an exact eigenfunction, and a variational solution is one
+      !> only inside its own basis. Writing 1 = P + Q for the basis at k+b1, what is left
+      !> over is <u(k+b1)| H Q |u(k+b2)>, the Hamiltonian reaching the part of the ket
+      !> outside the bra's basis. It falls as the basis grows, and at b1 = b2 the two bases
+      !> coincide, Q|u> = 0, and the term vanishes identically.
       !>
       !> What it CANNOT see: a correction whose coefficient is symmetric in b1 and b2. The
       !> gauge term enters C as (b1.b2) M, and a symmetric scalar cancels between the two
@@ -292,18 +285,18 @@ CONTAINS
       WRITE (oUnit, '(a,es12.4)') '   worst per pair                  ', dpair
       DEALLOCATE (pair_row, pair_col)
     END IF
-    !> HOW MUCH OF THE NON-ADJOINT PART OF C REACHES O, which is the question the check
-    !> above leaves open: its departure is in matrix elements, and what matters is what
-    !> survives the weighted sum over pairs and bands.
+    !> HOW MUCH OF THE NON-ADJOINT PART OF C REACHES O. The departure above is in matrix
+    !> elements; what matters is what survives the weighted sum over pairs and bands, and
+    !> the two differ by orders of magnitude.
     !>
     !> Symmetrising C over the pair swap -- ham(b1,b2) -> [ham(b1,b2) + ham(b2,b1)+]/2 --
     !> is EXACTLY the same as O(a,c) -> [O(a,c) + O(c,a)+]/2, because relabelling b1 <-> b2
-    !> in the weighted sum swaps the cartesian indices. So the impact costs no storage at
-    !> all: it is the departure of the assembled tensor from that symmetry.
+    !> in the weighted sum swaps the cartesian indices. So this costs no storage: it is the
+    !> departure of the assembled tensor from that symmetry.
     !>
-    !> Measured on Fe bcc: 1.9e-3 at the production basis against 9.4e-2 in the matrix
-    !> elements, a suppression of fifty, and it converges as about N^-2.4 against the N^-1
-    !> of the departure itself -- the cancellation improves as the basis grows.
+    !> C IS NOT SYMMETRISED. The departure is reported and nothing else: it is the only
+    !> observable handle on the error above, and imposing the symmetry would remove it while
+    !> leaving the part that shares it untouched.
     IF (l_ham .AND. fmpi%irank == 0 .AND. SIZE(o0, 5) > 0) THEN
       wa = 0.0; nrmp = 0.0
       DO ik = 1, SIZE(o0, 5)
@@ -318,8 +311,8 @@ CONTAINS
       WRITE (oUnit, '(/,a)') 'wannierlib: how much of the non-adjoint part of C reaches O'
       WRITE (oUnit, '(a,2es13.5)') '   max|O(a,c) - O(c,a)+|   max|O|   ', wa, nrmp
       WRITE (oUnit, '(a,es13.5)')  '   relative                        ', wa/MAX(nrmp, 1.0e-30)
-      WRITE (oUnit, '(a)') '   This is what symmetrising C would change in the assembled'
-      WRITE (oUnit, '(a)') '   tensor, and therefore the consequence of the pair residue.'
+      WRITE (oUnit, '(a)') '   C itself is left alone. This is what imposing the symmetry'
+      WRITE (oUnit, '(a)') '   would change, and so the consequence of the departure above.'
     END IF
     DEALLOCATE (vgauge, kdp)
     CALL timestop(MERGE("wannierlib_uhu", "wannierlib_uiu", l_ham))
@@ -556,10 +549,9 @@ CONTAINS
             END IF
           END IF
 
-          !> ACCUMULATED over the spin components, not assigned: for a spinor the overlap of
-          !> one component alone is not the identity, and the identity below holds for the
-          !> whole state and not component by component. Reading one component on its own
-          !> reports a 20 % departure that has nothing to do with the matrix elements.
+          !> ACCUMULATED over the spin components, not assigned: for a spinor the overlap
+          !> of one component alone is not the identity, and the relation checked below
+          !> holds for the whole state and not component by component.
           IF (l_ham .AND. fmpi%irank == 0 .AND. nk_local == 1) THEN
             IF (b1 == 1) pair_row(:, :, b2) = pair_row(:, :, b2) + ham
             IF (b2 == 1) pair_col(:, :, b1) = pair_col(:, :, b1) + ham

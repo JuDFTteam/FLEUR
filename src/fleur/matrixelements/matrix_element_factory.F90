@@ -356,14 +356,12 @@ CONTAINS
 
     END SUBROUTINE ensure_slot
 
-    !> Evaluate one operator at one k-point.
     !> The matching coefficients of a slot expanded about the GLOBAL frame, built once and
     !> only when an operator asks for them.
     !>
-    !> abcof rotates k+G by transpose(mrot(:,:,invtab(ngopr(na)))) before expanding, so that
-    !> every atom of a type can share one radial set. Forcing ngopr = 1 switches that off and
-    !> gives the expansion about the global frame directly -- the same thing secvar_soc does
-    !> to its own copy of sym, and for the same reason.
+    !> A slot holds them expanded about the local frame of each atom, so that every atom of
+    !> a type can share one radial set. Forcing the atom rotations to the identity switches
+    !> that off and gives the global-frame expansion directly.
     SUBROUTINE ensure_global_abc(is, input, atoms, sym, cell, lapw, noco, nococonv)
         INTEGER,          INTENT(IN) :: is
         TYPE(t_input),    INTENT(IN) :: input
@@ -398,6 +396,7 @@ CONTAINS
         END DO
     END SUBROUTINE ensure_global_abc
 
+    !> Evaluate one operator at one k-point.
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
                                       noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
                                       l_both_spinors, kpts)

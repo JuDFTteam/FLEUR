@@ -30,16 +30,14 @@ MODULE m_types_matelements
         INTEGER :: n_beta  = 1
         !> Which frame the operator wants its basis matching coefficients in.
         !>
-        !> abcof expands them about the LOCAL frame of each atom -- it rotates k+G by
-        !> transpose(mrot(:,:,invtab(ngopr(na)))) -- so that every atom of a type can share
-        !> one radial set. An operator that contracts those coefficients against a quantity
-        !> stored in the same local frame wants exactly that, and most do.
+        !> They arrive expanded about the LOCAL frame of each atom, so that every atom of a
+        !> type can share one radial set. An operator that contracts them against a quantity
+        !> held in that same local frame wants exactly that, and most do.
         !>
-        !> Spin-orbit does not: its angular table rsoc%soangl is built in the GLOBAL frame
-        !> and carries no atom index, so local-frame coefficients would be contracted
-        !> against a table that knows nothing of the rotation. Such an operator sets this
-        !> and the factory hands it a second set expanded about the global frame, which is
-        !> what secvar_soc arranges for its own call by forcing sym%ngopr = 1.
+        !> An operator whose angular tables are built in the GLOBAL frame and carry no atom
+        !> index does not: local-frame coefficients would meet a table that knows nothing of
+        !> the rotation. Setting this asks for a second set expanded about the global frame
+        !> instead.
         LOGICAL :: l_global_frame = .FALSE.
     CONTAINS
         PROCEDURE :: init_mat    !> provide the result matrix with the dimensions implied by the spinor flags

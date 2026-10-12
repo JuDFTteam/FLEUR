@@ -42,26 +42,16 @@ CONTAINS
       !> mrot lives in LATTICE coordinates and amat carries the lattice vectors as COLUMNS,
       !> so a cartesian vector transforms with amat . mrot . amat^-1.
       !>
-      !> invtab(ngopr), NOT ngopr, and this was MEASURED rather than derived. abcof and
-      !> types_abc build the coefficients by going global -> local with
-      !> TRANSPOSE(mrot(:,:,invtab(ngopr))), so coming back is the inverse operation, which
-      !> is what invtab names. The matrix is amat and not bmat: k+G is a reciprocal vector
+      !> invtab(ngopr), NOT ngopr: the coefficients are built going global to local, so
+      !> coming back is the inverse operation, which is what invtab names. The matrix is
+      !> amat and not bmat: k+G is a reciprocal vector
       !> and converts with bmat, but what rotates here are the cartesian components of a
       !> gradient, built on real-space spherical harmonics.
       !>
-      !> The four spellings -- ngopr or invtab(ngopr), transposed or not -- were swept on a
-      !> case of THREE atoms related by a proper rotation, and only this one closes:
-      !>
-      !>     mrot(ngopr)             3.77e-1  3.46e-1  1.62e-6
-      !>     mrot(invtab(ngopr))     2.17e-6  1.88e-6  1.62e-6   <-- this one
-      !>     TRANSPOSE(mrot(ngopr))  1.25e-1  2.76e-1  1.62e-6
-      !>     TRANSPOSE(mrot(invtab)) 2.53e-1  6.61e-1  1.62e-6
-      !>
-      !> The sweep NEEDED three atoms. Under inversion ngopr == invtab and R = -I is its own
-      !> inverse, so all four agree and the choice is invisible -- a wrong one passes every
-      !> test a two-atom cell can offer. The z column above says the same from the other
-      !> side: C3 turns about z, every spelling leaves that component alone, and all four
-      !> agree there to the last digit.
+      !> Under inversion the choice is invisible: ngopr equals invtab, R = -I is its own
+      !> inverse, and every spelling of the rotation gives the same matrix. Telling them
+      !> apart needs atoms related by a proper rotation of order three or more, and by one
+      !> whose axis is not the component being examined.
       r = MATMUL(cell%amat, MATMUL(REAL(sym%mrot(:, :, sym%invtab(sym%ngopr(na)))), &
                                    inverse3(cell%amat)))
    END FUNCTION melem_rot_polar
