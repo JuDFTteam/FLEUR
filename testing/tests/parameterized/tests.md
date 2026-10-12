@@ -92,6 +92,7 @@ Testset: Noco
 | +   | Noco, one atom, mag. in y direction           | noco/1aty               | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, one atom, mag. in z direction           | noco/1atz               | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, one atom, mag. in non-sym direction     | noco/1at                | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, B-field along moment          | noco/1atBfield          | bulk,hdf                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in x direction       | noco/1atSOCx            | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc,hdf                 |                   |         | 2   |

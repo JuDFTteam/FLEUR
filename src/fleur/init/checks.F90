@@ -16,6 +16,7 @@ MODULE m_checks
   USE m_types_banddos
   USE m_types_cell
   USE m_types_dfpt
+  USE m_types_field
   USE m_types_gfinp
   USE m_types_hybinp
   USE m_types_input
@@ -28,7 +29,7 @@ MODULE m_checks
   USE m_types_wannierlib
   IMPLICIT NONE
   private
-  public :: check_command_line,check_input_switches,check_input_switches_all_pe,check_apw
+  public :: check_command_line,check_input_switches,check_input_switches_all_pe,check_apw,check_bfield
   CONTAINS
     SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
@@ -231,5 +232,52 @@ MODULE m_checks
       END IF
 
     END SUBROUTINE check_input_switches_all_pe
+
+    !> Checks for the direction of the external B-field; executed by every MPI rank.
+    SUBROUTINE check_bfield(field,noco,atoms,sym,cell)
+      TYPE(t_field),INTENT(IN) :: field
+      TYPE(t_noco),INTENT(IN)  :: noco
+      TYPE(t_atoms),INTENT(IN) :: atoms
+      TYPE(t_sym),INTENT(IN)   :: sym
+      TYPE(t_cell),INTENT(IN)  :: cell
+
+      REAL    :: n(3), m(3)
+      INTEGER :: iType
+      LOGICAL :: symError(sym%nop)
+
+      IF (.NOT.field%l_b_field.OR.ABS(field%b_field)<1E-15) RETURN
+      n = field%b_dir()
+
+      IF (.NOT.noco%l_noco) THEN
+         IF (.NOT.noco%l_soc) RETURN
+         m = [SIN(noco%theta_inp)*COS(noco%phi_inp),SIN(noco%theta_inp)*SIN(noco%phi_inp),COS(noco%theta_inp)]
+         IF (ABS(DOT_PRODUCT(n,m))<1.0-1E-8) CALL juDFT_error("B-field not parallel to the spin quantization axis",&
+            hint="In collinear SOC calculations b_theta/b_phi must agree with soc/@theta,@phi. Use l_noco=T for other directions.",&
+            calledby="check_bfield")
+         RETURN
+      END IF
+
+      IF (noco%l_ss.AND.ABS(n(3))<1.0-1E-8) CALL juDFT_error("Transverse B-field not possible for spin spirals",&
+         hint="Only b_theta=0 or b_theta=Pi can be used with l_ss=T.",calledby="check_bfield")
+
+      IF (noco%l_soc.AND.sym%nop>1) THEN
+         CALL soc_sym(sym%nop,sym%mrot,field%b_theta,field%b_phi,cell%amat,symError)
+         IF (ANY(symError)) CALL juDFT_warn("Symmetry operations incompatible with the B-field direction are present.",&
+            hint="Recreate the input with inpgen with reduced symmetry, or use the '-nosym' command line option of inpgen.",&
+            calledby="check_bfield")
+      END IF
+
+      DO iType = 1, atoms%ntype
+         IF (noco%l_unrestrictMT(iType).OR.noco%l_constrained(iType)) CYCLE
+         m = [SIN(noco%beta_inp(iType))*COS(noco%alph_inp(iType)),SIN(noco%beta_inp(iType))*SIN(noco%alph_inp(iType)),&
+              COS(noco%beta_inp(iType))]
+         IF (ABS(DOT_PRODUCT(n,m))<1.0-1E-8) THEN
+            CALL juDFT_warn("B-field not parallel to the moment of atom type "//int2str(iType)//&
+               ": the transverse part is neglected in its MT sphere.",&
+               hint="Set l_mtNocoPot=T for this atom type to include the full field.",calledby="check_bfield")
+            EXIT
+         END IF
+      END DO
+    END SUBROUTINE check_bfield
 
   END MODULE m_checks

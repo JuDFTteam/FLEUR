@@ -35,9 +35,11 @@ MODULE m_types_field
   TYPE,EXTENDS(t_fleurinput_base):: t_field
      TYPE(t_efield)   :: efield
      LOGICAL          :: l_b_field=.FALSE.
-     REAL             :: b_field
+     REAL             :: b_field=0.0
+     REAL             :: b_theta=0.0, b_phi=0.0 ! direction of b_field
      REAL,ALLOCATABLE :: b_field_mt(:)
    CONTAINS
+     PROCEDURE :: b_dir
      PROCEDURE :: init=>init_field
      PROCEDURE :: read_xml=>read_xml_field
      PROCEDURE :: mpi_bc=>mpi_bc_field
@@ -59,6 +61,8 @@ CONTAINS
 
     CALL mpi_bc(this%l_b_field,rank,mpi_comm)
     CALL mpi_bc(this%b_field,rank,mpi_comm)
+    CALL mpi_bc(this%b_theta,rank,mpi_comm)
+    CALL mpi_bc(this%b_phi,rank,mpi_comm)
     CALL mpi_bc(this%b_field_mt,rank,mpi_comm)
 
     CALL mpi_bc(this%efield%zsigma  ,rank,mpi_comm)
@@ -80,6 +84,13 @@ CONTAINS
 
 
   END SUBROUTINE mpi_bc_field
+
+  PURE FUNCTION b_dir(this)
+    ! Unit vector along b_field
+    CLASS(t_field),INTENT(IN)::this
+    REAL :: b_dir(3)
+    b_dir=[SIN(this%b_theta)*COS(this%b_phi),SIN(this%b_theta)*SIN(this%b_phi),COS(this%b_theta)]
+  END FUNCTION b_dir
 
   SUBROUTINE init_field(this)
     !USE m_types_setup
@@ -115,6 +126,8 @@ CONTAINS
           this%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
           if (abs(this%b_field)>1E-15) this%l_b_field=.TRUE.
        ENDIF
+       this%b_theta = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//"/@b_theta"))
+       this%b_phi = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//"/@b_phi"))
        
        this%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
        this%efield%sig_b(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))

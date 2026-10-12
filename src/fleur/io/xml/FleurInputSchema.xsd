@@ -274,7 +274,23 @@
          <xsd:annotation>
             <xsd:documentation>
                Magnetic field applied to whole unit cell (simple Zeeman term).
-               Note: Only affects MT spheres, not included in total energy integrals.
+               Note: Not included in total energy integrals.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.0" name="b_theta" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Polar angle (in radians) of the direction of b_field (same convention as soc/@theta).
+               Arbitrary directions require l_noco=T; in collinear SOC calculations the field
+               must be parallel to the spin quantization axis.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.0" name="b_phi" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Azimuthal angle (in radians) of the direction of b_field (same convention as soc/@phi).
             </xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
