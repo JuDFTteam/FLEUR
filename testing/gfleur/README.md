@@ -33,6 +33,13 @@ runs the binary directly, which is a single rank).
   (`layer1_inp.xml`, `layer2_inp.xml`), a minimal `gf_inp` (tmat mode,
   `iter = 0`) and a 3-point energy contour `gf_en`.
 
+* `inputfiles/cu_supercell/` — a 4-atom Cu fcc supercell along (001), used by
+  `test_gfprep.py`. The test converges it briefly with `fleur` and converts it with
+  `gfprep` into four layers. It then checks the outputs and the accuracy of
+  the conversion, and starts `gfleur` on the result. `gfprep`, `fleur` and
+  `gfleur` are taken from the same build directory. Point to it with
+  `GFPREP_BINARY=/path/to/build/gfprep`.
+
 ## Scope
 
 Only the ported infrastructure is exercised (per-layer `fleur_init`, the

@@ -177,6 +177,14 @@ CONTAINS
       INTEGER :: i
       REAL, PARAMETER :: eps = 1.0E-8
 
+      !&LAYERS d/dt should match dVac/dTilda of the layer inp.xml
+      DO i = 1, layers%num_layers
+         IF (layers%dt(i) > 0.0 .AND. ABS(layers%dt(i) - ld(i)%fi%cell%amat(3, 3)) > 1.0E-6) &
+            CALL juDFT_warn("&LAYERS dt differs from dTilda of the layer inp.xml", calledby="gf_init")
+         IF (layers%d(i) > 0.0 .AND. ABS(layers%d(i) - ld(i)%fi%vacuum%dvac) > 1.0E-6) &
+            CALL juDFT_warn("&LAYERS d differs from dVac of the layer inp.xml", calledby="gf_init")
+      END DO
+
       DO i = 2, layers%num_layers
          IF (ld(i)%fi%input%jspins /= ld(1)%fi%input%jspins) &
             CALL juDFT_error("jspins differs between the layers", calledby="gf_init")
