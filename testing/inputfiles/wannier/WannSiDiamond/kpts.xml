@@ -1,0 +1,12 @@
+         <kPointLists>
+               <kPointList name="w222" count="8" nx="2" ny="2" nz="2" type="mesh">
+               <kPoint weight="     1.0000000000000">   0.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   0.00/2.00    0.00/2.00    1.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   0.00/2.00    1.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   0.00/2.00    1.00/2.00    1.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   1.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   1.00/2.00    0.00/2.00    1.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   1.00/2.00    1.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="     1.0000000000000">   1.00/2.00    1.00/2.00    1.00/2.00</kPoint>
+            </kPointList>
+   </kPointLists>

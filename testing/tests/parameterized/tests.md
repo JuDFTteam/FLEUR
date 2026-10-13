@@ -179,3 +179,4 @@ Testset: Wannier
 | +   | fcc Fe AFM noco+SOC, wannierlib O(R)         | wannier/WannFeAFMSOCOps | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe AFM collinear no-SOC, wannierlib O(R) | wannier/WannFeAFMCol | wannierlib,bulk |         |         | 1   |
 | +   | bcc Fe FM collinear, Wannier interpolation   | wannier/WannFeBccInterp | wannierlib,bulk,band |         |         | 1   |
+| +   | Si diamond, two equivalent atoms in one group | wannier/WannSiDiamond | wannierlib,bulk |         |         | 1   |

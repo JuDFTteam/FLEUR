@@ -94,6 +94,14 @@ def _skip_without_wannier90(fleur_binary):
 # part is what is asserted here and the total is not. Values measured at mpi=1 with
 # MKL_CBWR=AVX2 / I_MPI_CBWR=1, 2x2x2 mesh, itmax=1.
 EXPECTED_OMEGA_I = {
+    # The only case whose atoms are not all in groups of their own: one species, two
+    # equivalent atoms. abcof expands the matching coefficients about the LOCAL frame of
+    # each atom so that they can share one radial set, and a quantity that carries no atom
+    # index cannot be contracted against them in that form. Every other case here has one
+    # atom per group, where that frame is the global one and the distinction cannot show.
+    # The two atoms are also each other's inversion partner, so this reaches the shortcut
+    # that fills one of them from the other instead of expanding it.
+    "WannSiDiamond": 3.622612240,
     "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
     "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor)
     "WannPtSOCOps":  9.754340102,  # same system + <operators_r>; identical to WannPtSOC
