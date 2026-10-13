@@ -117,3 +117,15 @@ src/gfleur-embedding/gf_gfleur_basic.F90
 src/gfleur-embedding/gf_gfleur_propagate.F90
 src/gfleur-embedding/gf_gfleur_compose.F90
 )
+
+#Sources of gfprep: conversion of a bulk supercell into the layered gfleur
+#setup. It is linked with the gfleur sources (without their main program).
+set(gfprep_F90
+src/gfleur-embedding/prep/gfprep_inp.F90
+src/gfleur-embedding/prep/gfprep_bulk.F90
+src/gfleur-embedding/prep/gfprep_layer.F90
+src/gfleur-embedding/prep/gfprep_potconv.F90
+src/gfleur-embedding/prep/gfprep_setup.F90
+src/gfleur-embedding/prep/gfprep_write.F90
+src/gfleur-embedding/prep/gfprep.F90
+)
