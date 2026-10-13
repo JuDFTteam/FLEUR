@@ -32,6 +32,21 @@ MODULE m_wgauge_spin_collinear
 
 CONTAINS
 
+   !> The extents behind a manifold mismatch, as text for the error's hint.
+   !>
+   !> Which of the three is wrong names a different fault: the first is the band count, the
+   !> second the number of Wannier functions, and a fourth extent other than two means the
+   !> run wannierised a single spin channel. Reporting none of them leaves the reader to
+   !> guess among the three.
+   FUNCTION manifold_sizes(v_ch, nb, nw) RESULT(txt)
+      COMPLEX, INTENT(IN) :: v_ch(:, :, :, :)
+      INTEGER, INTENT(IN) :: nb, nw
+      CHARACTER(LEN=160) :: txt
+      WRITE (txt, '(6(a,i0),a)') &
+         'the gauges are (', SIZE(v_ch, 1), ',', SIZE(v_ch, 2), ',', SIZE(v_ch, 3), ',', &
+         SIZE(v_ch, 4), ') and the manifold wants (', nb, ',', nw, ',*,2)'
+   END FUNCTION manifold_sizes
+
    SUBROUTINE wgauge_rspauli_collinear(num_wann, x0, v_ch, cell, kpts, distk, fmpi)
       INTEGER, INTENT(IN) :: num_wann
       !> The cross-spin overlap <up|dn> on this rank's k-slice, in the Bloch basis:
@@ -57,6 +72,7 @@ CONTAINS
       !> silently wrong rotation rather than a failure.
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_rspauli_collinear: the gauges do not match the manifold", &
+                          hint=manifold_sizes(v_ch, nb, nw), &
                           calledby="wgauge_rspauli_collinear")
 
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
@@ -137,6 +153,7 @@ CONTAINS
 
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_anglmom_collinear: the gauges do not match the manifold", &
+                          hint=manifold_sizes(v_ch, nb, nw), &
                           calledby="wgauge_anglmom_collinear")
       IF (SIZE(l0, 5) /= 2) CALL juDFT_error( &
          "wgauge_anglmom_collinear: L was not stored for both spin channels", &
@@ -224,6 +241,7 @@ CONTAINS
 
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_soc_collinear: the gauges do not match the manifold", &
+                          hint=manifold_sizes(v_ch, nb, nw), &
                           calledby="wgauge_soc_collinear")
       IF (SIZE(soc4, 3) /= 4) CALL juDFT_error( &
          "wgauge_soc_collinear: the SOC operator did not keep its four spin blocks", &
