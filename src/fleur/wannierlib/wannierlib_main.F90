@@ -224,7 +224,14 @@ CONTAINS
          CALL wannierlib_store_gauge(fmpi, distk, kpts, input, wl%num_bands, wl%num_wann, &
                                      jspin, u_matrix, u_opt, results)
 
-         CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
+         !> Every real-space operator that is assembled from both channels at once needs
+         !> this gauge, and the three of them have to be named here: u_opt and u_matrix are
+         !> released at the end of this iteration, so one that is not asked for now cannot
+         !> be served later.
+         CALL wannierlib_keep_gauge(melem%n_channels, &
+                                    request%has_op_r('spin') .OR. &
+                                    request%has_op_r('orbital') .OR. &
+                                    request%has_op_r('spin_orbit'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
 
          !> Right here and not from v_ch: that one is only assembled on the collinear
@@ -339,17 +346,18 @@ CONTAINS
 
    !> Keep this spin channel's Wannier gauge V = u_opt u_matrix while both factors are alive.
    !>
-   !> Only the collinear two-channel spin operator needs it, and only it can say so: the
-   !> combined 2N matrix cannot be assembled until BOTH channels have wannierised, while
-   !> u_opt and u_matrix are released at the end of every iteration. Anything that wants a
-   !> gauge later has to have kept it here.
+   !> The operators that are assembled from both channels at once need it, and none of them
+   !> can be built until BOTH channels have wannierised, while u_opt and u_matrix are
+   !> released at the end of every iteration. Anything that wants a gauge later has to have
+   !> kept it here.
    !>
-   !> A no-op unless there are two channels and the spin operator was asked for, so the
-   !> caller can call it unconditionally.
-   SUBROUTINE wannierlib_keep_gauge(n_channels, l_want_spin, manifold, nkptf, jspin, &
+   !> A no-op unless there are two channels and a caller asked for it, so it can be called
+   !> unconditionally. Which operators want one is not visible from here, so the caller
+   !> decides, and one whose request is left out of that decision finds nothing.
+   SUBROUTINE wannierlib_keep_gauge(n_channels, l_want_gauge, manifold, nkptf, jspin, &
                                     u_opt, u_matrix, v_ch)
       INTEGER, INTENT(IN) :: n_channels
-      LOGICAL, INTENT(IN) :: l_want_spin
+      LOGICAL, INTENT(IN) :: l_want_gauge
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       INTEGER, INTENT(IN) :: nkptf, jspin
       COMPLEX, INTENT(IN) :: u_opt(:, :, :), u_matrix(:, :, :)
@@ -357,7 +365,7 @@ CONTAINS
 
       INTEGER :: ik
 
-      IF (n_channels /= 2 .OR. .NOT. l_want_spin) RETURN
+      IF (n_channels /= 2 .OR. .NOT. l_want_gauge) RETURN
       IF (.NOT. ALLOCATED(v_ch)) &
          ALLOCATE (v_ch(manifold%num_bands, manifold%num_wann, nkptf, 2), source=CMPLX(0.0, 0.0))
       DO ik = 1, SIZE(u_opt, 3)

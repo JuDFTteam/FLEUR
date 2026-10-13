@@ -70,6 +70,13 @@ CONTAINS
 
       !> The gauges index the same manifolds the overlap does, and a mismatch would be a
       !> silently wrong rotation rather than a failure.
+      !> The empty case goes first: a gauge that was never kept fails the shape test
+      !> too, and reporting a shape of zeros instead of the reason sends the reader
+      !> looking for a mismatch that is not there.
+      IF (SIZE(v_ch) == 0) CALL juDFT_error( &
+         "wgauge_rspauli_collinear: no gauge was kept for this operator", &
+         hint="the run has to ask for it before the channels are wannierised", &
+         calledby="wgauge_rspauli_collinear")
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_rspauli_collinear: the gauges do not match the manifold", &
                           hint=manifold_sizes(v_ch, nb, nw), &
@@ -151,6 +158,13 @@ CONTAINS
 
       nb = SIZE(l0, 1); nw = num_wann; n2 = 2*nw
 
+      !> The empty case goes first: a gauge that was never kept fails the shape test
+      !> too, and reporting a shape of zeros instead of the reason sends the reader
+      !> looking for a mismatch that is not there.
+      IF (SIZE(v_ch) == 0) CALL juDFT_error( &
+         "wgauge_anglmom_collinear: no gauge was kept for this operator", &
+         hint="the run has to ask for it before the channels are wannierised", &
+         calledby="wgauge_anglmom_collinear")
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_anglmom_collinear: the gauges do not match the manifold", &
                           hint=manifold_sizes(v_ch, nb, nw), &
@@ -239,6 +253,13 @@ CONTAINS
 
       nb = SIZE(soc4, 1); nw = num_wann; n2 = 2*nw
 
+      !> The empty case goes first: a gauge that was never kept fails the shape test
+      !> too, and reporting a shape of zeros instead of the reason sends the reader
+      !> looking for a mismatch that is not there.
+      IF (SIZE(v_ch) == 0) CALL juDFT_error( &
+         "wgauge_soc_collinear: no gauge was kept for this operator", &
+         hint="the run has to ask for it before the channels are wannierised", &
+         calledby="wgauge_soc_collinear")
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_soc_collinear: the gauges do not match the manifold", &
                           hint=manifold_sizes(v_ch, nb, nw), &
