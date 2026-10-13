@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -175,6 +175,8 @@ CONTAINS
          if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
             line=line(index(line,'href="')+6:)
             line=line(:index(line,'"')-1)
+            !relative paths are relative to the including file
+            if (line(1:1)/='/') line=filename(:index(filename,'/',back=.true.))//line
             read_kpts_by_name=this%read_kpts_by_name(line,name)
          endif
       enddo
