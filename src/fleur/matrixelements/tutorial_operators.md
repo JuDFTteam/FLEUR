@@ -117,9 +117,10 @@ Three things no declaration shows:
   what it finds there is plausible rather than obviously wrong.
 - **`radfun%integral` is allocated `(.,.,.,jspins,jspins)`**, so a component has to be
   clamped to the sets that exist with `radial_slot(radfun, s)` — once, outside the loop.
-- **The coefficients are in each atom's LOCAL frame.** A quantity that is not invariant
-  under that rotation has to be rotated before the sites are summed (`t_abc%rotate`). This
-  is what an antiferromagnet gets wrong if you forget.
+- **The coefficients come expanded about the GLOBAL frame**, whichever atom they belong to,
+  so the sites are summed as they are. What they are NOT already carried onto is the spin
+  quantisation axis: a quantity that is not invariant under that one has to be rotated per
+  site, which is what an antiferromagnet gets wrong if you forget.
 
 And one that leaves a mark on disk: **assign, do not accumulate** when each element gets
 exactly one contribution — accumulating onto a cleared matrix turns `-0.0` into `+0.0`.

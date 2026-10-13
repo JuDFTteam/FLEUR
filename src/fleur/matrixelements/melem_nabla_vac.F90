@@ -19,9 +19,7 @@
 !>      real and carry no e^{i k_z z} of their own, so p_z acts on u and ue and on nothing
 !>      else. The folding phase e^{-i b_z z} is NOT differentiated: it plays the part the
 !>      step function plays in the interstitial, bookkeeping for the two sides being folded
-!>      differently, not a factor of the ket. (uhu/wann_uHu_vac.F does differentiate its
-!>      phase, but it builds a different quantity and carries "TODO: different sign before"
-!>      on the very lines that set it.)
+!>      differently, not a factor of the ket.
 !>
 !>  Returns p and not nabla, like its two siblings, so the caller adds no factor.
 !>

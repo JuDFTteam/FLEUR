@@ -77,11 +77,8 @@ CONTAINS
             cph = 2.0*tpi_const*SIN(th)
             phasefac = CMPLX(rph, cph)
 
-            !> Per atom now, not accumulated over them: the three components that come
-            !> out of the contraction are a VECTOR in THIS atom's local frame, and vectors
-            !> in different frames cannot be added. Summing first and converting once was
-            !> the bug: with equivalent atoms related by inversion the two contributions
-            !> cancelled instead of adding, and the muffin-tin term vanished.
+            !> Per atom, not accumulated over them: the position phase above belongs to
+            !> THIS atom, so each one's three components are built and added on their own.
             sph = CMPLX(0.0, 0.0)
             lm = atoms%lmax(n)*(atoms%lmax(n) + 2)
             DO mu = -1, 1
@@ -98,8 +95,8 @@ CONTAINS
                END DO
             END DO
             !> The closing is conjugated because the contraction above is, and the -i of
-            !> the momentum becomes +i for the same reason. Done HERE, in the local frame,
-            !> because what follows has to act on cartesian components.
+            !> the momentum becomes +i for the same reason. Done HERE, on the spherical
+            !> components, because what follows has to act on cartesian ones.
             DO a = 1, 3
                loc(:, :, a) = img*(CONJG(hlp(a, -1))*sph(:, :, -1) &
                                    + CONJG(hlp(a, 0))*sph(:, :, 0) &

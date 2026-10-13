@@ -62,8 +62,8 @@ CONTAINS
                         op_r_needs, op_needs, this%l_ws_distance)
       !> On a film the three regions are all covered now: the pair overlap, the spin
       !> operator and the momentum each have their vacuum half, so nothing is refused by
-      !> geometry any more. What used to stand here was fmn and cmn, and the note is kept
-      !> because the reason they were refused is the reason they are not any more:
+      !> geometry any more. What each of the two needed, and why one without the other
+      !> would have been worse than nothing:
       !>
       !>   F is the pair overlap contracted with the gauge, so the vacuum expansions were
       !>   all it ever needed. C needs those AND a momentum; and adding one without the

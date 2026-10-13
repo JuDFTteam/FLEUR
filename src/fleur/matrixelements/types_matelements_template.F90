@@ -79,10 +79,9 @@ CONTAINS
    !> k dependence arrives with the coefficients and init_mat clears the result while
    !> keeping the allocation.
    !>
-   !> A site is not summed over here. An instance covers one site, and whoever wants
-   !> the total adds them up -- which is only a plain sum for an operator that is
-   !> spin-diagonal with a frame-invariant trace. If yours is not, the caller has to
-   !> rotate each site from its local frame first.
+   !> A site is not summed over here. An instance covers one site, and whoever wants the
+   !> total adds them up, which is a plain sum: the coefficients of every site come
+   !> expanded about the same frame.
    SUBROUTINE melem_template_init(this, atoms, ntyp, iat, channel)
       CLASS(t_matelements_template), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms

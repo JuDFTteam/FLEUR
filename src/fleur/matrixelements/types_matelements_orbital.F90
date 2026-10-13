@@ -57,12 +57,10 @@ CONTAINS
    !> over here: an instance covers one site, and the caller adds them up if it wants the
    !> total.
    !>
-   !> That sum is NOT frame-blind, and the note that used to stand here said it was. L is
-   !> axial, L' = det(R) . R . L, so for inversion -- det(R) = -1, R = -I -- the rotation
-   !> is the identity and the claim happens to hold. Under a proper rotation the Cartesian
-   !> components mix and the site sum comes out wrong without it. Pass `rot` for any site
-   !> whose coefficients live in another atom's frame; leaving it out keeps the old path
-   !> bit for bit, which is what every neq = 1 case wants.
+   !> That sum is a plain one because every site's components come out in the same frame.
+   !> Were each in its own it would be wrong: L is axial, L' = det(R) . R . L, so under a
+   !> proper rotation the Cartesian components mix, and only for inversion -- det(R) = -1,
+   !> R = -I -- would the rotation be the identity and a plain sum happen to hold.
    SUBROUTINE init(this, atoms, ntyp, iat, channel)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms

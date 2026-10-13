@@ -199,17 +199,12 @@ CONTAINS
       !> WHICH SYMMETRY OPERATION TAKES EACH ATOM ONTO ITS REPRESENTATIVE, and of which
       !> class, reported once per run.
       !>
-      !> abcof builds the muffin-tin coefficients in the LOCAL frame of each atom: it
-      !> rotates k+G by transpose(mrot(:,:,invtab(ngopr(na)))) before expanding. For a
-      !> SCALAR operator that cancels in the product A* A and there is nothing to do. For
-      !> a VECTOR one it does not: its components live in that local frame and have to be
-      !> carried to the global one before the sites are summed.
-      !>
-      !> The class matters as much as the matrix, because p and L do NOT transform alike:
+      !> The class is reported and not just the operation, because p and L do NOT transform
+      !> alike:
       !>     p' = R.p              (polar)
       !>     L' = det(R).R.L       (axial)
       !> Under inversion det(R) = -1, and that factor is exactly what leaves L alone while
-      !> flipping p. A fix that applied R to both alike would break L, which works today.
+      !> flipping p. Anything that treated the two alike would be right about one of them.
       IF (fmpi%irank == 0) THEN
          WRITE (oUnit, '(/,a)') 'melem symmetry: how each atom maps onto its representative'
          WRITE (oUnit, '(a)')   '   atom type neq  ngopr invtab invsat  det(R_cart)   R_cart (rows)'
@@ -332,10 +327,10 @@ CONTAINS
             !> Each instance covers one site and one channel, and whoever wants a total sums
             !> the sites -- wgauge_run.F90 does SUM(l0, DIM=4).
             !>
-            !> That sum DOES need the local-to-global rotation, and the note that used to
-            !> stand here said it does not. The claim holds for inversion only: L is axial,
-            !> L' = det(R) . R . L, and for R = -I that is the identity. Under a proper
-            !> rotation the components mix and the site sum is wrong without it.
+            !> That sum is a plain one because every site's components come out in the same
+            !> frame. Were each in its own it would be wrong: L is axial,
+            !> L' = det(R) . R . L, and under a proper rotation the components mix, so only
+            !> for inversion -- det(R) = -1, R = -I -- would a plain sum happen to hold.
             DO ch = 1, this%n_channels
                DO na = 1, atoms%nat
                   CALL matrix_element_factory(orbop(na, ch), eig_id, ikpt, input, atoms, sym, &
@@ -350,8 +345,8 @@ CONTAINS
                   END IF
                   !> How |L|^2 is shared between the three components, SITE BY SITE.
                   !>
-                  !> Hermiticity is no use here: the L of each site in its own local frame
-                  !> is already hermitian, and a real orthogonal rotation preserves that.
+                  !> Hermiticity is no use here: each site's L is already hermitian whatever
+                  !> frame it comes in, since a real orthogonal rotation preserves that.
                   !> The momentum was only detectable because its anti-hermitian part is a
                   !> surface term that has to cancel AGAINST ANOTHER REGION, and L is pure
                   !> muffin-tin.
@@ -408,13 +403,10 @@ CONTAINS
             !> The four blocks and their sum at one k, for the grouped-against-split
             !> control.
             !>
-            !> SOC is the one operator here whose coefficients arrive in the LOCAL frame
-            !> while its angular table soangl is built in the GLOBAL one and carries no
-            !> atom index. secvar_soc avoids the mismatch by forcing sym%ngopr = 1 before
-            !> the coefficients are made; this path hands every operator the same sym, and
-            !> the other operators now need the local frame. Every SOC case validated so
-            !> far has a single atom, where that rotation is the identity and the question
-            !> cannot arise.
+            !> SOC contracts its coefficients against soangl, which is built in the GLOBAL
+            !> frame and carries no atom index, so they have to be in that frame too --
+            !> which is how they arrive. secvar_soc arranges the same for its own call by
+            !> forcing sym%ngopr = 1 before the coefficients are made.
             !>
             !> Reading this: the DIAGONAL spin blocks set the noise floor and the CROSS
             !> blocks carry the signal. A local-frame rotation about z inserts exp(-i m a)
