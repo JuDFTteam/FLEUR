@@ -28,17 +28,6 @@ MODULE m_types_matelements
         COMPLEX, ALLOCATABLE :: comp(:, :, :)
         INTEGER :: n_alpha = 1  !> Cartesian extents the operator declared; 1 means comp is unused
         INTEGER :: n_beta  = 1
-        !> Which frame the operator wants its basis matching coefficients in.
-        !>
-        !> They arrive expanded about the LOCAL frame of each atom, so that every atom of a
-        !> type can share one radial set. An operator that contracts them against a quantity
-        !> held in that same local frame wants exactly that, and most do.
-        !>
-        !> An operator whose angular tables are built in the GLOBAL frame and carry no atom
-        !> index does not: local-frame coefficients would meet a table that knows nothing of
-        !> the rotation. Setting this asks for a second set expanded about the global frame
-        !> instead.
-        LOGICAL :: l_global_frame = .FALSE.
     CONTAINS
         PROCEDURE :: init_mat    !> provide the result matrix with the dimensions implied by the spinor flags
         PROCEDURE :: add         !> accumulate the matrix elements of another object: this = this + other

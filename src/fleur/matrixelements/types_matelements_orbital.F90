@@ -43,11 +43,6 @@ MODULE m_types_matelements_orbital
       INTEGER :: ntyp  = 0     !> atom type
       INTEGER :: iat   = 0     !> which of the equivalent atoms of that type
       INTEGER :: channel = 0   !> which spin channel this instance serves; 0 = a spinor
-      !> Local-to-global frame rotation for this site, and whether it is one at all. The
-      !> coefficients arrive in the local frame of the representative atom, so a site that
-      !> is not the representative needs its components turned before anyone sums them.
-      REAL    :: rot(3, 3) = RESHAPE([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], [3, 3])
-      LOGICAL :: l_rot = .FALSE.
    CONTAINS
       PROCEDURE :: init                 => init
       PROCEDURE :: calc_matrix_elements => calc_matrix_elements
@@ -68,12 +63,11 @@ CONTAINS
    !> components mix and the site sum comes out wrong without it. Pass `rot` for any site
    !> whose coefficients live in another atom's frame; leaving it out keeps the old path
    !> bit for bit, which is what every neq = 1 case wants.
-   SUBROUTINE init(this, atoms, ntyp, iat, channel, rot)
+   SUBROUTINE init(this, atoms, ntyp, iat, channel)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
       INTEGER, INTENT(IN) :: ntyp, iat
       INTEGER, INTENT(IN), OPTIONAL :: channel   !> present: serve this channel alone
-      REAL,    INTENT(IN), OPTIONAL :: rot(3, 3) !> local-to-global, already det-corrected
 
       IF (ntyp < 1 .OR. ntyp > atoms%ntype) &
          CALL judft_bug("init: the atom type is out of range")
@@ -91,17 +85,6 @@ CONTAINS
       !> Three Cartesian components out of one pass, declared here so that a caller
       !> which does not know which operator it is holding still gets the right store.
       this%n_alpha = 3
-
-      !> The identity is recognised and NOT taken as a rotation. Multiplying by 1.0 and
-      !> adding 0.0 is not a no-op here: it turns a -0.0 component into +0.0, and the sign
-      !> of zero reaches the exported file. Every neq = 1 site therefore keeps the old
-      !> arithmetic untouched.
-      this%l_rot = .FALSE.
-      IF (PRESENT(rot)) THEN
-         this%rot = rot
-         this%l_rot = ANY(ABS(rot - RESHAPE([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, &
-                                             0.0, 0.0, 1.0], [3, 3])) > 1.0e-6)
-      END IF
 
       this%atoms => atoms
       this%ntyp  = ntyp
@@ -185,17 +168,9 @@ CONTAINS
             lx = 0.5 * CONJG(cp + cm)               ! L_x = (L+ + L-)/2
             ly = -0.5 * ImagUnit * CONJG(cp - cm)   ! L_y = (L+ - L-)/(2i)
             lz = CONJG(cz)                          ! L_z
-            IF (this%l_rot) THEN
-               !> Local frame to global. `rot` already carries the det(R) factor that makes
-               !> L axial, so this is the same contraction a polar vector would get.
-               this%comp(i, j, 1) = this%rot(1, 1)*lx + this%rot(1, 2)*ly + this%rot(1, 3)*lz
-               this%comp(i, j, 2) = this%rot(2, 1)*lx + this%rot(2, 2)*ly + this%rot(2, 3)*lz
-               this%comp(i, j, 3) = this%rot(3, 1)*lx + this%rot(3, 2)*ly + this%rot(3, 3)*lz
-            ELSE
-               this%comp(i, j, 1) = lx
-               this%comp(i, j, 2) = ly
-               this%comp(i, j, 3) = lz
-            END IF
+            this%comp(i, j, 1) = lx
+            this%comp(i, j, 2) = ly
+            this%comp(i, j, 3) = lz
          END DO
       END DO
    END SUBROUTINE calc_matrix_elements

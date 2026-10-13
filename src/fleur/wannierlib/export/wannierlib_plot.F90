@@ -44,7 +44,6 @@ MODULE m_wannierlib_plot
    USE m_types_spinor_layout, ONLY: radial_slot
    USE m_matrix_element_factory, ONLY: matrix_element_states
    USE m_wann_real
-   USE m_wann_abinv
    USE m_wann_plot_vac
    USE m_wann_2dvacabcof
    USE m_xsf_io
@@ -349,7 +348,11 @@ CONTAINS
       !> the rotated frame; the plot needs the global one. The guard is the producer's own
       !> condition (t_abc: any(invsat==2) .and. .not.l_soc) -- with SOC the partners were
       !> built directly and flipping them here would be the error, not the fix.
-      IF (ANY(sym%invsat == 2) .AND. .NOT. noco%l_soc) CALL wann_abinv(atoms, sym, acof, bcof, ccof)
+      !> Nothing turns the coefficients here: they arrive expanded about the global frame
+      !> already, which is the frame the real-space grid below is laid out in. An expansion
+      !> about each atom's own frame would have to be undone first, and for an atom reached
+      !> through its inversion partner that means undoing the partner's rotation and the
+      !> inversion with it.
    END SUBROUTINE repack_coefficients
 
 #ifdef CPP_MPI
@@ -441,5 +444,7 @@ CONTAINS
 
       WRITE (oUnit, '(a,i0,a)') '  wrote ', nw, ' XSF files (block A: real part, block B: modulus)'
    END SUBROUTINE write_xsf
+
+
 
 END MODULE m_wannierlib_plot

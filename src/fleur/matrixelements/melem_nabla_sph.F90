@@ -17,7 +17,6 @@ MODULE m_melem_nabla_sph
    USE m_constants, ONLY: tpi_const
    USE m_types_sym
    USE m_types_cell
-   USE m_melem_symrot, ONLY: melem_rot_polar
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_nabla_sph
@@ -46,7 +45,6 @@ CONTAINS
       REAL :: bpt(3)
       COMPLEX :: phasefac
       COMPLEX, ALLOCATABLE :: sph(:, :, :), loc(:, :, :)
-      REAL :: rc(3, 3)
       COMPLEX :: hlp(3, -1:1)
       COMPLEX, PARAMETER :: img = CMPLX(0.0, 1.0)
       REAL :: s2
@@ -108,14 +106,13 @@ CONTAINS
                                    + CONJG(hlp(a, 1))*sph(:, :, 1))
             END DO
 
-            !> Local frame -> global, with THIS atom's operation. p is a POLAR vector, so it
-            !> is plain R; the orbital moment is axial and would need det(R) R instead, which
-            !> is why m_melem_symrot offers the two and not one.
-            rc = melem_rot_polar(sym, cell, na)
+            !> The components add straight in because the coefficients arrive expanded
+            !> about the global frame, so the contraction is already global. Were they
+            !> expanded about each atom's own frame this would be wrong: p is a vector and
+            !> its components mix under that atom's operation, so each one would have to be
+            !> turned before being summed with the others.
             DO a = 1, 3
-               DO mu = 1, 3
-                  pnk(:, :, a) = pnk(:, :, a) + rc(a, mu)*loc(:, :, mu)
-               END DO
+               pnk(:, :, a) = pnk(:, :, a) + loc(:, :, a)
             END DO
          END DO
       END DO

@@ -64,15 +64,6 @@ CONTAINS
         this%spinoroperator = .TRUE.
         this%spinorwavefcts = .FALSE.
 
-        !The angular table rsoc%soangl is built in the global frame and carries no atom
-        !index, so the coefficients it is contracted with must be in that frame too. Ask
-        !the factory for them rather than undo the local-frame rotation here: abcof is
-        !what puts the coefficients in a frame, so it is where the choice belongs. This is
-        !also what secvar_soc arranges for its own call, by forcing sym%ngopr = 1.
-        !Without it every atom that is not its own representative contributes with its lm
-        !components turned, which stays hermitian and so passes every check but the
-        !grouped-against-split one.
-        this%l_global_frame = .TRUE.
 
         this%atoms  => atoms
         this%noco   => noco

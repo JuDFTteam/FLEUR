@@ -28,7 +28,6 @@ MODULE m_melem_coarse
    USE m_types_enpara
    USE m_types_mpi
    USE m_types_potden
-   USE m_melem_symrot, ONLY: melem_rot_axial
    USE m_types_stars
    USE m_types_mat
    USE m_types_melem_request, ONLY: t_melem_request
@@ -262,15 +261,10 @@ CONTAINS
             DO itype = 1, atoms%ntype
                DO iatom = 1, atoms%neq(itype)
                   na = na + 1
-                  !> melem_rot_axial, not melem_rot_polar: L is axial and carries the
-                  !> det(R). For a representative atom this comes back as the identity and
-                  !> init then leaves the arithmetic alone.
                   IF (this%n_channels == 2) THEN
-                     CALL orbop(na, ch)%init(atoms, itype, iatom, channel=ch, &
-                                             rot=melem_rot_axial(sym, cell, na))
+                     CALL orbop(na, ch)%init(atoms, itype, iatom, channel=ch)
                   ELSE
-                     CALL orbop(na, ch)%init(atoms, itype, iatom, &
-                                             rot=melem_rot_axial(sym, cell, na))
+                     CALL orbop(na, ch)%init(atoms, itype, iatom)
                   END IF
                END DO
             END DO
@@ -513,5 +507,7 @@ CONTAINS
       b(3,2) = -(a(1,1)*a(3,2) - a(1,2)*a(3,1))/d
       b(3,3) =  (a(1,1)*a(2,2) - a(1,2)*a(2,1))/d
    END FUNCTION inverse3
+
+
 
 END MODULE m_melem_coarse
