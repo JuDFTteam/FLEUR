@@ -19,6 +19,7 @@ MODULE m_types_field
      REAL    :: zsigma  = 10.0  ! Distance to the charged plates
      REAL    :: sigma=0.0   ! charge at the plates
      REAL    :: sig_b(2)=  0.0  ! Extra charge for the top/bottom plate
+     REAL    :: qexcess=0.0 ! Electronic charge minus nuclear charge in a film
      REAL,    ALLOCATABLE :: sigEF(:,:,:) ! (nx, ny, nvac)
      COMPLEX, ALLOCATABLE :: rhoEF(:,:)   ! (g_||, nvac)
      COMPLEX, ALLOCATABLE :: C1(:), C2(:) ! Coeff. for Dirichlet bnd.cond.
@@ -69,6 +70,7 @@ CONTAINS
     CALL mpi_bc(this%efield%sigma   ,rank,mpi_comm)
     CALL mpi_bc(this%efield%sig_b(1),rank,mpi_comm)
     CALL mpi_bc(this%efield%sig_b(2),rank,mpi_comm)
+    CALL mpi_bc(this%efield%qexcess ,rank,mpi_comm)
     CALL mpi_bc(this%efield%sigEF ,rank,mpi_comm)
     CALL mpi_bc(this%efield%rhoEF   ,rank,mpi_comm)
     CALL MPI_BC(THIS%EFIELD%C1,RANK,MPI_COMM)

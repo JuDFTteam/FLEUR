@@ -79,7 +79,11 @@ CONTAINS
     IF (fmpi%irank.EQ.0) THEN
        !The total nucleii charge
        zc = SUM(atoms%neq(:)*atoms%zatom(:))
-       zc = zc + 2 * field%efield%sigma
+       IF (input%film) THEN
+          zc = zc + field%efield%qexcess
+       ELSE
+          zc = zc + 2 * field%efield%sigma
+       END IF
 
        IF (fixtotal) THEN
           !-roa
