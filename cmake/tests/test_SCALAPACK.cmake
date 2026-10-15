@@ -1,13 +1,21 @@
 #First check if we can compile with ScaLAPACK
+set(FLEUR_TRY_COMPILE_LIBRARIES "")
+foreach(library IN LISTS FLEUR_LIBRARIES)
+   # Parent-project targets are unavailable in try_compile projects.
+   if (NOT TARGET "${library}")
+      list(APPEND FLEUR_TRY_COMPILE_LIBRARIES "${library}")
+   endif()
+endforeach()
+
 try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_SCALAPACK.f90
-LINK_LIBRARIES ${FLEUR_LIBRARIES}
+LINK_LIBRARIES ${FLEUR_TRY_COMPILE_LIBRARIES}
             )
 
 #Try typical mkl string
 foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapack_openmpi" "-lscalapack-openmpi" "-lscalapack" "-Mscalapack")
 if (NOT FLEUR_USE_SCALAPACK)
      message("Test for SCALAPACK with:${test_string}")
-     set(TEST_LIBRARIES "${test_string};${FLEUR_LIBRARIES}")
+     set(TEST_LIBRARIES "${test_string};${FLEUR_TRY_COMPILE_LIBRARIES}")
      try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_SCALAPACK.f90
            LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output
             )
@@ -16,10 +24,11 @@ if (NOT FLEUR_USE_SCALAPACK)
      endif()
 
      if (FLEUR_USE_SCALAPACK)
-          set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+          set(FLEUR_LIBRARIES ${test_string} ${FLEUR_LIBRARIES})
      endif()
 endif()
 endforeach()
+unset(FLEUR_TRY_COMPILE_LIBRARIES)
 
 #By default we always compile SCALAPACK if not found
 if (NOT DEFINED CLI_FLEUR_USE_SCALAPACK)
