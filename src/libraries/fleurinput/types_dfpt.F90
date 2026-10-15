@@ -35,7 +35,7 @@ MODULE m_types_dfpt
       LOGICAL :: l_sumrule_scf  = .FALSE. ! Apply sumrule for dynmats in scf calculation 
       LOGICAL :: l_sumrule_intp  = .FALSE. ! Apply sumrule for dynmats in interpolation calculation
       LOGICAL :: l_bornhuang  = .FALSE. ! Project the force constants onto the invariance conditions
-      LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
+      LOGICAL :: l_rm_qhdf  = .FALSE. ! Do not keep converged density perturbations in dfpt_cdn.hdf
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: i_integration = 1   ! choose integration scheme for ph-linewidth (experimental)

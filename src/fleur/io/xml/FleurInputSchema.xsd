@@ -4093,7 +4093,7 @@
       </xsd:attribute>
       <xsd:attribute name="l_rm_qhdf" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Remove existing q.hdf files before calculation.</xsd:documentation>
+            <xsd:documentation>Do not keep converged density perturbations in dfpt_cdn.hdf.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional">

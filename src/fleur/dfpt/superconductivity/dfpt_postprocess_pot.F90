@@ -14,6 +14,7 @@ module m_dfpt_postprocess_pot
 
     USE m_constants
     USE m_cdn_io
+    USE m_dfpt_cdn_io, ONLY: dfptDensityArchiveName, readDfptDensity
     USE m_make_stars
     USE m_dfpt_dynmat_eig
     USE m_dfpt_dynmat_io
@@ -90,14 +91,12 @@ contains
 
         integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
         integer :: bandWindow(2)
-        logical :: l_dummy , l_exist
         complex :: pref 
         complex, allocatable :: dynMats(:,:,:) 
         complex, allocatable :: gmatCart(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQ)
         integer, allocatable :: q_list(:)
 
-        character(len=20) :: dfpt_tag
-        character(len=100)  :: filename
+        character(len=64) :: dfpt_tag
 
 #ifdef CPP_MPI 
         integer :: ierr
@@ -157,7 +156,7 @@ contains
                 do iDir = 1 , 3
                     call timestart("Dirloop")
                     
-                    write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+                    dfpt_tag = dfptDensityArchiveName(sternheimerJob%kind_name(), q_list(iQ), iDtype, iDir)
                     
                     iPerturb = iDir+3*(iDtype-1)
 
@@ -176,12 +175,8 @@ contains
                         call timestart("den1 IO")
                         ! We write out the density response in the sternheimer iteration 
                         ! read in the densities
-                        filename = trim(dfpt_tag)
-                        inquire(file=trim(filename)//".hdf",EXIST=l_exist)
-                        if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                    fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
-                                                    dummy_results%ef, dummy_results%last_distance, l_dummy, den1,  &
-                                                    inFilename=trim(filename))
+                        call readDfptDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, &
+                                             dfpt_tag, fi%dfpt%qvec%bk(:,iQ), dummy_results%ef, dummy_results%last_distance, den1)
                         call timestop("den1 IO")
                         
                         ! add the gradient to the density that we store
@@ -246,12 +241,10 @@ contains
             call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt,eig_win)
             if (fmpi%irank==0) call dfpt_check_lambda(fi,lambda,eig_win,1e-6)
             call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
-            call save_npy("lambda.npy",lambda)
             deallocate(lambda,mapped_kpt,eig_win)
         end do
         call timestop("elph symmetry unfolding")
 
-        call save_npy("gmatCartBZ.npy",gmatCartBZ)
         
         ! Perform Wannier interpolation
         if (fi%wannierlib%l_wannierize) then
