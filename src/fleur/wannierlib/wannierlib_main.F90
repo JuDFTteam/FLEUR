@@ -231,7 +231,7 @@ CONTAINS
          CALL wannierlib_keep_gauge(melem%n_channels, &
                                     request%has_op_r('spin') .OR. &
                                     request%has_op_r('orbital') .OR. &
-                                    request%has_op_r('spin_orbit'), manifold, &
+                                    request%has_op_r('spinOrbit'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
 
          !> Right here and not from v_ch: that one is only assembled on the collinear
@@ -299,7 +299,7 @@ CONTAINS
          CALL wgauge_anglmom_collinear(this%num_wann, melem%l0, v_ch, cell, kpts, distk, fmpi)
       ! And the spin-orbit coupling, which here is an operator on the basis rather than a
       ! term in the eigenproblem that produced it.
-      IF (melem%n_channels == 2 .AND. request%has_op_r('spin_orbit')) &
+      IF (melem%n_channels == 2 .AND. request%has_op_r('spinOrbit')) &
          CALL wgauge_soc_collinear(this%num_wann, melem%soc4, v_ch, cell, kpts, distk, fmpi)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 

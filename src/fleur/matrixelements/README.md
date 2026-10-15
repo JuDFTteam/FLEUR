@@ -40,11 +40,11 @@ because that is where it landed.
 ## First: which of the three are you adding?
 
 - **A real operator** — a contraction over the states, `O_mn(k) = <psi_m|O|psi_n>`
-  (`spin`, `orbital`, `spin_orbit`). Route A, the seven touchpoints below.
-- **Only an exposure** — the coarse matrix already exists (`soc` reuses `spin_orbit`).
+  (`spin`, `orbital`, `spinOrbit`). Route A, the seven touchpoints below.
+- **Only an exposure** — the coarse matrix already exists (`soc` reuses `spinOrbit`).
   Route B: one table row and one branch.
 - **Not an operator at all** — built from the neighbour overlaps or the eigenvalues
-  (`hamiltonian`, `velocity`, `eigenstates`, `position`, `position_pw90`, `bmn`, `fmn`,
+  (`hamiltonian`, `velocity`, `eigenstates`, `position`, `positionPw90`, `bmn`, `fmn`,
   `cmn`). Route C: a row with `operator=''` and a driver of your own.
 
 **The rule:** if it is not a contraction over the states, it does not go in the

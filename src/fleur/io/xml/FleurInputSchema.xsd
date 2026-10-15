@@ -3523,7 +3523,7 @@
                <xsd:enumeration value="hamiltonian"/>
                <xsd:enumeration value="spin"/>
                <xsd:enumeration value="orbital"/>
-               <xsd:enumeration value="spin_orbit"/>
+               <xsd:enumeration value="spinOrbit"/>
                <xsd:enumeration value="velocity"/>
                <xsd:enumeration value="eigenstates"/>
             </xsd:restriction>
@@ -3551,13 +3551,13 @@
             <xsd:restriction base="xsd:string">
                <xsd:enumeration value="hamiltonian"/>
                <xsd:enumeration value="position"/>
-               <xsd:enumeration value="position_pw90"/>
+               <xsd:enumeration value="positionPw90"/>
                <xsd:enumeration value="bmn"/>
                <xsd:enumeration value="fmn"/>
                <xsd:enumeration value="cmn"/>
                <xsd:enumeration value="spin"/>
                <xsd:enumeration value="orbital"/>
-               <xsd:enumeration value="spin_orbit"/>
+               <xsd:enumeration value="spinOrbit"/>
             </xsd:restriction>
          </xsd:simpleType>
       </xsd:attribute>

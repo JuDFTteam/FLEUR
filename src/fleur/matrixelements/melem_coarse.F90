@@ -108,7 +108,7 @@ CONTAINS
       !> first variation the states are spinors, nothing in the spread functional penalises
       !> a spin character that varies with k, and the exported S(R) and L(R) stop being
       !> localised. Like the spin, it needs both gauges, so it is a real-space export only.
-      l_ch_soc  = this%n_channels == 2 .AND. request%has_op_r('spin_orbit')
+      l_ch_soc  = this%n_channels == 2 .AND. request%has_op_r('spinOrbit')
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
       IF (this%l_active) THEN
@@ -221,7 +221,7 @@ CONTAINS
       IF (this%n_channels == 2) THEN
          l_do_spin = request%has_op_r('spin')
          l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital')
-         l_do_soc  = request%has_op_r('spin_orbit')
+         l_do_soc  = request%has_op_r('spinOrbit')
          IF (.NOT. (l_do_spin .OR. l_do_orb .OR. l_do_soc)) RETURN
       ELSE
          IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinors -> slices are stubs
@@ -389,7 +389,7 @@ CONTAINS
             CALL matrix_element_factory(socop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
-            IF (ikpt == 1) CALL melem_check_provider(socop, 'spin_orbit', ikpt)
+            IF (ikpt == 1) CALL melem_check_provider(socop, 'spinOrbit', ikpt)
             !> The blocks arrive as conj(<i|H_so|j>) and are restored to the convention
             !> the type documents here, where the real-space export consumes them.
             this%soc4(:, :, 1, il) = CONJG(socop%mat(1, 1)%data_c)
@@ -425,8 +425,8 @@ CONTAINS
             IF (ikpt == 1 .AND. this%l_active) THEN
                !> The sum over the four blocks is Hermitian even though two of them are not:
                !> 12 + 21 is, being a matrix plus its adjoint.
-               CALL melem_check_matrix(this%soc0(:, :, 1:1, il), 'spin_orbit (assembled)', ikpt)
-               CALL melem_check_matrix(this%soc4(:, :, :, il), 'spin_orbit blocks', ikpt, &
+               CALL melem_check_matrix(this%soc0(:, :, 1:1, il), 'spinOrbit (assembled)', ikpt)
+               CALL melem_check_matrix(this%soc4(:, :, :, il), 'spinOrbit blocks', ikpt, &
                                        l_hermitian=.FALSE.)
             END IF
          END IF

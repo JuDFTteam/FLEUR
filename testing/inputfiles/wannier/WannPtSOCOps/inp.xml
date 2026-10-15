@@ -64,7 +64,7 @@
           <operator name="hamiltonian"/>
           <operator name="spin"/>
           <operator name="orbital"/>
-          <operator name="spin_orbit"/>
+          <operator name="spinOrbit"/>
         </operatorsRs>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

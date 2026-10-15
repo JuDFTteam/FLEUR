@@ -194,7 +194,7 @@ CONTAINS
                   CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
                                                   SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, kfrac, &
                                                   hg, outname(iop, 1), irank, mpi_comm)
-            CASE ('spin_orbit')
+            CASE ('spinOrbit')
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, kfrac, hg, outname(iop, 1), irank, mpi_comm)
             CASE ('velocity')

@@ -47,7 +47,7 @@ MODULE m_types_wannierlib
   !> whether the site-summed projection is wanted.
   TYPE t_wannierlib_op
     SEQUENCE
-    CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spin_orbit/velocity/...
+    CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spinOrbit/velocity/...
     CHARACTER(LEN=32) :: comp = ''   ! requested components; '' = all of the operator rank
     INTEGER :: total = 1             ! 1 = write the summed-over-atoms projection
   END TYPE t_wannierlib_op
@@ -75,7 +75,7 @@ MODULE m_types_wannierlib
     LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
     LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
-    LOGICAL :: l_socop = .FALSE.           ! an <operator name="spin_orbit"> is requested
+    LOGICAL :: l_socop = .FALSE.           ! an <operator name="spinOrbit"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operatorsRs> block (real-space O(R) export) is present
     !> The <export> block: one boolean per artefact, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own
@@ -664,7 +664,7 @@ CONTAINS
         SELECT CASE (TRIM(WANNIERLIB_INTERP(iRow)%operator))
         CASE ('spin');       this%l_spin = .TRUE.
         CASE ('orbital');    this%l_orbmom = .TRUE.
-        CASE ('spin_orbit'); this%l_socop = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
         END SELECT
       END IF
     END DO
@@ -703,7 +703,7 @@ CONTAINS
         SELECT CASE (TRIM(WANNIERLIB_OPR(iRow)%operator))
         CASE ('spin');       this%l_spin = .TRUE.
         CASE ('orbital');    this%l_orbmom = .TRUE.
-        CASE ('spin_orbit'); this%l_socop = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
         END SELECT
       END IF
     END DO

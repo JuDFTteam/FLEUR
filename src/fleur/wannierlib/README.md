@@ -49,7 +49,7 @@ The two operator blocks are independent: `<operatorsRs>` writes `O(R)` to disk a
 interpolation, while `<interpolation>` projects onto the interpolated bands. They accept
 different *sets* of names, because not everything with an `O(R)` has an interpolation driver
 and the other way round, but **a name never means two different things in the two blocks** --
-the spin-orbit operator is `spin_orbit` in both. The accepted names of each live in
+the spin-orbit operator is `spinOrbit` in both. The accepted names of each live in
 `fleurinput/types_melem_optable.f90`, and a name the tables do not have stops the run with
 the accepted list in the message.
 

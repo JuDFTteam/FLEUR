@@ -40,7 +40,7 @@ MODULE m_types_melem_optable
    TYPE(t_melem_operator), PARAMETER, PUBLIC :: MELEM_OPERATORS(3) = [ &
       t_melem_operator('spin',       3), &
       t_melem_operator('orbital',    3), &
-      t_melem_operator('spin_orbit', 4)]
+      t_melem_operator('spinOrbit', 4)]
 
    ! ------------------------------------------------- how the wannierization exposes things
    TYPE, PUBLIC :: t_melem_exposed
@@ -53,7 +53,7 @@ MODULE m_types_melem_optable
       CHARACTER(LEN=24) :: out1 = ''
       CHARACTER(LEN=24) :: out2 = ''
       !> Honours the total="T" attribute, i.e. it has a site-summed projection to choose.
-      !> Only the two site-resolved ones do; spin_orbit and the currents have nothing to sum over.
+      !> Only the two site-resolved ones do; spinOrbit and the currents have nothing to sum over.
       LOGICAL :: honours_total = .FALSE.
    END TYPE t_melem_exposed
 
@@ -63,7 +63,7 @@ MODULE m_types_melem_optable
                       'bands_wann_interpol_ev', .FALSE.), &
       t_melem_exposed('spin',           'spin',       3, 'bands_wann_spin',         '', .TRUE.), &
       t_melem_exposed('orbital',        'orbital',    3, 'bands_wann_orbmom',       '', .TRUE.), &
-      t_melem_exposed('spin_orbit',     'spin_orbit', 1, 'bands_wann_spin_orbit',   '', .FALSE.), &
+      t_melem_exposed('spinOrbit',     'spinOrbit', 1, 'bands_wann_spin_orbit',   '', .FALSE.), &
       t_melem_exposed('velocity',       '',           0, 'bands_wann_velocity',     &
                       'bands_wann_berrycurv', .FALSE.), &
       t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.)]
@@ -79,13 +79,13 @@ MODULE m_types_melem_optable
       !> `position` writes the _r.dat that orbitrans reads and that carries the Wannier
       !> centres, while berry.F90 refuses that form for the orbital magnetisation
       !> ("transl_inv=T disabled for morb"). Writes WF*_rpw.dat.
-      t_melem_exposed('position_pw90', '',         0, '', '', .FALSE.), &
+      t_melem_exposed('positionPw90', '',         0, '', '', .FALSE.), &
       t_melem_exposed('bmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('fmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('cmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('spin',        'spin',       3, '', '', .FALSE.), &
       t_melem_exposed('orbital',     'orbital',    3, '', '', .FALSE.), &
-      t_melem_exposed('spin_orbit',  'spin_orbit', 4, '', '', .FALSE.)]
+      t_melem_exposed('spinOrbit',  'spinOrbit', 4, '', '', .FALSE.)]
 
    PUBLIC :: melem_exposed_find, melem_exposed_names
 

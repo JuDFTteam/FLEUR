@@ -158,7 +158,7 @@ interpolation: these are the files an external transport code reads.
   <operator name="position"/>      <!-- WF<n>_r.dat    -->
   <operator name="spin"/>          <!-- rspauli.1      -->
   <operator name="orbital"/>       <!-- anglmomrs.1    -->
-  <operator name="spin_orbit"/>    <!-- rssocmat.1     -->
+  <operator name="spinOrbit"/>    <!-- rssocmat.1     -->
 </operatorsRs>
 ```
 
@@ -168,13 +168,13 @@ Accepted names:
 |---|---|
 | `hamiltonian` | H(R) |
 | `position` | A(R) = `<0n|r|Rm>` |
-| `position_pw90` | the same in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation. Writes `WF<n>_rpw.dat`. |
+| `positionPw90` | the same in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation. Writes `WF<n>_rpw.dat`. |
 | `bmn` | B(R) = `<0n|H(r-R)|Rm>` |
 | `fmn` | F(R) = `<0n|r_a r_b|Rm>` — needs the pair overlap (uIu) |
 | `cmn` | C(R) = `<0n|r_a H r_b|Rm>` — needs uHu |
 | `spin` | S(R) |
 | `orbital` | L(R) |
-| `spin_orbit` | the spin-orbit operator |
+| `spinOrbit` | the spin-orbit operator |
 
 `fmn` and `cmn` are refused on a film: they need the vacuum halves of the pair overlap and
 of the momentum, which this layer does not reach. `spin` is refused on a film for the same
@@ -212,7 +212,7 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 | `hamiltonian` | `bands_wann_interpol.dat`, `bands_wann_interpol_ev.dat` |
 | `spin` | `bands_wann_spin.dat` |
 | `orbital` | `bands_wann_orbmom.dat` |
-| `spin_orbit` | `bands_wann_spin_orbit.dat` |
+| `spinOrbit` | `bands_wann_spin_orbit.dat` |
 | `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
 | `eigenstates` | `bands_wann_eigenstates.dat` |
 
@@ -220,7 +220,7 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 have anything to sum over. `comp` selects Cartesian components.
 
 > The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
-> particular it is `spin_orbit` in both. The two blocks do not accept the same *set* of
+> particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
 > names, because not everything that has an O(R) has an interpolation driver and the other
 > way round, but a name never means two different things.
 

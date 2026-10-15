@@ -65,7 +65,7 @@ CONTAINS
   ! ---------------------------------------------------------------------------
   ! <operatorsRs>: real-space Wannier operator matrices O(R) (Fourier step 3),
   ! in Wannier90/FLEUR standalone format for external transport post-processing.
-  ! No band interpolation. Rank 0 writes; spin/orbital/spin_orbit use a distributed FT-reduce
+  ! No band interpolation. Rank 0 writes; spin/orbital/spinOrbit use a distributed FT-reduce
   ! over MPI ranks. Files: WF1_hr.dat (H, eV), WF1_r.dat (position, Ang), rspauli.1 (spin),
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ CONTAINS
         IF (irank == 0) CALL wgauge_check_berry_centres(this, aw_r, aw_irvec, aw_nrpts, bmesh)
         IF (irank == 0) CALL wgauge_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
-      CASE ('position_pw90') ! A(R) in the postw90 convention: Eq. (44) on the diagonal too,
+      CASE ('positionPw90') ! A(R) in the postw90 convention: Eq. (44) on the diagonal too,
                              ! plus A <- (A + A^dagger)/2 at each k. `position` is NOT touched:
                              ! orbitrans and the Wannier-centre check need the _r.dat form, and
                              ! berry.F90 refuses that form for the orbital magnetisation
@@ -181,7 +181,7 @@ CONTAINS
         CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., &
                                           'anglmomrs.'//ACHAR(48+wf_channel))
         DEALLOCATE(o0l)
-      CASE ('spin_orbit')
+      CASE ('spinOrbit')
         ! collinear: like spin and orbital, written once as one 2N matrix after both
         ! wannierisations by wgauge_soc_collinear (main), not per channel here.
         IF (l_collinear) THEN

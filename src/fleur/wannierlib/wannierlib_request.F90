@@ -91,7 +91,7 @@ CONTAINS
             hint="ask for it in <operatorsRs>: there both channels are combined into the "// &
                  "2N rspauli.1, which is the only form this operator has here", &
             calledby="wannierlib_main")
-         IF (request%needs_op('spin_orbit', interp_only=.TRUE.)) CALL judft_error( &
+         IF (request%needs_op('spinOrbit', interp_only=.TRUE.)) CALL judft_error( &
             "the spin-orbit operator cannot be interpolated when the two spin channels are "// &
             "wannierised separately", &
             hint="ask for it in <operatorsRs>: there both channels are combined into the "// &

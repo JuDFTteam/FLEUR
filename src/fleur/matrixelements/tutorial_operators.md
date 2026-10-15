@@ -26,9 +26,9 @@ make you take explicitly.
 
 | What it is | Examples already in the tree | What you touch |
 |---|---|---|
-| **A real operator** — a contraction over the states, `O_mn(k) = <psi_m\|O\|psi_n>` | `spin`, `orbital`, `spin_orbit` | catalogue + provider + coarse slice + exposure (**route A**, §3) |
-| **Only an exposure** — the coarse matrix already exists | `soc` (reuses `spin_orbit` under another name) | one table row + one branch (**route B**, §4) |
-| **Not an operator at all** — it comes out of the neighbour overlaps or the eigenvalues | `hamiltonian`, `velocity`, `eigenstates`, `position`, `position_pw90`, `bmn`, `fmn`, `cmn` | a row with `operator=''` + a driver of its own (**route C**, §5) |
+| **A real operator** — a contraction over the states, `O_mn(k) = <psi_m\|O\|psi_n>` | `spin`, `orbital`, `spinOrbit` | catalogue + provider + coarse slice + exposure (**route A**, §3) |
+| **Only an exposure** — the coarse matrix already exists | `soc` (reuses `spinOrbit` under another name) | one table row + one branch (**route B**, §4) |
+| **Not an operator at all** — it comes out of the neighbour overlaps or the eigenvalues | `hamiltonian`, `velocity`, `eigenstates`, `position`, `positionPw90`, `bmn`, `fmn`, `cmn` | a row with `operator=''` + a driver of its own (**route C**, §5) |
 
 > **The rule in one line.** If it is not a contraction over the states, it does not belong
 > in the catalogue — it would force the coarse pass to produce something nobody reads.
@@ -88,7 +88,7 @@ three different combinations, which is why the comparison lives here and not in 
 | Operator | `spinoroperator` | `spinorwavefcts` | Result lands in |
 |---|---|---|---|
 | `spin` | `.TRUE.` | `.TRUE.` | `mat(2,2)` — the four blocks of sigma |
-| `spin_orbit` | `.TRUE.` | `.FALSE.` | `mat(2,2)` |
+| `spinOrbit` | `.TRUE.` | `.FALSE.` | `mat(2,2)` |
 | `orbital` | `.FALSE.` | `.FALSE.` | `comp(:,:,1:3)` — L is spin-diagonal |
 
 `mat` carries spin structure; `comp(band, band, alpha)` carries Cartesian indices, which
@@ -151,11 +151,11 @@ The coarse matrix already exists and you want another quantity derived from it. 
 no new slice: one row pointing at the existing catalogue entry.
 
 ```fortran
-t_melem_exposed('spin_orbit', 'spin_orbit', 1, 'bands_wann_spin_orbit', '', .FALSE.)
+t_melem_exposed('spinOrbit', 'spinOrbit', 1, 'bands_wann_spin_orbit', '', .FALSE.)
 ```
 
 That row says three things at once: the name is accepted in `<interpolation>`, serving it
-requires the `spin_orbit` matrix even though the user never writes that word, and the result
+requires the `spinOrbit` matrix even though the user never writes that word, and the result
 has one component.
 
 Every column of `t_melem_exposed` is documented on the field itself, in
@@ -176,7 +176,7 @@ is where your driver gets its input.
 | Source | What it gives you | Built by | Serves |
 |---|---|---|---|
 | the eigenvalues and the gauge | `H_W(k)` | `wgauge_hamk.F90` | `hamiltonian`, `eigenstates`, `velocity` |
-| the neighbour overlaps and the b-shell weights | `A^(W)(R)` | `wgauge_coeff_a.F90` | `position`, `position_pw90`, `velocity`, `bmn` |
+| the neighbour overlaps and the b-shell weights | `A^(W)(R)` | `wgauge_coeff_a.F90` | `position`, `positionPw90`, `velocity`, `bmn` |
 | the wavefunctions at **two** neighbours at once | `F(k)` / `C(k)` | `wannierlib_uiu` / `_uhu` | `fmn`, `cmn` |
 
 The Fourier transforms are not yours to write: `wgauge_ft.F90` interpolates any `mat_k` on
