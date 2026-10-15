@@ -150,6 +150,7 @@ CONTAINS
       TYPE(t_potden),               INTENT(OUT)    :: vCorr
 
       TYPE(t_potden)                               :: div, phi, divloc
+      TYPE(t_field)                                :: field_local
       TYPE(t_potden), DIMENSION(3)                 :: cvec, corrB
       TYPE(t_atoms)                                :: atloc
       INTEGER                                      :: n, jr, lh, lhmax, jcut, nat ,i
@@ -176,7 +177,7 @@ CONTAINS
       phi%pw_w = CMPLX(0.0,0.0)
 
       CALL timestart("Building potential")
-      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+      CALL vgen_coulomb(1,fmpi ,input,field_local,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
       CALL timestop("Building potential")
 
       DO i=1,3

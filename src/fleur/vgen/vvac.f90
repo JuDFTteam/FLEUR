@@ -131,14 +131,17 @@ contains
          end do
 
          ! force matching on the other side
-         vslope = ( field%efield%sig_b(2) - vnew(ncsh,1) ) / ( 2 * vacuum%delz * ( ncsh + 1 ) + vacuum%dvac )
+         vslope = ( field%efield%sig_b(2) - vnew(ncsh,2) ) / &
+                   ( 2.0 * field%efield%zsigma + vacuum%dvac )
          ivac = 1
          do imz = 1, ncsh
-            vnew(imz,ivac) = vnew(imz,ivac) + vslope * vacuum%delz * ( ncsh - imz + 1 )
+            vnew(imz,ivac) = vnew(imz,ivac) + vslope * vacuum%delz * ( ncsh - imz )
          end do
+         vz1dh = vnew(1,ivac)
          ivac = 2
          do imz = 1, ncsh
-            vnew(imz,ivac) = vnew(imz,ivac) + vslope * ( vacuum%dvac + vacuum%delz * imz + vacuum%delz * ncsh )
+            vnew(imz,ivac) = vnew(imz,ivac) + vslope * &
+                              ( vacuum%dvac + vacuum%delz * ( ncsh + imz - 2 ) )
          end do
          vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
       else ! Neumann
