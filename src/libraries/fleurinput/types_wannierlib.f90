@@ -92,7 +92,7 @@ MODULE m_types_wannierlib
     ! --- opt-in output domains (<domain> children of <interpolation>) ---
     ! One <domain> per set of k-points the operators are evaluated on, repeatable and
     ! without kinds: @listName (required) names a kPointList of kpts.xml, @suffix tails the
-    ! output names, @npts subdivides each segment of the list. Operators declared with no
+    ! output names, @refinementPoints subdivides each segment of the list. Operators declared with no
     ! domain are an error rather than a silent no-op.
     !> One entry per <domain>. The count and the suffixes ARE broadcast -- the first sets
     !> the domain loop bound on every rank, the second is read inside that loop, where the
@@ -618,8 +618,8 @@ CONTAINS
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@suffix') == 1) &
             this%dom_suffix(idom) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@suffix'))
           dom_npts = 0
-          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@npts') == 1) &
-            dom_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@npts'))
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@refinementPoints') == 1) &
+            dom_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@refinementPoints'))
           ! Pulled now, while the XML is still open.
           CALL read_domain_kset_wannierlib(this%dom_kset(idom), xml, dom_name, dom_npts)
         END DO
@@ -859,7 +859,7 @@ CONTAINS
     IF (nraw < 1) CALL juDFT_error('wannierlib: <domain>/@listName "'//TRIM(listname)// &
                                    '" is empty', calledby='read_domain_kset_wannierlib')
     IF (nraw < 2 .AND. npts > 1) &
-      CALL juDFT_error('wannierlib: @npts needs a list with at least two k-points to subdivide', &
+      CALL juDFT_error('wannierlib: @refinementPoints needs a list with at least two k-points to subdivide', &
                        calledby='read_domain_kset_wannierlib')
     ALLOCATE(raw(3, nraw))
     raw = raw_kset%bk(:, 1:nraw)

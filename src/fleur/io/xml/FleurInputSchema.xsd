@@ -3535,11 +3535,11 @@
 
    <xsd:complexType name="WannierlibDomainType">
       <xsd:annotation>
-         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' distinguishes this domain's bands_wann_*.dat files and may be left off for at most one domain. 'npts' optionally subdivides each segment of an ordered list into npts pieces (npts&lt;=1 = list as-is).</xsd:documentation>
+         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' distinguishes this domain's bands_wann_*.dat files and may be left off for at most one domain. 'refinementPoints' optionally subdivides each segment of an ordered list into refinementPoints pieces (refinementPoints&lt;=1 = list as-is).</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="listName" type="xsd:string" use="required"/>
       <xsd:attribute name="suffix" type="xsd:string" use="optional"/>
-      <xsd:attribute name="npts" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="refinementPoints" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOperatorRType">

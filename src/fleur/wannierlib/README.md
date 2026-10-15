@@ -74,7 +74,7 @@ not something FLEUR is told: every domain is interpolated the same way. With a s
 domain you write no suffix and the files keep their base names.
 
 `listName` names the input, `suffix` names the output, and they are separate on purpose --
-two domains may share a list (the same path subdivided differently by `@npts`), and the
+two domains may share a list (the same path subdivided differently by `@refinementPoints`), and the
 file names are read by other tools, so you choose them. At most one domain may go without
 a suffix, and a repeated one is rejected.
 

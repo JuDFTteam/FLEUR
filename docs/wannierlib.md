@@ -186,7 +186,7 @@ carrying spin density.
 ```xml
 <interpolation useWsDistance="F">
   <domain listName="path-2"/>
-  <domain listName="path-2" suffix="dense" npts="10"/>
+  <domain listName="path-2" suffix="dense" refinementPoints="10"/>
   <operator name="hamiltonian"/>
 </interpolation>
 ```
@@ -197,7 +197,7 @@ carrying spin density.
 |---|---|---|
 | `listName` | **yes** | an existing kPointList, in `kpts.xml` or any included file |
 | `suffix` | no | distinguishes this domain's `bands_wann_*.dat`; may be left off for at most one domain |
-| `npts` | no | subdivides each segment of an ordered list into `npts` pieces (`npts<=1` = list as-is) |
+| `refinementPoints` | no | subdivides each segment of an ordered list into `refinementPoints` pieces (`refinementPoints<=1` = list as-is) |
 
 Whether a list is a line, a plane or a mesh is a property of the list, not of FLEUR.
 
