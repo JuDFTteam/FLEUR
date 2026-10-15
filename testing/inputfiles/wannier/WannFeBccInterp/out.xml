@@ -642,12 +642,12 @@
         <wannierlib wannierize="T">
           <bands numBands="6" minBand="5" maxBand="10"/>
           <wannierization numIter="3000" convTol="0.00001"/>
-          <operators_r>
+          <operatorsRs>
             <operator name="hamiltonian"/>
             <operator name="spin"/>
             <operator name="orbital"/>
             <operator name="position"/>
-          </operators_r>
+          </operatorsRs>
           <interpolation>
             <path listName="w222"/>
             <plane listName="path-2"/>

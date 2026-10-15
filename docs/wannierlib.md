@@ -67,10 +67,10 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 
     <wannierization numIter="3000" convTol="0.00001"/>
 
-    <operators_r>
+    <operatorsRs>
       <operator name="hamiltonian"/>
       <operator name="spin"/>
-    </operators_r>
+    </operatorsRs>
 
     <interpolation useWsDistance="F">
       <domain listName="path-2"/>
@@ -147,19 +147,19 @@ are then the trial orbitals themselves, orthonormalised. That is a real choice, 
 degenerate case — the minimisation converges to maximally localised functions whatever it
 starts from, so the initial projections only decide the gauge when it is switched off.
 
-### 2.6 `<operators_r>` — O(R) for external post-processing
+### 2.6 `<operatorsRs>` — O(R) for external post-processing
 
 Writes the real-space operator matrices in the Wannier90/FLEUR standalone format. No band
 interpolation: these are the files an external transport code reads.
 
 ```xml
-<operators_r>
+<operatorsRs>
   <operator name="hamiltonian"/>   <!-- WF<n>_hr.dat   -->
   <operator name="position"/>      <!-- WF<n>_r.dat    -->
   <operator name="spin"/>          <!-- rspauli.1      -->
   <operator name="orbital"/>       <!-- anglmomrs.1    -->
   <operator name="spin_orbit"/>    <!-- rssocmat.1     -->
-</operators_r>
+</operatorsRs>
 ```
 
 Accepted names:
@@ -219,7 +219,7 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 `total="T"` (the default) asks for the site-summed projection; only `spin` and `orbital`
 have anything to sum over. `comp` selects Cartesian components.
 
-> The operator names are the **same** in `<operators_r>` and `<interpolation>` — in
+> The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
 > particular it is `spin_orbit` in both. The two blocks do not accept the same *set* of
 > names, because not everything that has an O(R) has an interpolation driver and the other
 > way round, but a name never means two different things.
@@ -236,7 +236,7 @@ and asking for one does not turn the others off.
 | `gauge` | `WF<n>_gauge.hdf` — `u_opt` and `u_mlwf`, the two factors Wannier90 returned. |
 | `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. |
 
-What `<operators_r>` and `<interpolation>` write is deliberately not here: those compute
+What `<operatorsRs>` and `<interpolation>` write is deliberately not here: those compute
 something first and writing it is the last step, while `<export>` only copies out.
 
 ## 3. Species projections: `<wannierproj .../>`
@@ -383,10 +383,10 @@ https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#ang
         disFrozMin="0.020" disFrozMax="0.562"
         numIter="3000" convTol="0.00001" mixRatio="0.5"/>
       <wannierization numIter="3000" convTol="0.00001"/>
-      <operators_r>
+      <operatorsRs>
         <operator name="hamiltonian"/>
         <operator name="spin"/>
-      </operators_r>
+      </operatorsRs>
     </wannierlib>
   </output>
   ...

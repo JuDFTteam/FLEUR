@@ -68,7 +68,7 @@ MODULE m_types_melem_optable
                       'bands_wann_berrycurv', .FALSE.), &
       t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.)]
 
-   !> <operators_r>/<operator name="..">. No output column: these write legacy names that
+   !> <operatorsRs>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
    TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(9) = [ &
       t_melem_exposed('hamiltonian', '',           0, '', '', .FALSE.), &

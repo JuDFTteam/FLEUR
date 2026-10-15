@@ -76,10 +76,10 @@ MODULE m_types_wannierlib
     LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="spin_orbit"> is requested
-    LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
+    LOGICAL :: l_operators_r = .FALSE.     ! an <operatorsRs> block (real-space O(R) export) is present
     !> The <export> block: one boolean per artefact, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own
-    !> matrices to someone outside -- and differ only in who reads them. What <operators_r>
+    !> matrices to someone outside -- and differ only in who reads them. What <operatorsRs>
     !> and <interpolation> write is NOT here: those compute something first and writing it
     !> is the last step, while these copy out what the run already holds.
     TYPE(t_wannierlib_export) :: export
@@ -121,8 +121,8 @@ MODULE m_types_wannierlib
     !> come apart. One entry per <operator> of <interpolation>.
     TYPE(t_wannierlib_op), ALLOCATABLE :: ops(:)
 
-    ! --- operators_r table: one entry per <operators_r>/<operator name=".."> child ---
-    !> One name per <operator> of <operators_r>. A list of names is all this is, so it
+    ! --- operatorsRs table: one entry per <operatorsRs>/<operator name=".."> child ---
+    !> One name per <operator> of <operatorsRs>. A list of names is all this is, so it
     !> stays a list of names rather than a record with one field in it.
     CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
 
@@ -687,16 +687,16 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
     END IF
 
-    ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
+    ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).
     !     Groups <operator name=".."> children written to standalone-format files. ---
-    xPathA = '/fleurInput/output/wannierlib/operators_r'
+    xPathA = '/fleurInput/output/wannierlib/operatorsRs'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%l_operators_r = .TRUE.
       nOprRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
     ALLOCATE(this%op_r_name(nOprRead))
     DO iProj = 1, nOprRead
-      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operators_r/operator[', iProj, ']'
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operatorsRs/operator[', iProj, ']'
       this%op_r_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
       iRow = melem_exposed_find(this%op_r_name(iProj), WANNIERLIB_OPR)
       IF (iRow > 0) THEN

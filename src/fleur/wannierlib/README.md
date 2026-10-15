@@ -28,10 +28,10 @@ once per channel.
                    disFrozMin="0.097" disFrozMax="0.661"
                    numIter="3000" convTol="0.00001" mixRatio="0.5"/>
   <wannierization numIter="3000" convTol="0.00001"/>
-  <operators_r>
+  <operatorsRs>
     <operator name="hamiltonian"/>
     <operator name="spin"/>
-  </operators_r>
+  </operatorsRs>
   <interpolation>
     <domain listName="path-2"/>
     <operator name="hamiltonian"/>
@@ -45,7 +45,7 @@ once per channel.
 guesses are `<wannierproj l=".." m=".." spin=".."/>` children of a `<species>`; their total
 count over all atoms is `num_wann`.
 
-The two operator blocks are independent: `<operators_r>` writes `O(R)` to disk and does no
+The two operator blocks are independent: `<operatorsRs>` writes `O(R)` to disk and does no
 interpolation, while `<interpolation>` projects onto the interpolated bands. They accept
 different *sets* of names, because not everything with an `O(R)` has an interpolation driver
 and the other way round, but **a name never means two different things in the two blocks** --
@@ -87,7 +87,7 @@ Declaring operators to interpolate but no domain is an error, not a silent no-op
 
 ## What comes out
 
-Real space, from `<operators_r>`:
+Real space, from `<operatorsRs>`:
 
 | File | Content |
 |---|---|

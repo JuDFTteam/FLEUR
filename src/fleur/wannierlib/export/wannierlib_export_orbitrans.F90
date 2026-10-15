@@ -17,7 +17,7 @@
 !>  table carries, which is the other half of the reason to write them here.
 !>
 !>  Only the four are written. The operator matrices orbitrans also reads are the same
-!>  arrays <operators_r> already exports.
+!>  arrays <operatorsRs> already exports.
 MODULE m_wannierlib_export_orbitrans
    USE m_juDFT
    USE m_constants, ONLY: oUnit, bohr_to_angstrom_const

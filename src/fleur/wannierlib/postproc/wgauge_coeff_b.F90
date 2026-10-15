@@ -61,7 +61,7 @@ CONTAINS
     nnt = bmesh%nntot; nkl = SIZE(gk_loc)
     IF (nnt < 1 .OR. .NOT. ALLOCATED(bmesh%wb)) THEN
       IF (irank == 0) WRITE(oUnit,'(a)') &
-        'wannierlib operators_r: B(R) needs the b-shell weights -> skipped'
+        'wannierlib operatorsRs: B(R) needs the b-shell weights -> skipped'
       RETURN
     END IF
 

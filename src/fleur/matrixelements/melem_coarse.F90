@@ -7,7 +7,7 @@
 !>  the ab-initio eigenstates and BEFORE any Wannier gauge exists.
 !>
 !>    %init   allocate the per-rank slices and decide which of them the requested
-!>            <operator>/<operators_r> lists actually need
+!>            <operator>/<operatorsRs> lists actually need
 !>    %calc   ONE k-pass that builds every requested operator through
 !>            matrix_element_factory, which reads the states and their coefficients and
 !>            keeps them, so one k is read once however many operators ask for it
@@ -148,7 +148,7 @@ CONTAINS
             calledby="melem_coarse_init")
          IF (request%l_spin .AND. .NOT. l_ch_spin) CALL judft_error( &
             "melem_coarse: the spin operator has no producer in this spin configuration", &
-            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
+            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operatorsRs> block", &
             calledby="melem_coarse_init")
       END IF
 

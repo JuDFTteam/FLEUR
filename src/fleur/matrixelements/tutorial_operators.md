@@ -223,7 +223,7 @@ operator builds. For routes A and B that is all: the generic driver does
 `O_W(k) = V^dagger O(k) V`, the transform to `R` and back, the diagonalisation of `H(k')`
 and the projection, **for any operator**. A route-C name calls its own driver here instead.
 
-### For the real-space export — `<operators_r><operator name=".."/>`
+### For the real-space export — `<operatorsRs><operator name=".."/>`
 
 A row in `WANNIERLIB_OPR` and a branch in `postproc/wgauge_operators_r.F90`:
 

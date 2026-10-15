@@ -57,10 +57,10 @@
         <bands numBands="8" minBand="1" maxBand="8"/>
         <disentanglement disWinMin="-0.245" disWinMax="0.45" disFrozMin="-0.245" disFrozMax="0.205" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00001" convWindow="3"/>
-        <operators_r>
+        <operatorsRs>
           <operator name="hamiltonian"/>
           <operator name="cmn"/>
-        </operators_r>
+        </operatorsRs>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

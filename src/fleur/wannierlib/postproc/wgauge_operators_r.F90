@@ -63,7 +63,7 @@ CONTAINS
   END SUBROUTINE wgauge_write_hr
 
   ! ---------------------------------------------------------------------------
-  ! <operators_r>: real-space Wannier operator matrices O(R) (Fourier step 3),
+  ! <operatorsRs>: real-space Wannier operator matrices O(R) (Fourier step 3),
   ! in Wannier90/FLEUR standalone format for external transport post-processing.
   ! No band interpolation. Rank 0 writes; spin/orbital/spin_orbit use a distributed FT-reduce
   ! over MPI ranks. Files: WF1_hr.dat (H, eV), WF1_r.dat (position, Ang), rspauli.1 (spin),

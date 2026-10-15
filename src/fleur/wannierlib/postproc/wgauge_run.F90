@@ -85,7 +85,7 @@ CONTAINS
       IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
       wf_ch = 1
       IF (PRESENT(wf_channel)) wf_ch = wf_channel
-      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
+      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operatorsRs (WF1/WF2)
 
       CALL timestart('wgauge_run')
 

@@ -84,11 +84,11 @@
       <wannierlib wannierize="T">
         <bands numBands="12" minBand="9" maxBand="20"/>
         <wannierization numIter="3000" convTol="0.00001"/>
-        <operators_r>
+        <operatorsRs>
           <operator name="hamiltonian"/>
           <operator name="spin"/>
           <operator name="orbital"/>
-        </operators_r>
+        </operatorsRs>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

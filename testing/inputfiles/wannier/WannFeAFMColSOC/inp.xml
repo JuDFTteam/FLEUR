@@ -85,12 +85,12 @@
         <bands numBands="24" minBand="17" maxBand="40"/>
         <disentanglement disWinMin="-0.1" disWinMax="0.6" disFrozMin="-0.1" disFrozMax="0.6" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00001"/>
-        <operators_r>
+        <operatorsRs>
           <operator name="hamiltonian"/>
           <operator name="spin"/>
           <operator name="orbital"/>
           <operator name="spin_orbit"/>
-        </operators_r>
+        </operatorsRs>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

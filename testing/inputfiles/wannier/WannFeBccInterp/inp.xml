@@ -61,7 +61,7 @@
       <wannierlib wannierize="T">
         <bands numBands="6" minBand="5" maxBand="10"/>
         <wannierization numIter="3000" convTol="0.00001"/>
-        <operators_r>
+        <operatorsRs>
           <operator name="hamiltonian"/>
           <operator name="spin"/>
           <operator name="orbital"/>
@@ -69,7 +69,7 @@
           <operator name="bmn"/>
           <operator name="cmn"/>
           <operator name="fmn"/>
-        </operators_r>
+        </operatorsRs>
         <interpolation>
           <domain listName="path-2" suffix="_plane"/>
           <domain listName="w222" suffix="_grid"/>
