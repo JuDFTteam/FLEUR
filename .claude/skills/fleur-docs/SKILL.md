@@ -127,7 +127,9 @@ Facts about the target repos:
   `docs/`, `mkdocs.yml`, the theme (`web_scheme/`), the schema browser (`fleurinput-xml/`) and the
   PDF manual (`latex/`). CI builds it as is and publishes it at `https://www.flapw.de/develop/`.
   Release branches (`MaX-x.y`) are published at `https://www.flapw.de/<branch>/`, and `rel` points
-  to the current release. Feature pages go to `develop` only.
+  to the current release. Feature pages go to `develop` only. **The project's default branch is
+  `master`** (an old state of the site), so every branch, diff and MR here must name `develop`
+  explicitly; never base work on or target `master`.
 - **PDF manual**: `latex/convert.pl` includes only the pages listed in `latex/include.list`
   (paths relative to `docs/`, in reading order). It copies all PNGs of
   `docs/documentation/*/` into **one flat directory**, so an image name must be unique across
@@ -218,6 +220,14 @@ glab mr create -R iffgit.fz-juelich.de/fleur/fleur_tutorial_container --source-b
     --target-branch master --title "Tutorial <code>: <title>" --description "$(cat <body-file>)"
 ```
 
+Check the target branches right after creating the MRs; the www.flapw.de MR must target `develop`
+(a wrong target is easy to miss because `master` is that project's default):
+
+```bash
+glab mr view docs/<feature> -R iffgit.fz-juelich.de/fleur/www.flapw.de -F json | jq -r .target_branch   # develop
+glab mr update docs/<feature> -R iffgit.fz-juelich.de/fleur/www.flapw.de --target-branch develop   # if not
+```
+
 The www.flapw.de MR description lists:
 
 - the new and changed pages, their nav positions and `latex/include.list` entries
@@ -243,5 +253,6 @@ addressed there. Remove them when the user says the MRs are merged:
 - [ ] Image names unique across `docs/documentation/`; `check_pages.py` without errors or schema warnings
 - [ ] Notebook registered in `Outline.ipynb`; `check_notebook.py` clean; executed (or skip reported); outputs cleared
 - [ ] Commits made; pushed and MRs opened only after the user agreed
+- [ ] www.flapw.de MR targets `develop` (checked with `glab mr view`), tutorial MR targets `master`
 - [ ] MR description lists pages, nav and `include.list` entries, and the documented fleur change
 - [ ] User told: documents written, checks run (and skipped), MR URLs
