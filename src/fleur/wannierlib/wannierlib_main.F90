@@ -36,7 +36,7 @@ MODULE m_wannierlib_main
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
 USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
    USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, wannierlib_write_s0, &
-                                     wannierlib_write_mmn
+                                     wannierlib_write_mmn, wannierlib_write_amn
    USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
@@ -57,7 +57,6 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
-   use m_wann_write_amn
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_main
@@ -181,16 +180,13 @@ CONTAINS
          !> without the eigenvalues the other two cannot be used -- w90 stops at
          !> "No .eig file found. Needed for disentanglement".
          !> amn is complete on every rank after the reduce above; mmn is one k-slice per rank
-         !> and has to be gathered first. Only rank 0 writes, and wann_write_amn is told
-         !> isize=1 so it does not try to collect a distribution it does not have.
+         !> and has to be gathered first. Only rank 0 writes, and neither writer collects
+         !> anything itself: what they are handed is already whole.
          IF (this%export%w90 .OR. fmpi%isize == 1) THEN
             CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, mmn, mmn_full)
             IF (fmpi%irank == 0) THEN
                amn_file = spin12(jspin)//'.amn'
-               call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
-                                   this%num_bands, kpts%nkptf, this%num_wann, &
-                                   0, 1, .false., .false., &
-                                   amn, .false.)
+               CALL wannierlib_write_amn(amn, amn_file, "Testing amn")
 
                CALL wannierlib_write_mmn(this, mmn_full, kpts, nnkp, gkpb, jspin)
                CALL wannierlib_write_eig(eig, spin12(jspin)//'.eig')

@@ -19,7 +19,7 @@ MODULE m_wannierlib_export_bloch
    PRIVATE
 
    PUBLIC :: wannierlib_write_eig, wannierlib_write_s0, &
-             wannierlib_write_mmn
+             wannierlib_write_mmn, wannierlib_write_amn
 
 CONTAINS
 
@@ -166,4 +166,30 @@ CONTAINS
       END DO
       close (305)
    END SUBROUTINE wannierlib_write_mmn
+   ! Write the projections in the Wannier90 .amn format: one line per (band, Wannier
+   ! function, k-point), real and imaginary part. The library hands w90 the same matrix
+   ! through the API and never puts it on disk, so without this file a standalone
+   ! wannier90.x cannot repeat the run -- the sibling of the .mmn and .eig above.
+   !
+   ! The matrix arrives complete. The k-distributed contributions are reduced before this
+   ! is reached, so there is nothing to gather here and only rank 0 writes.
+   SUBROUTINE wannierlib_write_amn(amn, filename, title)
+      COMPLEX, INTENT(IN) :: amn(:, :, :)      ! (num_bands, num_wann, nkptf)
+      CHARACTER(LEN=*), INTENT(IN) :: filename
+      CHARACTER(LEN=*), INTENT(IN) :: title
+      INTEGER :: iunit, iband, iwf, ikpt
+      OPEN (NEWUNIT=iunit, FILE=filename, FORM='formatted', STATUS='replace')
+      WRITE (iunit, *) title
+      WRITE (iunit, '(i5,i7,i5)') SIZE(amn, 1), SIZE(amn, 3), SIZE(amn, 2)
+      DO ikpt = 1, SIZE(amn, 3)
+         DO iwf = 1, SIZE(amn, 2)
+            DO iband = 1, SIZE(amn, 1)
+               WRITE (iunit, '(i5,i5,i7,3x,2f18.12)') iband, iwf, ikpt, &
+                  REAL(amn(iband, iwf, ikpt)), AIMAG(amn(iband, iwf, ikpt))
+            END DO
+         END DO
+      END DO
+      CLOSE (iunit)
+   END SUBROUTINE wannierlib_write_amn
+
 END MODULE m_wannierlib_export_bloch
