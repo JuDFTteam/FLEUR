@@ -7,7 +7,8 @@ build-intel:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel -c auto
+    - ./configure.sh -l intel -c auto $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build.intel
     - cd build.intel
     - make -j 2
   allow_failure: false
@@ -36,7 +37,8 @@ build-intel-ifx:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - FC=ifx ./configure.sh -l intel.ifx -c auto
+    - FC=ifx ./configure.sh -l intel.ifx -c auto $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build.intel.ifx
     - cd build.intel.ifx
     - make -j 2
   allow_failure: true
@@ -65,7 +67,8 @@ build-intel-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel -d -c auto
+    - ./configure.sh -l intel -d -c auto $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build.intel.debug
     - cd build.intel.debug
     - make -j 2
   allow_failure: false

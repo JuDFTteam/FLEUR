@@ -6,9 +6,11 @@ perf-gfortran:
   variables:
     BENCHER_TESTBED: GFortran-iffcluster
     OMP_NUM_THREADS: 16
+    FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier TRUE -includedir /opt/fleur-deps/mpi/include -libdir /opt/fleur-deps/mpi/lib"
   before_script:
     - cd $CI_PROJECT_DIR
-    - VERBOSE=1 FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
+    - VERBOSE=1 FLEUR_INCLUDEDIR="/usr/include /usr/include/hdf5/openmpi" FLEUR_LIBRARIES="-L/usr/lib/x86_64-linux-gnu/hdf5/openmpi;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build true
     - cd build
     - VERBOSE=1 make -j 12
   rules:
@@ -28,7 +30,8 @@ perf-intel:
     OMP_NUM_THREADS: 16
   before_script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -c auto
+    - ./configure.sh -c auto $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build
     - cd build
     - make -j 12
   rules:
@@ -48,7 +51,8 @@ perf-intel-ifx:
     OMP_NUM_THREADS: 16
   before_script:
     - cd $CI_PROJECT_DIR
-    - FC=ifx ./configure.sh -c auto
+    - FC=ifx ./configure.sh -c auto $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build
     - cd build
     - make -j 12
   rules:
@@ -66,7 +70,8 @@ perf-gpu:
   before_script:
     - set +e;source compiler-select nvhpc-26.5;set -e
     - cd $CI_PROJECT_DIR
-    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a"
+    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build
     - cd build
     - make -j 12
     - wget https://github.com/bencherdev/bencher/releases/download/v0.4.1/bencher-v0.4.1-linux-x86-64

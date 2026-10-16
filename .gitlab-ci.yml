@@ -1,5 +1,6 @@
 variables:
   GIT_CLONE_PATH: ${CI_BUILDS_DIR}/${CI_PROJECT_NAME}
+  FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier TRUE -includedir /opt/fleur-deps/include -libdir /opt/fleur-deps/lib"
 
 stages:
    - build
