@@ -29,6 +29,10 @@ python3 $SK/new_notebook.py tutorial/3.AdvancedTopics/A9/<Name>.ipynb --title "<
 Use `--kernel sos` only if Python cells (plots with masci-tools/matplotlib) are needed. Then fill
 in every `TODO`. `check_notebook.py` warns about each one left.
 
+In a SoS notebook each code cell names its sub-kernel in `metadata.kernel` (`Bash` or `Python3`,
+as listed in `metadata.sos.kernels`). The Bash cells share one shell, so a `cd` stays in effect.
+Python cells run in the notebook directory, so they open files as `<System>/banddos.hdf`.
+
 ## Content rules
 
 - **Sections**: `# Title`, `## Objectives` (bullets), `## Introduction`, the hands-on steps
@@ -48,8 +52,10 @@ in every `TODO`. `check_notebook.py` warns about each one left.
 - **Input changes must be scripted**, so that the notebook runs unattended (and
   `check_notebook.py --execute` can verify it):
   - Attribute values: `fleur_MPI -xmlXPath "/fleurInput/<path>/@<attr>=<value>"`. Several
-    settings are separated by `:`. This only affects that run, the element must already exist,
-    and path and value are each limited to 100 characters.
+    settings are separated by `:`. This only affects that run, the element **and the attribute**
+    must already exist in `inp.xml` (a missing attribute makes FLEUR segfault; inpgen omits many
+    optional ones such as `bandDOS/@orbcomp`), and path and value are each limited to 100
+    characters.
   - Persistent changes or new elements: a visible `sed -i` (or heredoc) in the cell, followed by
     `grep` showing the result.
   - In an ```` ```{attention} ```` block, also say which XPaths change, so readers learn the input
@@ -78,6 +84,22 @@ python3.13 -m venv <scratch>/nbenv
 <scratch>/nbenv/bin/pip install -q nbconvert nbclient bash_kernel
 <scratch>/nbenv/bin/python -m bash_kernel.install --sys-prefix
 ```
+
+A SoS notebook additionally needs the SoS kernel, its Python sub-kernel and sos-papermill, which
+`--execute` uses instead of nbconvert, plus the Python packages the notebook imports:
+
+```bash
+<scratch>/nbenv/bin/pip install -q sos sos-notebook sos-papermill sos-bash sos-python ipykernel h5py numpy matplotlib
+<scratch>/nbenv/bin/python -m sos_notebook.install --sys-prefix
+<scratch>/nbenv/bin/python -m ipykernel install --sys-prefix
+```
+
+With `--python`, the venv's kernels take precedence over user-level kernelspecs of the same
+name (e.g. a `bash` kernel bound to another Python). Unlike nbconvert, sos-papermill has no per-cell
+timeout.
+
+Write `sed -i` in GNU syntax (`sed -i 's|...|...|'`), as the container runs Linux. It also runs
+here only if the `sed` on PATH is GNU sed.
 
 `--execute` runs a copy. `fleur_MPI`, `fleur` and `inpgen` are mapped to the build directory, the
 stack limit is raised, and personal Jupyter config is ignored. The executed copy is kept for

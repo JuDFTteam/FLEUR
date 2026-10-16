@@ -11,10 +11,12 @@ local links/images and 'cd' targets exist, registered in the chapter Outline.ipy
 (with --www) links to www.flapw.de/rel/documentation/<Section>/<page>/ have a page.
 
 --execute copies the notebook's folder to a scratch directory and runs
-'jupyter nbconvert --execute' there. A PATH shim maps fleur_MPI, fleur and inpgen to the
-build directory, the stack limit is raised, and OMP_NUM_THREADS=2 as in the container.
---python PY uses that interpreter (a venv with nbconvert + bash_kernel) instead of the
-'jupyter' on PATH. Exit code 2 means execution was skipped (no Jupyter,
+'jupyter nbconvert --execute' there, or 'sos convert --execute' (sos-papermill) for a SoS
+notebook, which runs each cell in its own sub-kernel (Bash, Python3). A PATH shim maps
+fleur_MPI, fleur and inpgen to the build directory, the stack limit is raised, and
+OMP_NUM_THREADS=2 as in the container. --python PY uses that interpreter (a venv with
+nbconvert + bash_kernel, plus the sos packages for SoS notebooks) and only its kernels
+instead of the 'jupyter' on PATH. Exit code 2 means execution was skipped (no Jupyter,
 no kernel or no build). The original notebook is never modified, except by --clear.
 """
 import argparse
@@ -128,9 +130,38 @@ def jupyter_env(python):
     """With a venv interpreter, its own kernelspecs take precedence over user-level ones."""
     env = dict(os.environ)
     if python:
-        prefix = os.path.dirname(os.path.dirname(os.path.abspath(python)))
+        bindir = os.path.dirname(os.path.abspath(python))
+        prefix = os.path.dirname(bindir)
         env["JUPYTER_PATH"] = os.pathsep.join(filter(None, [os.path.join(prefix, "share", "jupyter"), env.get("JUPYTER_PATH")]))
+        # kernels started by name (SoS sub-kernels) must find the venv's python first
+        env["PATH"] = bindir + os.pathsep + env.get("PATH", "")
     return env
+
+
+def sos_kernels(nb):
+    """Jupyter kernels of the SoS sub-kernels used by the code cells."""
+    names = {k[0]: k[1] for k in nb.get("metadata", {}).get("sos", {}).get("kernels", []) if len(k) > 1}
+    used = {c.get("metadata", {}).get("kernel") for c in nb["cells"] if c["cell_type"] == "code"}
+    return sorted(names.get(u, u) for u in used if u and u != "SoS")
+
+
+def sos_cmd(python):
+    """Command for 'sos convert', or None with a message if sos-papermill is missing."""
+    if python:
+        probe = subprocess.run([python, "-c", "import sos, sos_notebook, sos_papermill"], capture_output=True, text=True)
+        if probe.returncode != 0:
+            print("skip execution: SoS notebook needs sos, sos-notebook, sos-papermill, sos-bash and sos-python in the venv")
+            return None
+        return [python, "-m", "sos"]
+    if not shutil.which("sos"):
+        print("skip execution: SoS notebook needs 'sos' on PATH (pip install sos sos-notebook sos-papermill sos-bash sos-python)")
+        return None
+    return ["sos"]
+
+
+def papermill_cell(c):
+    """Error banners that sos-papermill inserts into the executed notebook."""
+    return c["cell_type"] == "markdown" and "papermill" in src(c) and src(c).lstrip().startswith("<span")
 
 
 def kernels(python):
@@ -164,7 +195,15 @@ def execute(path, nb, args, report):
     if kernel not in installed:
         print("skip execution: Jupyter kernel '%s' is not installed (python -m bash_kernel.install --sys-prefix)" % kernel)
         return False
-    build = os.path.abspath(args.build_dir or os.environ.get("FLEUR_BUILD_DIR", ""))
+    if kernel == "sos":
+        missing = [k for k in sos_kernels(nb) if k not in installed]
+        if missing:
+            print("skip execution: SoS sub-kernel(s) %s not installed" % ", ".join(missing))
+            return False
+        runner = sos_cmd(args.python)
+        if runner is None:
+            return False
+    build =os.path.abspath(args.build_dir or os.environ.get("FLEUR_BUILD_DIR", ""))
     fleur = next((os.path.join(build, b) for b in ("fleur_MPI", "fleur") if os.path.isfile(os.path.join(build, b))), None)
     inpgen = os.path.join(build, "inpgen")
     if not fleur or not os.path.isfile(inpgen):
@@ -187,20 +226,27 @@ def execute(path, nb, args, report):
     os.makedirs(os.path.join(work, "jupyter-config"))  # ignore personal nbconvert config
     env.update(PATH=shim + os.pathsep + env.get("PATH", ""), OMP_NUM_THREADS="2",
                JUPYTER_CONFIG_DIR=os.path.join(work, "jupyter-config"))
-    cmd = ["bash", "-c", 'ulimit -s unlimited 2>/dev/null || ulimit -s 65520 2>/dev/null; exec "$@"', "_"] + nbconvert_cmd(args.python) + [
-        "--to", "notebook", "--execute", "--allow-errors",
-        "--ExecutePreprocessor.timeout=%d" % args.timeout,
-        "--ExecutePreprocessor.kernel_name=%s" % kernel,
-        "--output", "executed.ipynb", os.path.basename(path)]
+    if kernel == "sos":
+        # sos-papermill continues after failing cells and exits 1; it has no per-cell timeout
+        tool = runner + ["convert", os.path.basename(path), "executed.ipynb", "--execute"]
+    else:
+        tool = nbconvert_cmd(args.python) + [
+            "--to", "notebook", "--execute", "--allow-errors",
+            "--ExecutePreprocessor.timeout=%d" % args.timeout,
+            "--ExecutePreprocessor.kernel_name=%s" % kernel,
+            "--output", "executed.ipynb", os.path.basename(path)]
+    cmd = ["bash", "-c", 'ulimit -s unlimited 2>/dev/null || ulimit -s 65520 2>/dev/null; exec "$@"', "_"] + tool
     print("executing in %s (fleur: %s) ..." % (copy, fleur))
     run = subprocess.run(cmd, cwd=copy, env=env, capture_output=True, text=True)
     executed = os.path.join(copy, "executed.ipynb")
-    if run.returncode != 0 or not os.path.exists(executed):
-        report.append(("E", "nbconvert failed (exit %d):\n%s" % (run.returncode, run.stderr.strip()[-1500:])))
+    if not os.path.exists(executed) or (run.returncode != 0 and kernel != "sos"):
+        report.append(("E", "%s failed (exit %d):\n%s" % ("sos convert" if kernel == "sos" else "nbconvert", run.returncode,
+                                                          (run.stderr or run.stdout).strip()[-1500:])))
         return True
     with open(executed, encoding="utf-8") as f:
         result = json.load(f)
-    for i, c in enumerate(result["cells"]):
+    cells = [c for c in result["cells"] if not papermill_cell(c)]
+    for i, c in enumerate(cells):
         outs = c.get("outputs", [])
         text = "".join("".join(o.get("text", [])) for o in outs if o.get("output_type") == "stream")
         for line in text.splitlines():
@@ -208,7 +254,8 @@ def execute(path, nb, args, report):
                 report.append(("E", "cell %d output: %s" % (i, line.strip()[:200])))
         for o in outs:
             if o.get("output_type") == "error":
-                tail = " | ".join(line.strip() for line in text.strip().splitlines()[-3:])
+                lines = [line for line in text.strip().splitlines() if not line.startswith("[IPKernelApp]")]
+                tail = " | ".join(line.strip() for line in lines[-3:])
                 what = (o.get("ename") + ": ") if o.get("ename") else "exit status "
                 report.append(("E", "cell %d failed (%s%s): %s" % (i, what, o.get("evalue", "")[:100], tail[:300])))
     print("executed notebook: %s" % executed)
@@ -222,8 +269,8 @@ def main():
     p.add_argument("--clear", action="store_true", help="clear all outputs in place, then check")
     p.add_argument("--execute", action="store_true")
     p.add_argument("--build-dir", help="FLEUR build directory (default: $FLEUR_BUILD_DIR)")
-    p.add_argument("--python", help="interpreter of a venv with nbconvert and bash_kernel")
-    p.add_argument("--timeout", type=int, default=1800, help="seconds per cell (default 1800)")
+    p.add_argument("--python", help="interpreter of a venv with nbconvert and bash_kernel (SoS notebooks: also the sos packages)")
+    p.add_argument("--timeout", type=int, default=1800, help="seconds per cell (default 1800; not applied to SoS notebooks)")
     p.add_argument("--workdir", help="parent of the scratch run directory (default: system temp)")
     args = p.parse_args()
 
