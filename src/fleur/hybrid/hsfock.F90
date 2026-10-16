@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -40,27 +40,42 @@ MODULE m_hsfock
 !                                               M.Betzinger (09/07)           c
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 
+   use m_ex_to_vx
+   use m_judft
+   use m_intgrf
+   use m_wrapper
+   use m_io_hybrid
+   use m_hsefunctional
+   use m_symm_hf
+   use m_exchange_valence_hf
+   use m_exchange_core
+   use m_symmetrizeh
+   use m_work_package
+   use m_eig66_data
+   use m_eig66_mpi
+   use m_calc_cmt
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_misc
+   use m_types_stars
+   use m_types_xcpot_inbuild
+#ifdef CPP_MPI
+   use mpi
+#endif
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hsfock
 CONTAINS
 
    SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
                      results, xcpot, fmpi, vx_tmp)
 
-      use m_ex_to_vx
-      USE m_judft
-      USE m_types
-      USE m_intgrf
-      USE m_wrapper
-      USE m_io_hybrid
-      USE m_hsefunctional
-      USE m_symm_hf
-      USE m_exchange_valence_hf
-      USE m_exchange_core
-      USE m_symmetrizeh
-      use m_work_package
-      USE m_eig66_data
-      use m_eig66_mpi
-      use m_calc_cmt
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi

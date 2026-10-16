@@ -1,5 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_ptsym
    USE m_juDFT
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: ptsym
 !********************************************************************
 !     determines the point group symmetry for each representative
 !     atom and then check whether there are several with the same
@@ -21,7 +30,6 @@ MODULE m_ptsym
 CONTAINS
    SUBROUTINE ptsym(ntype,natd,neq,pos,nops,mrot,tau,lmax,nsymt,typsym,nrot,locops)
 
-      USE m_constants
 
       IMPLICIT NONE
 

@@ -1,9 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_mpi
+   use m_judft
+#ifdef CPP_MPI
+   use mpi
+#endif
+   implicit none
    TYPE t_mpi
       !k-point parallelism
       INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
@@ -59,10 +64,6 @@ contains
    end function mpi_is_root
 
    subroutine juDFT_win_create_real(base, size, disp_unit, info, comm, win)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
       integer, intent(in)      :: disp_unit, info, comm
@@ -92,10 +93,6 @@ contains
    end subroutine juDFT_win_create_real
 
    subroutine juDFT_win_create_real_3D(base, size, disp_unit, info, comm, win)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:,:,:)
       integer, intent(in)      :: disp_unit, info, comm
@@ -125,10 +122,6 @@ contains
    end subroutine juDFT_win_create_real_3D
 
    subroutine juDFT_win_create_cmplx(base, size, disp_unit, info, comm, win)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:)
       integer, intent(in)      :: disp_unit, info, comm
@@ -152,10 +145,6 @@ contains
    end subroutine juDFT_win_create_cmplx
 
    subroutine juDFT_win_create_cmplx_3D(base, size, disp_unit, info, comm, win)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:,:,:)
       integer, intent(in)      :: disp_unit, info, comm
@@ -179,10 +168,6 @@ contains
    end subroutine juDFT_win_create_cmplx_3D
 
    subroutine juDFT_win_create_int(base, size, disp_unit, info, comm, win)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       integer, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
       integer, intent(in)      :: disp_unit, info, comm
@@ -206,10 +191,6 @@ contains
    end subroutine juDFT_win_create_int
 
    subroutine judft_comm_split(comm, color, key, new_comm)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       integer, intent(in)    :: comm, color, key
       integer, intent(inout) :: new_comm
@@ -228,10 +209,6 @@ contains
    end subroutine judft_comm_split
 
    subroutine judft_comm_split_type(comm, split_type, key, info, new_comm)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       integer, intent(in)    :: comm, split_type, key, info
       integer, intent(inout) :: new_comm
@@ -250,10 +227,6 @@ contains
    end subroutine judft_comm_split_type
 
    subroutine t_mpi_set_errhandler(self)
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       class(t_mpi), intent(in) :: self
 
@@ -275,10 +248,6 @@ contains
    end subroutine t_mpi_set_errhandler
 
    subroutine judft_mpi_error_handler(comm, error_code)
-#ifdef CPP_MPI
-      use mpi
-#endif
-      use m_judft
       implicit none
       integer  :: comm, error_code
       integer             :: str_len, ierr

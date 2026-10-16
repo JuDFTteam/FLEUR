@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_kkintgr
 
    !------------------------------------------------------------------------------
@@ -241,8 +246,6 @@ MODULE m_kkintgr
 
       !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
-      USE m_smooth
-      USE m_lorentzian_smooth
 
       COMPLEX,       INTENT(IN)     :: im(:,-lmaxU_const:,-lmaxU_const:)       !Imaginary part of the green's function on the real axis
       LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
@@ -340,8 +343,6 @@ MODULE m_kkintgr
 
       !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
-      USE m_smooth
-      USE m_lorentzian_smooth
 
       COMPLEX,       INTENT(IN)     :: im(:,-lmaxU_const:,-lmaxU_const:,:)       !Imaginary part of the green's function on the real axis
       LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez

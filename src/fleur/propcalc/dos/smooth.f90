@@ -1,9 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_smooth
 !
 !     the function f(x), defined on a linear mesh,
 !     is smoothened by a gaussian
 !
 
+   USE m_constants, ONLY: tpi_const
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: smooth_r, smooth_c, smooth
    INTERFACE smooth
       PROCEDURE smooth_r, smooth_c
    END INTERFACE
@@ -27,7 +36,6 @@ MODULE m_smooth
 
    SUBROUTINE smooth_c(e,f,sigma,n)
 
-   USE m_constants, ONLY: tpi_const
    IMPLICIT NONE
 
 !    Arguments

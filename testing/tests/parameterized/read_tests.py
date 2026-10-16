@@ -9,6 +9,7 @@ def read_tests(testset):
         "band":pytest.mark.band,
         "fast":pytest.mark.fast,
         "bulk":pytest.mark.bulk,
+        "metagga":pytest.mark.metagga,
         "film":pytest.mark.film,
         "soc":pytest.mark.soc,
         "orbcomp":pytest.mark.orbcomp,

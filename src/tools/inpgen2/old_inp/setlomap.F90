@@ -1,10 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
       MODULE m_setlomap
+   USE m_juDFT
+   USE m_types_atoms
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: setlomap
       CONTAINS
         SUBROUTINE setlomap(ntyp,l_useapw,atoms)
           !***********************************************************************
@@ -19,9 +25,6 @@
           ! p.kurz jul. 1996
           !***********************************************************************
 
-          USE m_juDFT
-          USE m_types_atoms
-          USE m_constants
 
           IMPLICIT NONE
           !     ..

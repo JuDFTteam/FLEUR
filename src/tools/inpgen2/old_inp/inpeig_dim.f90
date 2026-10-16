@@ -1,20 +1,28 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_inpeigdim
 !*********************************************************************
 !     inputs the necessary quantities for the eigenvalue part (energy
 !     parameters, k-points, wavefunction cutoffs, etc.).
 !                  m. weinert   jan. 1987
 !*********************************************************************
+   USE m_constants, ONLY: pi_const, tpi_const
+   USE m_types_input
+   USE m_types_cell
+   USE m_types_noco
+   USE m_types_kpts
+   USE m_types_stars
+   USE m_apwsdim
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: inpeig_dim
       CONTAINS
       SUBROUTINE inpeig_dim(input,cell,noco,  kpts,stars,latnam)
 
-      USE m_constants, ONLY : pi_const,tpi_const
-      USE m_types_input
-      USE m_types_cell
-      USE m_types_noco
        
-      USE m_types_kpts
-      USE m_types_stars
-      use m_apwsdim
       IMPLICIT NONE
       TYPE(t_input),INTENT(INOUT)     :: input
       TYPE(t_cell),INTENT(INOUT)      :: cell

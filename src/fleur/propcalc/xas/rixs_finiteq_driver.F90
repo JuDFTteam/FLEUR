@@ -6,7 +6,6 @@
 
 MODULE m_rixs_finiteq_driver
    USE m_eig66_io, ONLY: read_eig
-   USE m_genMTBasis, ONLY: genMTBasis
    USE m_juDFT, ONLY: juDFT_error
    USE m_mpi_reduce_tool, ONLY: mpi_sum_reduce
    USE m_rixs_finiteq_io, ONLY: rixs_finiteq_label, rixs_open_finiteq_pair_table, rixs_open_finiteq_site_table, &
@@ -31,7 +30,6 @@ MODULE m_rixs_finiteq_driver
    USE m_types_potden, ONLY: t_potden
    USE m_types_radfun, ONLY: t_radfun
    USE m_types_sym, ONLY: t_sym
-   USE m_types_usdus, ONLY: t_usdus
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states
@@ -71,7 +69,6 @@ CONTAINS
       TYPE(t_results), INTENT(IN) :: results
 
       TYPE(t_absorber_context), ALLOCATABLE :: contexts(:)
-      TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw_v, lapw_n
       TYPE(t_mat) :: zmat_v, zmat_n
       TYPE(t_abc), ALLOCATABLE :: abc_v(:), abc_n(:)
@@ -80,7 +77,6 @@ CONTAINS
       REAL, ALLOCATABLE :: loss_grid(:), intensity(:, :, :), intensity_reduced(:, :, :)
       REAL, ALLOCATABLE :: contribution_intensity(:, :, :), contribution_intensity_reduced(:, :, :)
       REAL :: q_reduced_rlu(3)
-      REAL, ALLOCATABLE :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
       REAL, ALLOCATABLE :: eig_v(:), eig_n(:), occ_v(:), occ_n(:)
       INTEGER, ALLOCATABLE :: ev_list_v(:), ev_list_n(:), kq_index(:), reciprocal_shift(:, :)
       INTEGER :: pair_units(n_pol, n_pol), site_units(n_pol, n_pol)
@@ -144,7 +140,7 @@ CONTAINS
       END IF
 
       IF (l_kpt_group_root) THEN
-         CALL prepare_absorbers(contexts, usdus, f, g, flo, fmpi, input, rixs, atoms, enpara, vTot, nococonv)
+         CALL prepare_absorbers(contexts, fmpi, input, rixs, atoms, enpara, vTot, nococonv)
          n_contexts = SIZE(contexts)
          DO ikpt_i = 1, SIZE(fmpi%k_list)
             ikpt_v = fmpi%k_list(ikpt_i)
@@ -189,10 +185,10 @@ CONTAINS
                ALLOCATE(abc_v(2), abc_n(2))
                DO ispin = 1, 2
                   CALL abc_v(ispin)%init(input, atoms, nbands_v, contexts(i_context)%itype)
-                  CALL abc_v(ispin)%calc_abc(input, atoms, sym, cell, lapw_v, nbands_v, usdus, noco, nococonv, ispin, &
+                  CALL abc_v(ispin)%calc_abc(input, atoms, sym, cell, lapw_v, nbands_v, contexts(i_context)%radfun, noco, nococonv, ispin, &
                                              contexts(i_context)%itype, zmat_v)
                   CALL abc_n(ispin)%init(input, atoms, nbands_n, contexts(i_context)%itype)
-                  CALL abc_n(ispin)%calc_abc(input, atoms, sym, cell, lapw_n, nbands_n, usdus, noco, nococonv, ispin, &
+                  CALL abc_n(ispin)%calc_abc(input, atoms, sym, cell, lapw_n, nbands_n, contexts(i_context)%radfun, noco, nococonv, ispin, &
                                              contexts(i_context)%itype, zmat_n)
                END DO
                ALLOCATE(matrix_abs(nbands_n, SIZE(contexts(i_context)%core_state%twice_mj)))
@@ -295,10 +291,8 @@ CONTAINS
       END IF
    END SUBROUTINE rixs_run_finiteq_spinor
 
-   SUBROUTINE prepare_absorbers(contexts, usdus, f, g, flo, fmpi, input, rixs, atoms, enpara, vTot, nococonv)
+   SUBROUTINE prepare_absorbers(contexts, fmpi, input, rixs, atoms, enpara, vTot, nococonv)
       TYPE(t_absorber_context), ALLOCATABLE, INTENT(OUT) :: contexts(:)
-      TYPE(t_usdus), INTENT(INOUT) :: usdus
-      REAL, ALLOCATABLE, INTENT(OUT) :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
       TYPE(t_mpi), INTENT(IN) :: fmpi
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_xas), INTENT(IN) :: rixs
@@ -313,24 +307,16 @@ CONTAINS
       IF (n_contexts < 1) CALL juDFT_error("Finite-Q RIXS found no matching absorber type.", &
                                            calledby="m_rixs_finiteq_driver")
       ALLOCATE(contexts(n_contexts))
-      CALL usdus%init(atoms, input%jspins)
-      ALLOCATE(f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-      ALLOCATE(g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-      ALLOCATE(flo(atoms%jmtd, 2, atoms%nlod, input%jspins))
       i_context = 0
       DO itype = 1, atoms%ntype
          IF (atoms%nz(itype) /= rixs%rixs_absorber_z) CYCLE
          i_context = i_context + 1
          contexts(i_context)%itype = itype
-         DO ispin = 1, input%jspins
-            CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, ispin, usdus, f(:, :, 0:, ispin), g(:, :, 0:, ispin), &
-                            flo(:, :, :, ispin), l_writeArg=.FALSE.)
-         END DO
+         CALL contexts(i_context)%radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
          CALL xas_extract_core_states(atoms, itype, rixs%rixs_edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
          IF (SIZE(core_states) < 1) CALL juDFT_error("Finite-Q RIXS could not extract the requested core edge.", &
                                                     calledby="m_rixs_finiteq_driver")
          contexts(i_context)%core_state = core_states(1)
-         CALL contexts(i_context)%radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
          max_order = MAXVAL(contexts(i_context)%radfun%n_r(0:atoms%lmax(itype)))
          ALLOCATE(contexts(i_context)%radial_xas(max_order, 0:atoms%lmaxd, input%jspins), SOURCE=0.0)
          CALL xas_radial_dipole_integrals(atoms, itype, contexts(i_context)%radfun, &

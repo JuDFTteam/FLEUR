@@ -23,6 +23,9 @@ MODULE m_wgauge_ft
   USE m_constants, ONLY : tpi_const, oUnit, bohr_to_angstrom_const
   USE m_types_cell
   USE m_types_kpts
+#ifdef CPP_MPI
+  USE mpi
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wgauge_ft_to_real, wgauge_ft_to_real_reduce, wgauge_ft_rtok, &
@@ -401,9 +404,6 @@ CONTAINS
   !> indices gk_loc), then MPI_ALLREDUCE the small mat_r(nw,nw,nrpts). Same result as the
   !> serial wgauge_ft_to_real but never materializes the full-mesh coarse matrix.
   SUBROUTINE wgauge_ft_to_real_reduce(cell, kpts, mat_loc, gk_loc, commw, mat_r, irvec, ndegen, nrpts)
-#ifdef CPP_MPI
-    use mpi
-#endif
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: mat_loc(:, :, :)   ! (nw,nw,>=nk_loc) Wannier-gauge, this rank's slice

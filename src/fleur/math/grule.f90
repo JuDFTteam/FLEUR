@@ -1,4 +1,13 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_grule
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: grule
 CONTAINS
    SUBROUTINE grule(n, x, w)
 !***********************************************************************
@@ -11,7 +20,6 @@ CONTAINS
 !                                                            m.w.
 !***********************************************************************
 
-      USE m_constants
       IMPLICIT NONE
 !     ..
 !     .. Arguments ..

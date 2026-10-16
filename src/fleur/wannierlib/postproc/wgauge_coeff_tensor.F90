@@ -31,6 +31,9 @@ MODULE m_wgauge_coeff_tensor
   USE m_types_kpts
   USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+#ifdef CPP_MPI
+  USE mpi
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wgauge_write_fmn, wgauge_write_cmn
@@ -78,9 +81,6 @@ CONTAINS
   !> Collective: every rank owns a k-slice and the sum over R is reduced across all of them.
   SUBROUTINE write_tensor_r(this, kpts, o0_loc, gk_loc, irvec, nrpts, mpicm, irank, &
                             fmt, suffix, what, wfpref)
-#ifdef CPP_MPI
-    use mpi
-#endif
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: o0_loc(:, :, :, :, :)

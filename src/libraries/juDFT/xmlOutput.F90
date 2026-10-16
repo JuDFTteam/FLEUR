@@ -5,6 +5,12 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_judft_xmlOutput  
+   use m_juDFT_args
+   use m_juDFT_usage
+!$ use omp_lib
+#ifdef CPP_MPI
+   use mpi
+#endif
    implicit none
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -59,12 +65,6 @@ MODULE m_judft_xmlOutput
    END FUNCTION getXMLOutputUnitNumber
 
    SUBROUTINE startXMLOutput(filename,tag)
-#ifdef CPP_MPI 
-      use mpi 
-#endif
-      USE m_juDFT_args
-      USE m_juDFT_usage
-!$    use omp_lib
       
       IMPLICIT NONE
 

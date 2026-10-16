@@ -16,6 +16,7 @@ module m_available_solvers
    use m_cuda_diag
    use m_elpa
    use m_nvlamath
+   use m_juDFT
    implicit none
    private
    integer :: first_real_solver = 4, num_solvers = 11
@@ -83,7 +84,6 @@ contains
    end function parallel_solver_available
 
    subroutine select_solver(parallel, gpu, single_precision, diag_solver, diag_transform)
-      use m_juDFT
       logical, intent(IN)           :: parallel
       logical, intent(in), optional  :: single_precision, gpu
       class(t_solver), INTENT(OUT), allocatable  :: diag_solver, diag_transform

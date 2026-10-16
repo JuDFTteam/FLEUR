@@ -1,4 +1,8 @@
       MODULE m_angle
+      USE m_constants
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: angle
       CONTAINS
       REAL ELEMENTAL FUNCTION angle(x,y)
       
@@ -7,7 +11,6 @@ c     calculates an angle of a vector
 c     given by rectangular coordinates (x,y)
 c-----------------------------------------------
 
-      USE m_constants
       IMPLICIT NONE
 
       REAL, INTENT (IN) :: x,y

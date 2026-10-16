@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_easypbe
 !----------------------------------------------------------------------
 !     easypbe---exchpbe
@@ -6,6 +11,12 @@ MODULE m_easypbe
 ! easypbe is a driver for the pbe subroutines, using simple inputs
 ! k. burke, may 14, 1996.
 !----------------------------------------------------------------------
+   USE m_exchpbe
+   USE m_corpbe
+   USE m_types_xcpot_data
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: easypbe
 CONTAINS
    SUBROUTINE easypbe(xcpot, &
                       up,agrup,delgrup,uplap, &
@@ -17,9 +28,6 @@ CONTAINS
                       ecpbe,vcuppbe,vcdnpbe, &
                       vxupsr,vxdnsr)
 
-      USE m_exchpbe
-      USE m_corpbe
-      USE m_types_xcpot_data
       IMPLICIT NONE
 
 ! .. Arguments ..

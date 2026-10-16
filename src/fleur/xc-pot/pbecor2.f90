@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_pbecor2
 !---------------------
 ! slimmed down version of gcor used in pw91 routines, to interpolate
@@ -5,6 +10,9 @@ MODULE m_pbecor2
 ! j. p. perdew and y. wang, phys. rev. b {\bf 45}, 13244 (1992).
 ! k. burke, may 11, 1996.
 !---------------------
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: pbecor2
 CONTAINS
    SUBROUTINE pbecor2( &
       a,a1,b1,b2,b3,b4,rtrs, &

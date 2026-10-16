@@ -1,13 +1,31 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_mae
-  USE m_types
   USE m_types_forcetheo
   USE m_judft
+  USE m_calculator
+  USE m_socsym
+  USE m_types_potden
+  USE m_xmlOutput
+  USE m_constants
+  USE m_types_mpi
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_enpara
+  USE m_types_fleurinput
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_misc
+  USE m_types_sym
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_mae
@@ -28,9 +46,6 @@ CONTAINS
 
 
   SUBROUTINE mae_init(this,theta,phi,cell,sym)
-    USE m_calculator
-    USE m_socsym
-    USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_cell),INTENT(IN)             :: cell
@@ -56,7 +71,6 @@ CONTAINS
 
 
   SUBROUTINE mae_start(this,potden,l_io)
-    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)       :: potden
@@ -67,10 +81,6 @@ CONTAINS
 
 
   LOGICAL FUNCTION mae_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
-    USE m_types_setup
-    USE m_xmlOutput
-    USE m_constants
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_mpi), INTENT(IN)             :: fmpi
@@ -105,7 +115,6 @@ CONTAINS
 
   FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
-    USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     LOGICAL :: skip
@@ -133,8 +142,6 @@ CONTAINS
   END FUNCTION  mae_eval
 
   SUBROUTINE mae_postprocess(this,fi,results,fmpi)
-    USE m_xmlOutput
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
@@ -168,10 +175,6 @@ CONTAINS
   END SUBROUTINE mae_postprocess
 
   SUBROUTINE mae_dist(this,fmpi)
-#ifdef CPP_MPI
-    USE mpi
-#endif
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_mpi),INTENT(in):: fmpi

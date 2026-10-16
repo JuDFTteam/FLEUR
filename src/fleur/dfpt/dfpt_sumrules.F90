@@ -6,8 +6,9 @@
 
 module m_dfpt_sumrules
    use m_juDFT
-   use m_types
    use m_constants
+   use m_types_atoms
+   use m_types_cell
 
    implicit none
    private

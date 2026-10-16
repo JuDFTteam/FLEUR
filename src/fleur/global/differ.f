@@ -1,5 +1,11 @@
       MODULE m_differ
       use m_juDFT
+      use m_constants
+      use m_inwint
+      use m_outint
+      implicit none
+      private
+      public :: differ
 c
 cdiffer   subroutine for the differential equations
 c-----x----x----x----x----x----x----x----x----x----x----x----x----x----
@@ -11,9 +17,6 @@ c-----x----x----x----x----x----x----x----x----x----x----x----x----x----
      >                  fn,fl,fj,c,z,h,rnot,rn,d,msh,vr,
      X                  e,
      <                  a,b,ierr)
-      USE m_constants
-      USE m_inwint
-      USE m_outint
 
       IMPLICIT NONE
 

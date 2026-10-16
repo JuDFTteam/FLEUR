@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and avhttps://gcc.gnu.org/onlinedocs/gfortran/SQRT.htmlailable as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !------------------------------------------------------------------------------
@@ -12,17 +12,20 @@
 
 MODULE m_magnMomFromDen
 
-IMPLICIT NONE
-
-CONTAINS
-SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    USE m_constants
-   USE m_types
-   USE m_types_fleurinput
    USE m_intgr
    USE m_juDFT
    USE m_polangle
-   USE m_constants
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: magnmomfromden
+
+CONTAINS
+SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
 
    TYPE(t_input), INTENT(IN)     ::  input
    TYPE(t_atoms), INTENT(IN)     ::  atoms

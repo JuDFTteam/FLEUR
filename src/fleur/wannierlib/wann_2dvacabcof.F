@@ -6,6 +6,12 @@
 
       MODULE m_wann_2dvacabcof
       use m_juDFT
+      use m_vacuz
+      use m_vacudz
+      use m_types_mat
+      implicit none
+      private
+      public :: wann_2dvacabcof
 c********************************************************
 c     calculate a-, and b-coefficients of 2d-vacuum
 c     Frank Freimuth, November 2006
@@ -16,9 +22,6 @@ c********************************************************
      >nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,zMat,
      <ac,bc,u,ue,addnoco,l_ss,qss,jspin)
 
-      USE m_types
-      USE m_vacuz
-      USE m_vacudz
 
       implicit none
 

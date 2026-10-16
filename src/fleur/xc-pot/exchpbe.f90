@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_exchpbe
 !----------------------------------------------------------------------
 !     pbe exchange for a spin-unpolarized electronic system
@@ -13,13 +18,16 @@ MODULE m_exchpbe
 !     [d] J.~Heyd, G.~E.~Scuseria, M.~Ernzerhof, J. Chem. Phys. {\bf 118},
 !     8207 (2003)
 !----------------------------------------------------------------------
+   USE m_hsefunctional, ONLY: calculateEnhancementFactor
+   USE m_constants, ONLY: pi_const
+   USE m_types_xcpot_data
+   USE m_judft
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: exchpbe
 CONTAINS
    SUBROUTINE exchpbe(xcpot,rho,s,u,v,lgga,lpot, &
                       ex,vx,vx_sr)
-      USE m_hsefunctional, ONLY: calculateEnhancementFactor
-      USE m_constants,     ONLY: pi_const
-      USE m_types_xcpot_data
-      USE m_judft
       IMPLICIT NONE
 
 !     .. Arguments

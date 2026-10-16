@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -32,6 +32,8 @@ MODULE m_xcvwn
    USE m_constants, ONLY : pi_const
    USE m_relcor
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vxcvwn, excvwn, fec, fdedr
 
    REAL, PARAMETER, PRIVATE :: cex = 0.91633058742  ! 3/2 * ( 3/(2*pi) )^(2/3)
    REAL, PARAMETER, PRIVATE :: d_15 = 1.e-15

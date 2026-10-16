@@ -1,5 +1,11 @@
       MODULE m_nabla
       use m_juDFT
+      use m_constants
+      use m_clebsch
+      use m_intgr, only: intgr3
+      implicit none
+      private
+      public :: nabla, cgc
 
       CONTAINS
 
@@ -24,9 +30,6 @@
 !    dphi(r,l) ... radial derivative of valence wavefunction
 !
 !----------------------------------------------------------------
-       USE m_constants
-       USE m_clebsch
-       USE m_intgr, ONLY : intgr3
 
        IMPLICIT NONE
 

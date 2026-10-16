@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,26 +8,30 @@
 MODULE m_dfpt_potdenLocal
 
 
+    USE m_types_fleurinput
+    USE m_constants
+    USE m_types_stars
+    USE m_types_atoms
+    USE m_types_sym
+    USE m_types_vacuum
+    USE m_types_input
+    USE m_types_cell
+    USE m_convn
+    USE m_types_mpi
+    USE m_make_stars
+    USE m_types_noco
+    USE m_types_potden
+    USE m_types_sphhar
     IMPLICIT NONE 
+    PRIVATE
+    PUBLIC :: create_typeslocal, cast_smaller_grid, cast_onto_larger_grid
 
 
 CONTAINS
-    SUBROUTINE create_typesLocal(fi,fmpi,sym,cell,input,sphhar,vacuum,noco,stars,potdenLocal,atomsLocal,qvec,iDir,iDtype)
+    SUBROUTINE create_typesLocal(fi,fmpi,sym,cell,input,sphhar,vacuum,noco,stars,potdenLocal,atomsLocal,qvec,iDir,iDtype,l_dfpt)
         
         ! This subroutine creates the types with a bigger Gmaxz Cutoff
         ! Nessesary for the Film-Mode Calcaultion 
-        USE m_types_fleurinput
-        USE m_types
-        use m_constants
-        USE m_types_stars
-        USE m_types_atoms
-        USE m_types_sym
-        USE m_types_vacuum
-        USE m_types_input
-        USE m_types_cell
-        USE m_convn
-        USE m_types_mpi
-        USE m_make_stars
         TYPE(t_fleurinput), INTENT(IN) :: fi
         TYPE(t_mpi), INTENT(IN) :: fmpi
         TYPE(t_sym), INTENT(IN) :: sym
@@ -41,19 +45,23 @@ CONTAINS
         TYPE(t_atoms),INTENT(OUT)   :: atomsLocal
         REAL, OPTIONAL, INTENT(IN)    :: qvec(3)
         INTEGER, OPTIONAL, INTENT(IN) :: iDir,iDtype
+        LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
 
+        LOGICAL :: l_dfptLocal
+
+
+        l_dfptLocal = .FALSE.
+        IF (PRESENT(l_dfpt)) l_dfptLocal = l_dfpt
 
         call make_stars(stars,sym,fi%atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,gmaxzLocal=fi%dfpt%gmaxzLocal)
         atomsLocal = fi%atoms
         call convn(fmpi%irank == 0, atomsLocal, stars)
-        call potdenLocal%init(stars,atomsLocal,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
+        call potdenLocal%init(stars,atomsLocal,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT,l_dfpt=l_dfptLocal)
 
     END SUBROUTINE create_typesLocal
 
     SUBROUTINE cast_smaller_grid(pot1,pot2,starsGlobal,input)
         
-        USE m_types_input
-        USE m_types
 
         TYPE(t_potden), INTENT(INOUT) :: pot1
         TYPE(t_potden), INTENT(IN)    :: pot2
@@ -72,8 +80,6 @@ CONTAINS
 
     SUBROUTINE cast_onto_larger_grid(pot1,pot2,starsGlobal,input)
         
-        USE m_types_input
-        USE m_types
 
         TYPE(t_potden), INTENT(INOUT) :: pot1
         TYPE(t_potden), INTENT(IN)    :: pot2

@@ -1,10 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_cfOutput_hdf
 #ifdef CPP_HDF
 
    USE hdf5
    USE m_hdf_tools
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_juDFT
+   USE m_types_input
 
    IMPLICIT NONE
+   PRIVATE
 
    PUBLIC opencfFile, closecfFile, writeCFpot, writeCFcdn
 
@@ -12,9 +22,6 @@ MODULE m_cfOutput_hdf
 
    SUBROUTINE opencfFile(fileID, atoms, cell, inFilename, l_create)
 
-      USE m_types_atoms
-      USE m_types_cell
-      USE m_juDFT
 
       TYPE(t_atoms),                INTENT(IN)  :: atoms
       TYPE(t_cell),                 INTENT(IN)  :: cell
@@ -94,9 +101,6 @@ MODULE m_cfOutput_hdf
 
    SUBROUTINE writeCFpot(fileID, atoms,input,iType,vlm)
 
-      USE m_types_atoms
-      USE m_types_input
-      USE m_juDFT
 
       INTEGER(HID_T),   INTENT(IN)  :: fileID
       TYPE(t_atoms),    INTENT(IN)  :: atoms
@@ -160,9 +164,6 @@ MODULE m_cfOutput_hdf
 
    SUBROUTINE writeCFcdn(fileID, atoms,iType, n4f)
 
-      USE m_types_atoms
-      USE m_types_input
-      USE m_juDFT
 
       INTEGER(HID_T),   INTENT(IN)  :: fileID
       TYPE(t_atoms),    INTENT(IN)  :: atoms

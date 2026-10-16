@@ -32,6 +32,12 @@
 !     be use'd as needed.
 !                                              m. weinert 12-99
 !*********************************************************************
+      USE m_ptsym
+      USE m_lhcal
+      USE m_constants
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: local_sym
       CONTAINS
       SUBROUTINE local_sym(
      >                     l_write,lmaxd,lmax,nops,mrot,tau,
@@ -39,9 +45,6 @@
      X                     nlhd,memd,ntypsd,l_dim,
      <                     nlhtyp,nlh,llh,nmem,mlh,clnu)
 
-      USE m_ptsym
-      USE m_lhcal
-      USE m_constants
 
       IMPLICIT NONE
 

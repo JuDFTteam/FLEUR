@@ -1,11 +1,18 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_nococonv
    USE m_judft
    Use m_constants
+   use m_types_atoms
+   use m_types_noco
+   use m_types_potden
+   use m_intgr
+   use m_xmlOutput
+   use m_mpi_bc_tool
+   use m_polangle
 
    IMPLICIT NONE
    PRIVATE
@@ -48,11 +55,6 @@ MODULE m_types_nococonv
 CONTAINS
 
 SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
-   use m_types_atoms
-   use m_types_noco
-   use m_types_potden
-   use m_intgr
-   use m_xmlOutput
    CLASS(t_nococonv),INTENT(INOUT):: nococonv
    type(t_atoms),intent(in)       :: atoms
    type(t_potden),intent(in)      :: vtot
@@ -135,7 +137,6 @@ SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
 END SUBROUTINE 
 
 SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
-   USE m_mpi_bc_tool
    CLASS(t_nococonv),INTENT(INOUT)::this
    INTEGER,INTENT(IN):: mpi_comm
    INTEGER,INTENT(IN),OPTIONAL::irank
@@ -276,7 +277,6 @@ end subroutine
    end subroutine
 
    SUBROUTINE rotdenmat_explicit_denmat(nococonv, alph, beta, rho11, rho22, rho21, toGlobal)
-      use m_constants
       IMPLICIT NONE
 
       CLASS(t_nococonv), INTENT(IN) :: nococonv
@@ -309,7 +309,6 @@ end subroutine
    end subroutine
 
    subroutine t_nococonv_init(this, noco)
-      use m_types_noco
       class(t_nococonv), INTENT(OUT):: This
       type(t_noco), INTENT(IN)      :: noco
 
@@ -330,9 +329,6 @@ end subroutine
    end subroutine
 
    subroutine t_nococonv_initss(nococonv, noco, atoms, qss)
-      use m_types_noco
-      use m_types_atoms
-      use m_constants
       CLASS(t_nococonv), INTENT(inout):: nococonv
       TYPE(t_noco), INTENT(IN) :: noco
       TYPE(t_atoms), INTENT(IN):: atoms
@@ -365,10 +361,6 @@ end subroutine
    end subroutine
 
    subroutine avg_moments(nococonv, den, atoms, magm, theta, phi)
-      use m_types_atoms
-      use m_types_potden
-      use m_polangle
-      use m_intgr
       class(t_nococonv), intent(in) :: nococonv
       class(t_potden), INTENT(IN):: den
       type(t_atoms), INTENT(IN)  :: atoms

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,22 +7,46 @@ MODULE m_dfpt_cdngen
 #ifdef CPP_MPI
    USE mpi
 #endif
-CONTAINS
-
-SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
-                  kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
-                  enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
-                  archiveType, xcpot,outDen,outDenIm,bqpt,iDtype,iDir,l_real,&
-                  qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m)
-
-   use m_types_vacdos
-   USE m_types
+   USE m_types_vacdos
    USE m_constants
    USE m_juDFT
    USE m_dfpt_cdnval
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdncore
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cdnval
+   USE m_types_cell
+   USE m_types_dos
+   USE m_types_enpara
+   USE m_types_gfinp
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_regioncharges
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_cdngen
+CONTAINS
+
+SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
+                  kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
+                  enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
+                  archiveType, xcpot,outDen,bqpt,iDtype,iDir,l_real,&
+                  qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m)
+
    
 
    IMPLICIT NONE
@@ -47,7 +71,7 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
    TYPE(t_gfinp),INTENT(IN)         :: gfinp
    TYPE(t_hub1inp),INTENT(IN)       :: hub1inp
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
-   TYPE(t_potden),INTENT(INOUT)     :: outDen, outDenIm
+   TYPE(t_potden),INTENT(INOUT)     :: outDen
 
    !Scalar Arguments
    INTEGER, INTENT(IN)              :: eig_id, dfpt_eig_id, archiveType, iDtype, iDir
@@ -94,12 +118,12 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
          CALL cdnvalJob1m%init(fmpi,input,kpts,noco,resultsdummy1m,jspin)
          CALL dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
                           vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-                          hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real,&
+                          hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real,&
                           qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
       ELSE
          CALL dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
                           vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-                          hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real)
+                          hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real)
       END IF
    END DO
    CALL timestop("dfpt_cdngen: cdnval")
@@ -118,7 +142,6 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
 !   CALL MPI_BCAST(nococonv%qss,3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 !#endif
    CALL outDen%distribute(fmpi%mpi_comm)
-   CALL outDenIm%distribute(fmpi%mpi_comm)
 
 END SUBROUTINE dfpt_cdngen
 

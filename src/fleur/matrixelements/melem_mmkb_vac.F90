@@ -27,7 +27,6 @@
 !>  before comparing anything with eigen/hsvac.F90.
 MODULE m_melem_mmkb_vac
    USE m_juDFT
-   USE m_types
    USE m_intgr, ONLY: intgz0
    USE m_types_melem_vacabc, ONLY: t_melem_vacabc
    IMPLICIT NONE

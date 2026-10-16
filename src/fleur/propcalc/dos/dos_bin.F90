@@ -1,10 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dosbin
 
+   USE m_constants
+   USE m_smooth
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dos_bin, dos_bin_transport, dos_bin_double
 CONTAINS
    SUBROUTINE dos_bin(jspins, wtkpt, e, eig, qal, g, energyShift)
       !! This subroutine generates the idos, the ldos, the partial
@@ -88,8 +93,6 @@ CONTAINS
       !! Here we have to evalulation we have to take, one for k and one for k'
       !! \delta(eig - shift) \delta(eigq - shift)
 
-      USE m_constants
-      USE m_smooth
 
       IMPLICIT NONE
 

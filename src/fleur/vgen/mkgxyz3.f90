@@ -1,10 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mkgxyz3
    USE m_judft
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mkgxyz3
    !-----------------------------------------------------------------------------
    ! Using the cartesian components and derivatives of a charge density rho on
    ! the real space grid, make the following quantaties:
@@ -33,7 +37,6 @@ MODULE m_mkgxyz3
    !-----------------------------------------------------------------------------
 CONTAINS
    SUBROUTINE mkgxyz3(vl,dvx,dvy,dvz,dvxx,dvyy,dvzz,dvyz,dvxz,dvxy,idx,grad)
-      USE m_types
       IMPLICIT NONE
       REAL, INTENT (IN)                :: vl(:,:)
       REAL, INTENT (IN)                :: dvx(:,:),dvy(:,:),dvz(:,:)

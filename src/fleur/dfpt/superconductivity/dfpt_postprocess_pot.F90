@@ -12,10 +12,37 @@ module m_dfpt_postprocess_pot
     USE m_juDFT
 
 
-    USE m_types 
     USE m_constants
+    USE m_cdn_io
+    USE m_dfpt_cdn_io, ONLY: dfptDensityArchiveName, readDfptDensity
+    USE m_make_stars
+    USE m_dfpt_dynmat_eig
+    USE m_dfpt_dynmat_io
+    USE m_eigen
+    USE m_dfpt_vgen
+    USE m_dfpt_elph_mat
+    USE m_fermie
+    USE m_dfpt_generate_gradient
+    USE m_dfpt_lambda
+    USE m_types_enpara
+    USE m_types_fleurinput
+    USE m_types_forcetheo
+    USE m_types_hub1data
+    USE m_types_hybdat
+    USE m_types_kpts
+    USE m_types_mpi
+    USE m_types_nococonv
+    USE m_types_potden
+    USE m_types_misc
+    USE m_types_sphhar
+    USE m_types_stars
+    USE m_types_sternheimerjob
+    USE m_types_sym
+    USE m_types_xcpot
     
     implicit none
+    PRIVATE
+    PUBLIC :: dfpt_postprocess_elph
 
 
 contains 
@@ -23,17 +50,6 @@ contains
     subroutine dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
                                   rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real)
 
-        use m_types 
-        use m_cdn_io
-        use m_make_stars
-        use m_dfpt_dynmat_eig
-        use m_eigen 
-        use m_dfpt_vgen
-        use m_dfpt_elph_mat
-        use m_fermie
-        use m_dfpt_generate_gradient
-        use m_dfpt_vgen
-        use m_dfpt_lambda
 
         type(t_mpi), intent(in)       :: fmpi
         type(t_fleurinput),intent(in) :: fi 
@@ -57,7 +73,7 @@ contains
         type(t_stars) :: starsq
         type(t_kpts)  :: kqpts
         type(t_sternheimerJob) :: sternheimerJob
-        type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
+        type(t_potden) :: vTot1, den1, rho_local
         type(t_results) :: dummy_results
 
         ! Symmetry unfolding of the q axis (see dfpt_lambda.F90, README_symmetry.md)
@@ -75,14 +91,12 @@ contains
 
         integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
         integer :: bandWindow(2)
-        logical :: l_dummy , l_exist
         complex :: pref 
         complex, allocatable :: dynMats(:,:,:) 
         complex, allocatable :: gmatCart(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQ)
         integer, allocatable :: q_list(:)
 
-        character(len=20) :: dfpt_tag
-        character(len=100)  :: filename
+        character(len=64) :: dfpt_tag
 
 #ifdef CPP_MPI 
         integer :: ierr
@@ -133,7 +147,7 @@ contains
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
-                call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
+                call read_dynmat_q("dynmat.hdf", iQ, dynMats(:,:,iQ))
                 call timestop("dynMat IO")
             end if 
 
@@ -142,7 +156,7 @@ contains
                 do iDir = 1 , 3
                     call timestart("Dirloop")
                     
-                    write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+                    dfpt_tag = dfptDensityArchiveName(sternheimerJob%kind_name(), q_list(iQ), iDtype, iDir)
                     
                     iPerturb = iDir+3*(iDtype-1)
 
@@ -151,10 +165,8 @@ contains
                     starsq%ufft = stars%ufft
 
                     call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                    call den1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
                     call vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                    call vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                     
                     ! allocate the pw_w part
                     allocate( vTot1%pw_w(size(vTot1%pw,1),size(vTot1%pw,2)))
@@ -163,12 +175,8 @@ contains
                         call timestart("den1 IO")
                         ! We write out the density response in the sternheimer iteration 
                         ! read in the densities
-                        filename = trim(dfpt_tag)
-                        inquire(file=trim(filename)//".hdf",EXIST=l_exist)
-                        if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                    fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
-                                                    dummy_results%ef, dummy_results%last_distance, l_dummy, den1,  &
-                                                    inFilename=trim(filename),denIm=den1Im)
+                        call readDfptDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, &
+                                             dfpt_tag, fi%dfpt%qvec%bk(:,iQ), dummy_results%ef, dummy_results%last_distance, den1)
                         call timestop("den1 IO")
                         
                         ! add the gradient to the density that we store
@@ -178,19 +186,18 @@ contains
 
 #ifdef CPP_MPI
                     call den1%distribute(fmpi%mpi_comm)
-                    call den1Im%distribute(fmpi%mpi_comm)
 #endif 
                     call timestart("Generating Potential Perturbation")
                     call dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                                     fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_local,vTot,&
-                                    starsq,den1Im,vTot1,.TRUE.,vTot1Im,den1,iDtype,iDir,[1,1])
+                                    starsq,vTot1,.TRUE.,den1,iDtype,iDir,[1,1])
                     call timestop("Generating Potential Perturbation")
                     ! The matrix element needs the gradient correction in the MT 
                     vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
 
                     ! construct the electron-phonon element in cartesian basis 
                     call timestart("generate elph element")
-                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
+                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
                                         eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart(:,:,:,:,iPerturb,iQ),bandWindow)
 
                     call timestop("generate elph element")
@@ -198,9 +205,7 @@ contains
                     ! reset some variables 
                     call starsq%reset_stars()
                     call vTot1%reset_dfpt()
-                    call vTot1Im%reset_dfpt()
                     call den1%reset_dfpt()
-                    call den1Im%reset_dfpt()
                     
                 call timestop("Dirloop")
                 end do ! iDir
@@ -240,6 +245,7 @@ contains
         end do
         call timestop("elph symmetry unfolding")
 
+        
         ! Perform Wannier interpolation
         if (fi%wannierlib%l_wannierize) then
             call timestart("Wannier Interpolation elph")
@@ -249,49 +255,6 @@ contains
         end if
 
     end subroutine dfpt_postprocess_elph
-
-
-    subroutine read_dynmats(natoms,iQ,dynMat)
-
-        integer, intent(in) :: natoms
-        integer, intent(in)  :: iQ
-        complex, intent(out) :: dynMat(:,:) 
-
-        integer :: iread 
-        character(len=100) :: trash 
-        real,allocatable    :: numbers(:,:)
-
-        allocate(numbers(3*natoms,6*natoms))
-        numbers = 0.0
-        if (iQ<=9) then
-            open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
-        else if (iQ<=99) then  
-            open( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-        else if (iQ<=999) then
-            open( 3001, file="dynMatq=0"//int2str(iQ), status="old")
-        else 
-            open( 3001, file="dynMatq="//int2str(iQ), status="old")
-        end if 
-
-        
-        do iread = 1, 3 + 3*natoms !Loop over dynmat rows
-            if (iread<4) then
-                read( 3001,*) trash
-            else
-                read( 3001,*) numbers(iread-3,:)
-                dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
-            end if
-        end do ! iread
-        close(3001)
-
-
-
-    end subroutine read_dynmats
-
-
-
-
-
 
 
 end module m_dfpt_postprocess_pot

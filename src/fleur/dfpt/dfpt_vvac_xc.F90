@@ -1,5 +1,22 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_dfpt_vvac_xc
     use m_juDFT
+    use m_types_xcpot_libxc
+    use m_constants
+    use m_vac_tofrom_grid
+    use m_dfpt_gga_kernel
+    use m_types_cell
+    use m_types_xcpot
+    use m_types_input
+    use m_types_noco
+    use m_types_potden
+    use m_types_stars
+    use m_types_vacuum
+    implicit none
     private
 
     public dfpt_vvac_xc
@@ -12,11 +29,6 @@ MODULE m_dfpt_vvac_xc
   CONTAINS
     SUBROUTINE dfpt_vvac_xc(ifftd2,stars,starsq, vacuum, noco,cell,den,den1,xcpot,input,vxc)
 
-      USE m_types
-      USE m_types_xcpot_libxc
-      use m_constants
-      use m_vac_tofrom_grid
-      USE m_dfpt_gga_kernel
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_vacuum),INTENT(IN)    :: vacuum

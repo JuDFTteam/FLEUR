@@ -1,17 +1,20 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_brzone2
 USE m_juDFT
+   USE m_constants, ONLY: pimach
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: brzone2
 
 CONTAINS
 SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
                    cpoint,xvec,ncorn,nedge,nface,fnorm,fdist)
 
-   USE m_constants, ONLY : pimach
 
    IMPLICIT NONE
 

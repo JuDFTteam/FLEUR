@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vmmp21
 !     ************************************************************
 !     This subroutine calculates the potential matrix v^{s}_{m,m'}
@@ -10,10 +15,12 @@ MODULE m_vmmp21
 !     is calculated (e_ldau).
 !     Part of the LDA+U package                   G.B., Oct. 2000
 !     ************************************************************
-      USE m_types
       USE m_constants
+      USE m_types_atoms
 
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: v_mmp_21
 
       CONTAINS
 

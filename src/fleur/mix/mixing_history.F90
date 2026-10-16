@@ -1,25 +1,26 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mixing_history
   USE m_types_mixvector
+  USE m_types_mpi
+  USE m_types_potden
   IMPLICIT NONE
   PRIVATE
   INTEGER:: iter_stored=0
   TYPE(t_mixvector),ALLOCATABLE::sm_store(:),fsm_store(:)
   PUBLIC :: mixing_history,mixing_history_reset,mixing_history_store
   PUBLIC :: mixing_history_open,mixing_history_close,mixing_history_limit
-  PUBLIC :: dfpt_mixing_history_reset
+  PUBLIC :: dfpt_mixing_history_reset, dfpt_history_basename
 CONTAINS
 
   SUBROUTINE mixing_history_open(mpi,maxiter,basename)
-    USE m_types,ONLY:t_mpi
     INTEGER,INTENT(IN)    :: maxiter
     TYPE(t_mpi),INTENT(in):: mpi
 
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
 
    CHARACTER(len=80):: filename
     LOGICAL          :: l_fileexist
@@ -69,16 +70,17 @@ CONTAINS
 !#endif
   END SUBROUTINE mixing_history_open
 
-  SUBROUTINE mixing_history_close(mpi,basename)
-    USE m_types,ONLY:t_mpi
+  SUBROUTINE mixing_history_close(mpi,imix,basename)
     TYPE(t_mpi),INTENT(in):: mpi
+    INTEGER,INTENT(IN)    :: imix
 
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
 
    CHARACTER(len=80):: filename
     INTEGER          :: n
 
 
+    IF (imix==0) RETURN ! Straight mixing needs no history
     IF (iter_stored==0) RETURN ! Nothing found to be stored
     IF (mpi%isize>1) THEN
        IF (.NOT.PRESENT(basename)) THEN
@@ -109,8 +111,7 @@ CONTAINS
   END SUBROUTINE mixing_history_close
 
 
-  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inDenIm,outDenIm)
-    USE m_types
+  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inTau,outTau)
     implicit none
     INTEGER,INTENT(in)::imix,maxiter
     type(t_potden),intent(inout)::inden,outden
@@ -118,7 +119,7 @@ CONTAINS
     INTEGER,INTENT(out)::it
     INTEGER,INTENT(IN) :: nmzxyd
 
-    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau !MetaGGA kinetic energy densities
 
     INTEGER:: n
 
@@ -131,12 +132,12 @@ CONTAINS
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
-    IF (.NOT.PRESENT(inDenIm)) THEN
+    IF (.NOT.ALLOCATED(inDen%mtIm)) THEN
+      CALL sm(it)%from_density(inDen,nmzxyd,tau=inTau)
+      CALL fsm(it)%from_density(outDen,nmzxyd,tau=outTau)
+    ELSE
       CALL sm(it)%from_density(inDen,nmzxyd)
       CALL fsm(it)%from_density(outDen,nmzxyd)
-    ELSE
-      CALL sm(it)%from_density(inDen,nmzxyd,denIm=inDenIm)
-      CALL fsm(it)%from_density(outDen,nmzxyd,denIm=outDenIm)
     END IF
     !store the difference fsm - sm in fsm
     fsm(it) = fsm(it) - sm(it)
@@ -155,10 +156,9 @@ CONTAINS
   end subroutine mixing_history
 
   SUBROUTINE mixing_history_reset(mpi,basename)
-    USE m_types,ONLY:t_mpi
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
     iter_stored=0
     IF (ALLOCATED(sm_store)) DEALLOCATE(sm_store,fsm_store)
     IF (mpi%irank==0) PRINT *, "Reset of history"
@@ -195,13 +195,12 @@ CONTAINS
 END SUBROUTINE dfpt_mixing_history_reset
 
   SUBROUTINE mixing_history_file_count(mpi,expected_files,existing_files,l_has_history,basename)
-    USE m_types,ONLY:t_mpi
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN) :: mpi
     INTEGER,INTENT(OUT) :: expected_files, existing_files
     LOGICAL,INTENT(OUT) :: l_has_history
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
 
     CHARACTER(len=80) :: filename
     LOGICAL :: l_fileexist
@@ -239,5 +238,19 @@ END SUBROUTINE dfpt_mixing_history_reset
 
     l_has_history = existing_files > 0
   END SUBROUTINE mixing_history_file_count
+
+  FUNCTION dfpt_history_basename(archiveName) RESULT(basename)
+    !! File base name of the mixing history of a DFPT perturbation, built from its archive name.
+    CHARACTER(len=*), INTENT(IN) :: archiveName
+    CHARACTER(len=64)            :: basename
+
+    INTEGER :: i
+
+    basename = ADJUSTL(archiveName)
+    IF (basename(1:1)=='/') basename = basename(2:)
+    DO i = 1, LEN_TRIM(basename)
+       IF (basename(i:i)=='/') basename(i:i) = '_'
+    END DO
+  END FUNCTION dfpt_history_basename
 
 end MODULE m_mixing_history

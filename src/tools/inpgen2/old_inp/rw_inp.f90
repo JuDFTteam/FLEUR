@@ -1,11 +1,28 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
       MODULE m_rwinp
       use m_juDFT
+      use m_calculator
+      use m_types_input
+      use m_types_sym
+      use m_types_stars
+      use m_types_atoms
+      use m_types_vacuum
+      use m_types_kpts
+      use m_types_hybinp
+      use m_types_cell
+      use m_types_banddos
+      use m_types_sliceplot
+      use m_types_xcpot_inbuild_nofunction
+      use m_types_noco
+      use m_constants
+      implicit none
+      private
+      public :: rw_inp
       CONTAINS
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
@@ -17,21 +34,7 @@
 !* for ch_rw = 'R' read, ch_rw = 'W' write.                          *
 !*                                                           Gustav  *
 !*********************************************************************
-      USE m_calculator
-      USE m_types_input
-      USE m_types_sym
-      USE m_types_stars
-      USE m_types_atoms
-      USE m_types_vacuum
-      USE m_types_kpts
        
-      USE m_types_hybinp
-      USE m_types_cell
-      USE m_types_banddos
-      USE m_types_sliceplot
-      USE m_types_xcpot_inbuild_nofunction
-      USE m_types_noco
-      USE m_constants
 
       IMPLICIT NONE
 ! ..

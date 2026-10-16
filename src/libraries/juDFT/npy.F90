@@ -1,5 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_npy
    implicit none
+   private
+   public :: run_sys, addrpl_cmplx_sng_vec, addrpl_cmplx_sng_mtx, addrpl_cmplx_dbl_vec, addrpl_cmplx_dbl_mtx, &
+      addrpl_dbl_vec, addrpl_dbl_mtx, addrpl_sng_vec, addrpl_sng_mtx, addrpl_int8_vec, addrpl_int8_mtx, &
+      addrpl_int16_vec, addrpl_int16_mtx, addrpl_int32_vec, addrpl_int32_mtx, addrpl_int64_vec, addrpl_int64_mtx, &
+      write_cmplx_sgn_mtx, write_cmplx_sgn_vec, write_cmplx_dbl_6dt, write_cmplx_dbl_5dt, write_cmplx_dbl_4dt, &
+      write_cmplx_dbl_3dt, write_cmplx_dbl_mtx, write_cmplx_dbl_vec, write_sng_3dt, write_sng_mtx, write_sng_vec, &
+      write_dbl_3dt, write_dbl_4dt, write_dbl_5dt, write_dbl_mtx, write_dbl_vec, write_int64_mtx, write_int64_vec, &
+      write_int32_mtx, write_int32_3d, write_int32_vec, write_int16_mtx, write_int16_vec, write_int8_mtx, &
+      write_int8_3d, write_int8_vec, dict_str, shape_str, save_npy, add_npz, p_un, magic_num, major, minor, zip_flag, &
+      magic_str
 
    integer(4), parameter               :: p_un = 23
    character, parameter                :: magic_num = achar(147) ! x93

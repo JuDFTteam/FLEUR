@@ -10,7 +10,9 @@ DFPT Phonon Data Reader and JSON Export Utilities
 
 This module provides a collection of tools for reading, processing, and 
 serializing phonon data obtained from Density Functional Perturbation Theory 
-(DFPT) calculations—specifically, the `dynMatq*` files produced by FLEUR.
+(DFPT) calculations produced by FLEUR: the HDF5 files `dynmat.hdf`
+(SCF q-points), `dynmat_band.hdf` and `dynmat_dos.hdf` (interpolated), and
+the legacy `dynMatq*` text files of older versions.
 
 The module covers the needed functions to prepare phonon bandstructure
 and eigenvector data for visualization in external tools (e.g. web-based 
@@ -19,6 +21,7 @@ phonon viewers, Python dashboards, or custom GUI applications).
 Main Capabilities
 -----------------
 1. **Reading DFPT output files**
+   - `read_phonon_hdf`        → read all q-point data of a dynmat*.hdf file
    - `read_dynMats`           → read 3N×3N dynamical matrices for all q-points  
    - `read_eigenvectors`      → extract phonon eigenvectors (complex)  
    - `read_eigenfrequencies`  → extract phonon frequencies and q-vectors  
@@ -46,6 +49,11 @@ Main Capabilities
 
 import numpy as np
 import json
+
+try:
+    import h5py
+except ImportError:
+    h5py = None
 
 
 
@@ -139,7 +147,76 @@ def save_json(filename, data):
         json.dump(data, f, indent=4, cls=NumpyEncoder)
     
 
-def read_dynMats(path,number_atoms,number_q,prefix=''):
+
+def read_phonon_hdf(filename):
+    """
+    Read all q-point data of a FLEUR DFPT dynmat HDF5 file.
+
+    Works for `dynmat.hdf`, `dynmat_band.hdf` and `dynmat_dos.hdf`. The
+    groups /qpoints/q_NNNNNN are sorted by their `iQ` attribute and stacked.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the HDF5 file.
+
+    Returns
+    -------
+    dict
+        `iq` (nq,), `qpoints` (nq, 3), `weights` (nq,), `labels` (nq,) and,
+        if stored, `eigenvalues` (nq, 3N), `frequencies_cm` / `frequencies_THz`
+        (nq, 3N, complex), `dynmat` / `eigenvectors` (nq, 3N, 3N, complex).
+        Matrices are indexed like in FLEUR, i.e. dynmat[q, i, j] = D_ij(q).
+        Header data is returned under `amat`, `bmat`, `positions`,
+        `atomicNumbers`, `masses`, `nAtoms`, `specialPointIndices`, and
+        `gamma_sumrule` (3N, 3N) if the file contains it.
+    """
+    if h5py is None:
+        raise ImportError("h5py is required to read FLEUR dynmat HDF5 files")
+
+    def to_complex(arr):
+        # Fortran (2,n[,m]) appears reversed in h5py: (..., 2)
+        c = arr[..., 0] + 1j * arr[..., 1]
+        return c.T if c.ndim == 2 else c
+
+    data = {}
+    with h5py.File(filename, 'r') as f:
+        gen = f['general']
+        data['nAtoms'] = int(gen.attrs['nAtoms'])
+        data['amat'] = gen['amat'][()].T
+        data['bmat'] = gen['bmat'][()].T
+        data['positions'] = gen['positions'][()]
+        data['atomicNumbers'] = gen['atomicNumbers'][()]
+        data['masses'] = gen['masses'][()]
+
+        qgrp = f['qpoints']
+        if 'specialPointIndices' in qgrp:
+            data['specialPointIndices'] = qgrp['specialPointIndices'][()]
+        groups = sorted((g for g in qgrp.values() if isinstance(g, h5py.Group)),
+                        key=lambda g: int(g.attrs['iQ']))
+
+        data['iq'] = np.array([int(g.attrs['iQ']) for g in groups])
+        data['qpoints'] = np.array([g.attrs['qvec'] for g in groups])
+        data['weights'] = np.array([float(g.attrs['weight']) for g in groups])
+        labels = []
+        for g in groups:
+            label = g.attrs.get('label', '')
+            labels.append(label.decode() if isinstance(label, bytes) else str(label))
+        data['labels'] = labels
+
+        if groups:
+            data['eigenvalues'] = np.array([g['eigenvalues'][()] for g in groups])
+            for key in ('frequencies_cm', 'frequencies_THz', 'dynmat', 'eigenvectors'):
+                if all(key in g for g in groups):
+                    data[key] = np.array([to_complex(g[key][()]) for g in groups])
+
+        if 'sumrule' in f:
+            data['gamma_sumrule'] = to_complex(f['sumrule/dynmat_gamma'][()])
+
+    return data
+
+
+def read_dynMats(path,number_atoms,number_q,prefix='',hdf_file=None):
     """
     Read dynamical matrices from a FLEUR DFPT calculation. 
 
@@ -161,6 +238,9 @@ def read_dynMats(path,number_atoms,number_q,prefix=''):
     prefix : str, optional
         String to prepend to each generated filename. 
         Needed if band interpolation is used (e.g. band_)
+    hdf_file : str, optional
+        Name of a dynmat*.hdf file inside `path`. If given, the HDF5 file is
+        read instead of the text files.
 
     Returns
     -------
@@ -169,6 +249,8 @@ def read_dynMats(path,number_atoms,number_q,prefix=''):
         - `dyn[q]` corresponds to the dynamical matrix at q-point index `q`
         - Each matrix element is complex: real part + i * imaginary part
     """
+    if hdf_file is not None:
+        return read_phonon_hdf(f'{path}/{hdf_file}')['dynmat'][:number_q]
     dyn = np.zeros((number_q,3*number_atoms,3*number_atoms),dtype=complex)
     for q in range(1,number_q+1):
         file_name = get_filename(path,q,prefix)
@@ -193,7 +275,7 @@ def read_dynMats(path,number_atoms,number_q,prefix=''):
     return dyn
 
 
-def read_eigenvectors(path,number_q,number_atoms,prefix=''):
+def read_eigenvectors(path,number_q,number_atoms,prefix='',hdf_file=None):
     """
     Read phonon eigenvectors from DFPT output files.
 
@@ -215,6 +297,9 @@ def read_eigenvectors(path,number_q,number_atoms,prefix=''):
     prefix : str, optional
         String to prepend to each generated filename. 
         Needed if band interpolation is used (e.g. band_)
+    hdf_file : str, optional
+        Name of a dynmat*.hdf file inside `path`. If given, the HDF5 file is
+        read instead of the text files.
 
     Returns
     -------
@@ -224,6 +309,9 @@ def read_eigenvectors(path,number_q,number_atoms,prefix=''):
         Complex and realpart are splitted in the last index for the .json format
 
     """
+    if hdf_file is not None:
+        eigvec = read_phonon_hdf(f'{path}/{hdf_file}')['eigenvectors'][:number_q]
+        return recast_eigenvecs_dim(eigvec, number_q, number_atoms)
     eigvec = np.zeros((number_q,3*number_atoms,3*number_atoms),dtype=complex)
     for q in range(1,number_q+1):
         file_name = get_filename(path,q,prefix)
@@ -258,7 +346,7 @@ def read_eigenvectors(path,number_q,number_atoms,prefix=''):
 
 
 
-def read_eigenfrequencies(path,number_q,number_atoms,prefix=''):
+def read_eigenfrequencies(path,number_q,number_atoms,prefix='',hdf_file=None):
     """
    Read phonon eigenfrequencies from FLEUR DFPT dynMat files.
 
@@ -281,6 +369,9 @@ def read_eigenfrequencies(path,number_q,number_atoms,prefix=''):
    prefix : str, optional
         String to prepend to each generated filename. 
         Needed if band interpolation is used (e.g. band_)
+   hdf_file : str, optional
+        Name of a dynmat*.hdf file inside `path`. If given, the HDF5 file is
+        read instead of the text files.
 
    Returns
    -------
@@ -290,6 +381,10 @@ def read_eigenfrequencies(path,number_q,number_atoms,prefix=''):
        Complex eigenfrequency arry. 
        
    """
+    if hdf_file is not None:
+        data = read_phonon_hdf(f'{path}/{hdf_file}')
+        freqs = data['frequencies_cm'][:number_q]
+        return data['qpoints'][:number_q], np.real(freqs) + np.imag(freqs)
     q_sample=np.zeros((number_q,3)) #Store all q vectors along the path
     eigenfrequencies=np.zeros((number_q,3,number_atoms)) #store all eigenmodes in a q_N times 3*Atoms array
 

@@ -37,7 +37,6 @@
 MODULE m_wannierlib_plot
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_types_abc
    USE m_types_radfun
    USE m_types_wannierlib
@@ -47,6 +46,23 @@ MODULE m_wannierlib_plot
    USE m_wann_plot_vac
    USE m_wann_2dvacabcof
    USE m_xsf_io
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_plot_wf
@@ -287,7 +303,7 @@ CONTAINS
       REAL,    ALLOCATABLE, INTENT(INOUT) :: ff(:, :, :, :), gg(:, :, :, :), flo(:, :, :, :)
       COMPLEX, ALLOCATABLE, INTENT(INOUT) :: acof(:, :, :), bcof(:, :, :), ccof(:, :, :, :)
 
-      INTEGER :: lmd, nlod, llod, ntyp, na, nat_local, l, m, lm, ilo, ir, nseen
+      INTEGER :: lmd, nlod, llod, ntyp, na, nat_local, l, m, lm, ilo, ir
 
       lmd  = atoms%lmaxd*(atoms%lmaxd + 2)
       nlod = MAX(1, atoms%nlod)
@@ -311,12 +327,10 @@ CONTAINS
                IF (abc(ntyp)%n_r(l) >= 2) gg(ntyp, ir, 1:2, l) = radfun(ntyp)%r(ir, 1:2, 2, l, jspin_rad)
             END DO
          END DO
-         !> A global `ilo` is the nseen-th local orbital of its own l, so its slot is 2+nseen.
          DO ilo = 1, atoms%nlo(ntyp)
             l = atoms%llo(ilo, ntyp)
-            nseen = COUNT(atoms%llo(1:ilo, ntyp) == l)
             DO ir = 1, atoms%jri(ntyp)
-               flo(ntyp, ir, 1:2, ilo) = radfun(ntyp)%r(ir, 1:2, 2 + nseen, l, jspin_rad)
+               flo(ntyp, ir, 1:2, ilo) = radfun(ntyp)%r(ir, 1:2, atoms%slot_of_lo(ilo, ntyp), l, jspin_rad)
             END DO
          END DO
       END DO
@@ -335,10 +349,9 @@ CONTAINS
             END DO
             DO ilo = 1, atoms%nlo(ntyp)
                l = atoms%llo(ilo, ntyp)
-               nseen = COUNT(atoms%llo(1:ilo, ntyp) == l)
-               DO m = -l, l
+                  DO m = -l, l
                   lm = l*(l + 1) + m
-                  ccof(m, :, ilo, na) = abc(ntyp)%cof(1:nbands, lm, 2 + nseen, nat_local)
+                  ccof(m, :, ilo, na) = abc(ntyp)%cof(1:nbands, lm, atoms%slot_of_lo(ilo, ntyp), nat_local)
                END DO
             END DO
          END DO
@@ -358,7 +371,6 @@ CONTAINS
 #ifdef CPP_MPI
    !> Each rank summed its own share of the k-mesh; the whole sum lives on rank 0.
    SUBROUTINE collect_wf(wf, fmpi)
-      USE mpi
       COMPLEX,     INTENT(INOUT) :: wf(:, :)
       TYPE(t_mpi), INTENT(IN)    :: fmpi
       INTEGER :: ierr

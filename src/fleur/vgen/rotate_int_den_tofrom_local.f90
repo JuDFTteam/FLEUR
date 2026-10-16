@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,9 +8,21 @@ MODULE m_rotate_int_den_tofrom_local
    USE m_juDFT
    USE m_fft2d
    USE m_fft3d
-   USE m_types
+   USE m_constants
+   USE m_polangle
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: rotate_int_den_to_local, rotate_int_den_from_local
 
 CONTAINS
    
@@ -42,8 +54,6 @@ CONTAINS
       !        netic field (theta and phi) all stored on real space mesh
       !--------------------------------------------------------------------------
 
-      USE m_constants
-      USE m_polangle
     
       TYPE(t_noco),   INTENT(IN)    :: noco
        
@@ -106,7 +116,7 @@ CONTAINS
          rho_21r  = ris(imesh,3)
          rho_21i  = ris(imesh,4)
          mx       =  2*rho_21r
-         my       = -2*rho_21i ! TODO: This is a magic minus.
+         my       = -2*rho_21i 
          mz       = rho_11 - rho_22
          magmom   = SQRT(mx**2 + my**2 + mz**2)
          rhotot   = rho_11 + rho_22

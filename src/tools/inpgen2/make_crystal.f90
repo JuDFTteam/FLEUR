@@ -1,5 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_make_crystal
   USE m_juDFT
+  USE m_types_cell
+  USE m_types_sym
+  USE m_types_atoms
+  USE m_types_noco
+  USE m_constants
+  USE m_make_spacegroup
+  USE m_make_atom_groups
+  USE m_inv3
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: make_crystal
   !********************************************************************
   !      generate space group operations from lattice information
   !********************************************************************
@@ -7,14 +23,6 @@ CONTAINS
   SUBROUTINE make_crystal(film, atomid,atompos,mag_mom,atomlabel,dvac,noco,&
        cell,sym,atoms)
 
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_atoms
-    USE m_types_noco
-    USE m_constants
-    USE m_make_spacegroup
-    USE m_make_atom_groups
-    USE m_inv3
     !USE m_generator
     IMPLICIT NONE
     !===> Arguments

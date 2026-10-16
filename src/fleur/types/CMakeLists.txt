@@ -7,7 +7,6 @@ src/fleur/types/types_denCoeffsOffdiag.f90
 src/fleur/types/types_dos.f90
 src/fleur/types/types_eigvec.F90
 src/fleur/types/types_enpara.F90
-src/fleur/types/types.F90
 src/fleur/types/types_fft.F90
 src/fleur/types/types_force.f90
 src/fleur/types/types_forcetheo.F90
@@ -31,7 +30,6 @@ src/fleur/types/types_parallelLoop.F90
 src/fleur/types/types_potden.F90
 src/fleur/types/types_regionCharges.f90
 src/fleur/types/types_scalarGF.f90
-src/fleur/types/types_setup.F90
 src/fleur/types/types_sphhar.f90
 src/fleur/types/types_stars.f90
 src/fleur/types/types_tlmplm.F90

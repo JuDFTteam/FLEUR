@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,9 @@ use m_juDFT
    use hdf5
 #endif
    implicit none
+   private
+   public :: eig66_data_storedefault, eig66_find_data, eig66_remove_data, eig66_data_newid, eig66_data_mode, t_data, &
+      t_data_da, t_data_mpi, t_data_hdf, t_data_mem, t_list, da_mode, hdf_mode, mem_mode, mpi_mode
 
    TYPE :: t_data
       INTEGER:: io_mode

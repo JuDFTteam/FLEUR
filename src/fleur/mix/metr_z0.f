@@ -6,6 +6,9 @@
 
       MODULE m_metrz0
       use m_juDFT
+      implicit none
+      private
+      public :: metr_z0
 c     *****************************************************
 c     calculates weights for a 7-point simpson integration
 c     in analogy to intgz0

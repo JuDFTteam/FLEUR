@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,6 +13,10 @@ MODULE m_hdf_tools3
 !     io_[data/att/group]exists(id,name) to check for objects
 !
 !-----------------------------------------------
+   USE hdf5
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: io_dataexists, io_attexists, io_groupexists
 CONTAINS
    !<-- functions to test for objects
    !<-- F: io_dataexists(gid,name)RESULT(exists)
@@ -22,7 +26,6 @@ CONTAINS
 !     checks if dataset called 'name' exists at position gid
 !                          D. Wortmann
 !******************************************
-      USE hdf5
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  ::gid
@@ -54,7 +57,6 @@ CONTAINS
 !     checks if attribute called 'name' exists at position gid
 !                          D. Wortmann
 !******************************************
-      USE hdf5
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  ::gid
@@ -85,7 +87,6 @@ CONTAINS
 !     checks if group called 'name' exists at position gid
 !                          D. Wortmann
 !******************************************
-      USE hdf5
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  ::gid

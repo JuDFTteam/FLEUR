@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,15 +7,17 @@
 MODULE m_hsmt_spinor
    !!Module for the calculation of transformation matrices between 
    !!Spin-dependent matrices in the local frame and the global frame
+   USE m_constants
+   USE m_types_nococonv
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hsmt_spinor, hsmt_spinor_soc
 CONTAINS
 
 
   SUBROUTINE hsmt_spinor(iSpinNum, n, nococonv, chi_mat)
    !! Obtain the part of the transformation that maps the local spin
    !! iSpinNum to the global spin frame. 
-      USE m_types
-      USE m_constants
 
       TYPE(t_nococonv), INTENT(IN)  :: nococonv
       INTEGER,          INTENT(IN)  :: iSpinNum     !! local spin
@@ -51,8 +53,6 @@ CONTAINS
   SUBROUTINE hsmt_spinor_soc(n,nococonv,chi_so,isigma_xyz)
     !$acc routine seq
     !!Generalization of hsmt_spinor to SOC case. 
-    USE m_types
-    use m_constants
 
     TYPE(t_nococonv),INTENT(IN)  :: nococonv
     INTEGER,INTENT(IN)           :: n   !!index of atom

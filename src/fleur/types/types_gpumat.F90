@@ -1,10 +1,24 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_gpumat
   USE m_judft
   USE m_types_mat
 #ifdef CPP_GPU    
   USE cudafor
 #endif  
+#ifdef CPP_GPU
+  USE cublas
+#endif
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: t_gpumat
+#ifdef CPP_GPU
+  PUBLIC :: t_gpumat_alloc, init_from, t_gpumat_add_transpose, t_gpumat_multiply, t_gpumat_transpose, &
+     t_gpumat_from_packed, t_gpumat_to_packed, t_gpumat_inverse, t_gpumat_move, t_gpumat_copy, t_gpumat_clear
+#endif
 
   !<Some routines are overwritten for GPU handling
   !!
@@ -186,7 +200,6 @@ CONTAINS
   end function t_gpumat_to_packed
 
   SUBROUTINE t_gpumat_inverse(mat)
-    USE cublas
     implicit none
     CLASS(t_gpumat),INTENT(INOUT)       :: mat
     integer                :: info

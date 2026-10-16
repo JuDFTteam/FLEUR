@@ -1,11 +1,24 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_dimens
   USE m_juDFT
+  USE m_types_input
+  USE m_types_sym
+  USE m_types_stars
+  USE m_types_atoms
+  USE m_types_sphhar
+  USE m_types_vacuum
+  USE m_types_kpts
+  USE m_types_hybinp
+  USE m_types_cell
+  USE m_constants
+  USE m_dimen7
+  USE m_firstglance
+  IMPLICIT NONE
   private
   public :: dimens
 CONTAINS
@@ -14,19 +27,7 @@ CONTAINS
        &                  atoms,sphhar,vacuum,&
        &                  kpts ,hybinp)
 
-    USE m_types_input
-    USE m_types_sym
-    USE m_types_stars
-    USE m_types_atoms
-    USE m_types_sphhar
-    USE m_types_vacuum
-    USE m_types_kpts
      
-    USE m_types_hybinp
-    USE m_types_cell
-    USE m_constants
-    USE m_dimen7
-    USE m_firstglance
     IMPLICIT NONE
     TYPE(t_input),INTENT(INOUT) :: input
     TYPE(t_sym),INTENT(INOUT) :: sym

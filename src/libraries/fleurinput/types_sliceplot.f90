@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,8 @@
 MODULE m_types_sliceplot
   USE m_judft
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
   IMPLICIT NONE
   PRIVATE
   INTEGER,PUBLIC,PARAMETER :: PLOT_XSF_FORMAT=1
@@ -51,7 +53,6 @@ MODULE m_types_sliceplot
 
 CONTAINS
   SUBROUTINE mpi_bc_sliceplot(this,mpi_comm,irank)
-    USE m_mpi_bc_tool
     CLASS(t_sliceplot),INTENT(INOUT)::this
     INTEGER,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -82,7 +83,6 @@ CONTAINS
   END SUBROUTINE mpi_bc_sliceplot
 
   SUBROUTINE mpi_bc_plot(this,mpi_comm,irank)
-    USE m_mpi_bc_tool
     CLASS(t_plot),INTENT(INOUT)::this
     INTEGER,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -119,7 +119,6 @@ CONTAINS
   END SUBROUTINE mpi_bc_plot
 
   SUBROUTINE read_xml_sliceplot(this,xml)
-    USE m_types_xml
     CLASS(t_sliceplot),INTENT(inOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 
@@ -176,7 +175,6 @@ CONTAINS
   END SUBROUTINE read_xml_sliceplot
 
   SUBROUTINE read_xml_plot(this,xml)
-    USE m_types_xml
     CLASS(t_plot),INTENT(inOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 

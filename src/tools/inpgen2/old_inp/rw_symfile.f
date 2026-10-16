@@ -1,5 +1,9 @@
       MODULE m_rwsymfile
       use m_juDFT
+      use m_constants
+      implicit none
+      private
+      public :: rw_symfile, det
 !----------------------------------------------------------------------!
 !     writes spacegroup operations                                     ! 
 !     and                                                              |  
@@ -10,7 +14,6 @@
      >                      rw,symfh,symfn,nopd,bmat,
      X                      mrot,tau,nop,nop2,symor)
 
-      USE m_constants
 
       IMPLICIT NONE
 

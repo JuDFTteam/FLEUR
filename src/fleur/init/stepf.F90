@@ -1,6 +1,25 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_stepf
    USE m_juDFT
    USE m_cdn_io
+   USE m_cfft
+   USE m_constants
+   USE m_mpi_bc_tool
+   USE m_mpi_reduce_tool
+   USE m_types_mpi
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: stepf
 CONTAINS
    SUBROUTINE stepf(sym, stars, atoms, input, cell, vacuum, fmpi)
       !
@@ -14,12 +33,7 @@ CONTAINS
       !
       !*********************************************************************
 
-      USE m_cfft
-      USE m_constants
        
-      USE m_types
-      USE m_mpi_bc_tool
-      USE m_mpi_reduce_tool
       IMPLICIT NONE
       !     ..
       TYPE(t_sym), INTENT(IN)        :: sym

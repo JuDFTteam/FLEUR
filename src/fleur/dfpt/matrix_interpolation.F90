@@ -6,11 +6,17 @@
 
 module m_matrix_interpolation 
     use m_juDFT
-    use m_types
     use m_constants
     use m_npy
+    use m_dfpt_dynmat_fourier, only: ft_dyn_direct, build_ws_ft, ft_fcm_weight_packed
+    use m_types_cell
+    use m_types_fleurinput
+    use m_types_kpts
 
     implicit none
+    private
+    public :: wannier_matrix_interpolate, wannier_matrixq_interpolate, wannier_matrixq_forward, &
+       wannier_matrixq_backward, t_wann_ft
 
     ! Carrier for the q/fine-k-independent part of the double-mesh Wannier
     ! interpolation (real-space tensor + Wigner-Seitz data).
@@ -32,7 +38,6 @@ module m_matrix_interpolation
 contains
     subroutine wannier_matrix_interpolate(fi,matElement,U_mat,kpts_coarse,kpts_fine,matInterpol,qpts_coarse,qpts_fine)
 
-        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, build_ws_ft, ft_fcm_weight_packed
 
         type(t_fleurinput), intent(in) :: fi
         complex, intent(in) :: matElement(:,:,:)                 ! nu',nu, kpoints
@@ -153,7 +158,6 @@ contains
 
         ! Build the real-space Wannier-gauge matWannier and the Wigner-Seitz weights.
         
-        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, build_ws_ft
 
         type(t_fleurinput), intent(in)  :: fi
         complex,            intent(in)  :: matElement(:,:,:,:)    ! nu',nu, kpoints, qpts (nu' at k+q, nu at k)
@@ -270,7 +274,6 @@ contains
 
         ! Backward Fourier transform of the precomputed real-space to fine k space
     
-        use m_dfpt_dynmat_fourier , only : ft_fcm_weight_packed
 
         type(t_wann_ft), intent(in)    :: ft
         real,            intent(in)    :: kpts_fine(:,:)          ! fine k-mesh to interpolate onto

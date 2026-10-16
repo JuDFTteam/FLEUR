@@ -1,14 +1,18 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_corespec
 
-  USE m_types_setup, ONLY: t_coreSpecInput
+  USE m_types_corespecinput
 
   implicit none
+  PRIVATE
+  PUBLIC :: csvtype, cone, cimu, alpha, mec2, ecoredeep, edgel, edgej, sign, ssep, fsos1, fsos2, fsb, fse, csmsgerr, &
+     csmsgwar, csmsgs, csmsgsss, csmsgsis, csmsgsisis, csmsgsfs, csmsgses, l_cs, l1, l2, la1, la2, li, m1, m2, mu1, &
+     mu2, mi, lx, ln, lax, lan, lix, lin, smeno, csi, csv
 
 ! PARAMETERS
 

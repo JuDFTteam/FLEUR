@@ -1,4 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_gkptwgt
+   USE m_constants
+   USE m_types_kpts
+   USE m_types_cell
+   USE m_juDFT
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: gkptwgt
 CONTAINS
    SUBROUTINE gkptwgt(&
         &                   kpts, cell, latnam)
@@ -11,10 +23,6 @@ CONTAINS
       !
       !     changed by                        Stefan Bl"ugel, IFF, Jan.96
       !
-      USE m_constants
-      USE m_types_kpts
-      USE m_types_cell
-      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(INOUT):: kpts

@@ -21,6 +21,7 @@ src/fleur/io/greensf_io.F90
 src/fleur/io/writeBasis.F90
 src/fleur/io/writeOutHeader.F90
 src/fleur/io/wrtdop.f90
+src/fleur/io/libxc_xctyp.F90
 src/fleur/io/w_inpXML.f90
 src/fleur/io/writeOutParameters.f90
 src/fleur/io/xsf_io.f90
@@ -29,6 +30,8 @@ src/fleur/io/hubbard1_io.f90
 src/fleur/io/generic_txtio.f90
 src/fleur/io/cfOutput_hdf.F90
 src/fleur/io/writeCFOutput.F90
+src/fleur/io/dfpt_cdn_io.F90
+src/fleur/io/dfpt_dynmat_io.F90
 )
 if (FLEUR_USE_HDF5)
 set(fleur_F90 ${fleur_F90}

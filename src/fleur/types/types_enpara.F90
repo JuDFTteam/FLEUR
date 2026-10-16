@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,21 @@
 MODULE m_types_enpara
   USE m_judft
   use m_types_enparaxml
+  use m_types_atoms
+  use m_constants
+  use m_types_vacuum
+  use m_types_input
+  use m_xmlOutput
+  use m_types_potden
+  use m_types_hub1data
+  use m_find_enpara
+  use m_types_parallelLoop
+  use m_types_mpi
+  use m_mpi_reduce_tool
+  use m_mpi_bc_tool
+#ifdef CPP_MPI
+  use mpi
+#endif
   IMPLICIT NONE
   PRIVATE
   TYPE,extends(t_enparaxml):: t_enpara
@@ -23,6 +38,7 @@ MODULE m_types_enpara
      LOGICAL, ALLOCATABLE :: llochg(:,:,:)
      REAL                 :: epara_min
      real,allocatable     :: vr(:,:,:) !store the potential used to generate the basis functions 
+     real,allocatable     :: vr_core(:,:,:) !spin-resolved spherical potential used for the core states
      LOGICAL              :: ready ! are the enpara's ok for calculation?
      LOGICAL              :: floating !floating energy parameters are relative to potential
    CONTAINS
@@ -40,10 +56,7 @@ MODULE m_types_enpara
 
 CONTAINS
   SUBROUTINE init_enpara(this,atoms,jspins,film,enparaXML)
-   USE m_types_atoms
-   USE m_types_enparaxml
     
-    USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(IN)           :: jspins
@@ -55,6 +68,7 @@ CONTAINS
     ALLOCATE(this%el0(0:atoms%lmaxd,atoms%ntype,jspins),this%el1(0:atoms%lmaxd,atoms%ntype,jspins))
     ALLOCATE(this%ello0(atoms%nlod,atoms%ntype,jspins),this%ello1(atoms%nlod,atoms%ntype,jspins))
     ALLOCATE(this%vr(atoms%jmtd,atoms%ntype,jspins))
+    ALLOCATE(this%vr_core(atoms%jmtd,atoms%ntype,jspins))
     this%el0=-1E99
     this%ello0=-1E99
     this%evac0=-1E99
@@ -95,21 +109,6 @@ CONTAINS
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
   SUBROUTINE update(enpara,fmpi,atoms,vacuum,input,v,hub1data)
-    USE m_types_atoms
-    USE m_types_vacuum
-    USE m_types_input
-    USE m_constants
-    USE m_xmlOutput
-    USE m_types_potden
-    USE m_types_hub1data
-    USE m_find_enpara
-    USE m_types_parallelLoop
-    USE m_types_mpi
-    USE m_mpi_reduce_tool
-    USE m_mpi_bc_tool
-#ifdef CPP_MPI
-    USE mpi
-#endif
 
     CLASS(t_enpara),INTENT(inout):: enpara
     TYPE(t_mpi),INTENT(IN)       :: fmpi
@@ -153,10 +152,7 @@ CONTAINS
        elo_lo_local = 0.0
        elo_up_local = 0.0
 
-      DO n=1,atoms%ntype
-         enpara%vr(:,n,jsp)=v%mt(:,0,n,jsp)
-         if (atoms%l_nonpolbas(n)) enpara%vr(:,n,jsp)=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
-      endDO
+       ! enpara%vr is set by assign_enpara_potential before this routine is called
 
        CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%ntype)
        !$OMP PARALLEL DO DEFAULT(none) &
@@ -352,8 +348,6 @@ CONTAINS
   END SUBROUTINE update
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
-    USE m_types_atoms
-    USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT):: enpara
     INTEGER, INTENT (IN)        :: jspins
@@ -469,8 +463,6 @@ CONTAINS
 
     ! write enpara-file
     !
-    USE m_types_atoms
-    USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(IN) :: enpara
     INTEGER, INTENT (IN) :: jspins
@@ -530,14 +522,6 @@ CONTAINS
 
   SUBROUTINE mix(enpara,fmpi_comm,atoms,vacuum,input,pot)
     !------------------------------------------------------------------
-    USE m_types_atoms
-    USE m_types_input
-    USE m_types_vacuum
-    USE m_types_potden
-    USE m_constants
-#ifdef CPP_MPI
-    USE mpi
-#endif
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
     INTEGER,INTENT(IN)             :: fmpi_comm
@@ -661,8 +645,6 @@ CONTAINS
 
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
-    USE m_constants
-    USE m_xmlOutput
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,jsp,nqn

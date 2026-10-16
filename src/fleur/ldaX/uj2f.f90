@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_uj2f
    USE m_juDFT
    !  *********************************************************************
@@ -7,9 +12,11 @@ MODULE m_uj2f
    !  * Extension to multiple U per atom type by G.M. 2017                *
    !  * Extension for uses beyond LDA+U by H.J 2019                       *
    !  *********************************************************************
-   USE m_types
+   USE m_types_atoms
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: uj2f_single_onelist, uj2f_multiple_onelist, uj2f_single, uj2f_simple, uj2f_spins, uj2f
 
    INTERFACE uj2f
       procedure :: uj2f_simple, uj2f_spins, uj2f_single

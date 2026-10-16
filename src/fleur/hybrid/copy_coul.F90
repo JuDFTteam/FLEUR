@@ -1,11 +1,22 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_copy_coul
-   use m_types
    use m_constants
    use m_glob_tofrom_loc
    USE m_types_mpimat
 #ifdef CPP_MPI 
    use mpi 
 #endif
+   use m_judft
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   implicit none
    private 
    public :: copy_from_dense_to_sparse
 contains

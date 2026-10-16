@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,11 @@ MODULE m_types_hybmpi
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_types_mpi
+   use m_judft
+   implicit none
+   private
+   public :: t_hybmpi_root, t_hybmpi_copy_mpi, t_hybmpi_barrier, t_hybmpi_init, t_hybmpi
    TYPE t_hybmpi
       INTEGER :: comm
       INTEGER :: rank
@@ -27,7 +32,6 @@ contains
    end function t_hybmpi_root
 
    subroutine t_hybmpi_copy_mpi(glob_mpi, mpi_var)
-      use m_types_mpi
       implicit none
       class(t_hybmpi), intent(inout) :: glob_mpi
       type(t_mpi), intent(in)        :: mpi_var
@@ -38,7 +42,6 @@ contains
    end subroutine
 
    subroutine t_hybmpi_barrier(glob_mpi)
-      use m_judft
       implicit none
       class(t_hybmpi), intent(inout) :: glob_mpi
       integer :: ierr

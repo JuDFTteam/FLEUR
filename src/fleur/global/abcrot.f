@@ -6,6 +6,11 @@
 
       MODULE m_abcrot
 
+      USE m_dwigner
+      USE m_savewigner
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: abcrot
       CONTAINS
 
       SUBROUTINE abcrot(
@@ -20,9 +25,6 @@ C     * unrotated MT functions. Needed for GW calculations.         *
 C     *                                                             *
 C     * Christoph Friedrich Mar/2005                                *
 C     ***************************************************************
-      USE m_dwigner
-      use m_savewigner
-      USE m_types
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

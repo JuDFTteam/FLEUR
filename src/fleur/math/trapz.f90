@@ -1,9 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_trapz
    !General Purpose trapezian method integration
    !Used in green's function calculations because the
    !integrands are very spiky
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: trapzr, trapzc, trapz
 
    INTERFACE trapz
       PROCEDURE :: trapzr, trapzc

@@ -1,9 +1,23 @@
 !--------------------------------------------------------------------------------
-! Copyright (C) 2020 Peter GrüNberg Institut, Forschungszentrum JüLich, Germany
-! This File Is Part Of Fleur And Available As Free Software Under The Conditions
-! Of The Mit License As Expressed In The License File In More Detail.
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_vac_tofrom_grid
+      USE m_juDFT
+      USE m_constants
+      USE m_grdrsvac
+      USE m_grdchlh
+      USE m_mkgz
+      USE m_mkgxyz3
+      USE m_fft2d
+      USE m_types_stars
+      USE m_types_vacuum
+      USE m_types_cell
+      USE m_types_xcpot
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: vac_to_grid, vac_from_grid, fixed_ndvgrd
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
@@ -19,16 +33,8 @@ CONTAINS
     !     ** r.pentcheva 08.05.96
     !-----------------------------------------------------------------------
 
-    USE m_juDFT
-    USE m_types
-    use m_constants
-    USE m_grdrsvac
-    USE m_grdchlh
-    USE m_mkgz
-    USE m_mkgxyz3
     !
     !
-    USE m_fft2d
 
     IMPLICIT NONE
     logical,intent(in)           :: dograds
@@ -453,9 +459,6 @@ CONTAINS
   END SUBROUTINE vac_to_grid
 
   subroutine vac_from_grid(stars,vacuum,v_xc,ifft2d,vac)
-    use m_types_stars
-    use m_types_vacuum
-    use m_fft2d
     type(t_stars),intent(in)  :: stars
     type(t_vacuum),intent(in) :: vacuum
 

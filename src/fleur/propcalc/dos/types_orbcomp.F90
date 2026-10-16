@@ -6,6 +6,14 @@
 MODULE m_types_orbcomp
    use m_judft
    use m_types_eigdos
+   use m_types_atoms
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_banddos
+   use m_types_abc
+   use m_types_radfun
+   use m_types_kpts
+   use m_types_input
    implicit none
    PRIVATE
    integer, allocatable:: combine(:, :)
@@ -28,10 +36,6 @@ MODULE m_types_orbcomp
 CONTAINS
 
  subroutine postprocessing(this, noco,nococonv, banddos,alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
       class(t_orbcomp), intent(inout):: this
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -100,10 +104,6 @@ CONTAINS
     !!     Calculates an orbital composition of eigen states
     !! Based on code from    Yury  Koroteev  2003-12-24
 
-      USE m_types_atoms
-      USE m_types_banddos
-      USE m_types_abc
-      USE m_types_radfun
 
       IMPLICIT NONE
       CLASS(t_orbcomp), INTENT(INOUT)  :: orbcomp
@@ -225,8 +225,6 @@ CONTAINS
 
    SUBROUTINE orbcomp_init(thisOrbcomp, input, banddos, atoms, kpts, eig)
 
-      USE m_types_setup
-      USE m_types_kpts
 
       IMPLICIT NONE
 

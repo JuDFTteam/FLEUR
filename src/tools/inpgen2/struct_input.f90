@@ -1,5 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_structinput
       use m_juDFT
+      use m_constants
+      use m_calculator
+      use m_readrecord
+      use m_rwsymfile
+      use m_lattice, only: lattice2
+      implicit none
+      private
+      public :: struct_input, recip
 !********************************************************************
 !     read in lattice information and generate space group operations
 !********************************************************************
@@ -14,11 +27,6 @@
      <                       atomLabel,
      <                        l_hyb,l_soc,l_ss,theta,phi,qss,inistop)
 
-      USE m_constants
-      use m_calculator
-      USE m_readrecord
-      USE m_rwsymfile
-      USE m_lattice, ONLY : lattice2
       IMPLICIT NONE
 
 !===> Arguments
@@ -467,7 +475,6 @@
 !-------------------------------------
       SUBROUTINE recip(a1,a2,a3,b)
 
-      USE m_constants, ONLY : pimach
       IMPLICIT NONE
       REAL, INTENT (IN) :: a1(3),a2(3),a3(3)
       REAL, INTENT (OUT):: b(3,3)

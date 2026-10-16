@@ -7,15 +7,29 @@ MODULE m_secvar_soc
 #ifdef CPP_MPI
     use mpi
 #endif
+    use m_types_secvar
+    use m_types_matelements_soc
+    use m_matrix_element_factory
+    use m_types_atoms
+    use m_types_cell
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_input
+    use m_types_lapw
+    use m_types_mpi
+    use m_types_noco
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_rsoc
+    use m_types_sym
     IMPLICIT NONE
+    private
+    public :: secvar_soc_kpts, secvar_soc
 CONTAINS
 
     SUBROUTINE secvar_soc_kpts(atoms, noco, nococonv, input, sym, cell, enpara, lapw, vtot, rsoc, fmpi, ikpt, eig_id, ne_out, eigval_out, &
                                l_both_spinors)
-        USE m_types_secvar
-        USE m_types_matelements_soc
-        USE m_matrix_element_factory
-        USE m_types
 
         TYPE(t_atoms),   INTENT(IN) :: atoms
         TYPE(t_noco),    INTENT(IN) :: noco
@@ -71,8 +85,6 @@ CONTAINS
 
 
     SUBROUTINE secvar_soc(eig_id, fmpi, nococonv, vTot, enpara, fi, results)
-        use m_types
-        use m_matrix_element_factory
 
         INTEGER,            INTENT(IN)    :: eig_id
         TYPE(t_mpi),        INTENT(INOUT) :: fmpi

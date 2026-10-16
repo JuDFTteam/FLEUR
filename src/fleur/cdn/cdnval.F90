@@ -9,13 +9,83 @@ MODULE m_cdnval
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_eig66_io
+   use m_mcdinit
+   use m_sympsi
+   use m_nmat
+   use m_vacden
+   use m_pwden
+   use m_forcea8
+   use m_force_sf
+   use m_checkdopall
+   use m_greensfBZint
+   use m_greensfCalcImagPart
+   use m_local_hamiltonian
+   use m_greensfCalcScalarProducts
+   use m_abcof
+   use m_qmtsl
+   use m_qintsl
+   use m_corespec, only: l_cs
+   use m_corespec_io, only: corespec_init
+   use m_corespec_eval, only: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs
+   use m_xmlOutput
+   use m_types_dos
+   use m_types_mcd
+   use m_types_slab
+   use m_types_jDOS
+   use m_types_dmdos
+   use m_types_vacDOS
+   use m_types_orbcomp
+   use m_types_denmatrix
+   use m_types_radfun
+   use m_types_moessbauerParams
+   use m_l_like
+   use m_types_abc
+   use m_types_orbmom, only: t_orbmom
+   use m_addContribsA21A12
+   use m_nIJmat
+   use m_pwden_kinEnergyDen
+   use m_types_sym
+   use m_types_cell
+#ifdef CPP_MPI
+   use m_mpi_col_den
+#endif
+   use m_types_atoms
+   use m_types_banddos
+   use m_types_cdnval
+   use m_types_corespecinput
+   use m_types_enpara
+   use m_types_force
+   use m_types_gfinp
+   use m_types_greensfcoeffs
+   use m_types_hub1data
+   use m_types_hub1inp
+   use m_types_input
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_scalargf
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_tlmplm
+   use m_types_usdus
+   use m_types_vacuum
    implicit none
+   private
+   public :: cdnval, priv_sym_clmom
 
 CONTAINS
 
    SUBROUTINE cdnval(eig_id, fmpi, kpts, jspin, noco, nococonv, input, banddos, cell, atoms, enpara, stars, &
                      vacuum, sphhar, sym, vTot, cdnvalJob, den, dos, vacdos, results, &
-                     moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart)
+                     moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart, &
+                     dmdos, l_kinEnergyDen, kinEnergyDen)
 
       !************************************************************************************
       !     This is the FLEUR valence density generator
@@ -27,49 +97,9 @@ CONTAINS
       !     sqal     : l-like charge of each atom type. sum over all k-points and bands
       !************************************************************************************
 
-      USE m_types
-      USE m_constants
-      USE m_eig66_io
-      USE m_genMTBasis
-      USE m_mcdinit
-      USE m_sympsi
-      USE m_nmat        ! calculate density matrix for LDA + U
-      USE m_vacden
-      USE m_pwden
-      USE m_forcea8
-      USE m_force_sf ! Klueppelberg (force level 3)
-      USE m_checkdopall
-      USE m_greensfBZint
-      USE m_greensfCalcImagPart
-      USE m_local_hamiltonian
-      USE m_greensfCalcScalarProducts
-      USE m_abcof
       !USE m_cdnmt       ! calculate the density and orbital moments etc.
       !USE m_orbmom      ! coeffd for orbital moments
-      USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
-      USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
       
-      USE m_corespec, only: l_cs    ! calculation of core spectra (EELS)
-      USE m_corespec_io, only: corespec_init
-      USE m_corespec_eval, only: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs
-      USE m_xmlOutput
-      USE m_types_dos
-      USE m_types_mcd
-      USE m_types_slab
-      USE m_types_jDOS
-      USE m_types_vacDOS
-      USE m_types_orbcomp
-      USE m_types_denmatrix
-      USE m_types_radfun
-      USE m_types_moessbauerParams
-      use m_l_like
-      use m_types_abc
-      use m_types_orbmom, only: t_orbmom
-      use m_addContribsA21A12
-#ifdef CPP_MPI
-      USE m_mpi_col_den ! collect density data from parallel nodes
-#endif
-      USE m_nIJmat
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
@@ -103,6 +133,9 @@ CONTAINS
       TYPE(t_orbcomp), INTENT(INOUT) :: orbcomp
       TYPE(t_jDOS), INTENT(INOUT) :: jDOS
       TYPE(t_greensfImagPart), OPTIONAL, INTENT(INOUT) :: greensfImagPart
+      TYPE(t_dmdos), OPTIONAL, INTENT(INOUT) :: dmdos
+      LOGICAL, OPTIONAL, INTENT(IN)       :: l_kinEnergyDen
+      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: kinEnergyDen
 
       ! Scalar Arguments
       INTEGER, INTENT(IN)    :: eig_id, jspin
@@ -111,8 +144,8 @@ CONTAINS
       INTEGER :: ikpt, ikpt_i, jsp_start, jsp_end, ispin, jsp, max_length_k_list, nk
       INTEGER :: iErr, nbands, noccbd, iType, ispinpr, ispin123
       INTEGER :: skip_t, skip_tt, nbasfcn,abc_itype
-      LOGICAL :: l_real, l_corespec, l_empty
-      LOGICAL :: l_moessbauerHFF
+      LOGICAL :: l_real, l_corespec, l_empty, l_doKED
+      LOGICAL :: l_moessbauerHFF, l_dmdos
 
       ! Local Arrays
       REAL, ALLOCATABLE  :: we(:), eig(:)
@@ -139,13 +172,17 @@ CONTAINS
 
       call timestart("init")
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
+      l_doKED = .FALSE.
+      IF (PRESENT(l_kinEnergyDen)) l_doKED = l_kinEnergyDen
 
       ! Klueppelberg (force level 3)
       IF (input%l_f .AND. (input%f_level .GE. 3)) THEN
          CALL init_sf(sym, cell, atoms)
       END IF
 
-      IF (noco%l_mperp .OR. banddos%l_jDOS) THEN
+      l_dmdos = .FALSE.
+      IF (PRESENT(dmdos)) l_dmdos = dmdos%l_initialized
+      IF (noco%l_mperp .OR. banddos%l_jDOS .OR. (l_dmdos .AND. noco%l_noco)) THEN
          ! when the off-diag. part of the density matrix, i.e. m_x and
          ! m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
          ! is called only once. therefore, several spin loops have been
@@ -205,25 +242,14 @@ CONTAINS
          CALL openXMLElementPoly('mtCharges', (/'spin'/), (/jspin/))
       END IF
 8000  FORMAT(/, /, 10x, 'valence density: spin=', i2)
-      BLOCK !TODO This block should be put into subroutine?
-         REAL, ALLOCATABLE  :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :) ! radial functions
-         ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-         ALLOCATE (g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-         ALLOCATE (flo(atoms%jmtd, 2, atoms%nlod, input%jspins))
-         DO iType = 1, atoms%ntype
-
-            DO ispin = 1, input%jspins
-               CALL genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f(:, :, 0:, ispin), g(:, :, 0:, ispin), &
-                               flo(:, :, :, ispin), hub1data=hub1data)
-
-            END DO
+      DO iType = 1, atoms%ntype
+         CALL radfun(iType)%generate_radial_functions(atoms, input, enpara, fmpi, vTot, iType, usdus_out=usdus)
+         ASSOCIATE (f => radfun(iType)%r(:, :, 1, :, :), g => radfun(iType)%r(:, :, 2, :, :))
             IF (banddos%l_mcd) CALL mcd_init(atoms, banddos, input, vTot%mt(:, 0, :, :), g, f, mcd, iType, jspin)
             IF (l_coreSpec) CALL corespec_rme(atoms, input, iType, 29, input%jspins, jspin, results%ef, &
                                               atoms%msh, vTot%mt(:, 0, :, :), f, g)
-
-         END DO
-         DEALLOCATE (f, g, flo)
-      end block
+         END ASSOCIATE
+      END DO
 
       skip_tt = dot_product(enpara%skiplo(:atoms%ntype, jspin), atoms%neq(:atoms%ntype))
       IF (noco%l_soc .OR. noco%l_noco) skip_tt = 2*skip_tt
@@ -282,11 +308,10 @@ CONTAINS
          !orb probably should be private
          DO itype = 1, atoms%ntype
             abc_itype=min(itype,size(abc,2)) !abc might be only needed for a single itype
-            call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
                call abc(ispin, abc_itype)%init(input, atoms, noccbd, itype)
-               call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
+               call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat)
                DO ispinpr = jsp_start, ispin
                   ispin123 = merge(ispin, 3, ispin == ispinpr) !sometimes the "3rd" spin is the off-diagonal part
                   !Calculate the density matrix for LDA+U and related methods
@@ -298,6 +323,8 @@ CONTAINS
                   ! Determine weights for DOS and Bandstructures
                   call dos%calc_mt_dos(abc(ispin, abc_itype), abc(ispinpr, abc_itype), banddos, radfun(itype), &
                                        atoms, ev_list, itype, ikpt, ispin, ispinpr)
+                  IF (l_dmdos) call dmdos%calc_dm(abc(ispin, abc_itype), abc(ispinpr, abc_itype), radfun(itype), &
+                                                  atoms, sym, ev_list, itype, ikpt, ispin, ispinpr)
                   if (ispin == ispinpr) THEN
                      !No off-diagonal contributions yet
                      call mcd%calc_mt_mcd(banddos, atoms, ev_list, abc(ispin, abc_itype), itype, ikpt, ispin)
@@ -325,12 +352,12 @@ CONTAINS
                IF (input%l_f) THEN
                   !Calculate force contributions
                   call abc(ispin, abc_itype)%calc_force_abc(input, atoms, sym, cell, lapw, &
-                                                        noccbd, usdus, noco, nococonv, ispin, itype, zmat, eig, force)
+                                                        noccbd, radfun(itype), noco, nococonv, ispin, itype, zmat, eig, force)
 
                   call local_ham(sphhar, atoms, sym, noco, nococonv, enpara, fmpi, vtot, &
-                                 vtot, den, input, hub1inp, hub1data, tlmplm, usdus, 0.0)
+                                 vtot, den, input, hub1inp, hub1data, tlmplm, alpha_hybrid=0.0, l_forces=.TRUE.)
                   CALL addContribsA21A12(force, input, atoms, sym, cell, enpara, &
-                        usdus, tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, we, results, jsp_start, jspin, nbasfcn, zMat, lapw, &
+                        radfun(itype), tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, we, results, jsp_start, jspin, nbasfcn, zMat, lapw, &
                                          sphhar, lapw%gvec(1, :, :), lapw%gvec(2, :, :), lapw%gvec(3, :, :), bkpt, itype)
                END IF
 
@@ -339,7 +366,7 @@ CONTAINS
          !!$OMP END PARALLEL DO
          call timestop("Atoms loop")
          call timestart("valence density in the interstitial and vacuum region")
-         IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,1),input,atoms,noccbd,usdus,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
+         IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,1),input,atoms,noccbd,radfun,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
 
          ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
          IF (.NOT. ((jspin .EQ. 2) .AND. noco%l_noco)) THEN
@@ -356,6 +383,13 @@ CONTAINS
             
          END IF
          call timestop("valence density in the interstitial and vacuum region")
+         ! Interstitial kinetic energy density
+         IF (l_doKED) THEN
+            IF (.NOT. ((jspin .EQ. 2) .AND. noco%l_noco)) THEN
+               CALL pwden_kinEnergyDen(stars, kpts, input, cell, atoms, sym, &
+                                        ikpt, jspin, lapw, noccbd, we, kinEnergyDen, zMat)
+            END IF
+         END IF
          IF (input%l_sympsi .and. allocated(dos%jsym)) THEN
             CALL sympsi(lapw, jspin, sym, noccbd, cell, eig, noco, dos%jsym(:, ikpt, jspin), zMat)
          END IF
@@ -385,13 +419,18 @@ CONTAINS
       END DO
       DO ispin = jsp_start, jsp_end
          CALL mpi_col_den(fmpi, sphhar, atoms, stars, vacuum, input, noco, ispin, dos, vacdos, &
-                          results, den, mcd, slab, orbcomp, jDOS)
+                          results, den, mcd, slab, orbcomp, jDOS, dmdos)
          DO ispinpr = jsp_start, ispin
             DO itype = 1, atoms%ntype
                call denmatrix(ispin, ispinpr, itype)%mpi_collect(fmpi)
             end do
          END DO
       END DO
+      IF (l_doKED) THEN
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, kinEnergyDen%pw(:, jspin), &
+                            size(kinEnergyDen%pw, 1), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, iErr)
+      END IF
+
       ! Reduce orbital moments: each rank accumulated clmom from its own k-points.
       ! Only reduce the spin components updated in this cdnval call (jsp_start:jsp_end),
       ! because cdnval is called once per jspin for non-mperp. Reducing the full array
@@ -454,6 +493,15 @@ CONTAINS
          END DO
          !$OMP END PARALLEL DO
          CALL timestop("denmatrix_to_full")
+         IF (l_doKED) THEN
+            CALL timestart("denmatrix_to_kinEnergyDen")
+            DO itype = 1, atoms%ntype
+               call denmatrix(jspin, jspin, itype)%to_kinetic_energy_density( &
+                    jspin, jspin, itype, input, sphhar, atoms, noco, sym, radfun(itype), &
+                    kinEnergyDen%mt)
+            END DO
+            CALL timestop("denmatrix_to_kinEnergyDen")
+         END IF
          call timestart("write mtCharges")
          IF (l_coreSpec) CALL corespec_ddscs(jspin, input%jspins)
          DO ispin = jsp_start, jsp_end
@@ -482,9 +530,6 @@ CONTAINS
       ! contributions. Averaging det(R)*R_cart*L over all operations projects
       ! L onto the physically correct invariant subspace regardless of crystal
       ! structure or magnetization direction.
-      USE m_types_sym
-      USE m_types_cell
-      USE m_constants, ONLY: tpi_const
       IMPLICIT NONE
       TYPE(t_sym),  INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell

@@ -8,6 +8,18 @@ MODULE m_types_lapw
    USE m_judft
    use m_types_fleurinput
    use m_types_nococonv
+   use m_boxdim
+   use m_types_mpi
+   use m_sort
+   use m_types_kpts
+   use m_constants
+   use m_orthoglo
+   use m_ylm
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_noco
+   use m_types_sym
    IMPLICIT NONE
    PRIVATE
    !These dimensions should be set once per call of FLEUR
@@ -52,16 +64,17 @@ MODULE m_types_lapw
    PUBLIC :: t_lapw, lapw_dim_nbasfcn, lapw_dim_nvd, lapw_dim_nv2d
 
 CONTAINS
-   function hyb_num_bas_fun(lapw, fi) result(nbasfcn)
+   function hyb_num_bas_fun(lapw, fi, jsp) result(nbasfcn)
       implicit NONE
       class(t_lapw), intent(in)         :: lapw
       type(t_fleurinput), intent(in)    :: fi
+      integer, intent(in)               :: jsp
 
       integer :: nbasfcn
       if (fi%noco%l_noco) then
          nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot
       else
-         nbasfcn = lapw%nv(1) + fi%atoms%nlotot
+         nbasfcn = lapw%nv(jsp) + fi%atoms%nlotot
       endif
    end function hyb_num_bas_fun
 
@@ -89,9 +102,6 @@ CONTAINS
       !     determines dimensions of the lapw basis set with |k+G|<rkmax.
       !     bkpt is the k-point given in internal units
       !*********************************************************************
-      USE m_boxdim
-      USE m_types_fleurinput
-      USE m_types_nococonv
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_input), INTENT(IN)     :: input
@@ -169,8 +179,6 @@ CONTAINS
    END SUBROUTINE lapw_alloc
 
    subroutine t_lapw_init_fi(lapw, fi, nococonv, nk, mpi, dfpt_q) 
-      USE m_types_mpi
-      use m_types_fleurinput
       implicit none 
       CLASS(t_lapw), INTENT(INOUT)    :: lapw
       type(t_fleurinput), intent(in)  :: fi
@@ -196,12 +204,6 @@ CONTAINS
 
    SUBROUTINE t_lapw_init(lapw, input, noco, nococonv, kpts, atoms, sym, &
                         nk, cell,  mpi, dfpt_q)
-      USE m_types_mpi
-      USE m_sort
-      USE m_boxdim
-      USE m_types_fleurinput
-      USE m_types_kpts
-      USE m_types_nococonv
       IMPLICIT NONE
 
 
@@ -354,7 +356,6 @@ CONTAINS
    CONTAINS
 
       SUBROUTINE priv_lo_basis_setup(lapw, atoms, input, sym, noco, nococonv, cell)
-         USE m_types_fleurinput
 
          IMPLICIT NONE
          TYPE(t_lapw), INTENT(INOUT):: lapw
@@ -408,8 +409,6 @@ CONTAINS
    END SUBROUTINE t_lapw_init
 
    SUBROUTINE lapw_phase_factors(lapw, iintsp, tau, qss, cph)
-      USE m_constants
-      USE m_types_fleurinput
       IMPLICIT NONE
       CLASS(t_lapw), INTENT(in):: lapw
       INTEGER, INTENT(IN)     :: iintsp
@@ -431,10 +430,6 @@ CONTAINS
 
    SUBROUTINE priv_vec_for_lo_old(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
 
-      USE m_constants
-      USE m_orthoglo
-      USE m_ylm
-      USE m_types_fleurinput
 
       IMPLICIT NONE
 
@@ -629,10 +624,6 @@ CONTAINS
 
    SUBROUTINE priv_vec_for_lo(atoms, input, sym, na, ntype, np, noco, nococonv, lapw, cell)
 
-      USE m_constants
-      USE m_orthoglo
-      USE m_ylm
-      USE m_types_fleurinput
 
       IMPLICIT NONE
 

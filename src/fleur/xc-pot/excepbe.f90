@@ -1,8 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_excepbe
 !.....-----------------------------------------------------------------
 !.....epbe(easy_pbe) exchange-correlation energy density  in hartree.
 !     excepbe - easypbe
 !.....------------------------------------------------------------------
+   USE m_easypbe
+   USE m_types_xcpot_data
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: excepbe
 CONTAINS
    SUBROUTINE excepbe( &
       xcpot,jspins,mirm,irmx, &
@@ -10,8 +20,6 @@ CONTAINS
       g2ru,g2rd,gggr,gggru,gggrd, &
       exc)
 
-      USE m_easypbe
-      USE m_types_xcpot_data
 
       IMPLICIT NONE
 

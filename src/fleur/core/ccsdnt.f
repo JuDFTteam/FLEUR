@@ -2,6 +2,9 @@
 c...........................................................ccdnt
 c charge and spin density calculations
 c
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: ccsdnt
       CONTAINS
       SUBROUTINE ccsdnt(
      >                  mrad,is,jtop,nsol,

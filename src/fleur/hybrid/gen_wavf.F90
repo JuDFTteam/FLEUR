@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,21 +13,35 @@
 
 MODULE m_gen_wavf
 
+   USE m_constants
+   USE m_radfun
+   USE m_radflo
+   USE m_abcof
+   USE m_trafo
+   USE m_olap
+   USE m_hyb_abcrot
+   USE m_io_hybrid
+   USE m_judft
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: gen_wavf
 CONTAINS
 
    SUBROUTINE gen_wavf(kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, vr0, &
                        hybdat, noco,nococonv, fmpi, input, jsp)
 
       ! nkpt       ::     number of all k-points
-      USE m_types
-      USE m_constants
-      USE m_radfun
-      USE m_radflo
-      USE m_abcof
-      USE m_trafo!, ONLY: waveftrafo_genwavf
-      USE m_olap
-      USE m_hyb_abcrot
-      USE m_io_hybrid
 
       IMPLICIT NONE
 

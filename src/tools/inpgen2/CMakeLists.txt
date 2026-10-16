@@ -77,6 +77,7 @@ ${FLEUR_SRC}/init/compile_descr.F90
 ${FLEUR_SRC}/init/ss_sym.f
 ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
+${FLEUR_SRC}/io/libxc_xctyp.F90
 ${FLEUR_SRC}/io/w_inpXML.f90
 
 kpoints/divi.f
@@ -113,7 +114,6 @@ ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_parallelLoop.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
-${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_hub1data.f90
 
 ${FLEUR_SRC}/hybrid/divide_most_evenly.f90

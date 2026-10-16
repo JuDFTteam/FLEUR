@@ -13,12 +13,13 @@ MODULE m_types_matelements_soc
     USE m_types_enpara
     USE m_types_lapw
     USE m_types_cell
-    USE m_types_usdus
     USE m_types_noco
     USE m_types_nococonv
     USE m_types_sym
     USE m_types_potden
     USE m_judft
+    USE m_types_abc
+    USE m_types_radfun
     IMPLICIT NONE
    !> Only the type. init and calc_matrix_elements are reached through it -- secvar_soc
    !> and melem_coarse both call them as bindings -- so they are not part of the surface.
@@ -78,16 +79,12 @@ CONTAINS
         this%nococonv => nococonv
     END SUBROUTINE init
 
-    SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun, usdus)
-        USE m_types_abc
-        USE m_types_radfun
-        USE m_types_nococonv
+    SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
 
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
         TYPE(t_mat),    INTENT(IN) :: zMat(:)   !unused, SOC works on the abc coefficients only
         TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !(2,ntype)
         TYPE(t_radfun), INTENT(IN) :: radfun(:) !unused, the radial integrals are precomputed in rsoc
-        TYPE(t_usdus),  INTENT(IN) :: usdus     !unused
 
         INTEGER :: num_bands
         INTEGER :: n, l, m, lm, ll1, jcof, icof

@@ -1,10 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_qmtsl
+   USE m_types_abc
+   USE m_types_radfun
+   USE m_types_slab
+   USE m_types_atoms
    implicit none
+   PRIVATE
+   PUBLIC :: q_mt_sl
 CONTAINS
   !***********************************************************************
   ! Calculates the mt-spheres contribution to the layer charge for states
@@ -15,10 +21,6 @@ CONTAINS
   !***********************************************************************
   !
   SUBROUTINE q_mt_sl(itype,jsp,ikpt,atoms,ev_list,ne,abc,radfun,slab)
-    USE m_types_setup
-    USE m_types_abc
-    USE m_types_radfun
-    USE m_types_slab
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_abc),INTENT(IN)          :: abc

@@ -29,6 +29,10 @@ MODULE m_abcoeff_store
    !! and is not safe for concurrent hsmt_ab calls from different threads.
 
    USE m_juDFT
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_kpts
+   USE m_types_atoms
 
    IMPLICIT NONE
    PRIVATE
@@ -59,10 +63,6 @@ CONTAINS
       !! Prepare the storage slots and switch the storage on. The spin dimensions
       !! are sized to the actual spin structure of the calculation (mirroring the
       !! loop bounds in hsmt and the c_ph dimension in hsmt_ab), not hardwired to 2.
-      USE m_types_input
-      USE m_types_noco
-      USE m_types_kpts
-      USE m_types_atoms
 
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_noco),  INTENT(IN) :: noco

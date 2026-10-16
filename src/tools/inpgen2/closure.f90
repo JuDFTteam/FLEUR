@@ -1,6 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_closure
 
 use m_juDFT
+   use m_constants
+   implicit none
+   private
+   public :: closure, close_pt, check_close
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !     Contains 3 subroutines that more or less check the closure:
@@ -16,7 +25,6 @@ CONTAINS
 
 SUBROUTINE closure(mops,mrot,tau,nops,index_op,lclose)
 
-   USE m_constants
 
    IMPLICIT NONE
 
@@ -77,7 +85,6 @@ END SUBROUTINE closure
 
 SUBROUTINE close_pt(nops,mrot,mtable)
 
-   USE m_constants
 
    IMPLICIT NONE
 
@@ -136,7 +143,6 @@ END SUBROUTINE close_pt
 
 SUBROUTINE check_close(nops,mrot,tau,multtab,inv_op,optype)
 
-   USE m_constants
 
    IMPLICIT NONE
 

@@ -1,12 +1,21 @@
 !-------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_elsi
    use m_types_solver
+   use m_juDFT
+   use m_types_mpimat
+   use m_types_mat
+#ifdef CPP_ELSI
+   use elsi
+   use mpi
+#endif
    implicit none
+   private
+   public :: elsi_gev, t_solver_elsi
 
    type, extends(t_solver)::t_solver_elsi
    contains
@@ -37,13 +46,6 @@ contains
 
    subroutine elsi_gev(self, hmat, smat, ne, eig, zmat, ikpt)
 
-      use m_juDFT
-      use m_types_mpimat
-      use m_types_mat
-#ifdef CPP_ELSI
-      use elsi
-      use mpi
-#endif
       implicit none
       class(t_solver_elsi)           ::self
       class(t_mat), intent(INOUT)    :: hmat, smat

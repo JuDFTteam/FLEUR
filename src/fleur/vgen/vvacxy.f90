@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_vvacxy
   !     **********************************************************
   !     g/=0 coefficient of vacuum coulomb potential           *
@@ -8,13 +13,21 @@ module m_vvacxy
   !---------------------------------------------------------------
 
    use m_judft
+   use m_constants
+   use m_intgr, only: intgz1
+   use m_qsf
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   implicit none
+   private
+   public :: vvacxy, exp_safe
 
 contains
    subroutine vvacxy( stars, vacuum, cell, sym, input, field, rhtxy, vxy, alphm, l_dfptvgen )
-      use m_types
-      use m_constants
-      use m_intgr, only: intgz1
-      use m_qsf
 
       implicit none
 

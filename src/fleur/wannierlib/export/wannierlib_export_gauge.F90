@@ -28,10 +28,18 @@
 MODULE m_wannierlib_export_gauge
    USE m_juDFT
    USE m_constants, ONLY: oUnit
-   USE m_types, ONLY: t_results
    USE m_types_kpts
    USE m_types_input
    USE m_types_mpi
+#ifdef CPP_HDF
+   USE hdf5
+   USE m_hdf_tools
+   USE m_wannierlib_hdf_util, ONLY: wr_r4, wl_hdf_create, wl_hdf_root
+#endif
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_misc
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_export_gauge, &
@@ -39,13 +47,6 @@ MODULE m_wannierlib_export_gauge
 CONTAINS
 
    SUBROUTINE wannierlib_export_gauge(kpts, fmpi, jspin, u_opt, u_matrix)
-      USE m_types_kpts
-      USE m_types_mpi
-#ifdef CPP_HDF
-      USE hdf5
-      USE m_hdf_tools
-      USE m_wannierlib_hdf_util, ONLY: wr_r4, wl_hdf_create, wl_hdf_root
-#endif
       TYPE(t_kpts), INTENT(IN) :: kpts
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: jspin
@@ -125,9 +126,6 @@ CONTAINS
    !> arrays the caller holds are left exactly as they were.
    SUBROUTINE wannierlib_store_gauge(fmpi, distk, kpts, input, num_bands, num_wann, jspin, &
                                      u_matrix, u_opt, results)
-#ifdef CPP_MPI
-      use mpi
-#endif
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: distk(:)
       TYPE(t_kpts), INTENT(IN) :: kpts

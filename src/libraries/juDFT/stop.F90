@@ -38,6 +38,14 @@ MODULE m_juDFT_stop
 #ifdef CPP_MPI
   USE mpi
 #endif
+  USE iso_fortran_env
+  USE m_juDFT_internalParams
+  USE m_judft_usage
+  USE m_juDFT_string
+  USE m_judft_xmloutput
+#ifdef __INTEL_COMPILER
+  USE ifcore
+#endif
   IMPLICIT NONE
   PRIVATE
   CHARACTER(len=5),PARAMETER:: name="FLEUR"
@@ -161,11 +169,6 @@ CONTAINS
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,bug,file,line)
 
-    USE iso_fortran_env ! for "output_unit"
-    USE m_juDFT_internalParams
-    USE m_judft_usage
-    use m_juDFT_string
-    USE m_judft_xmloutput
     IMPLICIT NONE
     CHARACTER*(*),INTENT(IN)          :: message
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
@@ -322,9 +325,6 @@ CONTAINS
   SUBROUTINE juDFT_END(message, irank, l_endXML)
     ! If irank is present every mpi process has to call this routine.
     ! Otherwise only a single mpi process is allowed to call the routine.
-    USE iso_fortran_env ! for "output_unit"
-    USE m_judft_xmlOutput
-    USE m_judft_usage
     IMPLICIT NONE
     CHARACTER*(*), INTENT(IN)      :: message
     INTEGER, OPTIONAL, INTENT(IN)  :: irank
@@ -412,9 +412,6 @@ CONTAINS
   !this is a private subroutine that stops the calculations
   !different compilers might have to be added here
   SUBROUTINE juDFT_stop(errorCode)
-#ifdef __INTEL_COMPILER
-    USE ifcore
-#endif
     INTEGER, OPTIONAL, INTENT(IN)  :: errorCode
     INTEGER :: error
     LOGICAL :: calltrace

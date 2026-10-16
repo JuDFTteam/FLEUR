@@ -1,5 +1,13 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_juDFT_string
    implicit none
+   private
+   public :: strip, str2int, int2str_int4, int2str_int8, float2str, gen_filename, replace_text, get_byte_str, int2str, &
+      whitespaces
    character(len=3), parameter :: whitespaces = " "//achar(9)//achar(13) ! list of all whitespaces
    interface int2str
       module procedure int2str_int4, int2str_int8

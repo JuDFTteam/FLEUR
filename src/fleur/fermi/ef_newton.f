@@ -1,5 +1,9 @@
       MODULE m_efnewton
       use m_juDFT
+      use m_constants
+      implicit none
+      private
+      public :: ef_newton
       CONTAINS
       RECURSIVE SUBROUTINE ef_newton(
      >     n,irank,
@@ -22,7 +26,6 @@ c     and ef+8kt to obtain neutrality.
 c     
 c***********************************************************************
 
-      USE m_constants
 
       IMPLICIT NONE
 

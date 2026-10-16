@@ -1,9 +1,26 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 #ifndef CPP_ESSL
 #define CPP_Singleton
 #endif
 ! ou might want to undefine CPP_singleton to use essl FFT
 MODULE m_cfft
+#ifdef CPP_Singleton
+   USE m_juDFT
+   USE m_constants
+#endif
    IMPLICIT NONE
+   PRIVATE
+#ifdef CPP_Singleton
+   PUBLIC :: cfft
+#endif
+#ifdef CPP_Singleton
+#else
+   PUBLIC :: cfft
+#endif
 CONTAINS
 !     ***************************************************************
 !     multivariate complex fourier transform, computed in place
@@ -56,8 +73,6 @@ CONTAINS
 !     the following two constants should agree with the array dimensions
 #ifdef CPP_Singleton
    SUBROUTINE cfft(a, b, ntot, n, nspan, isn)
-      USE m_juDFT
-      USE m_constants
       IMPLICIT NONE
 !     .. Scalar Arguments ..
       INTEGER :: isn, n, nspan, ntot

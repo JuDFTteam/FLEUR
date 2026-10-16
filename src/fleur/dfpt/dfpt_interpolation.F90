@@ -11,20 +11,36 @@ module m_dfpt_interpolation
 
     use m_juDFT
     use m_constants
-    use m_types
     use m_dfpt_NAC
+    use m_fleur_init
+    use m_dfpt_dynmat_fourier
+    use m_dfpt_dynmat_eig
+    use m_dfpt_dynmat_io
+    use m_make_dos
+    use m_types_eigdos
+    use m_types_banddos
+    use m_types_dos
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_forcetheo
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpdata
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_xcpot
 
     implicit none 
+    private
+    public :: dfpt_interpolation
 
 contains 
 
     subroutine dfpt_interpolation(fi,fmpi,nococonv,results)
 
-        use m_fleur_init
-        use m_dfpt_dynmat_fourier
-        use m_dfpt_dynmat_eig
-        use m_make_dos
-        use m_types_eigdos
 
         type(t_fleurinput), intent(in) :: fi 
         type(t_mpi), intent(in)        :: fmpi
@@ -48,16 +64,17 @@ contains
         type(t_kpts)  :: qpts
         integer, allocatable :: q_list(:)
         
-        integer :: iQ, iread
+        integer :: iQ, iSpecial
 
-        ! for IO of dynMats
-        real    :: numbers(3*fi%atoms%nat,6*fi%atoms%nat)
-        character(len=100) :: trash, inp_pref
-        character(len=4)   :: dynfiletag
+        character(len=100) :: inp_pref
+        character(len=50)  :: label
+        character(len=:), allocatable :: dynfilename
+        logical :: l_sumrule
+        real    :: weight
 
         ! dynMat properties
         complex, allocatable   :: eigenFreqs(:), eigenVecs(:,:)
-        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_interp(:,:,:)
+        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_interp(:,:,:), dyn_mat_gamma(:,:,:)
         real,    allocatable   :: eigenVals(:), eigenValsFull(:,:,:)
 
 
@@ -76,9 +93,9 @@ contains
 
         ! determine the Job 
         if (fi%dfpt%l_band) then 
-            dynfiletag = "band"
+            dynfilename = "dynmat_band.hdf"
         else if (fi%dfpt%l_dos) then 
-            dynfiletag = "full"
+            dynfilename = "dynmat_dos.hdf"
         else
             call juDFT_error("Invalid option for post-procession of dynMatfiles.", calledby="dfpt_interpolation.F90")
         end if 
@@ -111,27 +128,9 @@ contains
 
 
         if (fmpi%irank==0) then 
-            ! this was copied from dfpt.F90 durin refactor --> think about a more clever way
-            do iQ = 1, qpts%nkpt ! Loop over dynmat files to read
-                if (iQ<=9) THEN
-                    open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
-                else if(iQ<=99) THEN 
-                    open( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-                else 
-                    open( 3001, file="dynMatq=0"//int2str(iQ), status="old")
-                end if 
-                do iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
-                    if (iread<4) then
-                        read( 3001,*) trash
-                        write(*,*) iread, trash
-                    else
-                        read( 3001,*) numbers(iread-3,:)
-                        write(*,*) iread, numbers(iread-3,:)
-                        dyn_mat(iread-3,:,iQ) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
-                    end if
-                end do  ! iread
-                close(3001)
-            end do  ! iQ
+            do iQ = 1, qpts%nkpt
+                call read_dynmat_q("dynmat.hdf", iQ, dyn_mat(:,:,iQ))
+            end do
 
             !subtract Long range part
             !if (fi%dfpt%l_polar) then
@@ -147,17 +146,45 @@ contains
                                     fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp, &
                                     l_bornhuang=fi%dfpt%l_bornhuang)
 
+            ! The projection already imposes the translational rule on the force constants.
+            l_sumrule = fi%dfpt%l_sumrule_intp .and. .not. fi%dfpt%l_bornhuang
+            if (l_sumrule) then
+                ! The Gamma matrix is needed before the first fine q-point
+                call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
+                                        fi%dfpt%l_WSinterpol, reshape([0.0, 0.0, 0.0], [3, 1]), dyn_mat_gamma, &
+                                        l_bornhuang=fi%dfpt%l_bornhuang)
+                call hermitize_scale_dynmat(fi%atoms, dyn_mat_gamma(:,:,1))
+            end if
+
+            call init_dynmat_file(dynfilename, fi%atoms, fi%cell, fi%dfpt%qpts_interpol, l_truncate=.true.)
+
             ! diagonalize the interpolated dynamical matrix at each fine q-point
             do iQ = 1, fi%dfpt%qpts_interpol%nkpt
                 call timestart("Dynmat diagonalization")
-                ! The projection already imposes the translational rule on the force constants.
-                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qpts_interpol%bk(:,iQ), fi%dfpt%calcEigenVec, dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, iQ, .TRUE., &
-                                       TRIM(dynfiletag), fi%dfpt%l_sumrule_intp.AND..NOT.fi%dfpt%l_bornhuang, l_writeOutput= (.not.fi%dfpt%l_dos))
+                call hermitize_scale_dynmat(fi%atoms, dyn_mat_interp(:,:,iQ))
+                if (l_sumrule) call apply_sumrule(dyn_mat_interp(:,:,iQ), dyn_mat_gamma(:,:,1))
+                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qpts_interpol%bk(:,iQ), dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, .not.fi%dfpt%l_dos)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, TRIM(dynfiletag), fi%dfpt%qpts_interpol%bk(:,iQ),l_writeOutput=(.not.fi%dfpt%l_dos))
+                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, fi%dfpt%qpts_interpol%bk(:,iQ), l_writeOutput=(.not.fi%dfpt%l_dos))
                 call timestop("Frequency calculation")
+
+                call timestart("dynMat IO")
+                weight = 0.0
+                if (allocated(fi%dfpt%qpts_interpol%wtkpt)) weight = fi%dfpt%qpts_interpol%wtkpt(iQ)
+                if (fi%dfpt%l_dos) then
+                    call write_dynmat_q(dynfilename, iQ, fi%dfpt%qpts_interpol%bk(:,iQ), weight, eigenVals, eigenFreqs)
+                else
+                    label = ''
+                    if (allocated(fi%dfpt%qpts_interpol%specialPointIndices)) then
+                        do iSpecial = 1, fi%dfpt%qpts_interpol%numSpecialPoints
+                            if (fi%dfpt%qpts_interpol%specialPointIndices(iSpecial) == iQ) label = fi%dfpt%qpts_interpol%specialPointNames(iSpecial)
+                        end do
+                    end if
+                    call write_dynmat_q(dynfilename, iQ, fi%dfpt%qpts_interpol%bk(:,iQ), weight, eigenVals, eigenFreqs, dynMat=dyn_mat_interp(:,:,iQ), eigVecs=eigenVecs, label=label)
+                end if
+                call timestop("dynMat IO")
 
                 if (fi%dfpt%l_dos) eigenValsFull(:,iQ,1) = sqrt(eigenVals(:)) * 1e3 ! factor so banddos saves in meV 
 

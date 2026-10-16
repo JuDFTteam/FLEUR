@@ -7,11 +7,16 @@
 MODULE m_dfpt_elph_linewidth
 
     USE m_juDFT
-    USE m_types
     USE m_constants
+    USE m_dosbin
+    USE m_smooth
+    USE m_dfpt_fermie, ONLY: sfermi
+    USE m_types_fleurinput
 
 
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: dfpt_ph_linewidth
 
 CONTAINS
     SUBROUTINE dfpt_ph_linewidth(fi,wtkpt,eig_k,eig_kq,gmat,eigenVals,ef,ph_linewidth)
@@ -20,9 +25,6 @@ CONTAINS
         !               = 2 : double-delta approximation
         ! All arrays are indexed with the LOCAL k index (1..size(gmat,3))
 
-        USE m_dosbin
-        USE m_smooth
-        USE m_dfpt_fermie, ONLY : sfermi
 
         TYPE(t_fleurinput), INTENT(IN)  :: fi
         REAL,               INTENT(IN)  :: wtkpt(:)          ! weight per k-point

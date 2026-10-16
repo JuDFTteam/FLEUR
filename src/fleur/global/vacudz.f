@@ -1,4 +1,10 @@
       MODULE m_vacudz
+      use m_juDFT
+      use m_constants
+      use m_intgr, only: intgz0
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: vacudz
       CONTAINS
       SUBROUTINE vacudz(
      >     e,vz,vz0,nmz,dz,
@@ -13,9 +19,6 @@ c     u. udz and dudz are the value and normal derivative at the
 c     vacuum boundary.
 c     based on code by m. weinert
 c*********************************************************************
-      use m_juDFT
-      USE m_constants
-      USE m_intgr, ONLY : intgz0
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

@@ -7,6 +7,8 @@
 MODULE m_types_xas
    USE m_juDFT
    USE m_types_fleurinput_base
+   USE m_mpi_bc_tool
+   USE m_types_xml
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: t_xas
@@ -68,7 +70,6 @@ MODULE m_types_xas
 CONTAINS
 
    SUBROUTINE mpi_bc_xas(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_xas), INTENT(INOUT) :: this
       INTEGER,      INTENT(IN)    :: mpi_comm
       INTEGER,      INTENT(IN), OPTIONAL :: irank
@@ -126,7 +127,6 @@ CONTAINS
    END SUBROUTINE mpi_bc_xas
 
    SUBROUTINE read_xml_xas(this, xml)
-      USE m_types_xml
       CLASS(t_xas), INTENT(INOUT) :: this
       TYPE(t_xml),  INTENT(INOUT) :: xml
 
@@ -240,7 +240,6 @@ CONTAINS
    END SUBROUTINE rixs_reset_defaults
 
    SUBROUTINE read_xml_rixs(this, xml)
-      USE m_types_xml
       CLASS(t_xas), INTENT(INOUT) :: this
       TYPE(t_xml),  INTENT(INOUT) :: xml
 
@@ -361,7 +360,6 @@ CONTAINS
    END SUBROUTINE read_xml_rixs
 
    SUBROUTINE rixs_read_band_windows(this, xml)
-      USE m_types_xml
       CLASS(t_xas), INTENT(INOUT) :: this
       TYPE(t_xml),  INTENT(INOUT) :: xml
 

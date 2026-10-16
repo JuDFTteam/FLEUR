@@ -1,12 +1,24 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_excSplitting
 
-   use m_types
    use m_constants
    use m_trapz
    use m_xmlOutput
    use m_intgr
+   use m_types_atoms
+   use m_types_gfinp
+   use m_types_greensfcoeffs
+   use m_types_input
+   use m_types_potden
+   use m_types_scalargf
 
    IMPLICIT NONE
+   private
+   public :: excsplitting
 
    CONTAINS
 

@@ -1,0 +1,17 @@
+material,category,structure,tm_atom,scan_reference_muB,experimental_reference_muB,quantity
+Fe,FM,bcc (alpha-Fe),Fe,2.63,"1.98 / 2.05 / 2.08 (three literature values, footnotes a-c)",total moment per f.u.
+Co,FM,hcp,Co,1.79,1.52 / 1.55-1.62 / 1.58 (footnotes b-d),total moment per f.u.
+Ni,FM,fcc,Ni,0.76,0.52 / 0.55,total moment per f.u.
+FeCo,FM,B2 (CsCl-type),FeCo,4.86,4.54,total moment per f.u.
+YFe2,FM,C15 Laves phase,YFe2,3.88,2.90,total moment per f.u.
+ZrZn2,FM,C15 Laves phase,ZrZn2,1.08,0.178,total moment per f.u.
+Ni3Al,FM,L1_2 (Cu3Au-type),Ni3Al,0.95,0.24,total moment per f.u.
+MnO,AFM,"rock salt, type-II AFM",Mn,4.53,4.58 (footnote a),Bader spin moment on TM atom (compare to FLEUR MT moment)
+FeO,AFM,"rock salt, type-II AFM",Fe,3.62,3.32 / 4.2 / 4.6 (footnotes b-d),Bader spin moment on TM atom (compare to FLEUR MT moment)
+CoO,AFM,"rock salt, type-II AFM",Co,2.6,3.35 / 3.8 / 3.98 (footnotes e-g),Bader spin moment on TM atom (compare to FLEUR MT moment)
+NiO,AFM,"rock salt, type-II AFM",Ni,1.6,"1.9 / 2.2 (footnotes h,i)",Bader spin moment on TM atom (compare to FLEUR MT moment)
+Cr2O3,AFM,"corundum, AFM along c",Cr,2.73,2.44 / 2.48 / 2.76 (footnotes k-m),Bader spin moment on TM atom (compare to FLEUR MT moment)
+Fe2O3,AFM,"corundum (hematite), AFM along c",Fe,4.01,"4.17 / 4.22 (footnotes n,o)",Bader spin moment on TM atom (compare to FLEUR MT moment)
+CuO,AFM,"tenorite (monoclinic), collinear AFM approximant",Cu,0.57,0.65 (footnote j),Bader spin moment on TM atom (compare to FLEUR MT moment)
+CrSb,AFM,"NiAs-type, A-type AFM along c",Cr,3.32,3.0 (footnote p),Bader spin moment on TM atom (compare to FLEUR MT moment)
+CrSb2,AFM,"marcasite, collinear AFM",Cr,3.18,1.94 (footnote g),Bader spin moment on TM atom (compare to FLEUR MT moment)

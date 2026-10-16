@@ -1,4 +1,17 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_gnuplot_BS
+   use m_types_cell
+   use m_types_kpts
+   use m_types_banddos
+   use m_inv3
+   use m_constants
+   implicit none
+   private
+   public :: gnuplot_bs, write_gnu_sc
 CONTAINS
 
 !----------------------------------------------------------------------
@@ -6,8 +19,6 @@ CONTAINS
 ! gnuplot < band.gnu > band.ps
 !----------------------------------------------------------------------
       SUBROUTINE gnuplot_BS(kpts,title,cell,jspins)
-      use m_types_cell
-      use m_types_kpts
       IMPLICIT NONE
       type(t_kpts),intent(in)  :: kpts
       type(t_cell),intent(in)  :: cell
@@ -155,11 +166,6 @@ CONTAINS
   END SUBROUTINE gnuplot_BS
 
   SUBROUTINE write_gnu_sc(banddos,kpts,title,cell,jspins)
-    use m_types_cell
-    use m_types_kpts
-    use m_types_banddos
-    USE m_inv3
-    USE m_constants
     IMPLICIT NONE
     type(t_kpts),intent(in)  :: kpts
     type(t_cell),intent(in)  :: cell

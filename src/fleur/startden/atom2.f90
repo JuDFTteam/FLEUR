@@ -1,5 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_atom2
    use m_juDFT
+   use m_intgr, only: intgr1, intgr0
+   use m_constants
+   use m_potl0
+   use m_stpot1
+   use m_differ
+   use m_types_atoms
+   use m_types_input
+   use m_types_xcpot
+   implicit none
+   private
+   public :: atom2
 !     *************************************************************
 !     fully relativistic atomic program based on the subroutines
 !     differ, outint and inwint by d.d.koelling
@@ -13,13 +29,7 @@ CONTAINS
   &                 qdel,&
   &                 rhoss, nst, lnum, eig, vbar,l_valence)
 
-      USE m_intgr, ONLY: intgr1, intgr0
-      USE m_constants
-      USE m_potl0
-      USE m_stpot1
     !  USE m_setcor
-      USE m_differ
-      USE m_types
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..

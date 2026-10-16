@@ -9,10 +9,10 @@
 MODULE m_wannierlib_band_window
    USE m_juDFT
    USE m_constants, ONLY: oUnit
-   USE m_types, ONLY: t_results
    USE m_types_kpts
    USE m_types_input
    USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
+   USE m_types_misc
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_default_windows, wannierlib_create_eig

@@ -1,4 +1,7 @@
       MODULE m_clebsch
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: clebsch
       CONTAINS
       REAL FUNCTION clebsch(aj,bj,am,bm,cj,cm)
 ******************************************************************

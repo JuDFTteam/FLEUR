@@ -1,8 +1,12 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_greensfPostProcess
 
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_greensfCalcRealPart
    USE m_greensfCalcScalarProducts
    USE m_greensf_io
@@ -11,8 +15,34 @@ MODULE m_greensfPostProcess
    USE m_crystalfield
    USE m_genMTBasis
    USE m_sointg
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_gfinp
+   USE m_types_greensf
+   USE m_types_greensfcoeffs
+   USE m_types_hub1data
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_scalargf
+   USE m_types_sphhar
+   USE m_types_sym
+#ifdef CPP_MPI
+   USE mpi
+#endif
+#ifdef CPP_HDF
+   USE hdf5
+#endif
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: greensfpostprocess
 
    CONTAINS
 

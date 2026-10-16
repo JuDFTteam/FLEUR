@@ -30,6 +30,16 @@
 MODULE m_wannierlib_export_basis
    USE m_juDFT
    USE m_constants, ONLY: oUnit
+   USE m_types_wannierlib
+   USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+   USE m_types_abc
+   USE m_types_spinor_layout, ONLY: t_spinor_layout
+   USE m_matrix_element_factory, ONLY: matrix_element_states
+#ifdef CPP_HDF
+   USE hdf5
+   USE m_hdf_tools
+   USE m_wannierlib_hdf_util, ONLY: wr_r4, wr_i3, wl_hdf_create, wl_hdf_root
+#endif
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_export_basis
@@ -37,19 +47,9 @@ CONTAINS
 
    SUBROUTINE wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, noco, &
                                       nococonv, enpara, vtot, fmpi, eig_id, jspin)
-      USE m_types_wannierlib
-      USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
       USE m_types_atoms; USE m_types_cell; USE m_types_input; USE m_types_kpts
       USE m_types_sym; USE m_types_noco; USE m_types_nococonv; USE m_types_enpara
       USE m_types_potden; USE m_types_mpi; USE m_types_lapw; USE m_types_mat
-      USE m_types_abc
-      USE m_types_spinor_layout, ONLY: t_spinor_layout
-      USE m_matrix_element_factory, ONLY: matrix_element_states
-#ifdef CPP_HDF
-      USE hdf5
-      USE m_hdf_tools
-      USE m_wannierlib_hdf_util, ONLY: wr_r4, wr_i3, wl_hdf_create, wl_hdf_root
-#endif
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       TYPE(t_atoms), INTENT(IN) :: atoms

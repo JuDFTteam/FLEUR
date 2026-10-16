@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
       MODULE m_bravais
       use m_juDFT
+      use m_constants
+      implicit none
+      private
+      public :: bravais
 !----------------------------------------------------------------------!
 ! given a Bravais-matrix amat, determine the lattice system and type   !
 ! (idsyst,idtype)                                              gb`05   !
@@ -13,7 +17,6 @@
       CONTAINS
       SUBROUTINE bravais(amat,idsyst,idtype)
 
-      USE m_constants
 
       IMPLICIT NONE
 

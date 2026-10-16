@@ -1,4 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_wrapper
+   use m_juDFT
+   implicit none
+   private
+   public :: identity, packmat_d, packmatcoul_d, unpackmat_d, packmat_z, packmatcoul_z, unpackmat_z, matvec_dpd, &
+      matvec_dpz, matvec_zpd, matvec_zpz, matmat_dpdp, matmat_dpzp, matmat_zpdp, matmat_zpzp, matmat_dpdm, matmat_dmdp, &
+      matmat_dmdm, matmat_dpzm, matmat_dmzp, matmat_dmzm, matmat_zpdm, matmat_zmdp, matmat_zmdm, matmat_zpzm, &
+      matmat_zmzp, matmat_zmzm, packmat, packmatcoul, unpackmat, matvec, matmat
    interface packmat
       module procedure packmat_d, packmat_z
    end interface
@@ -40,7 +52,6 @@ contains
 !     --------
 
    function packmat_d(mat)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat(:, :)
       real        :: packmat_d(size(mat, 1)*(size(mat, 1) + 1)/2)
@@ -57,7 +68,6 @@ contains
    end function packmat_d
 
    function packmatcoul_d(mat)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat(:, :)
       real        :: packmatcoul_d( &
@@ -80,7 +90,6 @@ contains
    end function packmatcoul_d
 
    function unpackmat_d(mat)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat(:)
       real        :: unpackmat_d( &
@@ -99,7 +108,6 @@ contains
    end function unpackmat_d
 
    function packmat_z(mat)
-      use m_juDFT
       implicit none
       complex, intent(in) :: mat(:, :)
       complex             :: packmat_z(size(mat, 1)*(size(mat, 1) + 1)/2)
@@ -116,7 +124,6 @@ contains
    end function packmat_z
 
    function packmatcoul_z(mat)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat(:, :)
       complex              :: packmatcoul_z( &
@@ -139,7 +146,6 @@ contains
    end function packmatcoul_z
 
    function unpackmat_z(mat)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat(:)
       complex              :: unpackmat_z( &
@@ -159,7 +165,6 @@ contains
 !     --------
 
    function matvec_dpd(mat, vec)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat(:), vec(:)
       real        :: matvec_dpd(size(vec))
@@ -171,7 +176,6 @@ contains
    end function matvec_dpd
 
    function matvec_dpz(mat, vec)
-      use m_juDFT
       implicit none
       real, intent(in) :: mat(:)
       complex, intent(in) :: vec(:)
@@ -188,7 +192,6 @@ contains
    end function matvec_dpz
 
    function matvec_zpd(mat, vec)
-      use m_juDFT
       implicit none
       complex, intent(in) :: mat(:)
       real, intent(in) :: vec(:)
@@ -205,7 +208,6 @@ contains
    end function matvec_zpd
 
    function matvec_zpz(mat, vec)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat(:), vec(:)
       complex              :: matvec_zpz(size(vec))
@@ -219,7 +221,6 @@ contains
 !     --------
 
    function matmat_dpdp(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat1(:), mat2(:)
       real        :: matmat_dpdp( &
@@ -247,7 +248,6 @@ contains
    end function matmat_dpdp
 
    function matmat_dpzp(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat1(:)
       complex, intent(in)  :: mat2(:)
@@ -279,7 +279,6 @@ contains
    end function matmat_dpzp
 
    function matmat_zpdp(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat1(:)
       real, intent(in)  :: mat2(:)
@@ -311,7 +310,6 @@ contains
    end function matmat_zpdp
 
    function matmat_zpzp(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat1(:), mat2(:)
       complex              :: matmat_zpzp( &
@@ -339,7 +337,6 @@ contains
    end function matmat_zpzp
 
    function matmat_dpdm(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat1(:), mat2(:, :)
       real        :: matmat_dpdm(size(mat2, 1), size(mat2, 1))
@@ -359,7 +356,6 @@ contains
    end function matmat_dpdm
 
    function matmat_dmdp(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat1(:, :), mat2(:)
       real        :: matmat_dmdp(size(mat1, 1), size(mat1, 1))
@@ -379,7 +375,6 @@ contains
    end function matmat_dmdp
 
    function matmat_dmdm(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in) :: mat1(:, :), mat2(:, :)
       real        :: matmat_dmdm(size(mat1, 1), size(mat1, 1))
@@ -395,7 +390,6 @@ contains
    end function matmat_dmdm
 
    function matmat_dpzm(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat1(:)
       complex, intent(in)  :: mat2(:, :)
@@ -419,7 +413,6 @@ contains
    end function matmat_dpzm
 
    function matmat_dmzp(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in)  :: mat1(:, :)
       complex, intent(in)  :: mat2(:)
@@ -440,7 +433,6 @@ contains
    end function matmat_dmzp
 
    function matmat_dmzm(mat1, mat2)
-      use m_juDFT
       implicit none
       real, intent(in) :: mat1(:, :)
       complex, intent(in) :: mat2(:, :)
@@ -459,7 +451,6 @@ contains
    end function matmat_dmzm
 
    function matmat_zpdm(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat1(:)
       real, intent(in)  :: mat2(:, :)
@@ -480,7 +471,6 @@ contains
    end function matmat_zpdm
 
    function matmat_zmdp(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat1(:, :)
       real, intent(in)  :: mat2(:)
@@ -504,7 +494,6 @@ contains
    end function matmat_zmdp
 
    function matmat_zmdm(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in) :: mat1(:, :)
       real, intent(in) :: mat2(:, :)
@@ -523,7 +512,6 @@ contains
    end function matmat_zmdm
 
    function matmat_zpzm(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat1(:), mat2(:, :)
       complex              :: matmat_zpzm(size(mat2, 1), size(mat2, 2))
@@ -542,7 +530,6 @@ contains
    end function matmat_zpzm
 
    function matmat_zmzp(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in)  :: mat1(:, :), mat2(:)
       complex              :: matmat_zmzp(size(mat1, 1), size(mat1, 1))
@@ -562,7 +549,6 @@ contains
    end function matmat_zmzp
 
    function matmat_zmzm(mat1, mat2)
-      use m_juDFT
       implicit none
       complex, intent(in) :: mat1(:, :), mat2(:, :)
       complex             :: matmat_zmzm(size(mat1, 1), size(mat2, 2))

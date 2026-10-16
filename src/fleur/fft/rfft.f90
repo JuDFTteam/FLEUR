@@ -1,11 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_rfft
    use m_juDFT
+   use m_constants
+   use m_cfft
+   implicit none
    PRIVATE
 ! module also contains routines vrffti,vrfftf&vrfftb as private routines below
    PUBLIC rfft
@@ -32,8 +35,6 @@ CONTAINS
 !                                                  G.Bihlmayer (UniWien)
 
 ! **********************************************************************
-      USE m_constants
-      USE m_cfft
       IMPLICIT NONE
 
       INTEGER :: n1d,n2d,n3d,n1,n2,n3,nw1,nw2,nw3,isn
@@ -181,6 +182,7 @@ CONTAINS
    END SUBROUTINE rfft
 
    SUBROUTINE vrffti(n,wsave)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 !***BEGIN PROLOGUE  VRFFTI
 !***DATE WRITTEN   860701   (YYMMDD)
 !***REVISION DATE  900509   (YYMMDD)
@@ -268,10 +270,10 @@ CONTAINS
       RETURN
    END subroutine
    SUBROUTINE vrfti1(n,wa,fac)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-      USE m_constants, ONLY : pimach
       DIMENSION wa(n),fac(15),ntryh(4)
       DATA ntryh(1),ntryh(2),ntryh(3),ntryh(4)/4,2,3,5/
 
@@ -333,6 +335,7 @@ CONTAINS
       RETURN
    END subroutine
    SUBROUTINE vrfftf(m,n,r,rt,mdimr,wsave)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !***BEGIN PROLOGUE  VRFFTF
 !***DATE WRITTEN   850801   (YYMMDD)
@@ -477,6 +480,7 @@ CONTAINS
       RETURN
    END subroutine
    SUBROUTINE vradf2(mp,ido,l1,cc,ch,mdimc,wa1)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
@@ -522,10 +526,10 @@ CONTAINS
 100   RETURN
    END subroutine
    SUBROUTINE vradf3(mp,ido,l1,cc,ch,mdimc,wa1,wa2)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-      USE m_constants, ONLY : pimach
       DIMENSION ch(mdimc,ido,3,l1),cc(mdimc,ido,l1,3),wa1(ido),wa2(ido)
 
       arg = 2.*pimach()/3.
@@ -589,6 +593,7 @@ CONTAINS
       RETURN
    END subroutine
    SUBROUTINE vradf4(mp,ido,l1,cc,ch,mdimc,wa1,wa2,wa3)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
@@ -678,10 +683,10 @@ CONTAINS
 100   RETURN
    END subroutine
    SUBROUTINE vradf5(mp,ido,l1,cc,ch,mdimc,wa1,wa2,wa3,wa4)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-      USE m_constants, ONLY : pimach
       DIMENSION cc(mdimc,ido,l1,5),ch(mdimc,ido,5,l1),wa1(ido),wa2(ido), &
          wa3(ido),wa4(ido)
 
@@ -845,10 +850,10 @@ CONTAINS
       RETURN
    END subroutine
    SUBROUTINE vradfg(mp,ido,ip,l1,idl1,cc,c1,c2,ch,ch2,mdimc,wa)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-      USE m_constants, ONLY : pimach
       DIMENSION ch(mdimc,ido,l1,ip),cc(mdimc,ido,ip,l1), &
          c1(mdimc,ido,l1,ip),c2(mdimc,idl1,ip), &
          ch2(mdimc,idl1,ip),wa(ido)
@@ -1052,6 +1057,7 @@ CONTAINS
       RETURN
    END subroutine
    SUBROUTINE vrftf1(m,n,c,ch,mdimc,wa,fac)
+      IMPLICIT INTEGER (i-n), REAL (a-h, o-z)
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
@@ -1331,7 +1337,6 @@ CONTAINS
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-         USE m_constants, ONLY : pimach
          IMPLICIT NONE
          INTEGER, INTENT(IN) :: mp, ido, l1, mdimc
          REAL, INTENT(IN)    :: cc(mdimc,ido,3,l1), wa1(ido), wa2(ido)
@@ -1479,7 +1484,6 @@ CONTAINS
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-         USE m_constants, ONLY : pimach
          IMPLICIT NONE
          INTEGER, INTENT(IN) :: mp, ido, l1, mdimc
          REAL, INTENT(IN)    :: cc(mdimc,ido,5,l1), wa1(ido), wa2(ido), &
@@ -1610,7 +1614,6 @@ CONTAINS
 
 !     VRFFTPK, VERSION 1, AUGUST 1985
 
-         USE m_constants, ONLY : pimach
          IMPLICIT NONE
          INTEGER, INTENT(IN) :: mp, ido, ip, l1, idl1, mdimc
          REAL, INTENT(IN)    :: cc(mdimc,ido,ip,l1), wa(ido)

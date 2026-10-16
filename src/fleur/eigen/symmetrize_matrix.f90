@@ -1,16 +1,22 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_symmetrize_matrix
   USE m_juDFT
+  USE m_constants
+  USE m_types_kpts
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_noco
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: symmetrize_matrix
 
 CONTAINS
   SUBROUTINE symmetrize_matrix(fmpi,noco,kpts,nk,hmat,smat,force_sym)
-    USE m_types
-    USE m_constants
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_noco),INTENT(in)    :: noco

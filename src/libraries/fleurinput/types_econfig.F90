@@ -1,10 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_econfig
   USE m_judft
+  USE m_mpi_bc_tool
+  USE m_constants
   IMPLICIT NONE
   PRIVATE
   !This is used by t_atoms and does not extend t_fleurinput_base by itself
@@ -145,7 +147,6 @@ CONTAINS
 
 
   SUBROUTINE broadcast(econf,irank,mpi_comm)
-    USE m_mpi_bc_tool
     CLASS(t_econfig),INTENT(INOUT):: econf
     INTEGER,INTENT(in)            :: irank,mpi_comm
 #ifdef CPP_MPI
@@ -161,7 +162,6 @@ CONTAINS
 
 
   SUBROUTINE init_num(econf,nc,nz)
-    USE m_constants
     CLASS(t_econfig),INTENT(OUT):: econf
     INTEGER,INTENT(in)          :: nc,nz
 
@@ -248,7 +248,6 @@ CONTAINS
 
 
   SUBROUTINE init_nz(econf,core,nz)
-    use m_constants
     CLASS(t_econfig),INTENT(OUT)   :: econf
     CHARACTER(len=*),INTENT(INOUT) :: core
     INTEGER,INTENT(IN)             :: nz

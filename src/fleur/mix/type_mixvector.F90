@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,7 +10,20 @@ MODULE m_types_mixvector
 #ifdef CPP_MPI
    use mpi
 #endif
-   USE m_types
+   USE m_convol
+   USE m_metrz0
+   USE m_constants
+   USE m_types_mpi
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_judft
    IMPLICIT NONE
 
    PRIVATE
@@ -22,16 +35,17 @@ MODULE m_types_mixvector
    TYPE(t_sym), POINTER    :: sym => NULL()
    INTEGER                :: jspins, nvac
    LOGICAL                :: l_noco, invs, invs2, l_mtnocopot, l_spinoffd_ldau
+   INTEGER                :: n_spinblocks = 1 !Number of spin blocks: one per complex function
    INTEGER                :: pw_length !The shape of the local arrays
-   INTEGER                :: pw_start(3) = 0, pw_stop(3) !First and last index for spin
+   INTEGER                :: pw_start(4) = 0, pw_stop(4) !First and last index for spin
    INTEGER                :: mt_length, mt_length_g
-   INTEGER                :: mt_start(3) = 0, mt_stop(3) !First and last index for spin
+   INTEGER                :: mt_start(4) = 0, mt_stop(4) !First and last index for spin
    INTEGER                :: vac_length, vac_length_g
-   INTEGER                :: vac_start(3) = 0, vac_stop(3) !First and last index for spin
+   INTEGER                :: vac_start(4) = 0, vac_stop(4) !First and last index for spin
    INTEGER                :: misc_length = 0, misc_length_g
-   INTEGER                :: misc_start(3) = 0, misc_stop(3) !First and last index for spin
+   INTEGER                :: misc_start(4) = 0, misc_stop(4) !First and last index for spin
    INTEGER                :: mix_mpi_comm !Communicator for all PEs doing mixing
-   LOGICAL                :: spin_here(3) = .TRUE.
+   LOGICAL                :: spin_here(4) = .TRUE.
    LOGICAL                :: pw_here = .TRUE.
    LOGICAL                :: mt_here = .TRUE.
    LOGICAL                :: vac_here = .TRUE.
@@ -39,6 +53,10 @@ MODULE m_types_mixvector
    INTEGER                :: mt_rank = 0
    INTEGER                :: mt_size = 1
    LOGICAL                :: l_pot = .FALSE. !Is this a potential?
+   ! MetaGGA: the kinetic energy density is carried along as a passive component. It uses the
+   ! pw/MT layout of the density, has zero weight in the metric and therefore does not enter
+   ! any dot product, so the mixing coefficients are determined by the density alone.
+   LOGICAL                :: tau_here = .FALSE.
    REAL, ALLOCATABLE       :: g_mt(:), g_vac(:), g_misc(:)
 
    TYPE, PUBLIC:: t_mixvector
@@ -46,6 +64,7 @@ MODULE m_types_mixvector
       REAL, ALLOCATABLE       :: vec_mt(:)
       REAL, ALLOCATABLE       :: vec_vac(:)
       REAL, ALLOCATABLE       :: vec_misc(:)
+      REAL, ALLOCATABLE       :: vec_tau_pw(:), vec_tau_mt(:)
    CONTAINS
       PROCEDURE :: alloc => mixvector_alloc
       PROCEDURE :: from_density => mixvector_from_density
@@ -82,7 +101,7 @@ CONTAINS
       CLASS(t_mixvector), INTENT(INOUT)::this
       INTEGER, INTENT(IN)::unit
       call timestart("read_mixing")
-      CALL this%alloc()
+      CALL this%alloc() ! tau is never stored in history files and stays zero
       IF (pw_here) READ (unit) this%vec_pw
       IF (mt_here) READ (unit) this%vec_mt
       IF (vac_here) READ (unit) this%vec_vac
@@ -112,6 +131,7 @@ CONTAINS
       IF (ALLOCATED(g_vac)) DEALLOCATE (g_vac)
       IF (ALLOCATED(g_misc)) DEALLOCATE (g_misc)
       !restore defaults
+      n_spinblocks = 1
       pw_start = 0
       mt_start = 0
       vac_start = 0
@@ -125,21 +145,22 @@ CONTAINS
       mt_rank = 0
       mt_size = 1
       l_pot = .FALSE. !Is this a potential?
+      tau_here = .FALSE.
    END SUBROUTINE mixvector_reset
 
-   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin, denIm)
-      USE m_types
+   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin, tau)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
       INTEGER, INTENT(IN) :: nmzxyd
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
-      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: tau !! MetaGGA kinetic energy density
       INTEGER:: js, ii, n, l, iv, jspin, mmpSize, nIJ_llp_mmpSize, offset
+      LOGICAL :: l_dfpt
 
+      l_dfpt = ALLOCATED(den%mtIm)
       CALL den%DISTRIBUTE(mix_mpi_comm)
-      IF (PRESENT(denIm)) CALL denIm%DISTRIBUTE(mix_mpi_comm)
-      DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
+      DO js = 1, n_spinblocks
          jspin = js
          IF (PRESENT(swapspin)) THEN
             IF (swapspin .AND. js < 3) jspin = MERGE(1, 2, js == 2)
@@ -149,26 +170,22 @@ CONTAINS
             IF (pw_here) THEN
                if (js==1.and.l_noco) THEN
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = 0.5*REAL(den%pw(:, 1)+den%pw(:,2))
-                  IF ((.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                  IF ((.NOT. sym%invs).OR.l_dfpt) THEN
                      vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = 0.5*AIMAG(den%pw(:, 1)+den%pw(:,2))
                   ENDIF
                elseif(js==2.and.l_noco) THEN
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = 0.5*REAL(den%pw(:, 1)-den%pw(:,2))
-                  IF ((.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                  IF ((.NOT. sym%invs).OR.l_dfpt) THEN
                      vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = 0.5*AIMAG(den%pw(:, 1)-den%pw(:,2))
                   ENDIF
                else   
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, jspin))
-                  IF (js>2.or.(.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                  IF (js>2.or.(.NOT. sym%invs).OR.l_dfpt) THEN
                                vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, jspin))
                   endif             
-               endif   
-               IF ((js == 3).AND.PRESENT(denIm)) THEN
-                  vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(den%pw(:, 4))
-                  vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(den%pw(:, 4))
-               END IF
+               endif
             ENDIF
-            IF (vac_here) THEN
+            IF (vac_start(js) > 0) THEN
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
@@ -176,7 +193,7 @@ CONTAINS
                      !construct density
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*REAL(den%vac(:, 1, iv, 1)+den%vac(:, 1, iv, 2))
                      ii = ii + SIZE(den%vac, 1)
-                     IF (PRESENT(denIm)) THEN
+                     IF (l_dfpt) THEN
                         vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*AIMAG(den%vac(:, 1, iv, jspin)+den%vac(:, 1, iv, 2))
                         ii = ii + SIZE(den%vac, 1)
                      END IF
@@ -193,7 +210,7 @@ CONTAINS
 
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*REAL(den%vac(:, 1, iv, 1)-den%vac(:, 1, iv, 2))
                      ii = ii + SIZE(den%vac, 1)
-                     IF (PRESENT(denIm)) THEN
+                     IF (l_dfpt) THEN
                         vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*AIMAG(den%vac(:, 1, iv, jspin)-den%vac(:, 1, iv, 2))
                         ii = ii + SIZE(den%vac, 1)
                      END IF
@@ -208,7 +225,7 @@ CONTAINS
                   else
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, jspin))
                      ii = ii + SIZE(den%vac, 1)
-                     IF (PRESENT(denIm)) THEN
+                     IF (l_dfpt) THEN
                         vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = AIMAG(den%vac(:, 1, iv, jspin))
                         ii = ii + SIZE(den%vac, 1)
                      END IF
@@ -227,30 +244,25 @@ CONTAINS
                   ENDIF
                ENDDO
             ENDIF
-            IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
+            IF (mt_start(js) > 0) THEN
                !This PE stores some(or all) MT data
                ii = mt_start(js) - 1
-               IF (.NOT.PRESENT(denIm)) THEN
-                  DO n = mt_rank + 1, atoms%ntype, mt_size
-                     if (js==1 .and. l_noco) then 
-                        !Construct charge
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = (den%mt(:atoms%jri(n), l, n, 1)+den%mt(:atoms%jri(n), l, n, 2))*0.5
-                           ii = ii + atoms%jri(n)
-                        ENDDO   
-                     elseif(js==2.and.l_noco) then  
-                        !Construct magnetiztaion
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = (den%mt(:atoms%jri(n), l, n, 1)-den%mt(:atoms%jri(n), l, n, 2))*0.5
-                           ii = ii + atoms%jri(n)
-                        ENDDO
-                     else   
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
-                           ii = ii + atoms%jri(n)
-                        ENDDO
-                     endif   
+               DO n = mt_rank + 1, atoms%ntype, mt_size
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
+                     IF (l_noco .AND. js == 1) THEN
+                        !charge response
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mt(:atoms%jri(n), l, n, 1) + den%mt(:atoms%jri(n), l, n, 2))
+                     ELSE IF (l_noco .AND. js == 2) THEN
+                        !magnetization response 
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mt(:atoms%jri(n), l, n, 1) - den%mt(:atoms%jri(n), l, n, 2))
+                     ELSE
+                        !off diagonal response
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
+                     END IF
+                     ii = ii + atoms%jri(n)
                   ENDDO
+               ENDDO
+               IF (.NOT.l_dfpt) THEN
                   IF (js == 3) THEN !Imaginary part
                      DO n = mt_rank + 1, atoms%ntype, mt_size
                         DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
@@ -259,38 +271,24 @@ CONTAINS
                         ENDDO
                      ENDDO
                   ENDIF
-           
-                  
-               ELSE ! DFPT mixing
+               ELSE
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
+                        IF (l_noco .AND. js == 1) THEN
+                           !charge
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mtIm(:atoms%jri(n), l, n, 1) + den%mtIm(:atoms%jri(n), l, n, 2))
+                        ELSE IF (l_noco .AND. js == 2) THEN
+                           !magnetization
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mtIm(:atoms%jri(n), l, n, 1) - den%mtIm(:atoms%jri(n), l, n, 2))
+                        ELSE
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mtIm(:atoms%jri(n), l, n, jspin)
+                        END IF
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
-                  DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, jspin)
-                        ii = ii + atoms%jri(n)
-                     END DO
-                  END DO
-                  IF (js == 3) THEN !Imaginary part
-                     DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
-                           ii = ii + atoms%jri(n)
-                        END DO
-                     END DO
-                     DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, 4)
-                           ii = ii + atoms%jri(n)
-                        END DO
-                     END DO
-                  END IF
                END IF
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
+            IF (misc_start(js) > 0) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, jspin))
                vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, jspin)), (/mmpSize/))
                vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, jspin)), (/mmpSize/))
@@ -304,23 +302,44 @@ CONTAINS
          END IF
       END DO
 
+      IF (PRESENT(tau) .AND. tau_here) THEN
+         ! Collinear only (tau_here is never set for noco), same layout as the density
+         CALL tau%DISTRIBUTE(mix_mpi_comm)
+         DO js = 1, jspins
+            IF (.NOT. spin_here(js)) CYCLE
+            IF (pw_here) THEN
+               vec%vec_tau_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(tau%pw(:, js))
+               IF (.NOT. sym%invs) vec%vec_tau_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(tau%pw(:, js))
+            END IF
+            IF (mt_here) THEN
+               ii = mt_start(js) - 1
+               DO n = mt_rank + 1, atoms%ntype, mt_size
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
+                     vec%vec_tau_mt(ii + 1:ii + atoms%jri(n)) = tau%mt(:atoms%jri(n), l, n, js)
+                     ii = ii + atoms%jri(n)
+                  END DO
+               END DO
+            END IF
+         END DO
+      END IF
+
    END SUBROUTINE mixvector_from_density
 
-   SUBROUTINE mixvector_to_density(vec, den, nmzxyd, denIm)
-      USE m_types
+   SUBROUTINE mixvector_to_density(vec, den, nmzxyd, tau)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
       TYPE(t_potden), INTENT(INOUT) :: den
-      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
+      !! MetaGGA kinetic energy density; all its fields must be zero on entry (summed by collect)
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: tau
       INTEGER,INTENT(IN) :: nmzxyd
       INTEGER:: js, i, ii, n, l, iv, mmpSize, nIJ_llp_mmpSize, offset
 
       LOGICAL :: l_dfpt
       REAL :: vacOffdiagTemp(SIZE(den%vac, 1))
 
-      l_dfpt = PRESENT(denIm)
+      l_dfpt = ALLOCATED(den%mtIm)
 
-      DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
+      DO js = 1, n_spinblocks
          IF (spin_here(js)) THEN
             !PW part
             IF (pw_here) THEN
@@ -328,13 +347,10 @@ CONTAINS
                   den%pw(:, js) = vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1)
                ELSE
                   den%pw(:, js) = CMPLX(vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
-                  IF (l_dfpt.AND.js==3) THEN
-                     den%pw(:, 4) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
-                  END IF
                ENDIF
                
             ENDIF
-            IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
+            IF (mt_start(js) > 0) THEN
                !This PE stores some(or all) MT data
                ii = mt_start(js)
                DO n = mt_rank + 1, atoms%ntype, mt_size
@@ -346,29 +362,21 @@ CONTAINS
                IF (l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        denIm%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                        den%mtIm(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
                END IF
-               IF (js == 3) THEN !Imaginary part comes as 4th spin
+               IF (js == 3 .AND. .NOT.l_dfpt) THEN !Imaginary part comes as 4th spin
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         den%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
-                  IF (l_dfpt) THEN
-                     DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           denIm%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
-                           ii = ii + atoms%jri(n)
-                        ENDDO
-                     ENDDO
-                  END IF      
                ENDIF
             ENDIF
-            IF (vac_here) THEN
+            IF (vac_start(js) > 0) THEN
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
@@ -397,7 +405,7 @@ CONTAINS
                   ENDIF
                ENDDO
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
+            IF (misc_start(js) > 0) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, js))
                den%mmpMat(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1), &
                                                                  vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1)), &
@@ -413,10 +421,30 @@ CONTAINS
          END IF
       ENDDO
 
-      IF (.NOT.l_dfpt) THEN
-         CALL den%collect(mix_mpi_comm)
-      ELSE
-         CALL den%collect(mix_mpi_comm,denIm)
+      CALL den%collect(mix_mpi_comm)
+
+      IF (PRESENT(tau) .AND. tau_here) THEN
+         DO js = 1, jspins
+            IF (.NOT. spin_here(js)) CYCLE
+            IF (pw_here) THEN
+               IF (sym%invs) THEN
+                  tau%pw(:, js) = vec%vec_tau_pw(pw_start(js):pw_start(js) + stars%ng3 - 1)
+               ELSE
+                  tau%pw(:, js) = CMPLX(vec%vec_tau_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), &
+                                        vec%vec_tau_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
+               END IF
+            END IF
+            IF (mt_here) THEN
+               ii = mt_start(js)
+               DO n = mt_rank + 1, atoms%ntype, mt_size
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
+                     tau%mt(:atoms%jri(n), l, n, js) = vec%vec_tau_mt(ii:ii + atoms%jri(n) - 1)
+                     ii = ii + atoms%jri(n)
+                  END DO
+               END DO
+            END IF
+         END DO
+         CALL tau%collect(mix_mpi_comm)
       END IF
 
       !Restore up/down density
@@ -436,6 +464,14 @@ CONTAINS
             den%mt(:, :, : , 2)=tmp-den%mt(:, :, : , 2)
          end block
       endif      
+      if (l_noco.and.l_dfpt) then
+         block
+            real,allocatable:: tmp(:,:,:)
+            tmp=den%mtIm(:, :, : , 1)
+            den%mtIm(:, :, : , 1)=den%mtIm(:, :, : , 1)+den%mtIm(:, :, : , 2)
+            den%mtIm(:, :, : , 2)=tmp-den%mtIm(:, :, : , 2)
+         end block
+      endif
       
       if (allocated(den%vac).and.l_noco) then 
          block
@@ -449,8 +485,6 @@ CONTAINS
    END SUBROUTINE mixvector_to_density
 
    FUNCTION mixvector_metric(vec,l_dfpt) RESULT(mvec)
-      USE m_types
-      USE m_convol
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN) :: vec
       LOGICAL,            INTENT(IN) :: l_dfpt
@@ -462,9 +496,11 @@ CONTAINS
       
       call timestart("metric")
       mvec = vec
+      IF (ALLOCATED(mvec%vec_tau_pw)) mvec%vec_tau_pw = 0.0
+      IF (ALLOCATED(mvec%vec_tau_mt)) mvec%vec_tau_mt = 0.0
       IF (pw_here) ALLOCATE (pw(stars%ng3), pw_w(stars%ng3))
 
-      DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
+      DO js = 1, n_spinblocks
          IF (spin_here(js)) THEN
             !PW part
             IF (pw_here) THEN
@@ -480,15 +516,8 @@ CONTAINS
                IF ((.NOT. sym%invs) .OR. (js == 3) .OR. l_dfpt) THEN
                   mvec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(pw_w)
                ENDIF
-               IF ((js == 3) .AND. l_dfpt) THEN
-                  pw(:) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
-                  CALL convol(stars, pw_w, pw)
-                  pw_w = pw_w*cell%omtil
-                  mvec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(pw_w)
-                  mvec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(pw_w)
-               END IF
             ENDIF
-            IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
+            IF (mt_start(js) > 0) THEN
                !This PE stores some(or all) MT data
                IF (.NOT.l_dfpt) THEN
                   mvec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1)
@@ -499,19 +528,15 @@ CONTAINS
                ELSE
                   mvec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1)
                   mvec%vec_mt(mt_start(js) + SIZE(g_mt):mt_start(js) + 2*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + SIZE(g_mt):mt_start(js) + 2*SIZE(g_mt) - 1)
-                  IF (js == 3) THEN
-                     mvec%vec_mt(mt_start(js) + 2*SIZE(g_mt):mt_start(js) + 3*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + 2*SIZE(g_mt):mt_start(js) + 3*SIZE(g_mt) - 1)
-                     mvec%vec_mt(mt_start(js) + 3*SIZE(g_mt):mt_start(js) + 4*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + 3*SIZE(g_mt):mt_start(js) + 4*SIZE(g_mt) - 1)
-                  ENDIF
                END IF
             ENDIF
-            IF (vac_here) THEN
+            IF (vac_start(js) > 0) THEN
                mvec%vec_vac(vac_start(js):vac_start(js) + SIZE(g_vac) - 1) = g_vac*vec%vec_vac(vac_start(js):vac_start(js) + SIZE(g_vac) - 1)
                IF (js == 3) THEN !We have some extra data that corresponds to first part of metric
                   mvec%vec_vac(vac_start(js) + SIZE(g_vac):vac_stop(js)) = g_vac(:vac_stop(js) - vac_start(js) - SIZE(g_vac) + 1)*vec%vec_vac(vac_start(js) + SIZE(g_vac):vac_stop(js))
                ENDIF
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
+            IF (misc_start(js) > 0) THEN
                mvec%vec_misc(misc_start(js):misc_stop(js)) = g_misc*vec%vec_misc(misc_start(js):misc_stop(js))
             END IF
          ENDIF
@@ -520,7 +545,6 @@ CONTAINS
    END FUNCTION mixvector_metric
 
    SUBROUTINE init_metric(vacuum, stars, l_dfpt)
-      USE m_metrz0
       IMPLICIT NONE
       !
       TYPE(t_vacuum), INTENT(in) :: vacuum
@@ -622,7 +646,7 @@ CONTAINS
    SUBROUTINE init_storage_mpi(comm_mpi)
       IMPLICIT NONE
       INTEGER, INTENT(in):: comm_mpi
-      INTEGER      :: irank, isize, err, js, new_comm
+      INTEGER      :: irank, isize, err, js, ngroup, new_comm
       mix_mpi_comm = comm_mpi
 #ifdef CPP_MPI
 
@@ -630,10 +654,12 @@ CONTAINS
       CALL mpi_comm_size(comm_mpi, isize, err)
 
       IF (isize == 1) RETURN !No parallelization
-      js = MERGE(jspins, 3,.NOT. l_noco)!distribute spins
-      js = MIN(js, isize)
-      CALL judft_comm_split(comm_mpi, MOD(irank, js), irank, new_comm)
-      spin_here = (/MOD(irank, js) == 0, MOD(irank, js) == 1, (isize == 2 .AND. irank == 0) .OR. MOD(irank, js) == 2/)
+      ngroup = MIN(n_spinblocks, isize) !distribute spins
+      CALL judft_comm_split(comm_mpi, MOD(irank, ngroup), irank, new_comm)
+      spin_here = .FALSE.
+      DO js = 1, n_spinblocks
+         spin_here(js) = MOD(irank, ngroup) == MOD(js - 1, ngroup)
+      END DO
 
       CALL mpi_comm_rank(new_comm, irank, err)
       CALL mpi_comm_size(new_comm, isize, err)
@@ -663,8 +689,7 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, l_densitymatrixV, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
-      USE m_types
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, l_densitymatrixV, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt, l_tau)
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
@@ -680,11 +705,14 @@ CONTAINS
       TYPE(t_sym), INTENT(IN), TARGET    :: sym_i
 
       LOGICAL, INTENT(IN) :: l_dfpt
+      LOGICAL, INTENT(IN), OPTIONAL :: l_tau !! mix a MetaGGA kinetic energy density along
 
       INTEGER :: js, n, len, i_v, natom2
 
       !Store pointers to data-types
       IF (ASSOCIATED(atoms)) RETURN !was done before...
+      tau_here = .FALSE.
+      IF (PRESENT(l_tau)) tau_here = l_tau .AND. .NOT. noco%l_noco .AND. .NOT. l_dfpt
       jspins = input%jspins
       nvac = vacuum%nvac
       l_noco = noco%l_noco
@@ -692,13 +720,15 @@ CONTAINS
       l_spinoffd_ldau = any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau)
       stars => stars_i; cell => cell_i; sphhar => sphhar_i; atoms => atoms_i; sym => sym_i
 
+      n_spinblocks = MERGE( MERGE(4, 3, l_dfpt),jspins, l_noco)
+
       vac_here = input%film
       misc_here = l_densitymatrix.OR.l_densitymatrixV
       CALL init_storage_mpi(comm_mpi)
 
       pw_length = 0; mt_length = 0; vac_length = 0; misc_length = 0
       mt_length_g = 0; vac_length_g = 0; misc_length_g = 0
-      DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
+      DO js = 1, n_spinblocks
          IF (spin_here(js)) THEN
             !Now calculate the length of the vectors
             IF (pw_here) THEN
@@ -708,7 +738,6 @@ CONTAINS
                ELSE
                   pw_length = pw_length + 2*stars%ng3
                ENDIF
-               IF (l_dfpt.AND.js==3) pw_length = pw_length + 2*stars%ng3
             ENDIF
             pw_stop(js) = pw_length
             IF (mt_here) THEN
@@ -724,20 +753,16 @@ CONTAINS
                ENDDO
                mt_length_g = MAX(len, mt_length_g)
                IF (l_dfpt) mt_length_g = mt_length_g / 2
-               IF (js == 3) THEN
+               IF (js == 3 .AND. .NOT.l_dfpt) THEN
                   !need to store imaginary part as well...
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     IF (l_dfpt) THEN
-                        len = len + 2*(sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
-                     ELSE
-                        len = len + (sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
-                     END IF
+                     len = len + (sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                   ENDDO
                ENDIF
                IF (js < 3 .OR. any(noco%l_unrestrictMT)) mt_length = mt_length + len
                mt_stop(js) = mt_length
             END IF
-            IF (vac_here) THEN
+            IF (vac_here .AND. js < 4) THEN !When DFPT NOCO will be extended to films js<4 will be removed
                !This PE stores vac-data
                vac_start(js) = vac_length + 1
                len = 0
@@ -752,7 +777,7 @@ CONTAINS
                vac_length = vac_length + len
                vac_stop(js) = vac_length
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
+            IF (misc_here .AND. (js < 3 .OR. (l_spinoffd_ldau .AND. js == 3))) THEN
                len = 7*7*2*atoms%n_u
                DO i_v = 1, atoms%n_v  !loop over pairs which are corrected by U+V 
                   DO natom2 = 1, atoms%lda_v(i_v)%numOtherAtoms
@@ -775,6 +800,9 @@ CONTAINS
       ALLOCATE (vec%vec_mt(mt_length))
       ALLOCATE (vec%vec_vac(vac_length))
       ALLOCATE (vec%vec_misc(misc_length))
+      ALLOCATE (vec%vec_tau_pw(MERGE(pw_length, 0, tau_here)), vec%vec_tau_mt(MERGE(mt_length, 0, tau_here)))
+      vec%vec_tau_pw = 0.0
+      vec%vec_tau_mt = 0.0
    END SUBROUTINE mixvector_alloc
 
    FUNCTION multiply_scalar(scalar, vec) RESULT(vecout)
@@ -787,6 +815,8 @@ CONTAINS
       vecout%vec_mt = vecout%vec_mt*scalar
       vecout%vec_vac = vecout%vec_vac*scalar
       vecout%vec_misc = vecout%vec_misc*scalar
+      IF (ALLOCATED(vecout%vec_tau_pw)) vecout%vec_tau_pw = vecout%vec_tau_pw*scalar
+      IF (ALLOCATED(vecout%vec_tau_mt)) vecout%vec_tau_mt = vecout%vec_tau_mt*scalar
    END FUNCTION multiply_scalar
 
    FUNCTION multiply_scalar_spin(scalar, vec) RESULT(vecout)
@@ -798,7 +828,7 @@ CONTAINS
       REAL:: fac
 
       vecout = vec
-      DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
+      DO js = 1, n_spinblocks
          IF (SIZE(scalar) < js) THEN
             fac = 0.0
          ELSE
@@ -808,6 +838,10 @@ CONTAINS
          IF (mt_start(js) > 0) vecout%vec_mt(mt_start(js):mt_stop(js)) = vecout%vec_mt(mt_start(js):mt_stop(js))*fac
          IF (vac_start(js) > 0) vecout%vec_vac(vac_start(js):vac_stop(js)) = vecout%vec_vac(vac_start(js):vac_stop(js))*fac
          IF (misc_start(js) > 0) vecout%vec_misc(misc_start(js):misc_stop(js)) = vecout%vec_misc(misc_start(js):misc_stop(js))*fac
+         IF (tau_here .AND. js <= jspins) THEN
+            IF (pw_start(js) > 0) vecout%vec_tau_pw(pw_start(js):pw_stop(js)) = vecout%vec_tau_pw(pw_start(js):pw_stop(js))*fac
+            IF (mt_start(js) > 0) vecout%vec_tau_mt(mt_start(js):mt_stop(js)) = vecout%vec_tau_mt(mt_start(js):mt_stop(js))*fac
+         END IF
       END DO
    END FUNCTION multiply_scalar_spin
 
@@ -820,6 +854,12 @@ CONTAINS
       vecout%vec_mt = vecout%vec_mt + vec2%vec_mt
       vecout%vec_vac = vecout%vec_vac + vec2%vec_vac
       vecout%vec_misc = vecout%vec_misc + vec2%vec_misc
+      IF (ALLOCATED(vecout%vec_tau_pw) .AND. ALLOCATED(vec2%vec_tau_pw)) THEN
+         IF (SIZE(vecout%vec_tau_pw) == SIZE(vec2%vec_tau_pw)) vecout%vec_tau_pw = vecout%vec_tau_pw + vec2%vec_tau_pw
+      END IF
+      IF (ALLOCATED(vecout%vec_tau_mt) .AND. ALLOCATED(vec2%vec_tau_mt)) THEN
+         IF (SIZE(vecout%vec_tau_mt) == SIZE(vec2%vec_tau_mt)) vecout%vec_tau_mt = vecout%vec_tau_mt + vec2%vec_tau_mt
+      END IF
    END FUNCTION add_vectors
 
    FUNCTION subtract_vectors(vec1, vec2) RESULT(vecout)
@@ -831,6 +871,12 @@ CONTAINS
       vecout%vec_mt = vecout%vec_mt - vec2%vec_mt
       vecout%vec_vac = vecout%vec_vac - vec2%vec_vac
       vecout%vec_misc = vecout%vec_misc - vec2%vec_misc
+      IF (ALLOCATED(vecout%vec_tau_pw) .AND. ALLOCATED(vec2%vec_tau_pw)) THEN
+         IF (SIZE(vecout%vec_tau_pw) == SIZE(vec2%vec_tau_pw)) vecout%vec_tau_pw = vecout%vec_tau_pw - vec2%vec_tau_pw
+      END IF
+      IF (ALLOCATED(vecout%vec_tau_mt) .AND. ALLOCATED(vec2%vec_tau_mt)) THEN
+         IF (SIZE(vecout%vec_tau_mt) == SIZE(vec2%vec_tau_mt)) vecout%vec_tau_mt = vecout%vec_tau_mt - vec2%vec_tau_mt
+      END IF
    END FUNCTION subtract_vectors
 
    FUNCTION multiply_dot(vec1, vec2) RESULT(dprod)
@@ -879,7 +925,7 @@ CONTAINS
 #endif
    END FUNCTION multiply_dot_mask
 
-   SUBROUTINE dfpt_multiply_dot_mask(vec1, vec2, mask, spin, dprod1, dprod2)
+   SUBROUTINE dfpt_multiply_dot_mask(vec1, vec2, mask, spin, dprod1)
       CLASS(t_mixvector), INTENT(IN)::vec1
       TYPE(t_mixvector),  INTENT(IN)::vec2
 
@@ -887,26 +933,25 @@ CONTAINS
       INTEGER, INTENT(IN)    :: spin
       REAL,    INTENT(INOUT) :: dprod1(2)
 
-      REAL, OPTIONAL, INTENT(INOUT) :: dprod2(2)
-
-      REAL :: dprod1_tmp(2), dprod2_tmp(2)
-      INTEGER:: js, ierr
+      REAL :: dprod1_tmp(2)
+      INTEGER:: js, ierr, nhalf
 
       dprod1 = 0.0
-      IF (PRESENT(dprod2)) dprod2 = 0.0
 
-      DO js = 1, 2
+      DO js = 1, n_spinblocks
          IF (mask(1) .AND. (spin == js) .AND. pw_start(js) > 0) THEN
-            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)/2), &
-                                                vec2%vec_pw(pw_start(js):pw_stop(js)/2))
-            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:pw_stop(js)), &
-                                                vec2%vec_pw(pw_stop(js)/2+1:pw_stop(js)))
+            nhalf = (pw_stop(js) - pw_start(js) + 1)/2
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_start(js) + nhalf - 1), &
+                                                vec2%vec_pw(pw_start(js):pw_start(js) + nhalf - 1))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_start(js) + nhalf:pw_stop(js)), &
+                                                vec2%vec_pw(pw_start(js) + nhalf:pw_stop(js)))
          END IF
          IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) THEN
-            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/2), &
-                                                vec2%vec_mt(mt_start(js):mt_stop(js)/2))
-            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
-                                                vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+            nhalf = (mt_stop(js) - mt_start(js) + 1)/2
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_start(js) + nhalf - 1), &
+                                                vec2%vec_mt(mt_start(js):mt_start(js) + nhalf - 1))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_start(js) + nhalf:mt_stop(js)), &
+                                                vec2%vec_mt(mt_start(js) + nhalf:mt_stop(js)))
          END IF
          IF (mask(3) .AND. (spin == js) .AND. vac_start(js) > 0) THEN
             dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_vac(vac_start(js):vac_stop(js)), &
@@ -914,36 +959,9 @@ CONTAINS
          END IF
       END DO
 
-      IF (js==3.AND.PRESENT(dprod2)) THEN
-         IF (mask(1) .AND. pw_start(js) > 0) THEN
-            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)/4), &
-                                                vec2%vec_pw(pw_start(js):pw_stop(js)/4))
-            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/4+1:pw_stop(js)/2), &
-                                                vec2%vec_pw(pw_stop(js)/4+1:pw_stop(js)/2))
-            dprod2(1) = dprod2(1) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:3*pw_stop(js)/4), &
-                                                vec2%vec_pw(pw_stop(js)/2+1:3*pw_stop(js)/4))
-            dprod2(2) = dprod2(2) + DOT_PRODUCT(vec1%vec_pw(3*pw_stop(js)/4+1:pw_stop(js)), &
-                                                vec2%vec_pw(3*pw_stop(js)/4+1:pw_stop(js)))
-         END IF
-         IF (mask(2) .AND. pw_start(js) > 0) THEN
-            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/4), &
-                                                vec2%vec_mt(mt_start(js):mt_stop(js)/4))
-            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/4+1:mt_stop(js)/2), &
-                                                vec2%vec_mt(mt_stop(js)/4+1:mt_stop(js)/2))
-            dprod2(1) = dprod2(1) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:3*mt_stop(js)/4), &
-                                                vec2%vec_mt(mt_stop(js)/2+1:3*mt_stop(js)/4))
-            dprod2(2) = dprod2(2) + DOT_PRODUCT(vec1%vec_mt(3*mt_stop(js)/4+1:mt_stop(js)), &
-                                                vec2%vec_mt(3*mt_stop(js)/4+1:mt_stop(js)))
-         END IF
-      END IF
-
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 2, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
       dprod1 = dprod1_tmp
-      IF (PRESENT(dprod2)) THEN
-         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 2, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
-         dprod2 = dprod2_tmp
-      END IF
 #endif
    END SUBROUTINE dfpt_multiply_dot_mask
 

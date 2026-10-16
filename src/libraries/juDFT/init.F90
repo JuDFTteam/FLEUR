@@ -13,6 +13,9 @@ MODULE m_juDFT_init
       USE m_judft_stop
       USE m_judft_args
       USE m_juDFT_internalParams
+#ifdef __INTEL_COMPILER
+      USE ifport
+#endif
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
@@ -39,7 +42,6 @@ MODULE m_juDFT_init
 
 
 #ifdef __INTEL_COMPILER
-      USE ifport
       INTEGER :: result,signal_handler
       EXTERNAL signal_handler
       result=signal(2,signal_handler,-1)

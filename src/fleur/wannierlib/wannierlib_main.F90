@@ -16,7 +16,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_juDFT
-   USE m_types, ONLY: t_stars, t_results
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
                                        matrix_element_release_anchor, matrix_element_radial
    USE m_types_melem_request, ONLY: t_melem_request
@@ -52,11 +51,12 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
    USE m_types_enpara
    USE m_types_mpi
    USE m_types_potden
-   USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
+   USE m_types_misc
+   USE m_types_stars
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_main
@@ -99,7 +99,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
       TYPE(t_wgauge_bmesh) :: bmesh    ! b-shell weights handed to the operator side
-      TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
       COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) the same one with H inside
@@ -128,7 +127,7 @@ CONTAINS
 
       !> The radial functions come from the factory, which keeps them for the operators
       !> anyway. Generating a second set here produced the same numbers twice.
-      CALL matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)
+      CALL matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun)
 
       ! Settled before anything else: it distributes the coarse-operator k-loop too.
       CALL wannierlib_distribute_k(kpts, fmpi, distk)
@@ -165,7 +164,7 @@ CONTAINS
 
          CALL wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
-                                       radfun, usdus, distk, kdiff, nntot_w90, jspin, &
+                                       radfun, distk, kdiff, nntot_w90, jspin, &
                                        l_wannierlib_spinors, amn, mmn, vacuum)
 
          ! amn was filled only on each rank's distk slice (zeros elsewhere) -> sum to the full set

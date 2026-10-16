@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !-------------------------------------------------------------------------------
@@ -7,16 +7,24 @@ MODULE m_step_function
    !! Contains revised subroutines to construct the step function \f$\Theta(r)\f$
    !! both on a fine real space grid as well as in \f$G<G_{max}\f$ space.
    USE m_juDFT
-   USE m_types
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_fftgrid
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_stars
+   USE m_types_sym
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: stepf_analytical, stepf_stars
 
 CONTAINS
    SUBROUTINE stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, iOrd, stepf_array)
       !! Construct the analytical representation of the step function on a big
       !! reciprocal grid.
 
-      USE m_constants
 
       TYPE(t_sym),   INTENT(IN) :: sym
       TYPE(t_stars), INTENT(IN) :: stars

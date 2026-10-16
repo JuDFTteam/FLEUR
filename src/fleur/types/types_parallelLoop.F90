@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_parallelLoop
 
+!$ use omp_lib
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: t_parallelloop_init, calcnumbercomputationbunches, getnumberofthreads
    TYPE t_parallelLoop
       INTEGER :: overallMinIndex
       INTEGER :: overallMaxIndex
@@ -62,7 +66,6 @@ CONTAINS
    END SUBROUTINE calcNumberComputationBunches
 
    INTEGER FUNCTION getNumberOfThreads()
-      !$ use omp_lib
       IMPLICIT NONE
       INTEGER :: numThreads
       numThreads = 1

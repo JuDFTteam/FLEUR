@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,6 +12,22 @@ MODULE m_cdnovlp
    USE m_force_a4_add
    USE m_sphbes
    USE m_phasy1
+   USE m_constants
+   USE m_qpwtonmt
+   USE m_diflgr
+   USE m_intgr, ONLY: intgr3, intgz0
+   USE m_spgrot
+   USE m_rcerf
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
 
    PRIVATE
@@ -24,7 +40,6 @@ CONTAINS
       !     added to the spin component jspin of the interstitial, muffin-tin and
       !     vacuum densities. All the work is done in add_coretail.
       !--------------------------------------------------------------------------
-      USE m_types
 
       TYPE(t_mpi),INTENT(IN)      :: fmpi
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -93,8 +108,6 @@ CONTAINS
       !     applied to the positive spin-resolved densities and never to a
       !     (possibly small or negative) magnetization.
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_types
 
       TYPE(t_mpi),INTENT(IN)      :: fmpi
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -232,9 +245,6 @@ CONTAINS
       !     components to cover the non-collinear case as well, see cdnovlp and
       !     cdnovlp_noco for the two entry points.
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_qpwtonmt
-      USE m_types
 
       TYPE(t_mpi),INTENT(IN)      :: fmpi
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -409,9 +419,6 @@ CONTAINS
       !
       !     rh enters as 4*pi*r^2*rho_core and leaves as the (pseudized) rho_core
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_types
-      USE m_diflgr
 
       TYPE(t_atoms),INTENT(IN) :: atoms
       LOGICAL,INTENT(IN)       :: l_st
@@ -509,8 +516,6 @@ CONTAINS
       !     is not useful. Since |rho_21| <= sqrt(rho_11*rho_22), the mean of the
       !     two diagonal decay constants is used for it.
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_types
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -638,8 +643,6 @@ CONTAINS
       !     for simple use, this is corrected here.
       !     Klueppelberg (force level 1)
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_types
 
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sphhar),INTENT(IN) :: sphhar
@@ -689,9 +692,6 @@ CONTAINS
       !
       !     Klueppelberg (force level 1), Oct. 2015
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_types
-      USE m_intgr, ONLY : intgr3
 
       TYPE(t_mpi),INTENT(IN)    :: fmpi
       TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -774,9 +774,6 @@ CONTAINS
       !     Subtract pseudo density contribution from own mt sphere from mt forces
       !     Klueppelberg (force level 1)
       !--------------------------------------------------------------------------
-      USE m_constants
-      USE m_types
-      USE m_intgr, ONLY : intgr3
 
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sphhar),INTENT(IN) :: sphhar
@@ -856,7 +853,6 @@ CONTAINS
       !     interstitial density matrix according to the local spin frame
       !     of that atom type. Without wgt all weights are 1.0.
 
-      USE m_types
 
       type(t_mpi)      ,intent(in) :: fmpi
       TYPE(t_input),    INTENT(in) ::input
@@ -952,9 +948,6 @@ CONTAINS
                           neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
       ! Calculates the structure constant for each atom of atom type
 
-      USE m_types
-      USE m_spgrot
-      USE m_constants
        
 
       integer,       intent(in)  :: nat1
@@ -1049,10 +1042,6 @@ CONTAINS
                                      mshc, rat, rh, alpha, stars, cell, acoff, &
                                      qf)
 
-      USE m_types
-      USE m_constants
-      USE m_rcerf
-      USE m_intgr, ONLY : intgr3, intgz0
 
       
       integer          ,intent(in) :: msh,method2, n_out_p

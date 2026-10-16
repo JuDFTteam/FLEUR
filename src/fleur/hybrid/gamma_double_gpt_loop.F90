@@ -1,8 +1,19 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_gamma_double_gpt_loop
-   use m_types 
    use m_juDFT
    use m_constants
    use m_glob_tofrom_loc
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_mpdata
+   use m_types_mpi
+   implicit none
+   private
+   public :: gamma_double_gpt_loop, setup_q_and_qnorm
 contains
    subroutine gamma_double_gpt_loop(fi, fmpi, hybdat, mpdata, sphbesmoment, gmat, ngptm1, pgptm1, pqnrm, coul) 
       implicit none

@@ -1,5 +1,13 @@
       MODULE m_util
       USE m_juDFT
+      USE m_constants
+      USE m_types_atoms
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gaunt, wigner3j, intgrf, pure_intgrf, intgrf_init,
+     &primitivef, modulo1, derivative_t, derivative_nt, sphbessel,
+     &harmonicsr, cerf, chr, intgrf_out, derivative, no_error,
+     &negative_exponent_warning, negative_exponent_error
 c     error and warning codes for intgrf function
       INTEGER, PARAMETER :: NO_ERROR                  = 0
       INTEGER, PARAMETER :: NEGATIVE_EXPONENT_WARNING = 1
@@ -26,7 +34,6 @@ C     sfac contains square root of fac, i.e. sfac(i)= sqrt(i!)
 
       FUNCTION gaunt(l1,l2,l3,m1,m2,m3,maxfac,fac,sfac)
       
-      USE m_constants ,ONLY: pimach
       
       IMPLICIT NONE
       
@@ -109,7 +116,6 @@ c     intgrf_init.
 
       FUNCTION intgrf(f,jri,jmtd,rmsh,dx,ntype,itype,gridf)
 
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -303,7 +309,6 @@ c     Only Lagrange integration is used
 
       SUBROUTINE primitivef(primf,fin,rmsh,dx,jri,jmtd,itypein,ntype)
 
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -411,7 +416,6 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       !function modulo1 maps kpoint into first BZ
       FUNCTION modulo1(kpoint,nkpt3)
 
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -441,7 +445,6 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 c     Returns derivative of f in df.
 
       SUBROUTINE derivative_t(df,f,atoms,itype)
-      USE m_types_atoms
       IMPLICIT NONE
       REAL,   INTENT(IN)   ::   f(:)
       REAL,   INTENT(OUT)  ::   df(:)
@@ -729,7 +732,6 @@ c     define Y,l,m, |m|<l-1
 c     Returns the complex error function.
       FUNCTION cerf(z)
       
-      USE m_constants , ONLY: pimach
       
       IMPLICIT NONE
       COMPLEX, INTENT(IN) ::  z

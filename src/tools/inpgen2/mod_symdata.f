@@ -11,6 +11,9 @@
 !                                                                   gb`02 !
 !-------------------------------------------------------------------------+
       
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: ord2, l_c2, tau2, gen2, spg2, gnt2, namgr2, nammap
       INTEGER ord2(25)    ! Number of 2D symmetry operations
       LOGICAL l_c2(25)    ! whether plane group contains the c_2
       REAL    tau2(2,3)   ! translations for the generators

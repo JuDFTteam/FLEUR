@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,11 +7,16 @@
 MODULE m_stmix
   !! Simple or straight mixing
   
+   USE m_types_mixvector
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: stmix
 CONTAINS
   SUBROUTINE stmix(atoms,input,noco,fsm,fsm_mag,sm)
     !!Simple mixing
-    USE m_types_mixvector
-    USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)        :: input  
     TYPE(t_noco),INTENT(IN)         :: noco

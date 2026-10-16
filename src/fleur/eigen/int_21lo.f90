@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_int21lo
   !-----------------------------------------------------------
   !
@@ -9,11 +14,14 @@ MODULE m_int21lo
   ! uloulop21n are calculated.
   !
   !-----------------------------------------------------------
+   USE m_intgr, ONLY: intgr3
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: int_21lo
 CONTAINS
   SUBROUTINE int_21lo(f,g,atoms,n,flo,ilo,uulo21n,ulou21n,dulo21n,ulod21n,uloulop21n)
 
-    USE m_intgr, ONLY : intgr3
-    USE m_types_setup
     IMPLICIT NONE
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     REAL,                      INTENT(INOUT) :: uulo21n(atoms%nlod,atoms%ntype)

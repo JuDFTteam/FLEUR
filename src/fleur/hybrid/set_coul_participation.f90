@@ -1,8 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_set_coul_participation
-   use m_types
+   use m_work_package
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_mpi
+   implicit none
+   private
+   public :: set_coul_participation
 contains
    subroutine set_coul_participation(hybdat, fi, fmpi, work_pack)
-      use m_work_package
       implicit none
       class(t_hybdat), intent(inout)   :: hybdat
       type(t_fleurinput), intent(in)   :: fi

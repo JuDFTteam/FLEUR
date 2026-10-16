@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,6 +12,11 @@ module m_cuda_diag
 #endif
    use m_types_solver
    implicit none
+   private
+   public :: cuda_gev, t_solver_cuda
+#ifdef CPP_CUSOLVER
+   public :: handle
+#endif
 !**********************************************************
 !     Solve the generalized eigenvalue problem
 !     using the cusolver library

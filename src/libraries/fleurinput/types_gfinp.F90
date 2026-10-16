@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,14 @@ MODULE m_types_gfinp
    USE m_juDFT
    USE m_types_fleurinput_base
    USE m_constants
+   USE m_mpi_bc_tool
+   USE m_types_xml
+   USE m_types_atoms
+   USE m_types_sym
+   USE m_types_noco
+   USE m_types_input
+   USE m_types_cell
+   USE m_atom_shells
 
    IMPLICIT NONE
    PRIVATE
@@ -147,7 +155,6 @@ MODULE m_types_gfinp
 CONTAINS
 
    SUBROUTINE mpi_bc_gfinp(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_gfinp), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -315,7 +322,6 @@ CONTAINS
    END SUBROUTINE distribute_elements_gfinp
 
    SUBROUTINE read_xml_gfinp(this, xml)
-      USE m_types_xml
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
@@ -667,11 +673,6 @@ CONTAINS
 
    SUBROUTINE init_gfinp(this,atoms,sym,noco,cell,input)
 
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_noco
-      USE m_types_input
-      USE m_types_cell
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
@@ -850,7 +851,6 @@ CONTAINS
 
    INTEGER FUNCTION uniqueElements_gfinp(this,atoms, max_index, l_sphavg, lo, l_kresolved_int,maxLO) Result(uniqueElements)
 
-      USE m_types_atoms
 
       CLASS(t_gfinp),   INTENT(IN)     :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
@@ -961,8 +961,6 @@ CONTAINS
 
    INTEGER FUNCTION find_symmetry_rotated_greensf_gfinp(this, atoms, sym, i_gf, iop, distinct_kresolved_int, l_found) RESULT(i_gf_rot)
 
-      USE m_types_sym
-      USE m_types_atoms
 
       CLASS(t_gfinp),         INTENT(IN)  :: this
       TYPE(t_atoms),          INTENT(IN)  :: atoms
@@ -1012,11 +1010,6 @@ CONTAINS
    SUBROUTINE addNearestNeighbours_gfelem(this,refAtom,elem,refCutoff,atoms,cell,sym,input,l_write,&
                                           nOtherAtoms,atomTypepList,atomicNumberSelection)
 
-      USE m_types_atoms
-      USE m_types_cell
-      USE m_types_sym
-      USE m_types_input
-      USE m_atom_shells
 
       !This is essentially a simplified version of chkmt, because we have a given
       !reference atom and do not need to consider all distances between all atoms
@@ -1433,7 +1426,6 @@ CONTAINS
    PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 
       !Counts the number of LOs associated with this green's function element
-      USE m_types_atoms
 
       CLASS(t_gfelementtype),   INTENT(IN)  :: this
       TYPE(t_atoms),            INTENT(IN)  :: atoms

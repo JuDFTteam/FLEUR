@@ -1,0 +1,7 @@
+AF CrSb - NiAs-type, A-type AFM along c
+&lattice latsys='hex', a0=1.8897259886, a=4.122, c=5.464 /
+4
+24  0.0  0.0  0.0   ! Cr spin UP
+24  0.0  0.0  0.5   ! Cr spin DOWN
+51  0.333333  0.666667  0.25   ! Sb
+51  0.666667  0.333333  0.75   ! Sb

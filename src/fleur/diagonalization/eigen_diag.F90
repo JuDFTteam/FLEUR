@@ -13,6 +13,9 @@ module m_eigen_diag
    use m_types_mat
    use m_types_solver
    use m_lapack
+#ifdef CPP_MPI
+   use mpi
+#endif
    implicit none
    private
    public :: eigen_diag,eigen_diag_std
@@ -21,9 +24,6 @@ contains
 
    subroutine eigen_diag(hmat, smat, ne, eig, ev, ikpt)
       !! Solve generalized eigenvalue problem
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       class(t_mat), intent(INOUT) :: smat, hmat !! overlapp matrix and Hamiltonian
       class(t_mat), allocatable, intent(OUT)   :: ev         !! eigenvectors
@@ -76,9 +76,6 @@ contains
 
    subroutine eigen_diag_std(hmat, ne, eig, ev)
       !! Solve standard eigenvalue problem
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       class(t_mat), intent(INOUT) ::  hmat !!  Hamiltonian
       class(t_mat), allocatable, intent(OUT)   :: ev         !! eigenvectors

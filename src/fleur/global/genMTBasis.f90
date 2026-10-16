@@ -1,26 +1,29 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_genMTBasis
 
-CONTAINS
-
-  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,hub1data,l_writeArg)
    USE m_types_atoms
    USE m_types_enpara
    USE m_types_potden
    USE m_types_mpi
    USE m_types_usdus
    USE m_types_hub1data
-    USE m_constants
-    USE m_radfun
-    USE m_radflo
-    USE m_find_enpara
-    USE m_radsra
-    USE m_intgr, ONLY : intgr0
-    !$  use omp_lib
+   USE m_constants
+   USE m_radfun
+   USE m_radflo
+   USE m_find_enpara
+   USE m_radsra
+   USE m_intgr, ONLY: intgr0
+!$ USE omp_lib
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: genmtbasis
+CONTAINS
+
+  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,hub1data,l_writeArg)
 
     IMPLICIT NONE
 

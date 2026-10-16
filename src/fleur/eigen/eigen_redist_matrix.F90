@@ -1,11 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_eigen_redist_matrix
+   USE m_types_mpimat
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_mat
+   USE m_types_atoms
+   USE m_types_lapw
+   USE m_types_mpi
    implicit none
+   PRIVATE
+   PUBLIC :: eigen_redist_matrix, priv_copy_lapwlo_part
 CONTAINS
   !> Collect Hamiltonian or overlap matrix to final form
   !!
@@ -16,8 +26,6 @@ CONTAINS
 
 
   SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ,lapwq)
-   USE m_types
-   USE m_types_mpimat
    IMPLICIT NONE
    TYPE(t_mpi),INTENT(IN)    :: fmpi
    TYPE(t_lapw),INTENT(IN)   :: lapw
@@ -27,6 +35,9 @@ CONTAINS
     CLASS(t_mat),INTENT(IN),OPTIONAL :: mat_final_templ
     TYPE(t_lapw),INTENT(IN),optional :: lapwq
     INTEGER:: m,mPr
+    LOGICAL:: l_dfpt
+
+    l_dfpt=PRESENT(lapwq)
 
     !determine final matrix size and allocate the final matrix
     m=lapw%nv(1)+atoms%nlotot
@@ -54,6 +65,16 @@ CONTAINS
     CALL mat_final%copy(mat(1,1),1,1)
     CALL mat(1,1)%free()
 
+    IF (l_dfpt) THEN
+       CALL mat_final%copy(mat(1,2),1,lapw%nv(1)+atoms%nlotot+1)
+       CALL mat_final%copy(mat(2,1),lapwq%nv(1)+atoms%nlotot+1,1)
+       CALL mat_final%copy(mat(2,2),lapwq%nv(1)+atoms%nlotot+1,lapw%nv(1)+atoms%nlotot+1)
+       CALL mat(1,2)%free()
+       CALL mat(2,1)%free()
+       CALL mat(2,2)%free()
+       RETURN
+    END IF
+
     !down-down component
     CALL mat_final%copy(mat(2,2),lapw%nv(1)+atoms%nlotot+1,lapw%nv(1)+atoms%nlotot+1)
     CALL mat(2,2)%free()
@@ -74,11 +95,6 @@ CONTAINS
   END SUBROUTINE eigen_redist_matrix
 
   subroutine priv_copy_lapwLO_Part(m1,m2,nv,nlotot,fmpi)
-   USE m_types
-   USE m_types_mpimat
-#ifdef CPP_MPI
-   use mpi 
-#endif   
    implicit none
    CLASS(t_mat),target,INTENT(INOUT):: m1,m2
    integer,intent(in)               :: nv(2),nlotot

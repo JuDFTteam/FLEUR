@@ -31,12 +31,12 @@ src/fleur/math/matmul_dgemm.F90
 )
 
 #Regression test for the Clebsch-Gordan selection rule, see issue #804.
-#Built on demand; testing/tests/invariants/test_math_invariants.py runs it.
+#Built with the default target; testing/tests/invariants/test_math_invariants.py runs it.
 set(clebsch_test_files
 ${CMAKE_SOURCE_DIR}/src/fleur/math/clebsch.f
 ${CMAKE_SOURCE_DIR}/testing/small-testcodes/clebsch_test.f90
 )
-add_executable(clebsch_test EXCLUDE_FROM_ALL ${clebsch_test_files})
+add_executable(clebsch_test ${clebsch_test_files})
 set_target_properties(clebsch_test PROPERTIES
    Fortran_MODULE_DIRECTORY modules/clebsch_test
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools")

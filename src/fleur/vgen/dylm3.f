@@ -1,5 +1,9 @@
       MODULE m_dylm
       use m_juDFT
+      use m_constants
+      implicit none
+      private
+      public :: dylm3
 c.....------------------------------------------------------------------
 c     preparation of dylmt1(=d(ylm)/dtheta),
 c     dylmt2(=d(dylmt1)/dtheta),
@@ -12,7 +16,6 @@ c.....------------------------------------------------------------------
      >                 lmaxd,lmax,v,ylm,
      <                 dylmt1,dylmt2,dylmf1,dylmf2,dylmtf)
 c
-      use m_constants
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

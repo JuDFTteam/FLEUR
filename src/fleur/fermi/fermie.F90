@@ -8,6 +8,23 @@ MODULE m_fermie
 #ifdef CPP_MPI 
    use mpi 
 #endif 
+   use m_constants
+   use m_eig66_io, only: read_eig, write_eig
+   use m_sort
+   use m_fertri
+   use m_ferhis
+   use m_fergwt
+   use m_fertetra
+   use m_xmlOutput
+   use m_types_cell
+   use m_types_input
+   use m_types_kpts
+   use m_types_mpi
+   use m_types_noco
+   use m_types_misc
+   implicit none
+   private
+   public :: fermie
   !-----------------------------------------------------------------------
   !     determines the fermi energy by
   !            gaussian-integration method                          c.l.fu
@@ -34,15 +51,6 @@ CONTAINS
     !
     !-----------------------------------------------------------------------
 
-    USE m_types
-    USE m_constants
-    USE m_eig66_io, ONLY : read_eig,write_eig
-    USE m_sort
-    USE m_fertri
-    USE m_ferhis
-    USE m_fergwt
-    USE m_fertetra
-    USE m_xmlOutput
 
     IMPLICIT NONE
 

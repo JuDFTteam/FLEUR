@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,10 @@ MODULE m_hdf_tools6
 !     variable for an array and fill it with data at once
 !-----------------------------------------------
    USE hdf5
+   USE m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
+   USE m_hdf_tools2, ONLY: io_WRITE, io_read
+   USE m_hdf_tools3, ONLY: io_dataexists
+   IMPLICIT NONE
    PRIVATE
    INTERFACE io_WRITE_var
       MODULE PROCEDURE io_WRITE_var_REAL1, io_WRITE_var_REAL2            &
@@ -35,9 +39,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_REAL1(gid, name, var, transprop)
 
-      USE m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      USE m_hdf_tools2, ONLY: io_WRITE
-      USE m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -67,9 +68,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_REAL2(gid, name, var, transprop)
 
-      USE m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      USE m_hdf_tools2, ONLY: io_WRITE
-      USE m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -98,9 +96,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_REAL3(gid, name, var, transprop)
 
-      use m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      use m_hdf_tools2, ONLY: io_WRITE
-      use m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -130,9 +125,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_REAL4(gid, name, var, transprop)
 
-      use m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      use m_hdf_tools2, ONLY: io_WRITE
-      use m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -166,9 +158,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_integer1(gid, name, var, transprop)
 
-      use m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      use m_hdf_tools2, ONLY: io_WRITE
-      use m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -198,9 +187,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_INTEGER2(gid, name, var, transprop)
 
-      use m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      use m_hdf_tools2, ONLY: io_WRITE
-      use m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -229,9 +215,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_INTEGER3(gid, name, var, transprop)
 
-      use m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      use m_hdf_tools2, ONLY: io_WRITE
-      use m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -260,9 +243,6 @@ CONTAINS
 
    SUBROUTINE io_WRITE_var_INTEGER4(gid, name, var, transprop)
 
-      use m_hdf_tools4, ONLY: hdf_err, rkind, io_createvar
-      use m_hdf_tools2, ONLY: io_WRITE
-      use m_hdf_tools3, ONLY: io_dataexists
 
       IMPLICIT NONE
       !<-- Arguments
@@ -296,9 +276,6 @@ CONTAINS
    !<-- S:io_read_var_real1
 
    SUBROUTINE io_READ_var_real1(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -334,9 +311,6 @@ CONTAINS
    !<-- S:io_read_var_real2
 
    SUBROUTINE io_READ_var_real2(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -373,9 +347,6 @@ CONTAINS
    !<-- S:io_read_var_real3
 
    SUBROUTINE io_READ_var_real3(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -412,9 +383,6 @@ CONTAINS
    !<-- S:io_read_var_real4
 
    SUBROUTINE io_READ_var_real4(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -457,9 +425,6 @@ CONTAINS
    !<-- S:io_read_var_integer1
 
    SUBROUTINE io_READ_var_integer1(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -496,9 +461,6 @@ CONTAINS
    !<-- S:io_read_var_integer2
 
    SUBROUTINE io_READ_var_integer2(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -535,9 +497,6 @@ CONTAINS
    !<-- S:io_read_var_integer3
 
    SUBROUTINE io_READ_var_integer3(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid
@@ -573,9 +532,6 @@ CONTAINS
    !>
    !<-- S:io_read_var_integer4
    SUBROUTINE io_READ_var_integer4(gid, name, var, transprop)
-      use m_hdf_tools4, ONLY: hdf_err, rkind
-      use m_hdf_tools2, ONLY: io_read
-      use m_hdf_tools3, ONLY: io_dataexists
       IMPLICIT NONE
       !<--Arguments
       INTEGER(HID_T), INTENT(IN)  :: gid

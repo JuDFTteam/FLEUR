@@ -5,6 +5,13 @@
 !--------------------------------------------------------------------------------
 MODULE m_efg
 
+   USE m_constants
+   USE m_lattHarmsSphHarmsConv
+   USE m_types_atoms
+   USE m_types_mpi
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
    IMPLICIT NONE
 
    PRIVATE
@@ -24,9 +31,6 @@ MODULE m_efg
       ! symmetric EFG tensor V_ij.
       !-------------------------------------------------------------------------
 
-      USE m_types
-      USE m_constants
-      USE m_lattHarmsSphHarmsConv
 
       TYPE(t_atoms),  INTENT(IN)  :: atoms
       TYPE(t_sym),    INTENT(IN)  :: sym

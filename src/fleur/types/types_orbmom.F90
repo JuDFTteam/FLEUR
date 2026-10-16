@@ -1,10 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_orbmom
+   USE m_types_radfun
+   USE m_types_atoms
+   USE m_types_abc
+   USE m_intgr, ONLY: intgr3
    IMPLICIT NONE
 
    PRIVATE
@@ -37,7 +41,6 @@ SUBROUTINE init(thisOrb, radfun, lmax)
    !! Initialize the orbital momentum coefficients.
    !! Allocates and initializes the arrays for \(L_z\), \(L_+\), and \(L_-\)
    !! based on the maximum radial function size and angular momentum quantum number.
-      USE m_types_radfun
       IMPLICIT NONE
 
       !> The orbital momentum object to initialize.
@@ -67,9 +70,6 @@ SUBROUTINE init(thisOrb, radfun, lmax)
       !! Computes the orbital momentum coefficients \(L_z\), \(L_+\), and \(L_-\)
       !! for a given atom type and spin channel. The results are accumulated into
       !! the provided `clmom` array.
-      USE m_types_atoms
-      USE m_types_abc
-      USE m_types_radfun
       IMPLICIT NONE
 
       !> The orbital momentum object to calculate.
@@ -159,9 +159,6 @@ SUBROUTINE init(thisOrb, radfun, lmax)
       !! (before the next call to calc_orbmom zeroes lz via orb%init).
       !! Both large and small radial components enter the 1/r³ matrix element.
       !! Results are accumulated (INOUT) so they sum over k-points.
-      USE m_types_atoms
-      USE m_types_radfun
-      USE m_intgr, ONLY: intgr3
       IMPLICIT NONE
 
       CLASS(t_orbmom), INTENT(IN)    :: orb

@@ -145,6 +145,11 @@ then
     echo "set(CLI_FLEUR_USE_SCALAPACK $CLI_USE_SCALAPACK)"  >>config.cmake
 fi
  
+if [ "$CLI_USE_RPATH" ]
+then
+    echo "set(CLI_FLEUR_USE_RPATH $CLI_USE_RPATH)"  >>config.cmake
+fi
+
 if [ "$CLI_PATCH_INTEL" ]
 then
     echo "set(CLI_PATCH_INTEL 1)"  >>config.cmake

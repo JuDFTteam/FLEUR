@@ -1,10 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_magmoments
+    USE m_constants
+    USE m_xmlOutput
+    USE m_intgr, ONLY: intgr3
+    USE m_types_noco
+    USE m_polangle
+    USE m_types_atoms
+    USE m_types_input
+    USE m_types_cdnval
+    USE m_types_nococonv
+    USE m_types_potden
+    USE m_types_misc
     implicit none
     private
     public:: spinMoments,orbMoments
@@ -14,10 +25,6 @@ module m_magmoments
         !! Calculate and output the spin moments
         !! Either the moments have to be given as calculated in cdnval (moments-argument)
         !! or the moments are calculated from the density 
-        USE m_types
-        USE m_constants
-        USE m_xmlOutput
-        USE m_intgr, ONLY : intgr3
         TYPE(t_input), INTENT(IN)           :: input
         TYPE(t_atoms), INTENT(IN)           :: atoms
         TYPE(t_noco), INTENT(IN)            :: noco
@@ -100,11 +107,7 @@ module m_magmoments
         !! Calculate and output the orbital moments
         !! Either the moments have to be given as calculated in cdnval (moments-argument)
         !! or the moments are calculated from the density 
-        USE m_types
-        USE m_constants
-        USE m_xmlOutput
         
-        USE m_intgr, ONLY : intgr3
         TYPE(t_input), INTENT(IN)           :: input
         TYPE(t_atoms), INTENT(IN)           :: atoms
         TYPE(t_noco), INTENT(IN)            :: noco
@@ -156,10 +159,6 @@ module m_magmoments
     END SUBROUTINE 
      
     subroutine priv_print_mt_moment(itype,l_noco,l_offdiag,l_soc,magmomL,magmom,grepstring)
-        USE m_xmlOutput
-        USE m_constants
-        USE m_types_noco
-        USE m_polangle
         integer,intent(in):: itype 
         logical,intent(in):: l_noco,l_offdiag,l_soc
         real,intent(in)   :: magmom(3)
@@ -199,8 +198,6 @@ module m_magmoments
      
     end subroutine
     subroutine priv_print_spin_density_at_nucleus(input,atoms,moments)
-        USE m_types
-        USE m_constants
         TYPE(t_input), INTENT(IN)           :: input
         TYPE(t_atoms), INTENT(IN)           :: atoms
         TYPE(t_moments),INTENT(IN)          :: moments

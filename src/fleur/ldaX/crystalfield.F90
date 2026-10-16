@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_crystalfield
 
    !------------------------------------------------------------------------------
@@ -12,13 +17,22 @@ MODULE m_crystalfield
    !
    !------------------------------------------------------------------------------
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_trapz
    USE m_sgml
    USE m_rotMMPmat
+   USE m_types_atoms
+   USE m_types_gfinp
+   USE m_types_greensfcoeffs
+   USE m_types_hub1data
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: crystal_field
 
    CONTAINS
 

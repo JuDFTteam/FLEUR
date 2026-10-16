@@ -5,16 +5,19 @@
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_check
 
+   USE m_types_fleurinput
+   USE m_types_xcpot_libxc
+   USE m_juDFT_stop, ONLY: juDFT_error
+   USE m_types_xcpot
 IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_check
 
 CONTAINS
     SUBROUTINE dfpt_check(fi, xcpot)
 
         ! This routine checks if the fleur input can be executed  
         ! with the dfpt code 
-        USE m_types_fleurinput
-        USE m_types_xcpot_libxc
-        USE m_juDFT_stop, only : juDFT_error
 
         TYPE(t_fleurinput), INTENT(IN) :: fi
         CLASS(t_xcpot),     INTENT(IN) :: xcpot
@@ -33,7 +36,7 @@ CONTAINS
         IF (fi%input%ctail) CALL judft_error("Coretails are not supported. Please consider moving the problematic states to LOs",calledby="dfpt_check.F90")
 
         !Noco
-        IF (fi%noco%l_noco) CALL judft_error("dfpt doesn't do non-collinear systems yet.",calledby="dfpt_check.F90")
+        !IF (fi%noco%l_noco) CALL judft_error("dfpt doesn't do non-collinear systems yet.",calledby="dfpt_check.F90")
 
         ! compiled with libxc ? 
 #ifndef CPP_LIBXC

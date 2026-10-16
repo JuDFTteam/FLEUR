@@ -1,20 +1,40 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_checkolap
    use m_ylm
+   use m_util, only: chr, sphbessel, harmonicsr
+   use m_intgrf, only: intgrf, intgrf_init
+   use m_calc_cmt
+   use m_constants
+   use m_io_hybrid
+   use m_types_hybdat
+   use m_calc_l_m_from_lm
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_judft
+   use m_types_atoms
+   use m_types_cell
+   use m_types_hybinp
+   use m_types_input
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_sym
+   implicit none
+   private
+   public :: checkolap
 CONTAINS
 
    SUBROUTINE checkolap(atoms, hybdat, mpdata, hybinp, nkpti, kpts, fmpi, &
                         input, sym, noco, nococonv,   cell, lapw, jsp)
-      USE m_util, ONLY: chr, sphbessel, harmonicsr
-      use m_intgrf, only: intgrf, intgrf_init
-      use m_calc_cmt
-      USE m_constants
-      USE m_types
-      USE m_io_hybrid
-      USE m_types_hybdat
-      use m_calc_l_m_from_lm
-#ifdef CPP_MPI
-      use mpi 
-#endif
 
       IMPLICIT NONE
 

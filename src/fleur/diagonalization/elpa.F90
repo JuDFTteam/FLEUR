@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,6 +15,7 @@ module m_elpa
 #ifdef CPP_MPI
    use mpi
 #endif
+!$ use omp_lib
    implicit none
    private
    type, extends(t_solver):: t_solver_elpa
@@ -133,7 +134,6 @@ contains
    end function
 
    subroutine create_elpa_obj(hmat, ne)
-!$    use omp_lib
       implicit none
       class(t_mat), intent(IN)              :: hmat
       integer, intent(IN)                  :: ne
@@ -229,8 +229,6 @@ contains
    end subroutine
 
    subroutine elpa_gev(self, hmat, smat, ne, eig, zmat, ikpt)
-      use m_types_mat
-      use m_judft
 
       implicit none
       class(t_solver_elpa)                  :: self

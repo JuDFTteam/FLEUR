@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_reorder
 #ifdef _OPENACC
    USE cublas
@@ -7,12 +12,16 @@ MODULE m_reorder
 #define CPP_zswap zswap
 #define CPP_dswap dswap
 #endif
+   USE m_judft
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: forw_order, back_order, reorder_real, reorder_cmplx, reorder
    interface reorder
       module procedure reorder_real, reorder_cmplx
    end interface reorder
 CONTAINS
    subroutine forw_order(atoms, lcutm, nindxm, new_order)
-      USE m_types
       IMPLICIT NONE
 
       INTEGER, INTENT(IN)          :: lcutm(:), nindxm(0:, :)
@@ -57,8 +66,6 @@ CONTAINS
    end subroutine forw_order
 
    subroutine back_order(atoms, lcutm, nindxm, new_order)
-      use m_types 
-      use m_judft
       implicit none 
       INTEGER, INTENT(IN)       :: lcutm(:), nindxm(0:, :)
       TYPE(t_atoms), INTENT(IN) :: atoms

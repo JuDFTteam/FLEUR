@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_types_fft
 #ifdef CPP_FFT_MKL
    USE mkl_dfti
@@ -16,6 +21,7 @@ module m_types_fft
    use cufft
 #endif
    !$ use omp_lib
+   use m_cfft
    implicit none
    private
 #ifdef CPP_FFT_MKL
@@ -241,7 +247,6 @@ contains
    end subroutine handle_cufft_error
 
    subroutine t_fft_exec_batched(fft, dat)
-      USE m_cfft
       implicit none 
       class(t_fft), intent(inout) :: fft
       complex, intent(inout)      :: dat(:,:) 

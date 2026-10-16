@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,7 +14,9 @@
 !>  Accumulates into mmnk, so the muffin-tin half can be added on top.
 MODULE m_melem_mmkb_int
   USE m_juDFT
-  USE m_types
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_stars
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_mmkb_int

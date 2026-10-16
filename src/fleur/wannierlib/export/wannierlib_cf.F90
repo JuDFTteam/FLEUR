@@ -47,7 +47,6 @@ MODULE m_wannierlib_cf
   USE m_matrix_element_factory, ONLY: matrix_element_states, matrix_element_release_anchor
   USE m_eig66_io, ONLY: read_eig
   USE m_constants, ONLY: oUnit
-  USE m_types
   USE m_types_abc
   USE m_types_radfun
   USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot
@@ -65,6 +64,9 @@ MODULE m_wannierlib_cf
   USE m_types_vacuum
   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
   USE m_types_mpi
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_stars
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wannierlib_uiu, wannierlib_uhu

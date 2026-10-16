@@ -33,7 +33,6 @@
 !>  d/d(mesh). slot_sign carries it, the same way it carries the reflection of the phase.
 MODULE m_melem_nabla_vac
    USE m_juDFT
-   USE m_types
    USE m_intgr, ONLY: intgz0
    USE m_types_melem_vacabc, ONLY: t_melem_vacabc
    IMPLICIT NONE

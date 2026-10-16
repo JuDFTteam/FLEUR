@@ -1,4 +1,9 @@
       MODULE m_sphpts
+      USE m_qranf
+      USE m_constants, ONLY: tpi_const
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: sphpts
       CONTAINS
       SUBROUTINE sphpts(p,n,r,pos)
 c     *******************************************************
@@ -7,8 +12,6 @@ c     e. wimmer     feb. 1980
 c     modified to give a better distribution of points
 c     m. weinert    jan. 1982
 c     *******************************************************
-      USE m_qranf
-      USE m_constants, ONLY : tpi_const
       IMPLICIT NONE
 C     .. Scalar Arguments ..
       REAL r

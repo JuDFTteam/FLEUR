@@ -1,6 +1,8 @@
       MODULE m_sphbes
       use m_juDFT
       IMPLICIT NONE
+      private
+      public :: sphbes
 c********************************************************************
 c calculate spherical Bessel functions and derivatives of sqrt(e)*r
 c                                   P. Marksteiner and E. Badralexe

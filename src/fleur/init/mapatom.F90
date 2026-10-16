@@ -1,5 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_mapatom
       use m_juDFT
+      use m_types_sym
+      use m_types_atoms
+      use m_types_cell
+      use m_types_input
+      use m_types_noco
+      use m_types_gfinp
+      use m_constants
+      use m_socsym
+      implicit none
+      private
+      public :: mapatom
 !*******************************************************************
 !     determines the group operation which maps the representive
 !     atom into its equivalent atoms     c.l.fu
@@ -26,14 +42,6 @@
 ! p.kurz aug. 1996
 !***********************************************************************
 
-      USE m_types_sym 
-      use m_types_atoms 
-      use m_types_cell 
-      use m_types_input 
-      use m_types_noco 
-      use m_types_gfinp
-      USE m_constants
-      USE m_socsym
 
       IMPLICIT NONE
 

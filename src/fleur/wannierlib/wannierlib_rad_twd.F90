@@ -18,7 +18,6 @@ MODULE m_wannierlib_rad_twd
   USE m_constants
   USE m_intgr, ONLY: intgr3
   USE m_types_atoms
-  USE m_types_usdus
   USE m_types_radfun
   USE m_clebsch
   USE m_types_wannierlib
@@ -27,12 +26,11 @@ MODULE m_wannierlib_rad_twd
   PUBLIC :: wannierlib_rad_twd, wannierlib_soc_tlmw
 CONTAINS
 
-  SUBROUTINE wannierlib_rad_twd(wannierlib, atoms, nwfs, ikpt, usdus, radfun,  jspin, rads)
+  SUBROUTINE wannierlib_rad_twd(wannierlib, atoms, nwfs, ikpt, radfun,  jspin, rads)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     TYPE(t_atoms), INTENT(IN) :: atoms
     INTEGER, INTENT(IN) :: nwfs
     INTEGER, INTENT(IN) :: ikpt
-    TYPE(t_usdus), INTENT(IN) :: usdus
     TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     INTEGER, INTENT(IN) :: jspin
     REAL, INTENT(OUT) :: rads(nwfs, 0:3, atoms%jmtd, 2)
@@ -62,10 +60,11 @@ CONTAINS
         b1 = -aa * bb * EXP(-bb * atoms%rmsh(atoms%jri(ntyp), ntyp))
 
         DO l = 0, 3
-          wronk = usdus%us(l, ntyp, jspin) * usdus%duds(l, ntyp, jspin) - &
-                  usdus%uds(l, ntyp, jspin) * usdus%dus(l, ntyp, jspin)
-          acft = (a1 * usdus%duds(l, ntyp, jspin) - b1 * usdus%uds(l, ntyp, jspin)) / wronk
-          bcft = (b1 * usdus%us(l, ntyp, jspin) - a1 * usdus%dus(l, ntyp, jspin)) / wronk
+          ASSOCIATE(b => radfun(ntyp)%bnd(:, :, l, jspin))
+            wronk = b(1, 1) * b(2, 2) - b(1, 2) * b(2, 1)
+            acft = (a1 * b(2, 2) - b1 * b(1, 2)) / wronk
+            bcft = (b1 * b(1, 1) - a1 * b(2, 1)) / wronk
+          END ASSOCIATE
           DO j = 1, atoms%jri(ntyp)
             rads(nwf, l, j, :) = acft * radfun(ntyp)%r(j, :, 1, l, jspin) + &
                                  bcft * radfun(ntyp)%r(j, :, 2, l, jspin)

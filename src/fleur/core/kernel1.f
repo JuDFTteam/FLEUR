@@ -14,13 +14,16 @@ c Rydberg units: in charge
 c hartree units: com.
 c NSOL= 1 -  2 equations
 c ------------                                     a. shick KFA 1996
+      USE m_constants, ONLY: c_light
+      USE m_diff
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: kernel1
       CONTAINS
       SUBROUTINE kernel1(mrad,xmj,kap1,xx1,e,v,b,ri,dx,nmatch,nstart,
      +                   dp,dq,wp,wq)
 
 c
-      USE m_constants, ONLY : c_light
-      USE m_diff
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

@@ -16,7 +16,6 @@
 !>  also keeps it valid across the pair-overlap passes that run later.
 MODULE m_wannierlib_build_amn_mmn
    USE m_juDFT
-   USE m_types, ONLY: t_stars
    USE m_types_atoms
    USE m_types_cell
    USE m_types_vacuum
@@ -29,7 +28,6 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_types_enpara
    USE m_types_mpi
    USE m_types_potden
-   USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
    USE m_types_abc
@@ -43,6 +41,10 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_melem_ujugaunt
    USE m_wannierlib_amn
    USE m_wannierlib_mmnkb
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_stars
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_build_amn_mmn, &
@@ -51,7 +53,7 @@ CONTAINS
 
    SUBROUTINE wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
-                                       radfun, usdus, distk, kdiff, nntot_w90, jspin, &
+                                       radfun, distk, kdiff, nntot_w90, jspin, &
                                        l_wannierlib_spinors, amn, mmn, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
@@ -70,7 +72,6 @@ CONTAINS
       TYPE(t_potden),   INTENT(IN) :: vtot
       INTEGER,          INTENT(IN) :: eig_id
       TYPE(t_radfun),   INTENT(IN) :: radfun(:)
-      TYPE(t_usdus),    INTENT(IN) :: usdus
       INTEGER, INTENT(IN) :: distk(:)          !> (nkptf) owning rank of each k
       REAL,    INTENT(IN) :: kdiff(:, :)
       INTEGER, INTENT(IN) :: nntot_w90
@@ -146,7 +147,7 @@ CONTAINS
             !> its own and the spin block is reached by row offset further down.
             irec = MERGE(1, jspin_comp, noco%l_noco)
 
-            CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
+            CALL wannierlib_amn(this, atoms, kpts, ikpt, radfun, abc_p(jspin_comp, :), l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
             !> One k is enough for an invariant: it tests the regions, not the mesh.
             IF (ikpt == 1 .AND. l_chk) THEN
@@ -191,9 +192,6 @@ CONTAINS
    ! Complete the distributed amn: each rank filled only its distk k-slice (zeros elsewhere),
    ! so an MPI_ALLREDUCE(SUM) reassembles the full amn on every rank (needed by w90_set_u_opt).
    SUBROUTINE wannierlib_reduce_amn(fmpi, amn)
-#ifdef CPP_MPI
-      use mpi
-#endif
       TYPE(t_mpi), INTENT(IN) :: fmpi
       COMPLEX, INTENT(INOUT) :: amn(:, :, :)
 #ifdef CPP_MPI
@@ -211,9 +209,6 @@ CONTAINS
    ! owned by exactly one rank, so the sum is a copy. This is the one full-mesh buffer the
    ! distributed post-processing otherwise avoids, so it is allocated only when asked for.
    SUBROUTINE wannierlib_gather_mmn(fmpi, distk, nkptf, mmn_loc, mmn_full)
-#ifdef CPP_MPI
-      use mpi
-#endif
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: distk(:)             ! (nkptf) owning rank of each k
       INTEGER, INTENT(IN) :: nkptf

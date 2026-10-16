@@ -1,9 +1,14 @@
       MODULE m_vacuz
+      use m_juDFT
+      use m_constants
+      use m_intgr, only: intgz0
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: vacuz
       CONTAINS
       SUBROUTINE vacuz(
      >     e,vz,vz0,nmz,dz,
      <     uz,duz,u)
-      use m_juDFT
 c*********************************************************************
 c     integrates the vacuum wavefunction fo energy e<0 inward from the
 c     last mesh point using the schrodinger equation and assuming that
@@ -17,8 +22,6 @@ c     (u(i),i=1,nmz) contains the normalized wavefunction
 c     based on code by m. weinert 
 c*********************************************************************
 
-      USE m_constants
-      USE m_intgr, ONLY : intgz0
       IMPLICIT NONE
 
 C     .. Scalar Arguments ..

@@ -7,6 +7,8 @@
 MODULE m_utility
   USE m_juDFT
    IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: getcomputerarchitectures, getprecision, gettargetstructureproperties, getadditionalcompilationflags
 
    CONTAINS
 

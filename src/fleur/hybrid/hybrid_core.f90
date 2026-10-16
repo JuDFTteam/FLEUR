@@ -1,16 +1,28 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hybrid_core
 
    ! read core radial wavefunctions from corebas
    ! corebas is written in cored.F
    ! (core basis functions can be read in once during an iteration)
 
+   USE m_juDFT
+   USE m_constants
+   USE m_intgr, ONLY: intgr3, intgr0, intgr1
+   USE m_differ
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_mpi
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: corewf, calcorewf, core_init
 CONTAINS
    SUBROUTINE corewf(atoms, jsp, input,&
                       vr, lmaxcd, maxindxc, fmpi, lmaxc, nindxc, core1, core2, eig_c)
 
-      USE m_juDFT
-      USE m_types
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -129,10 +141,6 @@ CONTAINS
                         ncstd, vr,&
                         lmaxc, nindxcr, core1, core2, eig_c, fmpi)
 
-      USE m_intgr, ONLY: intgr3, intgr0, intgr1
-      USE m_constants
-      USE m_differ
-      USE m_types
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: fmpi
@@ -309,10 +317,6 @@ CONTAINS
 
    SUBROUTINE core_init(input, atoms, lmaxcd, maxindxc)
 
-      USE m_types
-      USE m_constants
-      USE m_intgr, ONLY: intgr3, intgr0, intgr1
-      USE m_differ
       IMPLICIT NONE
 
       TYPE(t_input), INTENT(IN)       :: input

@@ -9,7 +9,6 @@ MODULE m_wannierlib_mmnkb
   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
   USE m_types_radfun
   USE m_matrix_element_factory, ONLY: matrix_element_states
-  USE m_types
   USE m_types_abc
   USE m_types_spinor_layout, ONLY: t_spinor_layout
   USE m_types_atoms
@@ -24,6 +23,10 @@ MODULE m_wannierlib_mmnkb
   USE m_types_enpara
   USE m_types_potden
   USE m_types_mpi
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_stars
+  USE m_types_vacuum
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wannierlib_mmnkb, &

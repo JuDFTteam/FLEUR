@@ -4,13 +4,16 @@
 !     harmonics up to lmax, i.e., (lm|l'm') for l,l'<=lmax
 !     number of points = (2*lmax+1)*(lmax+1 + mod(lmax+1,2))
 !**************************************************************
+      USE m_grule
+      USE m_constants
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gaussp
       CONTAINS 
       SUBROUTINE gaussp(
      >                  lmax,
      <                  vgauss,wt)
 
-      USE m_grule
-      USE m_constants
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: lmax

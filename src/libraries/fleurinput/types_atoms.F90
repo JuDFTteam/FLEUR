@@ -7,6 +7,10 @@ MODULE m_types_atoms
   USE m_juDFT
   USE m_types_econfig
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_constants
+  USE m_types_cell
   IMPLICIT NONE
   PRIVATE
 
@@ -153,6 +157,10 @@ CONTAINS
   PROCEDURE :: read_xml => read_xml_atoms
   PROCEDURE :: mpi_bc=>mpi_bc_atoms
   procedure :: num_radial_functions_per_l
+  procedure :: slot_of_lo
+  procedure :: l_apw
+  procedure :: udot_rows
+  procedure :: num_ab_rows
 END TYPE t_atoms
 
 PUBLIC :: t_atoms,t_utype, readAtomAttribute
@@ -161,17 +169,66 @@ CONTAINS
 
 
 pure  function num_radial_functions_per_l(this,itype)result(nrfpl)
+  !! APW LOs (l_dulo) add no radial function, they live on slot 2 (udot)
   class(t_atoms), intent(in):: this
   integer, intent(in):: itype
   INTEGER :: lo,nrfpl(0:this%lmaxd)
   nrfpl=0
   nrfpl(0:this%lmax(itype))=2 !u and \dot u
   do lo=1,this%nlo(itype)
+     if (this%l_dulo(lo,itype)) cycle
      nrfpl(this%llo(lo,itype))=nrfpl(this%llo(lo,itype))+1
   end do
 end function num_radial_functions_per_l
+
+pure integer function slot_of_lo(this,lo,itype)
+  !! radial-function slot of LO lo within its l channel: 1=u, 2=udot, 3.. = LOs of that l in llo order;
+  !! an APW LO (l_dulo) is a*u+b*udot and uses slot 2
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: lo,itype
+  if (this%l_dulo(lo,itype)) then
+     slot_of_lo = 2
+  else
+     slot_of_lo = 2 + count(this%llo(1:lo,itype)==this%llo(lo,itype).and..not.this%l_dulo(1:lo,itype))
+  end if
+end function slot_of_lo
+
+pure logical function l_apw(this,l,itype)
+  !! channel l of itype uses APW (value-matched u only): it carries an APW LO or l > lmaxAPW
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: l,itype
+  l_apw = any(this%l_dulo(:this%nlo(itype),itype).and.this%llo(:this%nlo(itype),itype)==l)
+  if (this%lapw_l(itype)>=0) l_apw = l_apw.or.l>this%lapw_l(itype)
+end function l_apw
+
+pure function udot_rows(this,lcut,itype) result(boff)
+  !! layout of the matching coefficients up to lcut: rows 0..s-1 hold u(lm), followed by udot(lm)
+  !! of the LAPW channels only. boff(l)+l+m is the 0-based udot row of (l,m), boff(l)=-1 for APW.
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: lcut,itype
+  integer :: boff(0:lcut),l,nrow
+  nrow = lcut*(lcut+2)+1
+  do l = 0,lcut
+     if (this%l_apw(l,itype)) then
+        boff(l) = -1
+     else
+        boff(l) = nrow
+        nrow = nrow+2*l+1
+     end if
+  end do
+end function udot_rows
+
+pure integer function num_ab_rows(this,lcut,itype)
+  !! number of matching coefficients (u for all l, udot for LAPW l) up to lcut
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: lcut,itype
+  integer :: l
+  num_ab_rows = lcut*(lcut+2)+1
+  do l = 0,lcut
+     if (.not.this%l_apw(l,itype)) num_ab_rows = num_ab_rows+2*l+1
+  end do
+end function num_ab_rows
 SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
- USE m_mpi_bc_tool
  CLASS(t_atoms),INTENT(INOUT)::this
  INTEGER,INTENT(IN):: mpi_comm
  INTEGER,INTENT(IN),OPTIONAL::irank
@@ -289,7 +346,6 @@ ENDDO
 END SUBROUTINE mpi_bc_atoms
 
 LOGICAL FUNCTION same_species(atoms,n,nn)
- USE m_judft
  IMPLICIT NONE
  CLASS(t_atoms),INTENT(IN)::atoms
  INTEGER,INTENT(in)::n,nn
@@ -321,8 +377,6 @@ PURE FUNCTION calc_nsp_atom(self) RESULT(nsp)
 END FUNCTION calc_nsp_atom
 
 SUBROUTINE read_xml_atoms(this,xml)
- USE m_types_xml
- USE m_constants
  IMPLICIT NONE
  CLASS(t_atoms),INTENT(INOUT):: this
  TYPE(t_xml),INTENT(INOUT)    :: xml
@@ -370,6 +424,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%ulo_der(this%nlod,this%ntype))
  ALLOCATE(this%l_relLO(this%nlod,this%ntype))
  this%l_relLO=.FALSE.
+ ALLOCATE(this%l_dulo(this%nlod,this%ntype),source=.FALSE.)
  ALLOCATE(this%nqn_relLO(this%nlod,this%ntype))
  this%nqn_relLO=0
  ALLOCATE(this%nRelLO(this%ntype))
@@ -473,6 +528,15 @@ SUBROUTINE read_xml_atoms(this,xml)
                 CALL judft_error("relLO local orbitals require eDeriv=0",calledby="read_xml_atoms")
              END IF
              this%nqn_relLO(this%nlo(n)+i,n) = nNumbers(i)
+          END IF
+          IF (loType=="APW") THEN
+             IF (this%ulo_der(this%nlo(n)+i,n)/=0) THEN
+                CALL judft_error("APW local orbitals require eDeriv=0",calledby="read_xml_atoms")
+             END IF
+             IF (ANY(this%l_dulo(:this%nlo(n)+i-1,n).AND.this%llo(:this%nlo(n)+i-1,n)==lNumbers(i))) THEN
+                CALL judft_error("Only one APW local orbital per l is allowed",calledby="read_xml_atoms")
+             END IF
+             this%l_dulo(this%nlo(n)+i,n) = .TRUE.
           END IF
        ENDDO
        this%nlo(n) = this%nlo(n) +lnumcount
@@ -634,7 +698,6 @@ SUBROUTINE read_xml_atoms(this,xml)
  IF (SIZE(this%llo,1)>0) this%llod=MAXVAL(this%llo)
  ALLOCATE(this%lo1l(0:this%llod,this%ntype))
  ALLOCATE(this%nlol(0:this%llod,this%ntype))
- ALLOCATE(this%l_dulo(this%nlod,this%ntype))
 
  DO n = 1, this%ntype
     IF (this%nlo(n).GE.1) THEN
@@ -654,10 +717,6 @@ SUBROUTINE read_xml_atoms(this,xml)
        DO l = 0,this%llod
           this%nlol(l,n) = 0
           this%lo1l(l,n) = 0
-       END DO
-
-       DO ilo = 1,this%nlod
-          this%l_dulo(ilo,n) = .FALSE.
        END DO
 
        DO ilo = 1,this%nlo(n)
@@ -776,7 +835,6 @@ END SUBROUTINE read_xml_atoms
 
 SUBROUTINE readAtomAttributeString(xml, atomType, relAttPath, outString, l_error)
 
-   USE m_types_xml
 
    IMPLICIT NONE
 
@@ -808,8 +866,6 @@ END SUBROUTINE readAtomAttributeString
 
 SUBROUTINE readAtomAttribute(xml, atomType, relAttPath, outValue)
 
-   USE m_types_xml
-   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -841,7 +897,6 @@ END SUBROUTINE readAtomAttribute
 
 SUBROUTINE init_atoms(this,cell)
 
-   USE m_types_cell
 
    IMPLICIT NONE
 

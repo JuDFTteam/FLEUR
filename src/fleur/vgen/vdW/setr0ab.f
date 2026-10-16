@@ -1,5 +1,8 @@
       MODULE m_setr0ab  
 !
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: setr0ab
       CONTAINS
 !
       SUBROUTINE setr0ab(

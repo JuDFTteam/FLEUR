@@ -1,6 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_efield
       USE m_juDFT
       USE m_constants
+      USE m_fft2d
+      USE m_starf, ONLY: starf2
+      USE m_types_atoms
+      USE m_types_cell
+      USE m_types_field
+      USE m_types_input
+      USE m_types_stars
+      USE m_types_sym
+      USE m_types_vacuum
       IMPLICIT NONE
       PRIVATE
       PUBLIC :: e_field
@@ -17,7 +31,6 @@
 !     modified and fixed 10-99
 !*********************************************************************
 
-      USE m_types
       !USE m_setcor, ONLY: setcor
       IMPLICIT NONE
 !     ..
@@ -33,7 +46,7 @@
 !     ..
 !     .. Local Scalars ..
       REAL, parameter :: eps = 1.0e-7
-      REAL  qn,qe,bmu
+      REAL  qn,qe,bmu,qsheet
       INTEGER n,iwd,nst,nc
 !     ..
 !     ..
@@ -68,6 +81,9 @@
       WRITE (oUnit, '(3x,a,f12.5)') 'total nuclear charge      =', qn
 
       CALL read_efield (efield, stars%mx1, stars%mx2, vacuum%nvac, cell%area)
+      efield%qexcess = qe - qn
+      qsheet = SUM(efield%sig_b(1:vacuum%nvac))
+      IF (vacuum%nvac == 1) qsheet = 2.0*efield%sig_b(1)
 
       ! Sign convention of electric field: E>0 repels electrons,
       ! consistent with conventional choice that current is
@@ -81,8 +97,8 @@
       CALL print_efield (oUnit,efield, cell%area, vacuum%nvac, cell%amat,vacuum%dvac)
 
       IF (.NOT. efield%dirichlet&
-     &    .AND. ABS (SUM (efield%sig_b) + 2*efield%sigma - (qe-qn)) > eps) THEN
-        IF (ABS (SUM (efield%sig_b) - (qe-qn)) < eps) THEN
+     &    .AND. ABS (qsheet + 2*efield%sigma - efield%qexcess) > eps) THEN
+        IF (ABS (qsheet - efield%qexcess) < eps) THEN
           CALL juDFT_error&
      &          ("E field: top+bottom+film charge does not add up to "&
      &           //"zero.",&
@@ -97,12 +113,17 @@
      &        ,calledby ="efield")
       ENDIF
 
-      IF (ABS (efield%sigma) > 0.49 .OR. ANY (ABS (efield%sig_b) > 0.49)) THEN
+      IF (input%film .AND. (ABS (efield%sigma) > 0.49 .OR. ANY (ABS (efield%sig_b) > 0.49))) THEN
         WRITE (oUnit,*) 'If you really want to calculate an e-field this'
         WRITE (oUnit,*) 'big, uncomment STOP in efield.f !'
         CALL juDFT_error("E-field too big or No. of e- not correct"&
      &       ,calledby ="efield")
       ENDIF
+
+      IF (input%film .AND. efield%zsigma / vacuum%delz + 1.01 > vacuum%nmz) THEN
+        CALL juDFT_error("E-field charge sheet lies outside the vacuum mesh",&
+     &    calledby="efield")
+      END IF
 
       IF (efield%l_segmented) THEN
         CALL V_seg_EF(&
@@ -300,7 +321,6 @@
       END SUBROUTINE read_efield
 
       SUBROUTINE read_shape (E, orig_str, nvac)
-        USE m_constants, ONLY : pimach
         TYPE(t_efield), INTENT(INOUT) :: E
         CHARACTER(*), INTENT(IN) :: orig_str
         INTEGER, INTENT(IN) :: nvac
@@ -755,8 +775,6 @@
         SUBROUTINE V_seg_EF(&
      &                      efield,&
      &                      vacuum, stars)
-          USE m_fft2d
-          use m_types
           ! Dummy variables:
           TYPE(t_efield), INTENT(INOUT) :: efield
           TYPE(t_vacuum), INTENT(IN) :: vacuum
@@ -806,7 +824,6 @@
      &                         efield, k1d, k2d, nvac, n2d, nop, nop2,&
      &                         nq2, kv2, mrot, symor, tau, invtab, area,&
      &                         nstr2, amat)
-          USE m_starf, ONLY: starf2
           ! Arguments
           TYPE(t_efield), INTENT(IN) :: efield
           INTEGER, INTENT(IN) :: k1d, k2d, nvac, n2d, nq2, nop, nop2
@@ -886,7 +903,6 @@
       END SUBROUTINE e_field
 
       SUBROUTINE read_namelist (iou, E, eV)
-        USE m_types, only: t_efield
         INTEGER, INTENT(IN) :: iou
         TYPE(t_efield), INTENT(INOUT) :: E
         LOGICAL, INTENT(INOUT) :: eV

@@ -1,17 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_compile_descr
 
+   USE m_constants
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: get_compile_desc_string, get_compile_desc
 
 CONTAINS
 
    SUBROUTINE get_compile_desc_string(info)
-      USE m_constants
       IMPLICIT NONE
       CHARACTER(:),ALLOCATABLE,INTENT(OUT):: info
 

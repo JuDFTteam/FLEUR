@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,12 @@ MODULE m_types_hub1data
 
    USE m_constants
    USE m_juDFT
+   USE m_types_mpi
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_hub1inp
+   USE m_gaunt
+   USE m_mpi_bc_tool
 
    IMPLICIT NONE
 
@@ -42,11 +48,6 @@ MODULE m_types_hub1data
 
    SUBROUTINE hub1data_init(this,atoms,input,hub1inp,fmpi,mmpmatDistancePrev,occDistancePrev,l_error)
 
-      USE m_types_mpi
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_hub1inp
-      USE m_gaunt
 
       CLASS(t_hub1data),   INTENT(INOUT) :: this
       TYPE(t_atoms),       INTENT(IN)    :: atoms
@@ -123,7 +124,6 @@ MODULE m_types_hub1data
    END SUBROUTINE hub1data_init
 
    SUBROUTINE hub1data_mpi_bc(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_hub1data), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank

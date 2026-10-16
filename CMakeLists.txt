@@ -15,7 +15,19 @@ set(CMAKE_Fortran_FLAGS "")
 project(FLEUR LANGUAGES C CXX Fortran)
 string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
+# CMake >= 4.0 rejects cmake_minimum_required(VERSION <3.5) in bundled
+# submodules (libxc, BLACS test project of SCALAPACK, ...). The environment
+# variable also covers sub-configures started via execute_process.
+if (NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+   set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+if (NOT DEFINED ENV{CMAKE_POLICY_VERSION_MINIMUM})
+   set(ENV{CMAKE_POLICY_VERSION_MINIMUM} ${CMAKE_POLICY_VERSION_MINIMUM})
+endif()
+
 include("cmake/CompilerConfig.txt")
+
+include("cmake/rpath.cmake")
 
 include("cmake/Generate_Schema.cmake")
 

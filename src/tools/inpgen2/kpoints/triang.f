@@ -1,5 +1,6 @@
       MODULE m_triang
       use m_juDFT
+      use m_constants
 !-------------------------------------------------------------------
 c     find a triangular decomposition of the irreducible wedge of
 c     the first brillouin zone for a given k-mesh. k-points at all
@@ -8,13 +9,14 @@ c     erich wimmer     july 1981
 !-------------------------------------------------------------------
 
       IMPLICIT NONE
+      private
+      public :: triang, vd2, area
 
       CONTAINS
       SUBROUTINE triang(
      >                  v,nkpt,
      <                  it,ntria,at,att,l_f_t)
 
-      USE m_constants
 
 c     Arguments
       INTEGER, INTENT(IN)  :: nkpt

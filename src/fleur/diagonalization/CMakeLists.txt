@@ -20,7 +20,6 @@ set(diag_test_files ${diag_test_files} ${diag_files}
 src/fleur/diagonalization/diag_test.F90
 src/fleur/types/types_mat.F90
 src/fleur/types/types_mpimat.F90
-src/fleur/types/types_setup.F90
 src/fleur/io/io_matrix.F90
 src/fleur/io/iomatrix_hdf.F90
 )

@@ -1,4 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fft3d
+   USE m_types_fftGrid
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: fft3d
 CONTAINS
    SUBROUTINE fft3d(&
   &                 afft, bfft, fg3,&
@@ -16,8 +26,6 @@ CONTAINS
 !* pgfft(i)   contains the phases of the G-vectors of sph.  *
 !*                                                          *
 !************************************************************
-      USE m_types
-      USE m_types_fftGrid
       IMPLICIT none
 
       INTEGER, INTENT(IN)       :: isn

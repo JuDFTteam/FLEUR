@@ -1,5 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_intgrf
+   use m_juDFT
+   use m_constants
+   use m_types_atoms
    implicit none
+   private
+   public :: intgrf, pure_intgrf, intgrf_init, intgrf_out, no_error, negative_exponent_warning, &
+      negative_exponent_error
    TYPE :: intgrf_out
       REAL      :: value    ! value of the integration
       INTEGER :: ierror   ! error code
@@ -21,9 +32,6 @@ CONTAINS
 
    FUNCTION intgrf(f, atoms, itype, gridf)
 
-      use m_juDFT
-      use m_types_setup
-      USE m_constants
 
       IMPLICIT NONE
 

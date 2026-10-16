@@ -10,6 +10,24 @@ module m_types_phonon
     use m_juDFT
     use m_types_dfpt_scf
     use m_dfpt_NAC
+    use m_dfpt_eii2
+    use m_dfpt_generate_gradient
+    use m_dfpt_dynmat
+    use m_dfpt_dynmat_eig
+    use m_dfpt_dynmat_io
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
     implicit none 
 
@@ -91,7 +109,6 @@ module m_types_phonon
 
 
     subroutine init_child_phonon(this,fi,nqpts,dynMatNac)
-        use m_types
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
@@ -112,10 +129,7 @@ module m_types_phonon
 
     subroutine q_indepent_properties_phonon(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
-        use m_types
-        use m_dfpt_eii2    
         
-        use m_dfpt_generate_gradient
 
 
         class(t_phonon), intent(inout) :: this
@@ -178,11 +192,9 @@ module m_types_phonon
 
 
     subroutine postprocessing_scf_phonon(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
         
         
-        use m_types
-        use m_dfpt_dynmat
         
 
         class(t_phonon),intent(inout) :: this
@@ -202,8 +214,8 @@ module m_types_phonon
         type(t_results),intent(inout)    :: results, results1
         logical,intent(in)               :: l_real
         type(t_dfpt),intent(in)        :: dfpt
-        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
-        type(t_potden),intent(inout)     :: vC1,vC1Im
+        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1
+        type(t_potden),intent(inout)     :: vC1
 
         
         complex,allocatable :: E2ndOrdII(:,:)
@@ -217,7 +229,7 @@ module m_types_phonon
         call dfpt_dynmat_row(sternheimerJob, fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
                                 eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, dfpt, &
                                 rho, vTot, grRho3, grVext3, grVC3, &
-                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
+                                den1, vTot1, vC1, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
 
         call timestop("Dynmat row")
         
@@ -230,8 +242,6 @@ module m_types_phonon
 
     subroutine postprocessing_qpoint_phonon(this,fi,fmpi,dfpt,qpts,iQ,q_list)
 
-        use m_types
-        use m_dfpt_dynmat_eig
 
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
@@ -245,7 +255,9 @@ module m_types_phonon
 
         real, allocatable    :: eigenVals(:)
         complex, allocatable :: eigenFreqs(:), eigenVecs(:,:),dynMatNac(:,:)
+        complex, allocatable :: dynMatGamma(:,:), dynMatQ(:,:)
         logical :: l_gamma
+        real    :: weight
 
         l_gamma = (norm2(qpts%bk(:,q_list(iQ))) .lt. 1e-8)
 
@@ -258,20 +270,39 @@ module m_types_phonon
                 dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:)
             end if 
 
+            dynMatQ = dyn_mat(iQ,:,:)
+            call hermitize_scale_dynmat(fi%atoms, dynMatQ)
+            if (dfpt%l_sumrule_scf) then
+                if (l_gamma) then
+                    dynMatGamma = dynMatQ
+                else
+                    allocate(dynMatGamma(3*fi%atoms%nat,3*fi%atoms%nat))
+                    call read_dynmat_gamma("dynmat.hdf", dynMatGamma)
+                end if
+                call apply_sumrule(dynMatQ, dynMatGamma)
+            end if
+
             call timestart("Dynmat diagonalization")
-            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), dfpt%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",dfpt%l_sumrule_scf,l_writeOutput=.true.)
+            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), dynMatQ, eigenVals, eigenVecs, .true.)
             call timestop("Dynmat diagonalization")
 
             call timestart("Frequency calculation")
-            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts%bk(:,q_list(iQ)),l_writeOutput=.true.)
+            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs, qpts%bk(:,q_list(iQ)), l_writeOutput=.true.)
             call timestop("Frequency calculation")
+
+            call timestart("dynMat IO")
+            weight = 0.0
+            if (allocated(qpts%wtkpt)) weight = qpts%wtkpt(q_list(iQ))
+            call init_dynmat_file("dynmat.hdf", fi%atoms, fi%cell, qpts, l_truncate=.false.)
+            if (dfpt%l_sumrule_scf .and. l_gamma) call write_dynmat_gamma("dynmat.hdf", dynMatGamma)
+            call write_dynmat_q("dynmat.hdf", q_list(iQ), qpts%bk(:,q_list(iQ)), weight, eigenVals, eigenFreqs, dynMat=dynMatQ, eigVecs=eigenVecs)
+            call timestop("dynMat IO")
         end if 
 
     end subroutine postprocessing_qpoint_phonon
 
     subroutine write_outfiles_phonon(this,fi,fmpi,dfpt)
 
-        use m_types 
 
         class(t_phonon),intent(inout)   :: this         
         type(t_fleurinput),intent(in) :: fi

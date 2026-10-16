@@ -1,5 +1,29 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_inped
       USE m_juDFT
+      USE m_rwinp
+      USE m_inpnoco
+      USE m_constants
+      USE m_types_atoms
+      USE m_types_vacuum
+      USE m_types_input
+      USE m_types_banddos
+      USE m_types_xcpot_inbuild_nofunction
+      USE m_types_sym
+      USE m_types_cell
+      USE m_types_sliceplot
+      USE m_types_noco
+      USE m_types_stars
+      USE m_types_hybinp
+      USE m_types_kpts
+      USE m_setlomap
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: inped, trans
 !     *******************************************************
 !     read in input parameters
 !     modified to include also empty spheres (z=1.e-10)
@@ -29,25 +53,8 @@
         SUBROUTINE inped(atoms,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
                          stars ,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
-          USE m_rwinp
           !USE m_chkmt
-          USE m_inpnoco
-          USE m_constants
-          USE m_types_atoms
-          USE m_types_vacuum
-          USE m_types_input
-          USE m_types_banddos
-          USE m_types_xcpot_inbuild_nofunction
-          USE m_types_sym
-          USE m_types_cell
-          USE m_types_sliceplot
-          USE m_types_noco
-          USE m_types_stars
            
-          USE m_types_hybinp
-          USE m_types_kpts
-          USE m_constants
-          USE m_setlomap
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..

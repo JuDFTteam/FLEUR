@@ -1,4 +1,7 @@
       MODULE m_outint
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: outint
       CONTAINS
       SUBROUTINE outint(
      >                  msh,e,fkap,cs,cis,s,vr,z,rn,rnot,h,d,

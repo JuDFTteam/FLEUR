@@ -1,4 +1,7 @@
       MODULE m_stpot1
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: stpot1
       CONTAINS
       SUBROUTINE stpot1(
      >                  msh,n,z,rad,

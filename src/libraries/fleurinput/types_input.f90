@@ -8,6 +8,9 @@ MODULE m_types_input
   USE m_judfT
   USE m_constants
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_types_noco
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_input
@@ -103,7 +106,6 @@ END TYPE t_input
 
 CONTAINS
 SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
-   USE m_mpi_bc_tool
    CLASS(t_input),INTENT(INOUT)::this
    INTEGER,INTENT(IN):: mpi_comm
    INTEGER,INTENT(IN),OPTIONAL::irank
@@ -191,17 +193,13 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
-   USE m_types_xml
-   USE m_constants
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
 
    CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
    INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
-   !TODO! these switches should be in the inp-file
-   !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
-   this%l_useapw=.FALSE.   !former CPP_APW
+   !l_useapw is derived from the atoms input in fleurinput_postprocess
    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
    DO i = 1, LEN(this%comment)
       IF(IACHAR(this%comment(i:i)).LT.32) this%comment(i:i) = ' '
@@ -285,6 +283,8 @@ SUBROUTINE read_xml_input(this,xml)
    IF (xml%versionNumber < 39) THEN
       IF (this%fixed_moment.EQ.0.0) this%isFixedMomentCalc = .FALSE. 
    END IF
+   IF (this%isFixedMomentCalc.AND.this%jspins==1) CALL juDFT_error("Fixed moment only in calculations with two spins", &
+                                                                   hint="Set jspins=2 or remove the fixed_moment attribute", calledby='types_input%read_xml_input')
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
@@ -417,7 +417,7 @@ SUBROUTINE read_xml_input(this,xml)
       CASE ('Muller')
          this%rdmftFunctional = 1
       CASE DEFAULT
-         STOP 'Error: unknown RDMFT functional selected!'
+         CALL judft_error('unknown RDMFT functional selected!')
       END SELECT
    END IF
    ! !! Start of output section
@@ -477,7 +477,6 @@ SUBROUTINE read_xml_input(this,xml)
 END SUBROUTINE read_xml_input
 
 SUBROUTINE init_input(input,noco,l_hybrid,invs,n_denmat,n_hia,nbasfcn)
-   USE m_types_noco
    CLASS(t_input),INTENT(inout):: input
    TYPE(t_noco),INTENT(in)     :: noco
    LOGICAL, INTENT(IN)         :: invs

@@ -1,5 +1,11 @@
       MODULE m_kptmop
       use m_juDFT
+      use m_constants
+      use m_ordstar
+      use m_fulstar
+      implicit none
+      private
+      public :: kptmop
 !-----------------------------------------------------------------------
 !     ---> This program generates k-points
 !     in irreducible wedge of BZ
@@ -67,9 +73,6 @@ c     vklmn(i,kpt)/divis(i) and weights as wght(kpt)/divis(4)
 c     nkstar   : number of stars for k-points generated in full stars
 c
 c-----------------------------------------------------------------------
-      USE m_constants
-      USE m_ordstar
-      USE m_fulstar
       IMPLICIT NONE
 C
 C-----> PARAMETER STATEMENTS

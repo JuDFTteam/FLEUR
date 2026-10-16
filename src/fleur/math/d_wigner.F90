@@ -1,11 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_dwigner
   USE m_juDFT
+  USE m_constants
+  USE m_inv3
+  IMPLICIT NONE
 
   ! Calculate the Wigner rotation matrices for complex spherical
   ! harmonics for all space-group rotations and l=1,2,3. Needed 
@@ -68,8 +71,6 @@ CONTAINS
   !c**************************************************
   SUBROUTINE real_wigner(nop,mrot,bmat,lmax, d_wgn, write)
 
-    USE m_constants
-    USE m_inv3
 
     IMPLICIT NONE
 

@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_enparaXML
   USE m_judft
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_types_atoms
+  USE m_constants
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_fleurinput_base):: t_enparaXML
@@ -26,7 +30,6 @@ MODULE m_types_enparaXML
 CONTAINS
 
   SUBROUTINE mpi_bc_enpara(this,mpi_comm,irank)
-    USE m_mpi_bc_tool
     CLASS(t_enparaXML),INTENT(INOUT)::this
     INTEGER,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -44,7 +47,6 @@ CONTAINS
   END SUBROUTINE mpi_bc_enpara
 
   SUBROUTINE read_xml_enpara(this,xml)
-    use m_types_xml
     CLASS(t_enparaXML),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(INOUT)   ::xml
 
@@ -105,7 +107,6 @@ CONTAINS
   END SUBROUTINE read_xml_enpara
 
   SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,eConfigStr,loStr)
-    USE m_types_atoms
     !sets the energy parameters according to simple electronic config string and lo string
     CLASS(t_enparaXML),INTENT(inout) :: enpara
     TYPE(t_atoms),INTENT(IN)         :: atoms
@@ -198,7 +199,6 @@ CONTAINS
   END SUBROUTINE set_quantum_numbers
 
   SUBROUTINE Init(This,Ntype,Nlod,Jspins,L_defaults,Nz)
-    USE m_constants
     CLASS(t_enparaXML),INTENT(inout):: this
     INTEGER,INTENT(IN)           :: jspins,nlod,ntype
     LOGICAL,INTENT(IN),OPTIONAL  :: l_defaults

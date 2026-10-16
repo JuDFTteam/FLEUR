@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,13 +9,19 @@ MODULE m_forceb8
    !
    ! FZJ 15/3-01 GMadsen
    !-----------------------------------------------------------------------------
+   USE m_constants, ONLY: tpi_const
+   USE m_sphbes
+   USE m_stern
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_stars
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: force_b8
 CONTAINS
    SUBROUTINE force_b8(atoms,ecwk,stars, sym,cell, jspin, force,f_b8)
 
-      USE m_constants, ONLY : tpi_const
-      USE m_sphbes
-      USE m_stern
-      USE m_types
 
       IMPLICIT NONE
 

@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 ! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -5,6 +10,19 @@
 
 MODULE m_resMoms
 
+   USE m_constants
+   USE m_juDFT
+   USE m_magDiMom
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: resmoms
 CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -18,10 +36,6 @@ CONTAINS
 
 SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,nococonv,den,rhoLRes)
 
-   USE m_constants
-   USE m_types
-   USE m_juDFT
-   USE m_magDiMom
 
    IMPLICIT NONE
    TYPE(t_sym),           INTENT(IN)    :: sym

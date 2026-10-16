@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -16,7 +16,6 @@ MODULE m_cdn_io
 #ifdef CPP_MPI
   use mpi
 #endif
-  USE m_types
   USE m_juDFT
   USE m_loddop
   USE m_wrtdop
@@ -26,12 +25,26 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
   USE hdf5
 #endif
+  USE m_qfix
+  USE m_fix_by_gaussian
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_field
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_potden
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC printDensityFileInfo
   PUBLIC readDensity, writeDensity
-  PUBLIC isDensityFilePresent, isCoreDensityPresent
+  PUBLIC isDensityFilePresent, isDensityArchivePresent, isCoreDensityPresent
   PUBLIC readCoreDensity, writeCoreDensity
   PUBLIC readStars, writeStars
   PUBLIC readStepfunction, writeStepfunction
@@ -136,7 +149,7 @@ CONTAINS
 
 
   SUBROUTINE readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,denIm,b_constr)
+       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,b_constr,inArchive,qvec)
 
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -157,13 +170,14 @@ CONTAINS
     LOGICAL, INTENT (OUT)     :: l_qfix
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inArchive ! named archive instead of /cdn-N, e.g. a DFPT perturbation
+    REAL,             OPTIONAL, INTENT(IN)  :: qvec(3)   ! required q-vector of the archive
 
-    TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
 
     ! local variables
     INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l, numLines, ioStatus, iofl
     LOGICAL            :: l_exist, l_rhomatFile, l_DimChange
-    CHARACTER(LEN=30)  :: filename
+    CHARACTER(LEN=64)  :: filename
 
 #ifdef CPP_HDF
     INTEGER(HID_T) :: fileID
@@ -172,7 +186,7 @@ CONTAINS
     INTEGER           :: currentStructureIndex,currentStepfunctionIndex
     INTEGER           :: readDensityIndex, lastDensityIndex
     INTEGER           :: previousDensityIndex, densityType
-    CHARACTER(LEN=30) :: archiveName
+    CHARACTER(LEN=64) :: archiveName
     TYPE(t_cell)      :: cellTemp
 
     COMPLEX, ALLOCATABLE :: cdomvz(:,:)
@@ -182,6 +196,10 @@ CONTAINS
     l_qfix = .FALSE.
 
     CALL getIOMode(mode)
+    IF (PRESENT(inArchive).AND.(mode.NE.CDN_HDF5_MODE)) THEN
+       CALL juDFT_error("Density archive "//TRIM(inArchive)//" can only be read from an HDF5 density file.",calledby="readDensity",&
+                        hint="Compile FLEUR with HDF5 and do not use -no_cdn_hdf.")
+    END IF
 
 #ifndef CPP_HDF
     filename = 'cdn.hdf'
@@ -206,7 +224,9 @@ CONTAINS
           CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
-          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
+          IF (PRESENT(inArchive)) THEN
+             archiveName = inArchive
+          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
              archiveName = 'cdn'
           ELSE
              WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
@@ -233,7 +253,7 @@ CONTAINS
              WRITE(*,*) 'inOrOutCDN = ', inOrOutCDN
              CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="readDensity")
           END SELECT
-          l_exist = isDensityEntryPresentHDF(fileID,archiveName,densityType)
+          l_exist = isDensityEntryPresentHDF(fileID,archiveName,densityType,qvec)
           CALL closeCDNPOT_HDF(fileID)
        END IF
 
@@ -242,15 +262,23 @@ CONTAINS
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
          CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-               fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm=denIm,b_constr=b_constr)
+               fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr=b_constr)
 
           CALL closeCDNPOT_HDF(fileID)
 
           IF(l_DimChange) THEN
+             IF (PRESENT(inArchive)) THEN
+                WRITE(*,*) TRIM(archiveName)//' was stored with different dimensions and has been mapped.'
+             ELSE
                 CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den,denIm=denIm)
+                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
+             END IF
           END IF
        ELSE
+          IF (PRESENT(inArchive)) THEN
+             CALL juDFT_error("Density archive "//TRIM(archiveName)//" with matching q-vector not found in "//TRIM(filename),&
+                              calledby="readDensity")
+          END IF
           INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
           IF(l_exist) THEN
              WRITE(*,*) 'densityType is ', densityType
@@ -376,8 +404,7 @@ CONTAINS
   END SUBROUTINE readDensity
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm,b_constr)
-
+       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,b_constr,inArchive,qvec)
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -399,8 +426,9 @@ CONTAINS
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
-    TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
     REAL, OPTIONAL, INTENT(IN) :: b_constr(:,:)
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: inArchive ! named archive instead of /cdn-N, e.g. a DFPT perturbation
+    REAL,             OPTIONAL, INTENT(IN) :: qvec(3)   ! q-vector stored with the archive
 
     TYPE(t_stars)        :: starsTemp
     TYPE(t_vacuum)       :: vacuumTemp
@@ -418,7 +446,7 @@ CONTAINS
     INTEGER           :: d1, d10, asciioffset, iUnitTemp
     LOGICAL           :: l_exist, l_storeIndices, l_writeNew, l_same
     LOGICAL           :: l_writeAll
-    CHARACTER(len=30) :: filename
+    CHARACTER(len=64) :: filename
     CHARACTER(len=5)  :: cdnfile
 
 #ifdef CPP_HDF
@@ -435,7 +463,7 @@ CONTAINS
     INTEGER           :: iSpin, iV, iPair, iAtom1, iAtom2
     REAL              :: fermiEnergyTemp, distanceTemp
     LOGICAL           :: l_qfixTemp, l_CheckBroyd
-    CHARACTER(LEN=30) :: archiveName
+    CHARACTER(LEN=64) :: archiveName
     CHARACTER(LEN=8)  :: dateString
     CHARACTER(LEN=10) :: timeString
     CHARACTER(LEN=10) :: zone
@@ -449,6 +477,11 @@ CONTAINS
 
     l_CheckBroyd = .TRUE.
     IF(PRESENT(inFilename)) l_CheckBroyd = .FALSE.
+    IF (PRESENT(inArchive)) THEN
+       IF (mode.NE.CDN_HDF5_MODE) CALL juDFT_error("Density archive "//TRIM(inArchive)//" can only be written to an HDF5 density file.",&
+                                                   calledby="writeDensity",hint="Compile FLEUR with HDF5 and do not use -no_cdn_hdf.")
+       l_CheckBroyd = .FALSE.
+    END IF
 
     IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -461,7 +494,7 @@ CONTAINS
 
        previousDensityIndex = readDensityIndex
        writeDensityIndex = readDensityIndex
-       IF(relCdnIndex.NE.0) THEN
+       IF((relCdnIndex.NE.0).AND..NOT.PRESENT(inArchive)) THEN
           writeDensityIndex = lastDensityIndex+relCdnIndex
           lastDensityIndex = writeDensityIndex
           readDensityIndex = writeDensityIndex
@@ -469,7 +502,9 @@ CONTAINS
        END IF
 
        archiveName = ''
-       IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
+       IF (PRESENT(inArchive)) THEN
+          archiveName = inArchive
+       ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
           archiveName = 'cdn'
        ELSE
           WRITE(archiveName,'(a,i0)') '/cdn-', writeDensityIndex
@@ -498,7 +533,7 @@ CONTAINS
           CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="writeDensity")
        END SELECT
 
-       IF(relCdnIndex.EQ.0) THEN
+       IF((relCdnIndex.EQ.0).AND..NOT.PRESENT(inArchive)) THEN
           l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_UNDEFINED_const)
           IF(l_exist) THEN
              CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
@@ -514,12 +549,12 @@ CONTAINS
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-            occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr)
+            occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr,qvec=qvec)
          else
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm=denIm)
+            occDistance,l_qfix,den%iter+relCdnIndex,den,qvec=qvec)
       endif          
 
        IF(l_storeIndices) THEN
@@ -531,7 +566,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write density to cdn.str file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        filename = 'cdn1'
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -771,7 +806,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'cdn.str not yet implemented!'
+       CALL judft_error('cdn.str not yet implemented!')
     ELSE
        l_error = .TRUE.
     END IF
@@ -822,7 +857,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'cdn.str not yet implemented!'
+       CALL judft_error('cdn.str not yet implemented!')
     ELSE
        l_error = .TRUE.
     END IF
@@ -830,7 +865,7 @@ CONTAINS
   END SUBROUTINE readPrevmmpDistances
 
   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
-
+    
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -903,7 +938,6 @@ CONTAINS
   END SUBROUTINE readCoreDensity
 
   SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints,filename)
-
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -933,7 +967,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write core density to cdn.str file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        iUnit = 17
        OPEN (iUnit,file='cdnc',form='unformatted',status='unknown')
@@ -1015,7 +1049,7 @@ CONTAINS
 #endif
        ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
           ! Write stars to stars file
-          STOP 'CDN_STREAM_MODE not yet implemented!'
+          CALL judft_error('CDN_STREAM_MODE not yet implemented!')
        ELSE
           ! In direct access mode no structure information is written to any file.
        END IF
@@ -1026,10 +1060,6 @@ CONTAINS
   END SUBROUTINE storeStructureIfNew
 
   SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum,cell,field,sym,sphhar,input,noco,nococonv)
-    USE m_types
-    USE m_constants
-    USE m_qfix
-    USE m_fix_by_gaussian
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -1139,7 +1169,6 @@ CONTAINS
   END SUBROUTINE transform_by_moving_atoms
 
   SUBROUTINE writeStars(stars ,l_xcExtended,l_ExtData)
-
     TYPE(t_stars),INTENT(IN)   :: stars
      
     LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
@@ -1176,7 +1205,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write stars to stars file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        !         OPEN (51,file='stars',form='unformatted',status='unknown')
        !         WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
@@ -1206,7 +1235,6 @@ CONTAINS
   END SUBROUTINE writeStars
 
   SUBROUTINE readStars(stars ,l_xcExtended,l_ExtData,l_error)
-
     TYPE(t_stars),INTENT(INOUT) :: stars
      
     LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
@@ -1267,7 +1295,7 @@ CONTAINS
     IF(mode.EQ.CDN_STREAM_MODE) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF (l_exist) THEN
-          STOP 'cdn.str code path not yet implemented!'
+          CALL judft_error('cdn.str code path not yet implemented!')
        END IF
        IF (.NOT.l_exist) THEN
           mode = CDN_DIRECT_MODE
@@ -1325,7 +1353,6 @@ CONTAINS
   END SUBROUTINE readStars
 
   SUBROUTINE writeStepfunction(stars)
-
     TYPE(t_stars),INTENT(IN) :: stars
 
     INTEGER                  :: mode, ifftd, i
@@ -1355,7 +1382,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write stars to stars file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        !         OPEN (14,file='wkf2',form='unformatted',status='unknown')
 
@@ -1369,7 +1396,6 @@ CONTAINS
   END SUBROUTINE writeStepfunction
 
   SUBROUTINE readStepfunction(stars, atoms, cell, vacuum, l_error)
-
     TYPE(t_stars),INTENT(INOUT)   :: stars
     TYPE(t_atoms), INTENT(IN)     :: atoms
     TYPE(t_cell), INTENT(IN)      :: cell
@@ -1427,7 +1453,7 @@ CONTAINS
     IF(mode.EQ.CDN_STREAM_MODE) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF (l_exist) THEN
-          STOP 'cdn.str code path not yet implemented!'
+          CALL judft_error('cdn.str code path not yet implemented!')
        END IF
        IF (.NOT.l_exist) THEN
           mode = CDN_DIRECT_MODE
@@ -1511,7 +1537,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        WRITE(*,*) 'Explicit setting of starting density in direct access mode'
        WRITE(*,*) 'not implemented.'
@@ -1620,7 +1646,7 @@ CONTAINS
           WRITE(*,*) "No cdn.hdf file found. No density entry deleted."
        END IF
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        WRITE(*,*) 'Explicit deletion of densities in direct access mode'
        WRITE(*,*) 'not implemented.'
@@ -1704,6 +1730,37 @@ CONTAINS
     isDensityFilePresent = l_exist
   END FUNCTION isDensityFilePresent
 
+  LOGICAL FUNCTION isDensityArchivePresent(inFilename,archiveType,inArchive,qvec)
+    !! Checks whether inFilename.hdf holds the input density in archive inArchive; if qvec is given, it must match the stored one.
+
+    CHARACTER(LEN=*), INTENT(IN)           :: inFilename
+    INTEGER,          INTENT(IN)           :: archiveType
+    CHARACTER(LEN=*), INTENT(IN)           :: inArchive
+    REAL,             INTENT(IN), OPTIONAL :: qvec(3)
+
+    INTEGER        :: mode, densityType
+    INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+    INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+    INTEGER(HID_T) :: fileID
+#endif
+
+    isDensityArchivePresent = .FALSE.
+    CALL getIOMode(mode)
+    IF (mode.NE.CDN_HDF5_MODE) RETURN
+    INQUIRE(FILE=TRIM(ADJUSTL(inFilename))//'.hdf',EXIST=isDensityArchivePresent)
+    IF (.NOT.isDensityArchivePresent) RETURN
+#ifdef CPP_HDF
+    densityType = DENSITY_TYPE_IN_const
+    IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) densityType = DENSITY_TYPE_FFN_IN_const
+    IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) densityType = DENSITY_TYPE_NOCO_IN_const
+    CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+         currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
+    isDensityArchivePresent = isDensityEntryPresentHDF(fileID,inArchive,densityType,qvec)
+    CALL closeCDNPOT_HDF(fileID)
+#endif
+  END FUNCTION isDensityArchivePresent
+
   LOGICAL FUNCTION isCoreDensityPresent()
 
     LOGICAL             :: l_exist
@@ -1724,7 +1781,7 @@ CONTAINS
     IF ((mode.EQ.CDN_STREAM_MODE).OR.(mode.EQ.CDN_HDF5_MODE)) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF(l_exist) THEN
-          STOP 'Not yet implemented!'
+          CALL judft_error('Not yet implemented!')
           RETURN
        END IF
     END IF

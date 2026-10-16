@@ -10,6 +10,13 @@ c     calculates the value of the periodic part of the
 c     wavefunction at the given real-grid point p(:)
 c                          Y.Mokrousov 16.8.6
 c     ********************************************************
+      USE m_ylm
+      USE m_constants
+      USE m_juDFT
+      USE m_types_mat
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: wann_real
       CONTAINS
       SUBROUTINE wann_real(
      >                  p,n,na,iv,iflag,bkpt,iband,
@@ -22,10 +29,6 @@ c     ********************************************************
      >                  nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <                  xdnout)
 
-      USE m_types
-      USE m_ylm
-      USE m_constants
-      use m_juDFT
 
       IMPLICIT NONE
 

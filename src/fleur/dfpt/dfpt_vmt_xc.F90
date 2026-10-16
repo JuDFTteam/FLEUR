@@ -8,14 +8,24 @@ MODULE m_dfpt_vmt_xc
 use mpi
 #endif
 USE m_judft
+   USE m_mt_tofrom_grid
+   USE m_types_xcpot_inbuild
+   USE m_types_xcpot_libxc
+   USE m_dfpt_gga_kernel
+   USE m_types_atoms
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_vmt_xc, mt_gradient_ftgrid
 
 CONTAINS
-   SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,den1im,xcpot,input,sym,noco,vTot,dfptvTotimag)
-      USE m_mt_tofrom_grid
-      USE m_types_xcpot_inbuild
-      USE m_types_xcpot_libxc
-      USE m_types
-      USE m_dfpt_gga_kernel
+   SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,xcpot,input,sym,noco,vTot)
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -24,9 +34,9 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)         :: sym
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
-      TYPE(t_potden),INTENT(IN)      :: den, den1, den1im
+      TYPE(t_potden),INTENT(IN)      :: den, den1
       TYPE(t_noco), INTENT(IN)       :: noco
-      TYPE(t_potden),INTENT(INOUT)   :: vTot, dfptvTotimag
+      TYPE(t_potden),INTENT(INOUT)   :: vTot
       !     ..
       !     .. Local Scalars ..
       TYPE(t_gradients)     :: gradRho, gradRho1, gradRho1Im
@@ -66,7 +76,7 @@ CONTAINS
       n_stride=fmpi%isize
       IF (fmpi%irank>0) THEN
          vTot%mt=0.0
-         dfptvTotimag%mt=0.0
+         vTot%mtIm=0.0
       ENDIF
 #else
       n_start=1
@@ -85,7 +95,7 @@ CONTAINS
 
          CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den%mt(:,0:,n,:),n,noco_loco,gradRho,ch)
          CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den1%mt(:,0:,n,:),n,noco_loco,gradRho1,ch1)
-         CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den1im%mt(:,0:,n,:),n,noco_loco,gradRho1Im,ch1Im)
+         CALL mt_to_grid(xcpot%needs_grad(),input%jspins,atoms,sym,sphhar,.FALSE.,den1%mtIm(:,0:,n,:),n,noco_loco,gradRho1Im,ch1Im)
 
          IF (xcpot%needs_grad()) THEN
             ALLOCATE(drivsigma(n_sigma,npoints),driv2rho2(nfxc,npoints))
@@ -133,7 +143,7 @@ CONTAINS
          END IF
 
          CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1,vTot%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1Im,dfptvTotimag%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1Im,vTot%mtIm(:,0:,n,:))
 
          DEALLOCATE (ch,ch1,ch1Im,v_xc1,v_xc1Im)
       ENDDO
@@ -141,7 +151,7 @@ CONTAINS
       CALL finish_mt_grid()
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dfptvTotimag%mt,SIZE(dfptvTotimag%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mtIm,SIZE(vTot%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       !
       RETURN
@@ -150,8 +160,6 @@ CONTAINS
    SUBROUTINE mt_gradient_ftgrid(xcpot,atoms,sym,sphhar,noco,n,f,f_mt,gradF)
       !! Gradient of a real field on the MT grid, obtained by projecting it back
       !! onto the lattice harmonics and differentiating there. f_mt is scratch.
-      USE m_mt_tofrom_grid
-      USE m_types
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)       :: xcpot
       TYPE(t_atoms),INTENT(IN)        :: atoms

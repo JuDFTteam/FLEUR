@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,11 +8,22 @@ MODULE m_mpi_bc_potden
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_types_atoms
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_vacuum
+   implicit none
+   private
+   public :: mpi_bc_potden
 CONTAINS
    SUBROUTINE mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum ,noco,potden,nococonv)
 
-   USE m_types
-   USE m_constants
    IMPLICIT NONE
 
    TYPE(t_mpi),INTENT(IN)        :: fmpi

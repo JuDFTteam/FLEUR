@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,7 +10,30 @@
 MODULE m_hsefunctional
    USE m_judft
    USE m_types_hybdat
+   USE m_constants
+   USE m_exponential_integral, ONLY: calculateExponentialIntegral, gauss_laguerre, series_laguerre
+   USE m_util, ONLY: gaunt, primitivef, sphbessel, harmonicsr
+   USE m_intgrf
+   USE m_trafo
+   USE m_types_atoms
+   USE m_types_sym
+   USE m_wrapper
+   USE m_olap, ONLY: olap_pw, olap_pwp
+   USE m_types_mat
+   USE m_types_fleurinput
+   USE m_types_mpdata
+   USE m_types_lapw
+   USE m_types_misc
+   USE m_gaunt
+   USE m_types_fleurinput_base
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: calculateenhancementfactor, calculate_fourier_transform, calculate_fourier_transform_once, &
+      change_coulombmatrix, dynamic_hse_adjustment, crc_gptssummation, rrr_gptssummation, exchange_vccvhse, &
+      exchange_cccchse, calculate_coefficients, my_sum, my_dot_product, omega_hse, maxnogpts
+#ifdef CPP_GPU
+   PUBLIC :: erfc
+#endif
 
 #ifdef CPP_GPU
    REAL, EXTERNAL ::erfc
@@ -67,7 +90,6 @@ CONTAINS
    !         dFx_ds   - derivative of this factor with respect to s
    !         d2Fx_ds2 - second derivative with respect to s
    SUBROUTINE calculateEnhancementFactor(kF, s_inp, F_x, dFx_Ds, d2Fx_Ds2, dFx_dkF, d2Fx_dsdkF)
-      use m_constants
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: kF, s_inp
@@ -232,8 +254,6 @@ CONTAINS
    SUBROUTINE approximateIntegral(omega_kF, Hs2, D_Hs2, dHs2_ds, d2Hs2_ds2, &
                                   appInt, dAppInt_ds, d2AppInt_ds2, dAppInt_dkF, d2AppInt_dsdkF)
 
-      USE m_exponential_integral, ONLY: calculateExponentialIntegral, gauss_laguerre
-      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: omega_kF, Hs2, D_Hs2, dHs2_ds, d2Hs2_ds2
@@ -313,8 +333,6 @@ CONTAINS
    ! Output: integral - array with the calculated integrals
    ! To simplify the calculation use integral(n+2) = - d(integral(n))/d(b omega/kF)
    SUBROUTINE generateIntegrals(bw_Hs2, bw_D_Hs2, integral)
-      USE m_exponential_integral, ONLY: calculateExponentialIntegral, gauss_laguerre, series_laguerre
-      USE m_constants
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: bw_Hs2, bw_D_Hs2
@@ -630,7 +648,6 @@ CONTAINS
    !         dGs2_ds   - first derivative of G(s)s^2 with respect to s
    !         d2Gs2_ds2 - second derivative of G(s)s^2
    SUBROUTINE calculateG(s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2, G, dGs2_ds, d2Gs2_ds2)
-      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2
@@ -842,7 +859,6 @@ CONTAINS
    !         dHs2_ds   - first derivative d(s^2*H(s))/ds
    !         d2Hs2_ds2 - second derivative d^2(s^2H(s))/ds^2
    SUBROUTINE calculateH(s, H, dHs2_ds, d2Hs2_ds2)
-      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s
@@ -983,10 +999,6 @@ CONTAINS
       ! Output
       potential, muffintin, interstitial)
 
-      USE m_constants
-      USE m_types_hybdat, ONLY: gptnorm
-      USE m_util, ONLY: sphbessel
-      use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       IMPLICIT NONE
 
       ! scalar input
@@ -1319,12 +1331,6 @@ CONTAINS
       ! Output
       potential, fourier_trafo)
 
-      USE m_constants
-      USE m_util, ONLY: sphbessel
-      use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,  NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
-      USE m_trafo, ONLY: symmetrize
-      USE m_types_atoms
-      USE m_types_sym
 
       IMPLICIT NONE
 
@@ -1656,12 +1662,6 @@ CONTAINS
       ! Input & output
       coul)
 
-      USE m_trafo, ONLY: symmetrize
-      USE m_wrapper, ONLY: packmat, unpackmat
-      USE m_olap, ONLY: olap_pw
-      USE m_types_atoms
-      USE m_types_mat
-      USE m_types_sym
 
       IMPLICIT NONE
       
@@ -1879,11 +1879,6 @@ CONTAINS
       nobd, nbands, nsst, ibando, psize, indx, sym, irank, &
       cprod_r, cprod_c, l_real, wl_iks, n_q)
 
-      USE m_trafo, ONLY: symmetrize
-      USE m_olap, ONLY: olap_pw, olap_pwp
-      USE m_wrapper, ONLY: packmat
-      USE m_types_atoms
-      USE m_types_sym
 
       IMPLICIT NONE
 
@@ -2012,7 +2007,6 @@ CONTAINS
    ! Helper function needed to use forall statements instead of do loop's
    ! calls the harmonicsr subroutine from 'util.F'
    PURE FUNCTION calcYlm(rvec, ll)
-      USE m_util, ONLY: harmonicsr
       IMPLICIT NONE
       REAL, INTENT(IN)    :: rvec(:)
       INTEGER, INTENT(IN) :: ll
@@ -2023,7 +2017,6 @@ CONTAINS
    ! Helper function needed to use forall statements instead of do loop's
    ! calls the sphbessel subroutine from 'util.F'
    PURE FUNCTION calcSphBes(x, l)
-      USE m_util, ONLY: sphbessel
       IMPLICIT NONE
       REAL, INTENT(IN)    :: x
       INTEGER, INTENT(IN) :: l
@@ -2159,17 +2152,7 @@ CONTAINS
    SUBROUTINE exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, &
                                nsest, indx_sest, irank, a_ex, results, cmt, mat_ex)
 
-      USE m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
-      USE m_types_lapw
-      USE m_types_misc
-      USE m_types_mat
 
-      USE m_constants
-      USE m_util
-      USE m_intgrf
-      USE m_wrapper
 
       IMPLICIT NONE
 
@@ -2390,16 +2373,7 @@ CONTAINS
    !
    SUBROUTINE exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
 
-      USE m_types_fleurinput
-      USE m_types_hybdat
-      USE m_types_misc
 
-      USE m_constants
-      USE m_util
-      use m_intgrf
-      USE m_wrapper
-      USE m_gaunt
-      USE m_trafo
 
       IMPLICIT NONE
       
@@ -2596,7 +2570,6 @@ CONTAINS
    ! Return: d_ln's for all r in rmsh, all 0 <= l <= lmax and all n <= ncut
    FUNCTION calculate_coefficients(rmsh, lmax, ncut, fac) RESULT(d_ln)
 
-      USE m_constants
 
       IMPLICIT NONE
 

@@ -1,19 +1,31 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsvac
    USE m_juDFT
+   USE m_vacfun
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hsvac
 CONTAINS
    !-----------------------------------------------------------------------------
    ! Calculate the vacuum contribution to the Hamiltonian and Overlap matrix
    !-----------------------------------------------------------------------------
    SUBROUTINE hsvac(vacuum, stars, fmpi, jsp, input, v, evac, cell, &
-                  & lapw, noco, nococonv, hmat, smat)
+                  & lapw, noco, nococonv, hmat, smat, dv)
 
-      USE m_vacfun
-      USE m_types
 
       IMPLICIT NONE
 
@@ -27,6 +39,8 @@ CONTAINS
       TYPE(t_mpi),INTENT(IN)        :: fmpi
       TYPE(t_potden),INTENT(IN)     :: v
       CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:),smat(:,:)
+      ! added to the Hamiltonian as matrix elements; the basis functions stay those of v
+      COMPLEX,INTENT(IN),OPTIONAL   :: dv(:,:,:,:)
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jsp
@@ -52,6 +66,7 @@ CONTAINS
       REAL    :: ddnv(lapw%dim_nv2d(),input%jspins),dudz(lapw%dim_nv2d(),input%jspins)
       REAL    :: duz(lapw%dim_nv2d(),input%jspins), udz(lapw%dim_nv2d(),input%jspins)
       REAL    :: uz(lapw%dim_nv2d(),input%jspins)
+      COMPLEX, ALLOCATABLE :: vxy(:,:,:,:)
 
       d2 = SQRT(cell%omtil/cell%area)
 
@@ -72,6 +87,8 @@ CONTAINS
          END DO k_loop
       END DO
 
+      IF (PRESENT(dv)) ALLOCATE(vxy, source=v%vac(:vacuum%nmzxyd,2:,:,:) + dv(:vacuum%nmzxyd,2:,:,:))
+
       !---> loop over the two vacuua (1: upper; 2: lower)
       DO ivac = 1,2
          sign = 3. - 2.*ivac !+/- 1
@@ -81,9 +98,15 @@ CONTAINS
                igSpinPr=MIN(SIZE(hmat,1),iSpinPr) !in colinear case igSpinPr=1
                !---> get the wavefunctions and set up the tuuv, etc matrices
                CALL timestart("vacfun")
-               CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
-                         &  cell, ivac, evac, lapw%bkpt + lapw%qphon, v%vac(:vacuum%nmzxyd,2:,:,:), v%vac(:,1,:,:), kvac, nv2, &
-                         & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk)
+               IF (PRESENT(dv)) THEN
+                  CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
+                            &  cell, ivac, evac, lapw%bkpt + lapw%qphon, vxy, v%vac(:,1,:,:), kvac, nv2, &
+                            & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk, dvz=dv(:,1,:,:))
+               ELSE
+                  CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
+                            &  cell, ivac, evac, lapw%bkpt + lapw%qphon, v%vac(:vacuum%nmzxyd,2:,:,:), v%vac(:,1,:,:), kvac, nv2, &
+                            & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk)
+               END IF
                CALL timestop("vacfun")
 
                !---> generate a and b coeffficients

@@ -1,9 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_judft_usage
+   use m_juDFT_string
+   use m_juDFT_args
+#ifdef CPP_MPI
+   use mpi
+#endif
    IMPLICIT NONE
    PRIVATE
    CHARACTER(LEN=99),PARAMETER:: URL_STRING="www.flapw.de/collect.pl"
@@ -20,7 +25,6 @@ MODULE m_judft_usage
 
 CONTAINS
    SUBROUTINE add_usage_data_s(key,VALUE,string_val)
-      use m_juDFT_string
       IMPLICIT NONE
       CHARACTER(len=*),INTENT(IN)  :: key,VALUE
       INTEGER                      :: i
@@ -80,11 +84,6 @@ CONTAINS
    END SUBROUTINE add_usage_data_l
 
    SUBROUTINE send_usage_data()
-#ifdef CPP_MPI
-      use mpi
-#endif
-      use m_juDFT_args
-      use m_juDFT_string
       IMPLICIT NONE
       INTEGER            :: i,ierr(2),pid,dt(8)
       CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap
@@ -227,7 +226,6 @@ CONTAINS
    END SUBROUTINE get_cpuinfo
 
    SUBROUTINE get_meminfo(VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap)
-      use m_juDFT_string
       implicit none
       character(len=200), intent(out)   :: VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap
       character(len=1000)               :: line

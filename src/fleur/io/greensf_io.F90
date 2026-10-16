@@ -1,15 +1,35 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_greensf_io
 
 #ifdef CPP_HDF
 
    USE hdf5
    USE m_hdf_tools
-   USE m_types
    USE m_types_selfen
    USE m_constants
    USE m_juDFT
+   USE m_cdn_io
+   USE m_lattHarmsSphHarmsConv
+   USE m_hdf_tools4
+   USE m_types_gfinp
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_greensf
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: writegreensfelement, io_write_string1
 
    PUBLIC openGreensFFile, closeGreensFFile, writeGreensFData
 
@@ -27,9 +47,6 @@ MODULE m_greensf_io
 
    SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, sym, cell, kpts, sphhar,inFilename, vtot)
 
-      USE m_types
-      USE m_cdn_io
-      use m_lattHarmsSphHarmsConv
 
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
@@ -777,8 +794,6 @@ MODULE m_greensf_io
 
    SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)
 
-      USE hdf5
-      USE m_hdf_tools4
 
       IMPLICIT NONE
 

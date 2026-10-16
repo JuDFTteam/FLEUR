@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,8 +7,15 @@
 MODULE m_types_greensfCoeffs
 
    USE m_juDFT
-   USE m_types_setup
    USE m_constants
+   USE m_mpi_bc_tool
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_atoms
+   USE m_types_gfinp
+   USE m_types_input
+   USE m_types_noco
 
    IMPLICIT NONE
 
@@ -258,9 +265,6 @@ MODULE m_types_greensfCoeffs
 
       SUBROUTINE greensfImagPart_collect(this,spin_ind,mpi_communicator)
 
-#ifdef CPP_MPI
-         USE mpi
-#endif
 
          CLASS(t_greensfImagPart),     INTENT(INOUT) :: this
          INTEGER,                      INTENT(IN)    :: spin_ind
@@ -347,7 +351,6 @@ MODULE m_types_greensfCoeffs
       END SUBROUTINE greensfImagPart_collect
 
       SUBROUTINE greensfImagPart_mpi_bc(this,mpi_comm,irank)
-         USE m_mpi_bc_tool
          CLASS(t_greensfImagPart), INTENT(INOUT)::this
          INTEGER, INTENT(IN):: mpi_comm
          INTEGER, INTENT(IN), OPTIONAL::irank

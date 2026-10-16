@@ -11,7 +11,6 @@ MODULE m_xas_driver
 #endif
    USE m_constants, ONLY: hartree_to_ev_const
    USE m_eig66_io, ONLY: read_eig
-   USE m_genMTBasis, ONLY: genMTBasis
    USE m_juDFT, ONLY: juDFT_error
    USE m_mpi_reduce_tool, ONLY: mpi_sum_reduce
    USE m_types_abc, ONLY: t_abc
@@ -29,7 +28,6 @@ MODULE m_xas_driver
    USE m_types_potden, ONLY: t_potden
    USE m_types_radfun, ONLY: t_radfun
    USE m_types_sym, ONLY: t_sym
-   USE m_types_usdus, ONLY: t_usdus
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
    USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
@@ -124,7 +122,6 @@ CONTAINS
       TYPE(t_potden),      INTENT(IN) :: vTot
       TYPE(t_results),     INTENT(IN) :: results
 
-      TYPE(t_usdus) :: usdus
       TYPE(t_radfun) :: radfun
       TYPE(t_xas_core_state), ALLOCATABLE :: core_states(:)
       TYPE(t_lapw) :: lapw
@@ -137,7 +134,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_lchan(:, :, :)
       REAL, ALLOCATABLE :: energy_grid(:), intensity(:, :), radial_xas(:, :, :)
       REAL, ALLOCATABLE :: intensity_reduced(:, :)
-      REAL, ALLOCATABLE :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
       REAL, ALLOCATABLE :: eig_band(:), occ_band(:)
       REAL, ALLOCATABLE :: xas_debug_strength_kpt(:, :)
       REAL, ALLOCATABLE :: xas_debug_strength_kpt_reduced(:, :)
@@ -235,10 +231,6 @@ CONTAINS
          CALL xas_print_symmetry_rotation_diagnostics(sym, cell, xas_debug_unit)
       END IF
 
-      CALL usdus%init(atoms, input%jspins)
-      ALLOCATE(f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-      ALLOCATE(g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-      ALLOCATE(flo(atoms%jmtd, 2, atoms%nlod, input%jspins))
       IF (l_xas_debug_kpt_strength) THEN
          ALLOCATE(xas_debug_strength_kpt(xas_debug_n_pol, kpts%nkpt), SOURCE=0.0)
       END IF
@@ -344,10 +336,7 @@ CONTAINS
 
       DO itype = 1, atoms%ntype
          IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
-         DO ispin = 1, input%jspins
-            CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, ispin, usdus, &
-                            f(:, :, 0:, ispin), g(:, :, 0:, ispin), flo(:, :, :, ispin), l_writeArg=.FALSE.)
-         END DO
+         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
 
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
          CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
@@ -364,7 +353,6 @@ CONTAINS
             l_xas_angular_sumrule_printed = .TRUE.
          END IF
 
-         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
          max_order = MAXVAL(radfun%n_r(0:atoms%lmax(itype)))
          ALLOCATE(radial_xas(max_order, 0:atoms%lmaxd, input%jspins), SOURCE=0.0)
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
@@ -421,14 +409,14 @@ CONTAINS
                END DO
                IF (l_spinor_abc) THEN
                   DO ispin = 1, n_local_spins
-                     CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                     CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                                    ispin, itype, zMat)
                   END DO
                ELSE IF (input%jspins == 2) THEN
-                  CALL abc_spin(jsp_loop)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                  CALL abc_spin(jsp_loop)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                                    jsp_loop, itype, zMat)
                ELSE
-                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                             1, itype, zMat)
                END IF
                IF (l_root .AND. xas_debug_abc_star_compare .AND. l_spinor_abc .AND. &

@@ -1,10 +1,18 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_matrix_pref
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: matrix_pref
 CONTAINS
    SUBROUTINE matrix_pref(fmpi, atoms, bmat, gvecPr, gvec, lapwPr, lapw, nk, nvPr, nv, &
                           & iDtype, iDir, hmat_tmp, smat_tmp, hmat, smat, killcont)
@@ -12,7 +20,6 @@ CONTAINS
       !! <\phi_{kG'q}|M|\phi_{kG}>
       !! with a prefactor i(G-G'-q).
 
-      USE m_types
 
       IMPLICIT NONE
 

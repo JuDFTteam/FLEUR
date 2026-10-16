@@ -1,15 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_fleur_version
+    use m_compile_descr
+    use m_constants
+    use m_juDFT
+    use m_check_arguments
+    use m_types_xml
+!$  use omp_lib
     implicit none
     private
     public fleur_version
   contains
     subroutine fleur_version()
-      use m_compile_descr
-      use m_constants
-      use m_juDFT
-      use m_check_arguments
-      use m_types_xml
-!$    use omp_lib
   
       character(:), allocatable:: infostring, additional_info, omp_string
       character(len=10) :: outputVersionString

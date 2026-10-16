@@ -5,6 +5,13 @@
 !--------------------------------------------------------------------------------
 MODULE  m_fergwt
   USE m_juDFT
+  USE m_constants
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpi
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: fergwt
   !****************************************************************
   !     determines the fermi energy and weights for the k-space
   !     integration using gaussing-smearing method.
@@ -13,8 +20,6 @@ MODULE  m_fergwt
 CONTAINS
   SUBROUTINE fergwt(kpts,input,input_zelec,fmpi, ne,eig, ef,w_iks,seigv,l_output)
 
-    USE m_constants
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: fmpi

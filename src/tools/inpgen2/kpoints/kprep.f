@@ -1,4 +1,7 @@
       MODULE m_kprep
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: kprep
       CONTAINS
       SUBROUTINE  kprep(
      >                  iofile,iokpt,kpri,ktest,

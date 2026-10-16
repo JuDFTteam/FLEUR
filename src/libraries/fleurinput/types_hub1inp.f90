@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,8 @@ MODULE m_types_hub1inp
    USE m_juDFT
    USE m_constants
    USE m_types_fleurinput_base
+   USE m_mpi_bc_tool
+   USE m_types_xml
    IMPLICIT NONE
    PRIVATE
 
@@ -54,7 +56,6 @@ MODULE m_types_hub1inp
 CONTAINS
 
    SUBROUTINE mpi_bc_hub1inp(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_hub1inp), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -89,7 +90,6 @@ CONTAINS
    END SUBROUTINE mpi_bc_hub1inp
 
    SUBROUTINE read_xml_hub1inp(this, xml)
-      USE m_types_xml
       CLASS(t_hub1inp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 

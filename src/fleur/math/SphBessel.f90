@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -57,6 +57,9 @@ module m_SphBessel
 
   use m_constants, only: ImagUnit
   implicit none
+  private
+  public :: sphbesselcomplex, sphbesselreal, modsphbesselcomplex, modsphbesselcomplex2, modsphbesselreal, sphbessel, &
+     modsphbessel
 
 
   interface SphBessel

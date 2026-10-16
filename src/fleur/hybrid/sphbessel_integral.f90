@@ -1,10 +1,19 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_sphbessel_integral
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_hybinp
+   implicit none
+   private
+   public :: sphbessel_integral
 contains
    FUNCTION sphbessel_integral(atoms, itype, qnrm, nqnrm, iqnrm1, iqnrm2, l, hybinp, &
                                sphbes0, l_warnin, l_warnout)
 
-      USE m_types
-      USE m_constants
 
       IMPLICIT NONE
 
