@@ -180,6 +180,10 @@ Test inputs live in `testing/inputfiles/` organised by feature (e.g. `noco/`, `f
 
 `out.xml` is validated against `src/fleur/io/xml/FleurOutputSchema.xsd`; `inp.xml` against `FleurInputSchema.xsd` in the same directory.
 
+## User Documentation
+
+A user-visible change (new or changed `inp.xml` input, new output in `out.xml`, files or HDF5, new command-line option) is not finished without user documentation. Before calling such work done, propose the documentation and follow the `fleur-docs` skill (`.claude/skills/fleur-docs/`). The skill writes theory, howto and reference pages for the www.flapw.de repo and a tutorial notebook for fleur_tutorial_container, and delivers them as MRs. Do not put user documentation into this repo's `docs/`; existing files there are drafts to be moved to the site.
+
 ## Git Workflow
 
 - `develop` — default branch; small changes and bugfixes go here directly
