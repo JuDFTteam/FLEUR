@@ -173,6 +173,21 @@ GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
 # tolerance on any one of them.
 ONSITE_MIN = 50.0
 
+# Localization in R is gauge-dependent by construction: Omega_I is the invariant part of the
+# spread and Omega_D + Omega_OD are not. Where the minimization leaves the gauge undetermined,
+# the share at R = 0 reports which gauge the run landed in, not whether the operator decays.
+#
+# WannFeAFMCol is such a case. Its two spin channels reach the same Omega to nine decimals
+# from gauges that leave 32-41 % at R = 0 and ones that leave 88 %, with the same L(k)
+# behind both, so there the share says which gauge the run found and nothing more. Both of
+# its operators move.
+#
+# The guard is kept rather than dropped, because the two conjugation bugs it was built for
+# left 13 % and 2 %, well under the 32 % the wobble reaches here. A case that wobbles gets
+# its own floor, below the wobble and above the bugs. The gauge-invariant rules further
+# down -- hermiticity, the vanishing traces -- apply unchanged either way.
+ONSITE_MIN_GAUGE_LABILE = {"WannFeAFMCol": 25.0}
+
 # <w_0n|sigma_a|w_0n> is a Pauli expectation value on a normalized Wannier function, so
 # |.| <= 1 holds elementwise -- for any gauge, which makes it basin-independent. This is
 # the guard for the coarse-pass spin index: handing calc_abc the wrong (zMat, jspin)
@@ -363,10 +378,11 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # Every other rule here is an upper bound -- the Pauli bound, the vanishing spin
         # sums, the vanishing orbital traces -- and a file of zeros satisfies all of them,
         # so an operator that computes nothing passes every check made on its output.
+        onsite_floor = ONSITE_MIN_GAUGE_LABILE.get(test_id, ONSITE_MIN)
         for name in [f for f in OPERATOR_FILES[test_id] if f in GENERIC_OP_FILES]:
-            assert onsite_weight(res[name]) > ONSITE_MIN, (
+            assert onsite_weight(res[name]) > onsite_floor, (
                 f"{name}: only {onsite_weight(res[name]):.2f} % of |O(R)|^2 sits at R = 0 "
-                f"(expected above {ONSITE_MIN}). The operator no longer decays in real "
+                f"(expected above {onsite_floor}). The operator no longer decays in real "
                 f"space, which is what a conjugation convention that disagrees with the "
                 f"gauge looks like -- and nothing else in this file would see it.")
             assert nonzero_entries(res[name]) > 0, (
