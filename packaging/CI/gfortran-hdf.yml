@@ -1,20 +1,23 @@
 build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
+  variables:
+    FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier TRUE -includedir /opt/fleur-deps/mpi/include -libdir /opt/fleur-deps/mpi/lib"
   artifacts:
      paths:
        - build
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - VERBOSE=1 FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
+    - VERBOSE=1 FLEUR_INCLUDEDIR="/usr/include /usr/include/hdf5/openmpi" FLEUR_LIBRARIES="-L/usr/lib/x86_64-linux-gnu/hdf5/openmpi;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build true
     - cd build
     - make -j 2
   rules:
-    - if: $CI_TASKS
-      when: never
     - if: $CI_TASKS =~ /gfortran/  
     - if: $CI_TASKS =~ /all/    
+    - if: $CI_TASKS
+      when: never
     - when: on_success
 
 
@@ -30,9 +33,10 @@ test-gfortran-hdf5:
     - fast-test-gfortran-hdf5
     - build-gfortran-hdf5
   rules:
+    - if: $CI_TASKS =~ /gfortran/
+    - if: $CI_TASKS =~ /all/
     - if: $CI_TASKS
       when: never
-    - if: $CI_TASKS =~ /gfortran/
     - when: on_success  
 
 fast-test-gfortran-hdf5: 
@@ -44,10 +48,10 @@ fast-test-gfortran-hdf5:
   needs: 
     - build-gfortran-hdf5
   rules:
-    - if: $CI_TASKS
-      when: never
     - if: $CI_TASKS =~ /gfortran/  
     - if: $CI_TASKS =~ /all/    
+    - if: $CI_TASKS
+      when: never
     - when: on_success
 
 #masci-test-gfortran-hdf5: 
@@ -65,5 +69,3 @@ fast-test-gfortran-hdf5:
 #    - if: $CI_TASKS =~ /gfortran/  
 #    - if: $CI_TASKS =~ /all/    
 #    - when: on_success
-
-

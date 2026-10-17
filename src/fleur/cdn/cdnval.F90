@@ -145,7 +145,7 @@ CONTAINS
       INTEGER :: iErr, nbands, noccbd, iType, ispinpr, ispin123
       INTEGER :: skip_t, skip_tt, nbasfcn,abc_itype
       LOGICAL :: l_real, l_corespec, l_empty, l_doKED
-      LOGICAL :: l_moessbauerHFF, l_dmdos
+      LOGICAL :: l_moessbauerHFF, l_dmdos, l_socForceDn
 
       ! Local Arrays
       REAL, ALLOCATABLE  :: we(:), eig(:)
@@ -157,13 +157,14 @@ CONTAINS
       TYPE(t_denmatrix), allocatable      :: denmatrix(:, :, :)
       TYPE(t_force)             :: force
       TYPE(t_usdus)             :: usdus
-      TYPE(t_mat)               :: zMat
+      TYPE(t_mat)               :: zMat, zMatDn
       TYPE(t_tlmplm)            :: tlmplm
       TYPE(t_greensfBZintCoeffs):: greensfBZintCoeffs
       TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
       TYPE(t_eigVecCoeffs)      :: eigVecCoeffs
       TYPE(t_radfun)             :: radfun(atoms%ntype)
       TYPE(t_abc), allocatable    :: abc(:, :)
+      TYPE(t_abc)                 :: abcDn
 
       CALL timestart("cdnval")
 
@@ -174,6 +175,9 @@ CONTAINS
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
       l_doKED = .FALSE.
       IF (PRESENT(l_kinEnergyDen)) l_doKED = l_kinEnergyDen
+      ! jspins=1 with SOC: the densities use the doubled up-spinor component, but the
+      ! force terms need both components (stored in spin record 2 by secvar_soc)
+      l_socForceDn = input%l_f .AND. noco%l_soc .AND. (.NOT. noco%l_noco) .AND. (input%jspins == 1)
 
       ! Klueppelberg (force level 3)
       IF (input%l_f .AND. (input%f_level .GE. 3)) THEN
@@ -282,6 +286,10 @@ CONTAINS
          nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
          CALL zMat%init(l_real, nbasfcn, noccbd)
          CALL read_eig(eig_id, ikpt, jsp, list=ev_list, neig=nbands, zmat=zMat)
+         IF (l_socForceDn) THEN
+            CALL zMatDn%init(l_real, nbasfcn, noccbd)
+            CALL read_eig(eig_id, ikpt, 2, list=ev_list, neig=nbands, zmat=zMatDn)
+         END IF
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, iErr) ! Synchronizes the RMA operations
 #endif
@@ -357,8 +365,19 @@ CONTAINS
                   call local_ham(sphhar, atoms, sym, noco, nococonv, enpara, fmpi, vtot, &
                                  vtot, den, input, hub1inp, hub1data, tlmplm, alpha_hybrid=0.0, l_forces=.TRUE.)
                   CALL addContribsA21A12(force, input, atoms, sym, cell, enpara, &
-                        radfun(itype), tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, we, results, jsp_start, jspin, nbasfcn, zMat, lapw, &
+                        radfun(itype), tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, MERGE(0.5*we, we, l_socForceDn), &
+                        results, jsp_start, jspin, nbasfcn, zMat, lapw, &
                                          sphhar, lapw%gvec(1, :, :), lapw%gvec(2, :, :), lapw%gvec(3, :, :), bkpt, itype)
+                  IF (l_socForceDn) THEN
+                     ! Spin-down spinor component in the same first-variation basis
+                     CALL abcDn%init(input, atoms, noccbd, itype)
+                     CALL abcDn%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMatDn)
+                     CALL abcDn%calc_force_abc(input, atoms, sym, cell, lapw, &
+                                               noccbd, radfun(itype), noco, nococonv, ispin, itype, zMatDn, eig, force)
+                     CALL addContribsA21A12(force, input, atoms, sym, cell, enpara, &
+                           radfun(itype), tlmplm, vtot, abcDn, noccbd, ispin, eig, 0.5*we, results, jsp_start, jspin, nbasfcn, zMatDn, lapw, &
+                                            sphhar, lapw%gvec(1, :, :), lapw%gvec(2, :, :), lapw%gvec(3, :, :), bkpt, itype)
+                  END IF
                END IF
 
             END DO ! end loop over ispin

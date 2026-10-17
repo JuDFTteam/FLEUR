@@ -6,7 +6,11 @@ try_compile(FLEUR_USE_WANNLIB_API ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/
             LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 set(FLEUR_WANNIER90_LIBRARIES ${FLEUR_LIBRARIES})
-foreach(ADD_String "-lwannier" )
+set(_wannier_library_names "-lwannier;-lwannier90")
+if (FLEUR_USE_MPI)
+   list(PREPEND _wannier_library_names "-lwannier90_mpi")
+endif()
+foreach(ADD_String ${_wannier_library_names})
    if (NOT FLEUR_USE_WANNLIB_API)
      set(TEST_LIBRARIES "${ADD_String};${FLEUR_LIBRARIES}")
 
