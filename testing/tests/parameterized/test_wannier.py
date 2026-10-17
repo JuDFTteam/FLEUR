@@ -111,6 +111,14 @@ EXPECTED_OMEGA_I = {
     # Its on-site share is 97.8 %, and it does not move when the same cell is run with
     # the symmetry switched off: the rotations land where not having to rotate does.
     "WannMoS2":      16.089990243,
+    # The only non-symmorphic group here: wurtzite AlN has a screw axis, tau != 0. The
+    # rotation of a coefficient uses mrot and never the translation, and this is the only
+    # case that can show that ignoring tau is right. Both species sit in groups of two,
+    # so it also exercises firstAtom(n)+na-1 with n > 1. Sixteen valence electrons give
+    # eight occupied bands, isolated by the gap, and N s+p over two atoms gives exactly
+    # eight Wannier functions: no disentanglement, so the window needs no measuring.
+    # Its on-site share is 98.0 %, and the same cell without symmetry agrees to 1e-9.
+    "WannAlN":        5.003795238,
     "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
     "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor)
     "WannPtSOCOps":  9.754340102,  # same system + <operators_r>; identical to WannPtSOC
@@ -170,6 +178,7 @@ OPERATOR_FILES = {
     # there is no rspauli.1: this case is here for the mirror and the vacuum, and the
     # spin sum rule is already covered by the cases above.
     "WannMoS2": ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
+    "WannAlN":  ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
 }
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
