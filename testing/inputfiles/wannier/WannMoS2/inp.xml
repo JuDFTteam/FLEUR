@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      MoS2 monocapa 1H                                                                                    
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.5" Gmax="11.0" GmaxXC="9.0" numbands="30"/>
+      <scfLoop itmax="15" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.8" spinf="2.0" sdNocoIR="T"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="2"/>
+      <soc l_soc="F" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="26.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="default-1"/>
+         <!-- k-points included here -->
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
+      </bzIntegration>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
+      <filmLattice scale="1.0" dVac="10.21" dTilda="12.71">
+         <bravaisMatrixFilm>
+            <row-1>    2.9857999999999998    -5.1715573012391616</row-1>
+            <row-2>    2.9857999999999998     5.1715573012391616</row-2>
+         </bravaisMatrixFilm>
+         <vacuumEnergyParameters vacuum="1" spinUp="-.25" spinDown="-.25"/>
+      </filmLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Mo-1" element="Mo" atomicNumber="42">
+         <mtSphere radius="2.4" gridPoints="793" logIncrement="0.016"/>
+         <atomicCutoffs lmax="10" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (3d3/2) (3d5/2)</coreConfig>
+            <valenceConfig>(4s1/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2)</valenceConfig>
+            <stateOccupation state="(5s1/2)" spinUp="0.5" spinDown="0.5"/>
+            <stateOccupation state="(4d3/2)" spinUp="1.0" spinDown="1.0"/>
+            <stateOccupation state="(4d5/2)" spinUp="1.5" spinDown="1.5"/>
+         </electronConfig>
+         <energyParameters s="5" p="5" d="4" f="4"/>
+         <lo type="SCLO" l="0" n="4" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="4" eDeriv="0"/>
+               <wannierproj l="2" m="1" spin=""/>
+         <wannierproj l="2" m="2" spin=""/>
+         <wannierproj l="2" m="3" spin=""/>
+         <wannierproj l="2" m="4" spin=""/>
+         <wannierproj l="2" m="5" spin=""/>
+      </species>
+      <species name="S-1" element="S" atomicNumber="16">
+         <mtSphere radius="1.71" gridPoints="565" logIncrement="0.02"/>
+         <atomicCutoffs lmax="8" lnonsphr="4"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2)</valenceConfig>
+            <stateOccupation state="(3p1/2)" spinUp="0.6666666666667" spinDown="0.6666666666667"/>
+            <stateOccupation state="(3p3/2)" spinUp="1.3333333333333" spinDown="1.3333333333333"/>
+         </electronConfig>
+         <energyParameters s="3" p="3" d="3" f="4"/>
+               <wannierproj l="1" m="1" spin=""/>
+         <wannierproj l="1" m="2" spin=""/>
+         <wannierproj l="1" m="3" spin=""/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Mo-1">
+         <filmPos label="                   1">1.000/3.000 -1.000/3.000 .0000000000</filmPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="S-1">
+         <filmPos label="                   2">-1.000/3.000 1.000/3.000 2.9971000000</filmPos>
+         <filmPos label="                   3">-1.000/3.000 1.000/3.000 -2.9971000000</filmPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+      <wannierlib wannierize="T">
+         <bands numBands="11" minBand="7" maxBand="17"/>
+         <wannierization numIter="3000" convTol="0.00001" precond="T"/>
+         <operatorsRs>
+            <operator name="hamiltonian"/>
+            <operator name="orbital"/>
+         </operatorsRs>
+      </wannierlib>
+
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Users/saez/fleur_versions/fleur/build.mergetest/inpgen -warn_only -noKsym -f entrada.txt
+
+Initial (original) inpgen input (only for documentation purposes):
+MoS2 monocapa 1H
+&input film=t cartesian=f /
+&lattice latsys='hP' a0=1.0 a=5.9716 c=30.0 /
+&film dvac=20.0 dtild=24.0 /
+3
+42  0.3333333333  0.6666666667   0.00000
+16  0.6666666667  0.3333333333   2.99710
+16  0.6666666667  0.3333333333  -2.99710
+&atom element="Mo" rmt=2.40 lmax=10 lnonsph=6 /
+&atom element="S"  rmt=2.00 lmax=8  lnonsph=4 /
+&comp kmax=3.5 gmaxxc=9.0 gmax=11.0 /
+&kpt div1=6 div2=6 div3=1  gamma=t /
+-->

@@ -193,3 +193,4 @@ Testset: Wannier
 | +   | fcc Fe AFM collinear no-SOC, wannierlib O(R) | wannier/WannFeAFMCol | wannierlib,bulk |         |         | 1   |
 | +   | bcc Fe FM collinear, Wannier interpolation   | wannier/WannFeBccInterp | wannierlib,bulk,band |         |         | 1   |
 | +   | Si diamond, two equivalent atoms in one group | wannier/WannSiDiamond | wannierlib,bulk |         |         | 1   |
+| +   | MoS2 monolayer, mirror (det=-1) and vacuum   | wannier/WannMoS2 | wannierlib,film |         |         | 1   |

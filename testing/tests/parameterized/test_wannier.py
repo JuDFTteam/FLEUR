@@ -102,6 +102,15 @@ EXPECTED_OMEGA_I = {
     # The two atoms are also each other's inversion partner, so this reaches the shortcut
     # that fills one of them from the other instead of expanding it.
     "WannSiDiamond": 3.622612240,
+    # The only film, and the only case whose point group has a mirror (det = -1 with
+    # R != -I). That is the one operation where det(R).R is neither +I nor -I, which is
+    # what the axial rotation of L rests on; no bulk case here can reach it. Three atoms
+    # in two groups, the two S equivalent, so it also takes the local-frame path, and the
+    # vacuum is exercised for the first time. Mo d plus S p, 11 Wannier functions,
+    # jspins=2 without SOC because the orbital operator has no producer otherwise.
+    # Its on-site share is 97.8 %, and it does not move when the same cell is run with
+    # the symmetry switched off: the rotations land where not having to rotate does.
+    "WannMoS2":      16.089990243,
     "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
     "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor)
     "WannPtSOCOps":  9.754340102,  # same system + <operators_r>; identical to WannPtSOC
@@ -157,6 +166,10 @@ OPERATOR_FILES = {
     "WannFeFMy": ["rspauli.1", "wig_vectors"],
     "WannFeBcc":        _OP_R_FILES_2CH,
     "WannFeAFMCol":     _OP_R_FILES_2CH,
+    # Hamiltonian per spin channel and the orbital operator. No spin was asked for, so
+    # there is no rspauli.1: this case is here for the mirror and the vacuum, and the
+    # spin sum rule is already covered by the cases above.
+    "WannMoS2": ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
 }
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
