@@ -39,7 +39,7 @@ module m_dfpt_write_epw
    use m_juDFT
    use m_constants
    use m_matrix_interpolation,  only: t_wann_ft
-   use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_dyn_direct, build_ws_ft
+   use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_ws_forward, build_ws_ft
    use m_types_cell
    use m_types_fleurinput
    use m_types_kpts
@@ -74,10 +74,8 @@ contains
 
       integer :: nbndsub, nmodes, nat, ispin
       integer :: nrr_k, nrr_q, nrr_g
-      integer :: ft_lim_k(2,3)
       complex, allocatable :: chw(:,:,:)          ! (nbndsub,nbndsub,nrr_k)   electron H, real space [Ry]
       complex, allocatable :: rdw(:,:,:)          ! (nmodes,nmodes,nrr_q)     dyn-matrix, real space
-      complex, allocatable :: chw_cube(:,:,:) ! dense electron-H grid on the k-mesh box
       integer, allocatable :: irvec_q(:,:)        ! (3,nrr_q) phonon WS vectors (own q-mesh)
       real,    allocatable :: weight_q(:)         ! (nrr_q)   phonon WS weights (= 1/ndegen)
       character(len=:), allocatable :: prefix
@@ -92,19 +90,14 @@ contains
          call juDFT_warn("EPW restart export only writes spin channel 1 (jspins>1 not supported yet).", &
                          calledby="write_epw_restart_files")
 
-      ! Electron (R_e) and e-ph (R_g) WS lists come from the elph tensor. Note that
-      ! wannier_matrixq_forward builds that tensor with fi%kpts as BOTH k- and q-mesh,
-      ! so its R_p axis (ws_q) lives on the k-mesh box -> this is EPW's irvec_g / nrr_g.
-      ! The dynamical matrix (rdw) is instead handled on its OWN coarse phonon q-mesh
-      ! (qpts_dyn), which may differ from the k-mesh. EPW keeps irvec_q and irvec_g
-      ! as independent lists, so nrr_q and nrr_g are allowed to differ.
+      ! Electron (R_e) and e-ph (R_g) WS lists come from the elph tensor, whose R_p
+      ! axis (ws_q) belongs to the coarse phonon q mesh. The dynamical matrix (rdw)
+      ! gets its own WS list from qpts_dyn; EPW keeps irvec_q and irvec_g independent.
       nrr_k = ftRealspace(1,ispin)%ws_k_nNZ
       nrr_g = ftRealspace(1,ispin)%ws_q_nNZ
-      ft_lim_k = ftRealspace(1,ispin)%ft_lim_k
 
       ! --- electron Hamiltonian real space (R_e) ---
-      call build_chw_cube(fi, results, U_full, ispin, ft_lim_k, nbndsub, chw_cube)
-      call unpack_cube(chw_cube, ftRealspace(1,ispin)%ws_k_indFlat, nrr_k, htr2ry, chw)
+      call build_chw(fi, results, U_full, ispin, ftRealspace(1,ispin), nbndsub, chw)
 
       ! --- dynamical matrix real space (R_q) on the coarse phonon q-mesh ---
       call build_rdw(fi, dynMats, nmodes, rdw, irvec_q, weight_q, nrr_q, qpts_dyn, sym_dyn)
@@ -127,46 +120,24 @@ contains
 
    !---------------------------------------------------------------------------
 
-   subroutine unpack_cube(cube, indFlat, nNZ, scal, list)
-      !! Copy the dense real-space grid values at the WS folded indices into a
-      !! flat (m,n,ir) list, scaled by `scal`.
-      complex,              intent(in)  :: cube(:,:,0:)
-      integer,              intent(in)  :: indFlat(:)       ! (nNZ) 0-based folded indices
-      integer,              intent(in)  :: nNZ
-      real,                 intent(in)  :: scal
-      complex, allocatable, intent(out) :: list(:,:,:)
-
-      integer :: ir, m, n
-
-      m = size(cube,1); n = size(cube,2)
-      allocate(list(m,n,nNZ))
-      do ir = 1, nNZ
-         list(:,:,ir) = scal * cube(:,:, indFlat(ir))
-      end do
-   end subroutine unpack_cube
-
-   subroutine build_chw_cube(fi, results, U_full, ispin, ft_lim, nwann, cube)
-      !! Real-space Wannier-gauge electron Hamiltonian on the coarse k-mesh box.
+   subroutine build_chw(fi, results, U_full, ispin, ft, nwann, chw)
+      !! Real-space Wannier-gauge electron Hamiltonian [Ry] on the WS vectors ft%ws_k_Rvecs.
       !! Mirrors wannier_matrix_interpolate's forward transform (m_matrix_interpolation).
       type(t_fleurinput), intent(in)  :: fi
       type(t_results),    intent(in)  :: results
       complex,            intent(in)  :: U_full(:,:,:,:)
-      integer,            intent(in)  :: ispin, ft_lim(2,3), nwann
-      complex, allocatable, intent(out) :: cube(:,:,:)
+      integer,            intent(in)  :: ispin, nwann
+      type(t_wann_ft),    intent(in)  :: ft
+      complex, allocatable, intent(out) :: chw(:,:,:)
 
-      integer :: num_bands, ikpt, ib, nk1, nk2, nk3, ngrid
+      integer :: num_bands, ikpt, ib
       complex, allocatable :: H_bloch(:,:), matRot(:,:)
 
       num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
-      ! size the box from ft_lim so the folding matches the WS indFlat exactly
-      nk1 = ft_lim(2,1) - ft_lim(1,1) + 1
-      nk2 = ft_lim(2,2) - ft_lim(1,2) + 1
-      nk3 = ft_lim(2,3) - ft_lim(1,3) + 1
-      ngrid = nk1*nk2*nk3
 
       allocate(H_bloch(num_bands,num_bands), matRot(nwann,nwann))
-      allocate(cube(nwann,nwann,0:ngrid-1))
-      cube = cmplx(0.0,0.0)
+      allocate(chw(nwann,nwann,ft%ws_k_nNZ))
+      chw = cmplx(0.0,0.0)
 
       do ikpt = 1, fi%kpts%nkpt
          H_bloch = cmplx(0.0,0.0)
@@ -175,10 +146,10 @@ contains
          end do
          ! Wannier gauge: U^dagger H U
          matRot = matmul(conjg(transpose(U_full(:,:,ikpt,ispin))), matmul(H_bloch, U_full(:,:,ikpt,ispin)))
-         call ft_dyn_direct(ft_lim, 1, fi%kpts%bk(:,ikpt), matRot, cube)
+         call ft_ws_forward(ft%ws_k_nNZ, ft%ws_k_Rvecs, fi%kpts%bk(:,ikpt), matRot, chw)
       end do
-      cube = cube / fi%kpts%nkpt
-   end subroutine build_chw_cube
+      chw = htr2ry * chw / fi%kpts%nkpt
+   end subroutine build_chw
 
    subroutine build_rdw(fi, dynMats, nmodes, rdw, Rvecs_q, weightNZ_q, nrr_q, qpts_dyn, sym_dyn)
       !! Real-space dynamical matrix (rdw) on the coarse PHONON q-mesh, together
@@ -200,11 +171,11 @@ contains
       type(t_kpts),         intent(in)  :: qpts_dyn
       type(t_sym),          intent(in)  :: sym_dyn
 
-      integer :: nq(3), ft_lim(2,3), bigBox(2,3), boxSize, ix, iy, iz, iGrid, ia, ja, i0, j0
+      integer :: nq(3), bigBox(2,3), boxSize, ix, iy, iz, iGrid, ia, ja, i0, j0
       real    :: fac
-      integer, allocatable :: supercellR(:,:), indFlat_q(:)
+      integer, allocatable :: supercellR(:,:)
       real,    allocatable :: FTweight(:)
-      complex, allocatable :: cube(:,:,:), dyn_mat_q_full(:,:,:)
+      complex, allocatable :: dyn_mat_q_full(:,:,:)
       type(t_cell) :: cellLocal
 
       if (size(dynMats, 3) < qpts_dyn%nkpt) then
@@ -213,10 +184,8 @@ contains
 
       nq = qpts_dyn%nkpt3(:)
 
-      ! Fourier box and Wigner-Seitz weights of the coarse phonon q-mesh supercell
+      ! Wigner-Seitz weights of the coarse phonon q-mesh supercell
       ! (mirrors interpolate_dynmat / wannier_matrixq_forward: big box +-2N, always WS).
-      ft_lim(2,:) = nq(:)/2
-      ft_lim(1,:) = ft_lim(2,:) - nq(:) + 1
       bigBox(2,:) =  2*nq(:)
       bigBox(1,:) = -2*nq(:)
       boxSize = (4*nq(1)+1) * (4*nq(2)+1) * (4*nq(3)+1)
@@ -233,11 +202,11 @@ contains
       end do
       cellLocal = fi%cell
       call cellLocal%calculate_WSweight(supercellR, FTweight, scaleSupercell=nq)
-      call build_ws_ft(ft_lim, bigBox, FTweight, nrr_q, Rvecs_q, indFlat_q, weightNZ_q)
+      call build_ws_ft(bigBox, FTweight, nrr_q, Rvecs_q, weightNZ_q)
 
       ! D_norm(R) = (1/Nq) sum_q e^{+i q.R} D(q)   (symmetry-unfolded to the full BZ)
-      allocate(cube(nmodes,nmodes,0:nq(1)*nq(2)*nq(3)-1))
-      call ft_dyn(fi%atoms, qpts_dyn, sym_dyn, ft_lim, fi%cell%amat, dynMats, cube, dyn_mat_q_full)
+      allocate(rdw(nmodes,nmodes,nrr_q))
+      call ft_dyn(fi%atoms, qpts_dyn, sym_dyn, nrr_q, Rvecs_q, fi%cell%amat, dynMats, rdw, dyn_mat_q_full)
 
       ! per-(atom,atom) block mass/energy scaling (see module header)
       do ia = 1, fi%atoms%nat
@@ -245,11 +214,9 @@ contains
          do ja = 1, fi%atoms%nat
             j0 = 3*(ja-1)
             fac = htr2ry**2 * amu_ry * sqrt(atomicMasses_const(fi%atoms%nz(ia)) * atomicMasses_const(fi%atoms%nz(ja)))
-            cube(i0+1:i0+3, j0+1:j0+3, :) = fac * cube(i0+1:i0+3, j0+1:j0+3, :)
+            rdw(i0+1:i0+3, j0+1:j0+3, :) = fac * rdw(i0+1:i0+3, j0+1:j0+3, :)
          end do
       end do
-
-      call unpack_cube(cube, indFlat_q, nrr_q, 1.0, rdw)
    end subroutine build_rdw
 
    !---------------------------------------------------------------------------
@@ -446,7 +413,6 @@ contains
       character(len=*),   intent(in) :: prefix
 
       integer :: iu, irg, imode, irk, lrepmatw, direct_io_factor, unf_recl
-      integer :: ke, kg
       real    :: dummy
       complex, allocatable :: rec4d(:,:,:,:)
 
@@ -458,12 +424,8 @@ contains
       open(newunit=iu, file=trim(prefix)//".epmatwp", status='replace', action='write', &
            form='unformatted', access='direct', recl=unf_recl)
       do irg = 1, nrr_g
-         kg = ft_spin(1)%ws_q_indFlat(irg)
          do imode = 1, nmodes
-            do irk = 1, nrr_k
-               ke = ft_spin(1)%ws_k_indFlat(irk)
-               rec4d(:,:,irk,imode) = htr2ry * ft_spin(imode)%matWannier(:,:, ke, kg)
-            end do
+            rec4d(:,:,:,imode) = htr2ry * ft_spin(imode)%matWannier(:,:,:,irg-1)
          end do
          write(iu, rec=irg) rec4d
       end do

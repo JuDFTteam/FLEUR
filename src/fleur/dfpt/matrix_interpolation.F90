@@ -8,7 +8,7 @@ module m_matrix_interpolation
     use m_juDFT
     use m_constants
     use m_npy
-    use m_dfpt_dynmat_fourier, only: ft_dyn_direct, build_ws_ft, ft_fcm_weight_packed
+    use m_dfpt_dynmat_fourier, only: ft_ws_forward, build_ws_ft, ft_fcm_weight_packed
     use m_types_cell
     use m_types_fleurinput
     use m_types_kpts
@@ -22,16 +22,13 @@ module m_matrix_interpolation
     ! interpolation (real-space tensor + Wigner-Seitz data).
     type t_wann_ft
         integer :: nwann
-        integer :: nk1, nk2, nk3, nq1, nq2, nq3
-        integer :: ft_lim_k(2,3), ft_lim_q(2,3)
         integer :: bigBox_lim_k(2,3), bigBox_lim_q(2,3)
         real,    allocatable :: FTweight_k(:), FTweight_q(:)
-        complex, allocatable :: matWannier(:,:,:,:)   ! nwann,nwann, R_e flat, R_p flat
-        ! packed nonzero Wigner-Seitz weights for the backward FT (built once):
-        !   *_Rvecs(:,i) big-box coords (phase), *_indFlat(i) 0-based storage idx, *_weightNZ(i) weight
+        complex, allocatable :: matWannier(:,:,:,:)   ! nwann,nwann, 0:ws_k_nNZ-1 (R_e), 0:ws_q_nNZ-1 (R_p)
+        ! Wigner-Seitz vectors *_Rvecs(:,i) with weights *_weightNZ(i), stored at index i-1
         integer :: ws_k_nNZ = 0, ws_q_nNZ = 0
-        integer, allocatable :: ws_k_Rvecs(:,:), ws_k_indFlat(:)
-        integer, allocatable :: ws_q_Rvecs(:,:), ws_q_indFlat(:)
+        integer, allocatable :: ws_k_Rvecs(:,:)
+        integer, allocatable :: ws_q_Rvecs(:,:)
         real,    allocatable :: ws_k_weightNZ(:), ws_q_weightNZ(:)
     end type t_wann_ft
 
@@ -49,21 +46,20 @@ contains
         type(t_kpts),optional,intent(in) :: qpts_fine            ! to interpolate onto
 
 
-        integer :: ikpt , nu , iNupr, boxSize, nx, ny, nz, iGrid, ix , iy , iz
-        integer :: ft_lim(2,3), bigBox_lim(2,3) ! discrete fourier box limits
+        integer :: ikpt , boxSize, nx, ny, nz, iGrid
+        integer :: bigBox_lim(2,3)
         type(t_cell) :: cell
         integer, allocatable  :: supercellR(:,:)
         real, allocatable  :: FTweight(:)
 
         complex,allocatable :: matWannier(:,:,:)                    ! matrix elements in realspace (wannier gauge)
         complex,allocatable :: matRot(:,:)                          ! rotated matrix elements in wannier gauge
-        real :: bkpt(3)
 
         integer :: nNZ                              ! packed nonzero-weight list (built once)
-        integer, allocatable :: Rvecs(:,:), indFlat(:)
+        integer, allocatable :: Rvecs(:,:)
         real,    allocatable :: weightNZ(:)
 
-        integer :: nwann, nfine, nGrid
+        integer :: nwann, nfine
 
         nwann = size(U_mat, 2)
         nfine = size(kpts_fine,2)
@@ -72,31 +68,6 @@ contains
         allocate(matRot(nwann,nwann))
         matRot = cmplx(0.0,0.0)
 
-
-        ft_lim(2,:) = kpts_coarse%nkpt3(:)/2
-        ft_lim(1,:) = ft_lim(2,:) - kpts_coarse%nkpt3(:) + 1
-
-        nGrid = kpts_coarse%nkpt3(1) * kpts_coarse%nkpt3(2) * kpts_coarse%nkpt3(3)
-        allocate(matWannier(nwann,nwann,0:nGrid-1))
-        matWannier = cmplx(0.0,0.0)
-
-
-        call timestart("Forward FT + Wannier gauge")
-        do ikpt = 1 , kpts_coarse%nkpt
-
-            bkpt = kpts_coarse%bk(:, ikpt)
-
-            ! rotate the matrix elements into wannier gauge
-            ! U^dagger M U
-            matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikpt))),matmul(matElement(:,:,ikpt),U_mat(:,:,ikpt)))
-
-            call ft_dyn_direct(ft_lim,1,bkpt,matRot,matWannier)
-        end do ! ikpt
-
-        matWannier(:,:,:)=matWannier(:,:,:)/kpts_coarse%nkpt
-        call timestop("Forward FT + Wannier gauge")
-
-        ! interpolate to fine mesh with WS construction
         call timestart("Wigner-Seitz weights")
         bigBox_lim(2,:) =   2*kpts_coarse%nkpt3(:)
         bigBox_lim(1,:) = - 2*kpts_coarse%nkpt3(:) 
@@ -118,12 +89,27 @@ contains
         ! compute WS weights for the WS cell
         cell = fi%cell
         call cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=kpts_coarse%nkpt3(:))
-        call build_ws_ft(ft_lim, bigBox_lim, FTweight, nNZ, Rvecs, indFlat, weightNZ)
+        call build_ws_ft(bigBox_lim, FTweight, nNZ, Rvecs, weightNZ)
         call timestop("Wigner-Seitz weights")
+
+        allocate(matWannier(nwann,nwann,0:nNZ-1))
+        matWannier = cmplx(0.0,0.0)
+
+        call timestart("Forward FT + Wannier gauge")
+        do ikpt = 1 , kpts_coarse%nkpt
+            ! rotate the matrix elements into wannier gauge
+            ! U^dagger M U
+            matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikpt))),matmul(matElement(:,:,ikpt),U_mat(:,:,ikpt)))
+
+            call ft_ws_forward(nNZ,Rvecs,kpts_coarse%bk(:,ikpt),matRot,matWannier)
+        end do ! ikpt
+
+        matWannier(:,:,:)=matWannier(:,:,:)/kpts_coarse%nkpt
+        call timestop("Forward FT + Wannier gauge")
 
         call timestart("Backward FT")
         do ikpt = 1 , nfine
-            call ft_fcm_weight_packed(-1,nNZ,Rvecs,indFlat,weightNZ,kpts_fine(:,ikpt),matInterpol(:,:,ikpt),matWannier)
+            call ft_fcm_weight_packed(-1,nNZ,Rvecs,weightNZ,kpts_fine(:,ikpt),matInterpol(:,:,ikpt),matWannier)
         end do !ikpt
         call timestop("Backward FT")
 
@@ -168,11 +154,11 @@ contains
 
         integer :: ikpt, iqpt, ikqpt, ix, iy, iz, iGrid, iqR
         integer :: boxSize_k, boxSize_q
-        integer :: nwann, nk_c, nq_c, nk1, nk2, nk3, nq1, nq2, nq3, nGrid_k, nGrid_q
+        integer :: nwann, nk_c, nq_c, nk1, nk2, nk3, nq1, nq2, nq3
         type(t_cell) :: cell
         integer, allocatable :: supercellR_k(:,:), supercellR_q(:,:)
         complex, allocatable :: matRot(:,:)                       ! wannier-gauge block for one (k,q)
-        complex, allocatable :: matRpK(:,:,:,:)                  ! after q->R_p FT (nwann,nwann, R_p flat, nk_c)
+        complex, allocatable :: matRpK(:,:,:,:)                  ! after q->R_p FT (nwann,nwann, R_p, nk_c)
         real :: bkqpt(3)
 
         nwann = size(U_mat, 2)
@@ -183,22 +169,6 @@ contains
         nq1 = qpts_coarse%nkpt3(1); nq2 = qpts_coarse%nkpt3(2); nq3 = qpts_coarse%nkpt3(3)
 
         ft%nwann = nwann
-        ft%nk1 = nk1; ft%nk2 = nk2; ft%nk3 = nk3
-        ft%nq1 = nq1; ft%nq2 = nq2; ft%nq3 = nq3
-
-        ! fourier box limits (Monkhorst box -N/2 .. N/2) for each mesh
-        ft%ft_lim_k(2,:) = kpts_coarse%nkpt3(:)/2
-        ft%ft_lim_k(1,:) = ft%ft_lim_k(2,:) - kpts_coarse%nkpt3(:) + 1
-        ft%ft_lim_q(2,:) = qpts_coarse%nkpt3(:)/2
-        ft%ft_lim_q(1,:) = ft%ft_lim_q(2,:) - qpts_coarse%nkpt3(:) + 1
-
-        nGrid_k = nk1*nk2*nk3
-        nGrid_q = nq1*nq2*nq3
-
-        allocate(matRot(nwann,nwann))
-        allocate(matRpK(nwann,nwann, 0:nGrid_q-1, nk_c))
-        allocate(ft%matWannier(nwann,nwann, 0:nGrid_k-1, 0:nGrid_q-1))
-        ft%matWannier = cmplx(0.0,0.0)
 
         ! Wigner-Seitz weights and big-box supercell R vectors, one set per mesh
         call timestart("Wigner-Seitz weights (k and q)")
@@ -235,11 +205,16 @@ contains
         cell = fi%cell
         call cell%calculate_WSweight(supercellR_k,ft%FTweight_k,scaleSupercell=kpts_coarse%nkpt3(:))
         call cell%calculate_WSweight(supercellR_q,ft%FTweight_q,scaleSupercell=qpts_coarse%nkpt3(:))
-        call build_ws_ft(ft%ft_lim_k, ft%bigBox_lim_k, ft%FTweight_k, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_indFlat, ft%ws_k_weightNZ)
-        call build_ws_ft(ft%ft_lim_q, ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_indFlat, ft%ws_q_weightNZ)
+        call build_ws_ft(ft%bigBox_lim_k, ft%FTweight_k, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_weightNZ)
+        call build_ws_ft(ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ)
         call timestop("Wigner-Seitz weights (k and q)")
 
-        ! forward fourier transform ( k-space ---> Realspace )
+        allocate(matRot(nwann,nwann))
+        allocate(matRpK(nwann,nwann, 0:ft%ws_q_nNZ-1, nk_c))
+        allocate(ft%matWannier(nwann,nwann, 0:ft%ws_k_nNZ-1, 0:ft%ws_q_nNZ-1))
+        ft%matWannier = cmplx(0.0,0.0)
+
+        ! forward fourier transform ( k-space ---> Realspace ) onto the WS vectors
         ! fourier transform of the q-mesh --> R_p
         call timestart("Forward FT + Wannier gauge")
         matRpK = cmplx(0.0,0.0)
@@ -252,7 +227,7 @@ contains
                                               calledby="wannier_matrixq_forward")
                 ! rotate the matrix element into wannier gauge: U^dagger(k+q) M(k,q) U(k)
                 matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikqpt))),matmul(matElement(:,:,ikpt,iqpt), U_mat(:,:,ikpt)))
-                call ft_dyn_direct(ft%ft_lim_q, 1, qpts_coarse%bkf(:,iqpt), matRot, matRpK(:,:,:,ikpt))
+                call ft_ws_forward(ft%ws_q_nNZ, ft%ws_q_Rvecs, qpts_coarse%bkf(:,iqpt), matRot, matRpK(:,:,:,ikpt))
             end do !iqpt
             matRpK(:,:,:,ikpt) = matRpK(:,:,:,ikpt) / nq_c
         end do !ikpt
@@ -260,9 +235,9 @@ contains
 
         ! fourier transfrom k -> R_e, for each R_p grid point ----
         call timestart("Forward FT")
-        do iqR = 0, nGrid_q-1
+        do iqR = 0, ft%ws_q_nNZ-1
             do ikpt = 1 , nk_c
-                call ft_dyn_direct(ft%ft_lim_k, 1, kpts_coarse%bk(:,ikpt), matRpK(:,:,iqR,ikpt), ft%matWannier(:,:,:,iqR))
+                call ft_ws_forward(ft%ws_k_nNZ, ft%ws_k_Rvecs, kpts_coarse%bk(:,ikpt), matRpK(:,:,iqR,ikpt), ft%matWannier(:,:,:,iqR))
             end do !ikpt
             ft%matWannier(:,:,:,iqR) = ft%matWannier(:,:,:,iqR) / nk_c
         end do
@@ -280,14 +255,13 @@ contains
         real,            intent(in)    :: qpts_fine(:,:)          ! fine q-mesh to interpolate onto
         complex,         intent(inout) :: matInterpol(:,:,:,:)    ! interpolated matrix element (nwann,nwann,kpts,qpts)
 
-        integer :: ik_fine, iq_fine, ikR, nk_fine, nq_fine, nGrid_k
-        complex, allocatable :: matReQ(:,:,:)                  ! after R_p->q' FT (nwann,nwann, R_e flat)
+        integer :: ik_fine, iq_fine, ikR, nk_fine, nq_fine
+        complex, allocatable :: matReQ(:,:,:)                  ! after R_p->q' FT (nwann,nwann, R_e)
 
         nk_fine = size(kpts_fine, 2)
         nq_fine = size(qpts_fine, 2)
-        nGrid_k = ft%nk1 * ft%nk2 * ft%nk3
 
-        allocate(matReQ(ft%nwann,ft%nwann, 0:nGrid_k-1))
+        allocate(matReQ(ft%nwann,ft%nwann, 0:ft%ws_k_nNZ-1))
         matInterpol = cmplx(0.0, 0.0)
 
         ! backwards fourier transform ( Realspace --> kspace )
@@ -295,13 +269,13 @@ contains
         do iq_fine = 1 , nq_fine
             ! ---- stage 1: R_p -> q', for each R_e grid point ----
             matReQ = cmplx(0.0,0.0)
-            do ikR = 0, nGrid_k-1
-                call ft_fcm_weight_packed(-1, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_indFlat, ft%ws_q_weightNZ, qpts_fine(:,iq_fine), &
+            do ikR = 0, ft%ws_k_nNZ-1
+                call ft_fcm_weight_packed(-1, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ, qpts_fine(:,iq_fine), &
                                    matReQ(:,:,ikR), ft%matWannier(:,:,ikR,:))
             end do
             ! ---- stage 2: R_e -> k' ----
             do ik_fine = 1 , nk_fine
-                call ft_fcm_weight_packed(-1, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_indFlat, ft%ws_k_weightNZ, kpts_fine(:,ik_fine), &
+                call ft_fcm_weight_packed(-1, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_weightNZ, kpts_fine(:,ik_fine), &
                                    matInterpol(:,:,ik_fine,iq_fine), matReQ)
             end do !ik_fine
         end do !iq_fine

@@ -17,15 +17,15 @@ module m_dfpt_sumrules
 
 contains
 
-   subroutine dfpt_born_huang(atoms, cell, ft_lim, nNZ, Rvecs, indFlat, weightNZ, fcm)
+   subroutine dfpt_born_huang(atoms, cell, nR, nNZ, Rvecs, weightNZ, fcm)
       !! Projects the real-space force constants onto the translational, rotational
       !! and Born-Huang invariance conditions. fcm holds the de-normalized force
-      !! constants on the coarse supercell grid and is overwritten in place.
+      !! constants at the lattice vectors Rvecs and is overwritten in place.
       type(t_atoms), intent(in)    :: atoms
       type(t_cell),  intent(in)    :: cell
-      integer,       intent(in)    :: ft_lim(2,3)
+      integer,       intent(in)    :: nR(3)   ! supercell of the coarse q mesh
       integer,       intent(in)    :: nNZ
-      integer,       intent(in)    :: Rvecs(:,:), indFlat(:)
+      integer,       intent(in)    :: Rvecs(:,:)
       real,          intent(in)    :: weightNZ(:)
       complex,       intent(inout) :: fcm(:,:,0:)
 
@@ -36,8 +36,8 @@ contains
       ! Cartesian pairs of the rotational conditions: (y,z), (z,x), (x,y)
       integer, parameter :: rpair(2,3) = reshape([2,3, 3,1, 1,2],[2,3])
 
-      integer :: dynDim, nGrid, nR(3), nBH, iGrid0
-      integer :: iter, iBond, iRot, iBH, jBH, iGrid, iAtom, jAtom, iRow, iVoigt, jVoigt, iC, jC, ix, iy, iz
+      integer :: dynDim, nGrid, nBH, iGrid0
+      integer :: iter, iBond, iRot, iBH, jBH, iGrid, iAtom, jAtom, iRow, iVoigt, jVoigt, iC, jC
       integer :: alpha, beta, gamma
       real    :: rCart(3), bondVec(3), maxBondPairLength, fcScale, violationAfter(3), violationBefore(3), violationOnsite(3)
       complex :: asrSum
@@ -50,8 +50,7 @@ contains
       integer, allocatable :: negRIdx(:), bhPairs(:,:)
 
       dynDim = size(fcm,1)
-      nR     = ft_lim(2,:) - ft_lim(1,:) + 1
-      nGrid  = nR(1)*nR(2)*nR(3)
+      nGrid  = nNZ
       nBH    = 15 ! number of Born-Huang conditions
 
       allocate(mom0(0:nGrid-1,atoms%nat,atoms%nat), mom1(3,0:nGrid-1,atoms%nat,atoms%nat), mom2(6,0:nGrid-1,atoms%nat,atoms%nat))
@@ -71,7 +70,7 @@ contains
       ! d and -d give the same conditions, but R and the offset have to carry the
       ! same sign: mixing them pairs a force constant with the wrong bond.
       do iBond = 1, nNZ
-         iGrid = indFlat(iBond)
+         iGrid = iBond-1
          rCart = matmul(cell%amat, real(Rvecs(:,iBond)))
          do iAtom = 1, atoms%nat
             do jAtom = 1, atoms%nat
@@ -92,14 +91,8 @@ contains
 
       ! -R for hermicity 
       allocate(negRIdx(0:nGrid-1))
-      do iz = 0, nR(3)-1
-         do iy = 0, nR(2)-1
-            do ix = 0, nR(1)-1
-               iGrid = ix + nR(1)*(iy + nR(2)*iz)
-               negRIdx(iGrid) = modulo(-ix-2*ft_lim(1,1),nR(1)) + nR(1)*(modulo(-iy-2*ft_lim(1,2),nR(2)) &
-                              + nR(2)*modulo(-iz-2*ft_lim(1,3),nR(3)))
-            end do
-         end do
+      do iBond = 1, nNZ
+         negRIdx(iBond-1) = find_rvec(-Rvecs(:,iBond), Rvecs, nR) - 1
       end do
 
       allocate(bhPairs(2,nBH))
@@ -121,7 +114,7 @@ contains
 
       ! Fix onside sumrule at first to kick the solution close to where we 
       ! want it to be.
-      iGrid0 = -ft_lim(1,1) + nR(1)*(-ft_lim(1,2) + nR(2)*(-ft_lim(1,3)))
+      iGrid0 = find_rvec([0,0,0], Rvecs, nR) - 1
       do iAtom = 1, atoms%nat
          do alpha = 1, 3
             do beta = 1, 3
@@ -230,6 +223,28 @@ contains
       if (.not.l_conv) call juDFT_warn("Born-Huang projection did not fully converge.", calledby="dfpt_sumrules.F90")
 
    end subroutine dfpt_born_huang
+
+   integer function find_rvec(R, Rvecs, nR)
+      !! Index of R in Rvecs; without an exact match, the first entry congruent to R modulo the supercell nR.
+      integer, intent(in) :: R(3), Rvecs(:,:), nR(3)
+
+      integer :: i
+
+      find_rvec = 0
+      do i = 1, size(Rvecs,2)
+         if (all(Rvecs(:,i) == R)) then
+            find_rvec = i
+            return
+         end if
+      end do
+      do i = 1, size(Rvecs,2)
+         if (all(modulo(Rvecs(:,i) - R, nR) == 0)) then
+            find_rvec = i
+            return
+         end if
+      end do
+      call juDFT_error("Lattice vector not found in the force-constant list.", calledby="find_rvec")
+   end function find_rvec
 
    subroutine build_bh_constraint(dynDim, nAtoms, nGrid, pair, voigt, mom2, consBH)
       !! Constraint array of one Born-Huang condition [ab,cd] = [cd,ab].
