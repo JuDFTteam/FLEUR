@@ -6,6 +6,7 @@ src/fleur/force/force_a12.f90
 src/fleur/force/force_a21.F90
 src/fleur/force/force_a21_U.f90
 src/fleur/force/force_a21_lo.f90
+src/fleur/force/force_a21_soc.F90
 src/fleur/force/force_a3.f90
 src/fleur/force/force_a4.f90
 src/fleur/force/force_a8.F90
