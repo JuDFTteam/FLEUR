@@ -273,7 +273,9 @@ CONTAINS
          IF (this%export%orbitrans) &
             CALL wannierlib_export_orbitrans(this, atoms, cell, bmesh, fmpi, jspin, melem%n_channels)
 
-         if (fmpi%isize == 1) CALL report_w90(this)
+         !> Rank 0 owns `out` and `out.xml`, and the centres are plain data on every
+         !> rank, so the report is written whatever the number of ranks.
+         IF (fmpi%irank == 0) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
