@@ -17,7 +17,7 @@ If no suitable Wannier90 is found, `-wannier TRUE` builds the `external/wannier9
 submodule along with FLEUR:
 
 ```bash
-./configure.sh -libxc -wannier TRUE -hdf5 -l wannlib
+./configure.sh -libxc TRUE -wannier TRUE -hdf5 TRUE -l wannlib
 cd build.wannlib && make -j16
 ```
 
