@@ -69,7 +69,6 @@ contains
     LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
-    !COMPLEX,            INTENT(INOUT)            :: sigma_disc(2)
     type(t_results),    intent(inout), optional  :: results
 
     type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
@@ -79,34 +78,27 @@ contains
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
-    !COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
 
     complex                                      :: vintcza, xint, rhobar,vslope
-    integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
-    integer                                      :: lh, n, nzst1, first_star
-    integer                                      :: imz, imzxy, ichsmrg, ivfft
-    integer                                      :: l, nat , ncsh
-    real                                         :: ani, g3, z , sigmaa(2)
-    complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is, constantShift
-    !complex                                      :: sigma_loc(2), sigma_loc2(2)
+    integer                                      :: i, i3, irec2, irec3, k3
+    integer                                      :: nzst1, first_star
+    integer                                      :: ivfft
+    integer                                      :: ncsh
+    real                                         :: ani, z , sigmaa(2)
+    complex                                      :: sig1dh, vz1dh, constantShift
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film
     real                                         :: wgtEdge, zMir ! blend across the +-dTilda/2 cell edge
     complex                                      :: vintczMir
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord, l_corr , l_gradientEfield
+    LOGICAL :: l_gradientEfield
 
 #ifdef CPP_MPI
     integer:: ierr
 #endif
 
     l_dfptvgen = PRESENT(stars2)
-    l_2ndord = PRESENT(iDir2)
-    !l_corr = .FALSE. !ALL(ABS(den%vac)<1e-12)
-    !vmz1dh_is = cmplx(0.0,0.0)
-    !sigma_loc = CMPLX(0.0,0.0) !sigma_disc
-    !sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
     l_gradientEfield = .FALSE. 
     if (present(iDtype)) then 
       if (iDtype==0 .and. .not. ALL(ABS(den%pw)<1e-12)) l_gradientEfield = .TRUE. 
@@ -115,7 +107,6 @@ contains
     vintcza = cmplx(0.0,0.0)
     sig1dh = cmplx(0.0,0.0)
     vz1dh = cmplx(0.0,0.0)
-    vmz1dh = cmplx(0.0,0.0)
     vslope = cmplx(0.0,0.0)
     constantShift = cmplx(0.0,0.0)
 
@@ -142,10 +133,10 @@ contains
           ! If we do DPFT AND q/=0, there is no G_||+q_||=0 part! So all components are
           ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
-          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,vmz1dh,l_dfptvgen )
+          call vvac( vacuum, stars, cell, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh, vslope, l_dfptvgen )
         end if
-        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
-        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
+        call vvacis( stars, vacuum, cell, psq, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
+        call vvacxy( stars, vacuum, cell, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
         if ( l_dfptvgen ) then 
           if (dfpt%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
@@ -170,18 +161,13 @@ contains
                               hint="Increase nmz or reduce dTilda-dVac", calledby="vgen_coulomb" )
         end if
         do irec2 = 1, stars%ng2
-          ! If we do DFPT, we want to fix the second vacuum at infinity to 0. This is WIP,
-          ! as to how we want to do it eventually. Here, we calculate the necessary offset.
-          !IF (l_dfptvgen.AND.irec2 == 1) vmz1dh_is = vintcz( stars, vacuum, cell,  input, field, -cell%z1+1e-15, irec2, psq, &
-          !                    vCoul%vac(:,:,:,ispin), &
-          !                    rhobar, sig1dh, vz1dh, alphm, vslope, .TRUE., CMPLX(0.0,0.0) )
           i = 0
           do i3 = 0, ivfft - 1
             i = i + 1
             z = cell%amat(3,3) * i3 * ani
             if (l_dfptvgen) gaussian = 1 - exp( -(z-cell%amat(3,3)/2.0)**2 / ( 2 * sigma**2 )    )
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
-            vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
+            vintcza = vintcz( stars, vacuum, cell, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
                                 rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
             ! vintcz returns the vacuum-1 solution for z >= z1 and the vacuum-2 solution
@@ -201,7 +187,7 @@ contains
               wgtEdge = 0.5 * ( 1.0 + erf( ( cell%amat(3,3) / 2.0 - abs( z ) ) &
                                          / ( sqrt( 2.0 ) * sigma ) ) )
               zMir = z - sign( cell%amat(3,3), z )   ! same distance into the other vacuum
-              vintczMir = vintcz( stars, vacuum, cell,  input, field, zMir, irec2, psq, &
+              vintczMir = vintcz( stars, vacuum, cell, field, zMir, irec2, psq, &
                                   vCoul%vac(:,:,:,ispin), &
                                     rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
               vintcza = wgtEdge * vintcza + ( 1.0 - wgtEdge ) * vintczMir
@@ -247,7 +233,6 @@ contains
         if (l_dfptvgen) then 
           if  (dfpt%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
         end if 
-        !sigma_disc = sigma_loc
         if (l_gradientEfield) then 
           if (iDir == 3 ) then 
                 sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
