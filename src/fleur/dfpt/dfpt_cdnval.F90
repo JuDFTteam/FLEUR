@@ -263,15 +263,15 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
             call abc(ispin)%init(input, atoms, noccbd, itype)
             call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat)
             call abc1(ispin)%init(input, atoms, noccbd, itype)
-            call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1)
+            call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1)
             IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
                call abcpref(ispin)%init(input, atoms, noccbd, itype)
-               call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
+               call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMatPref)
                abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
             END IF
             IF (l_minusq) THEN
                call abc1m(ispin)%init(input, atoms, noccbd, itype)
-               call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1m)
+               call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1m)
                if (sternheimerJob%l_IBScorrection.and.idtype==itype) then
                   abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof
                end if
