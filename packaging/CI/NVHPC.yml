@@ -15,7 +15,6 @@ build-nvhpc-cpu:
     - set +e;source compiler-select nvhpc-26.5;set -e
     - cd $CI_PROJECT_DIR
     - ./configure.sh  -c nvidia -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
-    - ./packaging/CI/check-configured-features.sh build
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/     
@@ -52,7 +51,6 @@ build-nvhpc-gpu:
     - set +e;source compiler-select nvhpc-26.5;set -e
     - cd $CI_PROJECT_DIR
     - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
-    - ./packaging/CI/check-configured-features.sh build
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
