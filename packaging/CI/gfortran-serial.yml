@@ -1,4 +1,4 @@
-  build-gfortran-hdf5-serial:
+build-gfortran-hdf5-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
