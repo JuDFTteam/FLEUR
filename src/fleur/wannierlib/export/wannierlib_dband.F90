@@ -54,6 +54,17 @@ MODULE m_wannierlib_dband
    PRIVATE
    PUBLIC :: wl_build_dband
 
+   !> The radial integrals of the b = 0 kernel, one table per LOCAL spin direction.
+   !>
+   !> One table was enough while one potential served both components, which is a
+   !> spin-orbit run. A non-collinear one has two potentials and two radial sets, and a
+   !> component contracted against the wrong one is a silent error of the size of the
+   !> exchange splitting. Keyed on the direction rather than rebuilt inside the k loop,
+   !> because b = 0 leaves the integrals independent of k.
+   TYPE t_ujug_slot
+      COMPLEX, ALLOCATABLE :: t(:, :, :, :, :, :)
+   END TYPE t_ujug_slot
+
 CONTAINS
 
    !> Every rank computes the whole table. The eigenvectors of an arbitrary k are what this
@@ -66,6 +77,7 @@ CONTAINS
       USE m_types_sym; USE m_types_noco; USE m_types_nococonv; USE m_types_enpara
       USE m_types_potden; USE m_types_stars; USE m_types_mpi; USE m_types_lapw
       USE m_types_mat
+      USE m_dwigner, ONLY: d_wigner
       TYPE(t_wl_kstar), INTENT(IN) :: star
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       TYPE(t_atoms), INTENT(IN) :: atoms
@@ -85,38 +97,72 @@ CONTAINS
       COMPLEX, ALLOCATABLE, INTENT(OUT) :: dband(:, :, :, :)   !> (nb,nb,nsym,nkirr)
 
       TYPE(t_lapw) :: lapw_irr, lapw_img
-      TYPE(t_mat) :: z_irr, z_rot
+      TYPE(t_mat) :: z_irr(2), z_rot(2)
       TYPE(t_mat), POINTER :: zmat_p(:)
       TYPE(t_abc), POINTER :: abc_p(:, :)
-      TYPE(t_abc), ALLOCATABLE :: abc_rot(:)
-      TYPE(t_spinor_layout) :: layout
-      COMPLEX, ALLOCATABLE :: ujug0(:, :, :, :, :, :), ovl(:, :)
+      TYPE(t_abc), ALLOCATABLE :: abc_rot(:, :), abc_irr(:, :), abc_one(:)
+      COMPLEX, ALLOCATABLE :: dwgn(:, :, :, :)
+      TYPE(t_spinor_layout) :: layout, layout_irr
+      COMPLEX, ALLOCATABLE :: oblk(:, :, :, :)
+      TYPE(t_ujug_slot) :: ujug(2)
       INTEGER, ALLOCATABLE :: ev_list(:), perm(:)
       REAL :: kdiff0(3, 1), rrot(3, 3), kimg(3)
-      INTEGER :: ir, iop, jop, kirr, jk, nb, ioff, ginv(3, 3), g0(3), j, jsp_rad, rsign
-      LOGICAL :: l_anti
-
-      !> Both limits are of the rotation, not of this table: see the module header.
-      IF (atoms%nlotot > 0) CALL juDFT_error( &
-         "wannierlib: d_band is not implemented for a basis with local orbitals", &
-         hint="the symmetry export still writes the stars and the group without it", &
-         calledby="wl_build_dband")
-      IF (l_spinors) CALL juDFT_error( &
-         "wannierlib: d_band is not implemented for spinor states", &
-         hint="the spin half of the rotation is missing; a collinear run without SOC works", &
-         calledby="wl_build_dband")
+      INTEGER :: ir, iop, jop, kirr, jk, nb, ginv(3, 3), g0(3), j, rsign
+      INTEGER :: js, js2, jrec, krec, n_comp, jsp_loc(2), n_rad, ja, jb, i0, j0, nh
+      COMPLEX :: usp(2, 2), amt(2, 2), fspin(2, 2, atoms%ntype)
+      TYPE(t_mat) :: zperm
+      LOGICAL :: l_anti, l_stack, l_two_recs
+      REAL :: dev_u, dev_a, gap_lo
 
       nb = manifold%num_bands
-      !> Which radial set this component reads: a single potential serves both.
-      jsp_rad = radial_slot(radfun, jspin)
+      !> Two components to carry when the states are spinors, one otherwise. Everything
+      !> below is written for both: the orbital half of the rotation acts on each component
+      !> alone and the spin half is the 2x2 that mixes them, which is why the two can be
+      !> kept apart all the way to the overlap.
+      n_comp = MERGE(2, 1, l_spinors)
+      !> A spinor arrives one of two ways, and the difference decides where the spin
+      !> rotation goes. After a spin-orbit second variation the eig file holds TWO records,
+      !> one per component, and the components are independent all the way to the overlap:
+      !> the 2x2 can wait until the end. A non-collinear Hamiltonian was 2N x 2N and ONE
+      !> record holds both halves, and there they are not independent -- calc_abc builds
+      !> the coefficients of a local spin direction out of BOTH halves, weighted by the
+      !> atom's own frame. So the 2x2 has to be applied to the eigenvector, before the
+      !> coefficients are rebuilt, and the overlap is then a plain sum over the directions.
+      l_stack = l_spinors .AND. noco%l_noco
+      l_two_recs = l_spinors .AND. .NOT. noco%l_noco
+      !> The local spin direction each component carries. Where the record is stacked it is
+      !> the component; otherwise one potential serves every component and it is the
+      !> channel. It selects the radial set and, in the non-collinear case, the frame.
+      DO js = 1, n_comp
+         jsp_loc(js) = MERGE(js, radial_slot(radfun, jspin), l_stack)
+      END DO
       ALLOCATE (dband(nb, nb, star%nsym, star%nkirr), source=CMPLX(0.0, 0.0))
-      ALLOCATE (ovl(nb, nb))
+      !> <psi^s(Rk)|rot psi^s'(k)>, the overlap with NO spin rotation in it. The spin
+      !> rotation enters the overlap linearly, so the table a reader wants is one 2x2
+      !> contraction of these four blocks, and the convention sits in that one line
+      !> instead of being spread through the rotation.
+      ALLOCATE (oblk(nb, nb, 2, 2))
+      ALLOCATE (abc_rot(2, atoms%ntype), abc_irr(2, atoms%ntype))
       ev_list = [(j, j=manifold%min_band, manifold%max_band)]
 
       !> b = 0: the two sides sit at the same k, so the muffin-tin table is the one entry
       !> the neighbour list never holds, built the way the M(k,k) invariant builds it.
+      !> Wigner matrices for the whole group, over the full lmax rather than the lmaxU the
+      !> sym carries: these rotate the muffin-tin coefficients of every l the basis has.
+      ALLOCATE (dwgn(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd, &
+                     0:atoms%lmaxd, sym%nop))
+      CALL d_wigner(sym%nop, sym%mrot, cell%bmat, atoms%lmaxd, dwgn(:, :, 1:, :))
+      dwgn(:, :, 0, :) = CMPLX(1.0, 0.0)
+      dev_u = 0.0
+      dev_a = 0.0
+      gap_lo = 0.0
+
       kdiff0 = 0.0
-      CALL melem_ujugaunt(atoms, cell, 1, kdiff0, radfun, radfun, jsp_rad, jsp_rad, .FALSE., 1, ujug0)
+      n_rad = radial_slot(radfun, 2)
+      DO ja = 1, n_rad
+         CALL melem_ujugaunt(atoms, cell, 1, kdiff0, radfun, radfun, ja, ja, .FALSE., 1, &
+                             ujug(ja)%t)
+      END DO
 
       CALL timestart("wl_build_dband")
       DO ir = 1, star%nkirr
@@ -124,10 +170,22 @@ CONTAINS
          CALL lapw_irr%init(input, noco, nococonv, kpts, atoms, sym, kirr, cell)
          CALL matrix_element_states(eig_id, kirr, input, atoms, sym, cell, noco, nococonv, &
                                     enpara, lapw_irr, vtot, fmpi, zmat_p, abc_p, &
-                                    ev_list=ev_list, l_both_spinors=.FALSE., kpts=kpts)
+                                    ev_list=ev_list, l_both_spinors=l_two_recs, kpts=kpts)
          !> Copied, not pointed at: the slot it lives in is keyed on k and the image points
-         !> below go through the same cache, which holds three.
-         z_irr = zmat_p(MERGE(1, jspin, noco%l_noco))
+         !> below go through the same cache, which holds three. The rule below reads the
+         !> representative's muffin-tin coefficients for the same reason, while the cache
+         !> has already moved on to the image point.
+         !> Which record is which: the two records of a spinor are its two components,
+         !> while two collinear channels are unrelated states and only this one is wanted.
+         CALL layout_irr%init(input, noco, lapw_irr, atoms, l_both_spinors=l_two_recs)
+         !> A stacked record is copied once and whole; the coefficients come per local
+         !> direction either way, because the factory builds a set per component.
+         IF (l_stack) z_irr(1) = zmat_p(1)
+         DO js = 1, n_comp
+            jrec = MERGE(js, jspin, l_two_recs)
+            IF (.NOT. l_stack) z_irr(js) = zmat_p(jrec)
+            abc_irr(js, :) = abc_p(MERGE(js, jspin, l_spinors), :)
+         END DO
 
          DO iop = 1, star%nsym
             jk = star%kirr2k(ir, iop)
@@ -136,9 +194,8 @@ CONTAINS
             CALL lapw_img%init(input, noco, nococonv, kpts, atoms, sym, jk, cell)
             CALL matrix_element_states(eig_id, jk, input, atoms, sym, cell, noco, nococonv, &
                                        enpara, lapw_img, vtot, fmpi, zmat_p, abc_p, &
-                                       ev_list=ev_list, l_both_spinors=.FALSE., kpts=kpts)
-            CALL layout%init(input, noco, lapw_img, atoms)
-            ioff = layout%row_offset(jspin)
+                                       ev_list=ev_list, l_both_spinors=l_two_recs, kpts=kpts)
+            CALL layout%init(input, noco, lapw_img, atoms, l_both_spinors=l_two_recs)
 
             !> A k vector transforms under the inverse transpose, which is how the stars
             !> were built: operation iop here is the same operation iop there. Past nop
@@ -158,20 +215,124 @@ CONTAINS
             g0 = NINT(kimg - kpts%bkf(:, jk))
 
             CALL wl_gmap(lapw_irr, lapw_img, ginv, g0, rsign, perm)
-            CALL z_rot%init(z_irr%l_real, z_irr%matsize1, z_irr%matsize2)
-            CALL z_rot%clear()
-            CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm, sym%tau(:, jop), l_anti, &
-                                  z_irr, z_rot)
+            !> The orbital half, component by component. One permutation of reciprocal
+            !> vectors serves both: a spinor's two components are expanded in the SAME
+            !> basis, so what differs between them is the coefficients and nothing else.
+            IF (l_spinors) THEN
+               CALL wl_su2(sym, cell, jop, l_anti, usp)
+            ELSE
+               usp = CMPLX(0.0, 0.0)
+               usp(1, 1) = CMPLX(1.0, 0.0)
+            END IF
 
-            CALL matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, fmpi, &
-                                       vtot, lapw_img, z_rot, nb, jsp_rad, abc_rot)
+            IF (l_stack) THEN
+               !> Permute first, into the half each component belongs to, and mix the
+               !> halves afterwards: z_rot^s = sum_s' U(s,s') (perm z)^s'. Two passes and
+               !> not one, because every component of the mixture reads every component of
+               !> the permuted copy.
+               nh = layout%row_dn
+               CALL zperm%init(.FALSE., z_irr(1)%matsize1, nb)
+               CALL zperm%clear()
+               CALL z_rot(1)%init(.FALSE., z_irr(1)%matsize1, nb)
+               CALL z_rot(1)%clear()
+               DO js = 1, 2
+                  CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm, sym%tau(:, jop), l_anti, &
+                                        z_irr(1), zperm, layout_irr%row_offset(js), &
+                                        layout%row_offset(js))
+               END DO
+               DO js = 1, 2
+                  i0 = layout%row_offset(js)
+                  DO js2 = 1, 2
+                     j0 = layout%row_offset(js2)
+                     z_rot(1)%data_c(i0 + 1:i0 + nh, :) = z_rot(1)%data_c(i0 + 1:i0 + nh, :) &
+                        + usp(js, js2)*zperm%data_c(j0 + 1:j0 + nh, :)
+                  END DO
+               END DO
+               CALL zperm%free()
+               DO js = 1, n_comp
+                  CALL matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, &
+                                             fmpi, vtot, lapw_img, z_rot(1), nb, jsp_loc(js), &
+                                             abc_one)
+                  abc_rot(js, :) = abc_one
+                  DEALLOCATE (abc_one)
+               END DO
+            ELSE
+               DO js = 1, n_comp
+                  CALL z_rot(js)%init(z_irr(js)%l_real, z_irr(js)%matsize1, &
+                                      z_irr(js)%matsize2)
+                  CALL z_rot(js)%clear()
+                  CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm, sym%tau(:, jop), l_anti, &
+                                        z_irr(js), z_rot(js))
+                  CALL matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, &
+                                             fmpi, vtot, lapw_img, z_rot(js), nb, jsp_loc(js), &
+                                             abc_one)
+                  abc_rot(js, :) = abc_one
+                  DEALLOCATE (abc_one)
+               END DO
+            END IF
 
-            ovl = CMPLX(0.0, 0.0)
-            CALL melem_overlap_states(stars, atoms, lapw_img, lapw_img, &
-                                      zmat_p(MERGE(1, jspin, noco%l_noco)), z_rot, &
-                                      abc_p(jspin, :), abc_rot, jsp_rad, jsp_rad, &
-                                      lapw_img%bkpt, lapw_img%bkpt, [0, 0, 0], &
-                                      ujug0, kdiff0, 1, ioff, ioff, ovl)
+            !> The frame each type's coefficients are expanded about, folded into the spin
+            !> half of the rule. Nothing mixes unless the record was stacked.
+            !>
+            !> calc_abc builds the local direction j as a^loc_j = sum_s A(s,j) z^s with
+            !> A = conjg(nococonv%umat), that is a^loc = transpose(A) z. A is unitary, so
+            !> transpose(A) conjg(A) = 1 and z = conjg(A) a^loc. A unitary operation sends
+            !> z -> U z and therefore a^loc -> transpose(A) U conjg(A) a^loc; an antiunitary
+            !> one sends z -> U conjg(z) = U A conjg(a^loc), leaving transpose(A) U A on the
+            !> conjugated coefficients. The unitary factor is the identity for U = 1, which
+            !> is what the identity gate asks of it.
+            fspin = CMPLX(0.0, 0.0)
+            DO j = 1, atoms%ntype
+               IF (l_stack) THEN
+                  amt = TRANSPOSE(CONJG(nococonv%umat(j)))
+                  IF (l_anti) THEN
+                     fspin(:, :, j) = MATMUL(MATMUL(amt, usp), TRANSPOSE(amt))
+                  ELSE
+                     fspin(:, :, j) = MATMUL(MATMUL(amt, usp), CONJG(TRANSPOSE(amt)))
+                  END IF
+               ELSE
+                  fspin(1, 1, j) = CMPLX(1.0, 0.0)
+                  fspin(2, 2, j) = CMPLX(1.0, 0.0)
+               END IF
+            END DO
+            CALL wl_rotate_mt(atoms, sym, jop, l_anti, kimg, dwgn, n_comp, fspin, &
+                              abc_irr, abc_rot, dev_u, dev_a, gap_lo)
+            !> The spin rotation is inside the eigenvector where the record was stacked, so
+            !> what is left to contract with is the identity.
+            IF (l_stack) THEN
+               usp = CMPLX(0.0, 0.0)
+               usp(1, 1) = CMPLX(1.0, 0.0)
+               usp(2, 2) = CMPLX(1.0, 0.0)
+            END IF
+
+            !> The blocks the contraction actually reads, and no others: a diagonal 2x2
+            !> leaves half of them out, and a stacked record leaves the off-diagonal ones
+            !> out because its rotation already mixed the halves. The representative's side
+            !> is the record the cache holds; the rotated side is one matrix per component
+            !> unless it is stacked, where both sides are reached by offset.
+            oblk = CMPLX(0.0, 0.0)
+            DO js = 1, n_comp
+               DO js2 = 1, n_comp
+                  IF (ABS(usp(js, js2)) < 1e-14) CYCLE
+                  jrec = MERGE(1, MERGE(js, jspin, l_two_recs), l_stack)
+                  krec = MERGE(1, js2, l_stack)
+                  ja = radial_slot(radfun, jsp_loc(js))
+                  jb = radial_slot(radfun, jsp_loc(js2))
+                  IF (ja /= jb) CALL juDFT_error( &
+                     "wannierlib: the b=0 radial table holds no mixed pair of spin sets", &
+                     hint="two components reading different potentials cannot overlap here", &
+                     calledby="wl_build_dband")
+                  CALL melem_overlap_states(stars, atoms, lapw_img, lapw_img, &
+                                            zmat_p(jrec), z_rot(krec), &
+                                            abc_p(MERGE(js, jspin, l_spinors), :), &
+                                            abc_rot(js2, :), ja, jb, &
+                                            lapw_img%bkpt, lapw_img%bkpt, [0, 0, 0], &
+                                            ujug(ja)%t, kdiff0, 1, &
+                                            layout%row_offset(js), &
+                                            MERGE(layout%row_offset(js2), 0, l_stack), &
+                                            oblk(:, :, js, js2))
+               END DO
+            END DO
             !> CONJUGATED. The overlap kernel is the mmn's, which puts its conjugation on
             !> the second argument, so what comes back is the conjugate of <a|R|b>. Which of
             !> the two the file should hold is not a matter of taste: the relation a reader
@@ -181,15 +342,33 @@ CONTAINS
             !> That one is this conjugate. Unitarity, the identity, the block structure and
             !> the group product table are all blind to it: the conjugate of a representation
             !> is a representation.
-            dband(:, :, iop, ir) = CONJG(ovl)
-            DEALLOCATE (abc_rot)
-            CALL z_rot%free()
+            dband(:, :, iop, ir) = CMPLX(0.0, 0.0)
+            DO js = 1, n_comp
+               DO js2 = 1, n_comp
+                  dband(:, :, iop, ir) = dband(:, :, iop, ir) &
+                                         + usp(js, js2)*CONJG(oblk(:, :, js, js2))
+               END DO
+            END DO
+            DO js = 1, MERGE(1, n_comp, l_stack)
+               CALL z_rot(js)%free()
+            END DO
          END DO
       END DO
       CALL timestop("wl_build_dband")
 
+      IF (fmpi%irank == 0) THEN
+         WRITE (oUnit, '(/,a)') &
+            "Wannier90/WannierBerri symmetry export: muffin-tin rotation rule"
+         WRITE (oUnit, '(a,es10.3)') "  vs the rebuilt A and B, unitary ops     ", dev_u
+         IF (star%nsym > star%nop) THEN
+            WRITE (oUnit, '(a,es10.3)') &
+               "  vs the rebuilt A and B, antiunitary ops ", dev_a
+         END IF
+         IF (atoms%nlotot > 0) WRITE (oUnit, '(a,es10.3)') &
+            "  how far the rebuild was where overridden ", gap_lo
+      END IF
       IF (fmpi%irank == 0) CALL wl_report_dband(star, sym, dband)
-      DEALLOCATE (ujug0, ovl)
+      DEALLOCATE (oblk)
    END SUBROUTINE wl_build_dband
 
    !> Where each plane wave of the representative's basis lands in the image point's basis.
@@ -257,7 +436,7 @@ CONTAINS
    !> translation, exp(-2 pi i (k' + G').tau) with k' + G' the vector AFTER folding, which is
    !> the same vector before it. A symmorphic group leaves it at one, so a case whose tau is
    !> all zero does not exercise this line at all.
-   SUBROUTINE wl_rotate_coeffs(lapw_a, lapw_b, perm, tau, l_anti, z_a, z_b)
+   SUBROUTINE wl_rotate_coeffs(lapw_a, lapw_b, perm, tau, l_anti, z_a, z_b, ioff_a, ioff_b)
       USE m_types_lapw; USE m_types_mat
       TYPE(t_lapw), INTENT(IN) :: lapw_a, lapw_b
       INTEGER, INTENT(IN) :: perm(:)
@@ -265,10 +444,18 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_anti
       TYPE(t_mat), INTENT(IN) :: z_a
       TYPE(t_mat), INTENT(INOUT) :: z_b
+      !> Row at which this component's block begins on each side. Zero unless the spinor
+      !> arrives as one matrix of both halves, where the permutation of reciprocal vectors
+      !> is the same for the two and only the block they live in differs.
+      INTEGER, OPTIONAL, INTENT(IN) :: ioff_a, ioff_b
 
-      INTEGER :: i, j
+      INTEGER :: i, j, ia, ib
       REAL :: arg
       COMPLEX :: ph
+
+      ia = 0; ib = 0
+      IF (PRESENT(ioff_a)) ia = ioff_a
+      IF (PRESENT(ioff_b)) ib = ioff_b
 
       !> Unreachable from wannierlib_main, which refuses d_band for this combination and
       !> writes the stars alone. It stays as the contract of this routine: a caller that
@@ -285,13 +472,13 @@ CONTAINS
                                       (/REAL(lapw_b%k1(j, 1)), REAL(lapw_b%k2(j, 1)), &
                                         REAL(lapw_b%k3(j, 1))/), tau)
          IF (z_a%l_real) THEN
-            z_b%data_r(j, :) = z_a%data_r(i, :)     ! conjugating real data is a no-op
+            z_b%data_r(ib + j, :) = z_a%data_r(ia + i, :)   ! conjugating real data is a no-op
          ELSE
             ph = EXP(ImagUnit*arg)
             IF (l_anti) THEN
-               z_b%data_c(j, :) = ph*CONJG(z_a%data_c(i, :))
+               z_b%data_c(ib + j, :) = ph*CONJG(z_a%data_c(ia + i, :))
             ELSE
-               z_b%data_c(j, :) = ph*z_a%data_c(i, :)
+               z_b%data_c(ib + j, :) = ph*z_a%data_c(ia + i, :)
             END IF
          END IF
       END DO
@@ -300,13 +487,214 @@ CONTAINS
    !> The two properties that hold whatever the convention, so that a run says whether the
    !> table is worth writing without a reader on the other side: unitarity, and that the
    !> identity came out the identity.
-   !> prod(i, j) = the operation that is i composed with j, or 0 when it is not in the set.
+   !> The muffin-tin coefficients of the rotated state, by the rotation rule instead of from
+   !> the rotated eigenvector.
    !>
-   !> An element is (R, t, a) with a the time-reversal flag, and
-   !> (R1,t1,a1).(R2,t2,a2) = (R1 R2, R1 t2 + t1, a1 xor a2): T commutes with the spatial
-   !> part and does not act on the coordinates. The flag takes part in the match, so a
-   !> unitary operation never pairs with its antiunitary partner. FLEUR keeps no
-   !> multiplication table, and a search costs nothing at these sizes.
+   !> cof(nu, lm, iOrd, iAtom) holds the A coefficient at iOrd = 1, the B at 2 and the local
+   !> orbitals from 3 on, and a rotation acts on the lm index alone -- the radial order is a
+   !> spectator. One rule therefore covers all of them, which is the whole point: the A and B
+   !> orders can be rebuilt from the rotated eigenvector and the local orbitals cannot. Their
+   !> rows of the eigenvector are written in a basis the image point does not share, because
+   !> lapw%kvec picks its 2l+1 reciprocal vectors per orbital by a greedy independence test
+   !> at each k, and the image point's choice is not the image of this one.
+   !>
+   !> So the rule is applied to every order, COMPARED against the rebuilt coefficients in
+   !> every l that has no local orbital, and used in every l that has one -- the whole
+   !> channel, not just the orbital's own order, because the rebuilt A and B of that l are
+   !> fed by the same rows. That comparison is the control, and it runs on
+   !> every case whether or not it has local orbitals: it is what says the atom map and the
+   !> phase are right rather than merely plausible. Unitary and antiunitary operations are
+   !> reported apart, because the antiunitary half conjugates the source and whether the
+   !> conjugation commutes with the rebuild is a question, not an assumption.
+   !>
+   !> Map and phase come from where mapatom built the map: R.taual(a) + tau = taual(a') + L
+   !> with L a lattice vector, and L is what the Bloch factor of the image point sees.
+   SUBROUTINE wl_rotate_mt(atoms, sym, jop, l_anti, kimg, dwgn, ncomp, fspin, src, dst, &
+                           dev_u, dev_a, gap)
+      USE m_types_atoms; USE m_types_sym
+      USE m_constants, ONLY: tpi_const, ImagUnit
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_sym), INTENT(IN) :: sym
+      INTEGER, INTENT(IN) :: jop
+      LOGICAL, INTENT(IN) :: l_anti
+      REAL, INTENT(IN) :: kimg(3)
+      COMPLEX, INTENT(IN) :: dwgn(-atoms%lmaxd:, -atoms%lmaxd:, 0:, :)
+      !> How many local spin directions travel together, and the 2x2 that mixes them for
+      !> each type. They travel together because where the magnetisation is non-collinear
+      !> they do not rotate independently: the coefficients of an atom live in that atom's
+      !> own spin frame, so the rotation seen from inside the frame is the global one
+      !> conjugated by the frame, and that mixes the directions. The factor is not guessed
+      !> -- calc_abc builds a local direction as a^loc = A^T g with A = conjg(umat) of the
+      !> type, so A^T U conjg(A) is what the rule has to carry, and A^T U A on the
+      !> antiunitary half, where the conjugation of the state is already in the branch
+      !> below. The identity for every type when nothing mixes.
+      INTEGER, INTENT(IN) :: ncomp
+      COMPLEX, INTENT(IN) :: fspin(:, :, :)
+      TYPE(t_abc), INTENT(IN) :: src(:, :)
+      TYPE(t_abc), INTENT(INOUT) :: dst(:, :)
+      REAL, INTENT(INOUT) :: dev_u, dev_a, gap
+
+      INTEGER :: n, na, nb, ia, ja, l, j, lm1, lm2, nord, m, is, is2
+      LOGICAL :: l_lo
+      REAL :: glat(3)
+      COMPLEX :: ph
+      COMPLEX, ALLOCATABLE :: blk(:, :), tflip(:, :), rot(:, :, :)
+
+      IF (.NOT. ALLOCATED(sym%mapped_atom)) CALL juDFT_error( &
+         "wannierlib: d_band needs the atom map under the group", &
+         hint="sym%mapped_atom is filled by mapatom; this build left it out", &
+         calledby="wl_rotate_mt")
+
+      DO n = 1, atoms%ntype
+         DO na = 1, atoms%neq(n)
+            ia = atoms%firstAtom(n) + na - 1
+            ja = sym%mapped_atom(jop, ia)
+            IF (ja < 1) CALL juDFT_error("wannierlib: an atom is mapped nowhere", &
+                                         calledby="wl_rotate_mt")
+            nb = ja - atoms%firstAtom(n) + 1
+            !> A symmetry operation cannot take an atom out of its own type, and if the map
+            !> said so the coefficients would be rotated against a different radial set.
+            IF (nb < 1 .OR. nb > atoms%neq(n)) CALL juDFT_error( &
+               "wannierlib: the atom map leaves the type", calledby="wl_rotate_mt")
+
+            glat = MATMUL(REAL(sym%mrot(:, :, jop)), atoms%taual(:, ia)) &
+                   + sym%tau(:, jop) - atoms%taual(:, ja)
+            IF (ANY(ABS(glat - ANINT(glat)) > 1e-6)) CALL juDFT_error( &
+               "wannierlib: the atom map is not a lattice jump", calledby="wl_rotate_mt")
+            ph = EXP(-tpi_const*ImagUnit*DOT_PRODUCT(kimg, ANINT(glat)))
+
+            DO l = 0, atoms%lmax(n)
+               lm1 = l**2
+               lm2 = l*(l + 2)
+               nord = MIN(src(1, n)%n_r(l), SIZE(src(1, n)%cof, 3))
+               !> Whether this l can be controlled at all. A local orbital does not merely
+               !> add an order of its own: abclocdn feeds its coefficient back into the A
+               !> and the B of the same l through alo1 and blo1, so where one sits the
+               !> rebuilt orders are built from the zeroed rows as well and are no
+               !> reference. There the rule takes the whole channel; everywhere else it is
+               !> checked and nothing is written.
+               l_lo = nord > 2
+               IF (l_anti) THEN
+                  !> The conjugation itself, in the lm basis. conj(Y_lm) = (-1)^m Y_l,-m,
+                  !> so conjugating the state is not conjugating its coefficients: m flips
+                  !> and the sign rides along.
+                  IF (ALLOCATED(tflip)) DEALLOCATE (tflip)
+                  ALLOCATE (tflip(-l:l, -l:l), source=CMPLX(0.0, 0.0))
+                  DO m = -l, l
+                     tflip(-m, m) = CMPLX((-1.0)**m, 0.0)
+                  END DO
+               END IF
+               DO j = 1, nord
+                  IF (ALLOCATED(rot)) DEALLOCATE (rot)
+                  ALLOCATE (rot(SIZE(src(1, n)%cof, 1), lm2 - lm1 + 1, ncomp))
+                  DO is = 1, ncomp
+                  IF (l_anti) THEN
+                     !> The (-1)^l is the i**l that abcof leaves in these coefficients,
+                     !> turned into (-i)**l by the conjugation -- the same factor
+                     !> rot_to_unrotated carries as ifac**l. Measured on Pt, which has
+                     !> time reversal: 2.4e-15 this way, and 1.703 for every one of the
+                     !> seven other placements of the flip, of the two signs and of the
+                     !> conjugate of D. The l = 0 block passes under all of them, which is
+                     !> what says the atom map and the phase are not the question here.
+                     rot(:, :, is) = (-1.0)**l &
+                        *MATMUL(MATMUL(CONJG(src(is, n)%cof(:, lm1:lm2, j, na)), &
+                                       CONJG(dwgn(-l:l, -l:l, l, jop))), tflip)
+                  ELSE
+                     !> d_wgn goes in as it is, neither transposed nor conjugated. Measured
+                     !> against the rebuilt coefficients on wurtzite AlN, where a proper
+                     !> operation has a symmetric block and only an improper one tells the
+                     !> four placements apart: D passes everywhere, while the transpose and
+                     !> the conjugate each fail on one half of the group. t_abc%rotate and
+                     !> rot_to_unrotated conjugate because they go the other way, from the
+                     !> local frame to the global one; and the parity of an improper
+                     !> operation is already inside d_wgn, so it is not added here.
+                     rot(:, :, is) = MATMUL(src(is, n)%cof(:, lm1:lm2, j, na), &
+                                            dwgn(-l:l, -l:l, l, jop))
+                  END IF
+                  END DO
+                  DO is = 1, ncomp
+                  IF (ALLOCATED(blk)) DEALLOCATE (blk)
+                  ALLOCATE (blk(SIZE(rot, 1), SIZE(rot, 2)), source=CMPLX(0.0, 0.0))
+                  DO is2 = 1, ncomp
+                     blk = blk + fspin(is, is2, n)*rot(:, :, is2)
+                  END DO
+                  blk = ph*blk
+                  IF (l_lo) THEN
+                     !> How far the rebuild was where the rule overrode it. Reported, not
+                     !> asserted: it is the evidence that the override did something. A
+                     !> number down at the rounding would say the local orbital rows never
+                     !> reached these coefficients, and then this whole branch is a no-op
+                     !> dressed as a fix.
+                     gap = MAX(gap, MAXVAL(ABS(blk - dst(is, n)%cof(:, lm1:lm2, j, nb))))
+                     dst(is, n)%cof(:, lm1:lm2, j, nb) = blk
+                  ELSE IF (l_anti) THEN
+                     !> The control: this channel's orders are also in dst, rebuilt from
+                     !> the rotated eigenvector by the routine that owns that job.
+                     dev_a = MAX(dev_a, MAXVAL(ABS(blk - dst(is, n)%cof(:, lm1:lm2, j, nb))))
+                  ELSE
+                     dev_u = MAX(dev_u, MAXVAL(ABS(blk - dst(is, n)%cof(:, lm1:lm2, j, nb))))
+                  END IF
+                  DEALLOCATE (blk)
+                  END DO
+               END DO
+            END DO
+         END DO
+      END DO
+      IF (ALLOCATED(tflip)) DEALLOCATE (tflip)
+      IF (ALLOCATED(rot)) DEALLOCATE (rot)
+   END SUBROUTINE wl_rotate_mt
+
+   !> The 2x2 the spin half of a symmetry operation contributes to the band table.
+   !>
+   !> It is the INVERSE rotation that belongs here, d^+, because the orbital half is the
+   !> inverse too: d_wigner takes its angles from the inverse matrix while the euler of
+   !> m_grp_k takes them from the direct one, and the two halves only agree once this one
+   !> is adjointed. The two choices differ by r -> 1/r on the relative phase of the two
+   !> components, which is REAL for alpha = 0 and pi, so the convention is invisible
+   !> everywhere except on a rotation of 90 degrees -- and there it is worth 0.9 of
+   !> unitarity. Measured on Pt with spin-orbit, where the four C4z and their four
+   !> partners under time reversal were the only operations failing, and a sweep of r
+   !> against the unitarity of the lowest Kramers doublet put the minimum at
+   !> exp(-i(alpha+gamma)) in all sixteen.
+   !>
+   !> An antiunitary operation carries -i sigma_y on top of that, which SWAPS the two
+   !> components: what it contributes is built from the OFF-DIAGONAL overlap blocks, and
+   !> no phase on the diagonal pair can stand in for it.
+   SUBROUTINE wl_su2(sym, cell, jop, l_anti, u)
+      USE m_types_sym; USE m_types_cell
+      USE m_grp_k, ONLY: euler
+      TYPE(t_sym), INTENT(IN) :: sym
+      TYPE(t_cell), INTENT(IN) :: cell
+      INTEGER, INTENT(IN) :: jop
+      LOGICAL, INTENT(IN) :: l_anti
+      COMPLEX, INTENT(OUT) :: u(2, 2)
+
+      REAL :: alpha, beta, gamma
+      COMPLEX :: d(2, 2), sy(2, 2)
+
+      !> The spin half of the operation, as the adjoint of the Wigner d of the Euler
+      !> angles: d_wigner reads its angles off the INVERSE rotation while euler reads
+      !> them off the direct one, so only the adjoint makes the two halves agree. An
+      !> antiunitary operation carries -i*sigma_y on top, which swaps the components.
+      !>
+      !> The choice is invisible on most operations: for a diagonal U the relative
+      !> phase is real at beta = 0 and 180 degrees, so conjugating changes nothing and
+      !> the wrong convention still passes. Only a 90 degree rotation sees it.
+      CALL euler(jop, sym, cell, alpha, beta, gamma)
+      d(1, 1) = COS(beta/2.0)*EXP(CMPLX(0.0, -(alpha + gamma)/2.0))
+      d(1, 2) = -SIN(beta/2.0)*EXP(CMPLX(0.0, -(alpha - gamma)/2.0))
+      d(2, 1) = SIN(beta/2.0)*EXP(CMPLX(0.0, (alpha - gamma)/2.0))
+      d(2, 2) = COS(beta/2.0)*EXP(CMPLX(0.0, (alpha + gamma)/2.0))
+      u = TRANSPOSE(CONJG(d))
+
+      IF (l_anti) THEN
+         sy = CMPLX(0.0, 0.0)
+         sy(1, 2) = CMPLX(-1.0, 0.0)
+         sy(2, 1) = CMPLX(1.0, 0.0)
+         u = MATMUL(u, sy)
+      END IF
+   END SUBROUTINE wl_su2
+
    SUBROUTINE wl_group_table(star, sym, prod)
       USE m_types_sym
       TYPE(t_wl_kstar), INTENT(IN) :: star

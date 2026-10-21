@@ -343,6 +343,24 @@ L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 # cancelling.
 
 
+#: How far the band representation matrices may sit from the identities they must satisfy.
+#:
+#: Measured on Si over 14 of its 16 bands and 48+48 operations: unitarity 5.3e-14, identity
+#: 2.7e-14, little-group products 2.7e-14 over 3186 pairs. Six orders of room, and the errors
+#: this bound exists for are nowhere near it -- reading d_band transposed, or swapping one
+#: pair of bands by hand, both land at 1e-01 and worse.
+DBAND_TOL = 1e-8
+
+#: The same, for a run with spin-orbit coupling.
+#:
+#: Two orders looser, and the two orders are physics rather than slack: with spin-orbit on,
+#: the representation gates sit at 3.1e-08 instead of the 1e-14 they reach without it, and
+#: that residue is LINEAR in socscale and falls to the machine floor when it is zero. It is
+#: first order in the coupling, not a broken convention -- the group, the band count and the
+#: window were each ruled out by measurement. The errors this bound exists for are still far
+#: above it: the wrong spin convention on a 90 degree rotation lands at 9e-01.
+DBAND_TOL_SOC = 1e-6
+
 #: Cases that write the symmetrizer export: (d_band expected, time reversal expected).
 #:
 #: <export symmetrizer="T"> hands a reader the k-point stars, the space group and -- when it
@@ -360,18 +378,26 @@ L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 #: structure needs a complex phase they cannot carry: d_band is refused and the stars go out
 #: alone, which is the behaviour this case pins down -- an export must not kill a run over a
 #: part it cannot write. Its jspins=1 is also the time-reversal side of that flag.
-SYM_EXPORT = {"WannSiDiamond": (False, True), "WannAlN": (True, False)}
-
-#: How far the band representation matrices may sit from the identities they must satisfy.
+#: Which systems check the symmetrizer export, and what each one must come out with:
+#: (band representation matrices, time reversal, a basis with local orbitals).
 #:
-#: Measured on Si over 14 of its 16 bands and 48+48 operations: unitarity 5.3e-14, identity
-#: 2.7e-14, little-group products 2.7e-14 over 3186 pairs. Six orders of room, and the errors
-#: this bound exists for are nowhere near it -- reading d_band transposed, or swapping one
-#: pair of bands by hand, both land at 1e-01 and worse.
-DBAND_TOL = 1e-8
+#: The three are picked to leave no branch unvisited. Si is the refusal -- real
+#: eigenvectors and a non-symmorphic operation -- and carries time reversal without
+#: d_band. AlN has d_band with neither time reversal nor local orbitals, and is
+#: non-symmorphic and improper, which is what pins the Wigner convention. Pt has both
+#: of the things AlN has not, so the antiunitary half of the muffin-tin rule and the
+#: local orbital override are only measured here.
+SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
+              "WannAlN": (True, False, False, DBAND_TOL),
+              "WannPt": (True, True, True, DBAND_TOL),
+              "WannPtSOC": (True, True, True, DBAND_TOL_SOC),
+              "WannFeFM": (False, False, False, DBAND_TOL),
+              "WannFeAFM": (False, False, False, DBAND_TOL),
+              "WannFeFMy": (False, False, False, DBAND_TOL)}
 
 
-def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr):
+def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,
+                              tol_rep=DBAND_TOL):
     """What the symmetrizer export must have written, in the order that localises a failure."""
     txt = open(out, errors="ignore").read()
     assert "symmetry export: k-point stars" in txt, (
@@ -395,19 +421,50 @@ def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr):
         f"matrices, the opposite of what this system allows. Which runs can have them is "
         f"decided in wannierlib_main, which writes the reason to this file")
     if not expect_dband:
-        assert ("local orbitals" in txt or "spinors" in txt
-                or "eigenvectors are real" in txt), (
+        assert "non-collinear" in txt or "eigenvectors are real" in txt, (
             "d_band was refused without naming a reason, and the reason is the only thing "
             "that tells a refusal from a failure")
         return
+
+    #> The muffin-tin rotation rule, against the coefficients rebuilt from the rotated
+    #> eigenvector by the routine that owns that job. It is the one check here that is not
+    #> an identity d_band satisfies by construction: it says the atom map, the
+    #> non-symmorphic phase and the Wigner convention are right rather than consistent.
+    #> The two halves are reported apart because the group table never pairs a unitary
+    #> operation with an antiunitary one, so nothing else in this list sees the second.
+    worst = grep_number(out, "rebuilt A and B, unitary ops", split="ops")
+    assert abs(worst) < DBAND_TOL, (
+        f"the muffin-tin rotation rule disagrees with the rebuilt A and B by {worst} "
+        f"(tol {DBAND_TOL}); the rotation is being applied in the wrong convention")
+    if expect_tr:
+        worst = grep_number(out, "rebuilt A and B, antiunitary ops", split="ops")
+        assert abs(worst) < DBAND_TOL, (
+            f"the rule disagrees with the rebuild by {worst} on the antiunitary half "
+            f"(tol {DBAND_TOL}); conjugating a state is not conjugating its coefficients, "
+            f"and that half of the rule carries the m flip and the sign that go with it")
+
+    #> And that the local orbital branch is not a no-op. Their rows of the eigenvector are
+    #> zero in the rotated copy, so the rule has to supply the whole l that carries one, and
+    #> this number is how far that moved the coefficients. Asserted from BELOW: a small one
+    #> would mean the branch is running and changing nothing, which is the one failure a
+    #> tolerance on the gates above cannot see, because they would all stay green.
+    overrode = "how far the rebuild was where overridden" in txt
+    assert overrode == expect_lo, (
+        f"the export {'overrode' if overrode else 'did not override'} muffin-tin "
+        f"coefficients for local orbitals, which is not what this basis has")
+    if expect_lo:
+        moved = grep_number(out, "where overridden", split="overridden")
+        assert moved > 1e-6, (
+            f"the local orbital override moved the coefficients by {moved}, which is "
+            f"nothing: the rows it exists to replace never reached them")
 
     assert "NO leading band set is closed" not in txt, (
         "no leading set of bands is closed under the group, so the matrices are not a change "
         "of basis of anything and nothing downstream can symmetrise with them")
     worst = grep_number(out, "closed up to band", split="=")
-    assert abs(worst) < DBAND_TOL, (
+    assert abs(worst) < tol_rep, (
         f"d_band is not unitary on the set it reports as closed: |D D^+ - 1| = {worst} "
-        f"(tol {DBAND_TOL})")
+        f"(tol {tol_rep})")
 
     err = grep_number(out, r"D\(identity\)", split="max")
     assert abs(err) < DBAND_TOL, (
@@ -419,9 +476,9 @@ def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr):
         "no pair of operations in any little group, so the group claim measured nothing. "
         "Either the stars are wrong or every representative has a trivial little group")
     worst = grep_number(out, r"D\(i\.j\)", split="=")
-    assert abs(worst) < DBAND_TOL, (
+    assert abs(worst) < tol_rep, (
         f"d_band does not represent the little group: D(i.j) and D(i)D(j) differ by {worst} "
-        f"over {pairs:.0f} pairs (tol {DBAND_TOL}). This is the check that sees the (m,n) "
+        f"over {pairs:.0f} pairs (tol {tol_rep}). This is the check that sees the (m,n) "
         f"order and the non-symmorphic phase; unitarity above is blind to both")
 
 

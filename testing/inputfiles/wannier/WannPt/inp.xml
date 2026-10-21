@@ -61,6 +61,7 @@
 	<bands numBands="18" minBand="4" maxBand="21"/>
 	<disentanglement disWinMin="0.093551146" disWinMax="2.666003698" disFrozMin="0.093551146" disFrozMax="0.534543012" numIter="3000" convTol="0.00001" mixRatio="0.5" />
 	<wannierization numIter="3000" convTol="0.00001"/>
+        <export symmetrizer="T"/>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
