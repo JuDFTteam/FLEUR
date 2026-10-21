@@ -20,7 +20,7 @@ MODULE m_wannierlib_hdf_util
    USE m_hdf_tools
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wr_r4, wr_i3, wl_hdf_create, wl_hdf_root
+   PUBLIC :: wr_r1, wr_r2, wr_r3, wr_r4, wr_i1, wr_i2, wr_i3, wl_hdf_create, wl_hdf_root
 CONTAINS
 
    !> Make WF<jspin>_<what>.hdf and return it open. A stale file is removed rather than
@@ -51,6 +51,48 @@ CONTAINS
       CALL io_write_attint0(gid, 'nkpt', nkpt)
    END SUBROUTINE wl_hdf_root
 
+   SUBROUTINE wr_r2(gid, name, n, dat)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n(:)
+      REAL, INTENT(IN) :: dat(:, :)
+      INTEGER(HID_T) :: sid, did
+      INTEGER :: e
+      CALL h5screate_simple_f(2, INT(n(:2), HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
+      CALL h5sclose_f(sid, e)
+      CALL io_write_real2(did, (/1, 1/), n(:2), name, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wr_r2
+
+   SUBROUTINE wr_r1(gid, name, n, dat)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n(:)
+      REAL, INTENT(IN) :: dat(:)
+      INTEGER(HID_T) :: sid, did
+      INTEGER :: e
+      CALL h5screate_simple_f(1, INT(n(:1), HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
+      CALL h5sclose_f(sid, e)
+      CALL io_write_real1(did, (/1/), n(:1), name, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wr_r1
+
+   SUBROUTINE wr_r3(gid, name, n, dat)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n(:)
+      REAL, INTENT(IN) :: dat(:, :, :)
+      INTEGER(HID_T) :: sid, did
+      INTEGER :: e
+      CALL h5screate_simple_f(3, INT(n(:3), HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
+      CALL h5sclose_f(sid, e)
+      CALL io_write_real3(did, (/1, 1, 1/), n(:3), name, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wr_r3
+
    SUBROUTINE wr_r4(gid, name, n, dat)
       INTEGER(HID_T), INTENT(IN) :: gid
       CHARACTER(LEN=*), INTENT(IN) :: name
@@ -64,6 +106,32 @@ CONTAINS
       CALL io_write_real4(did, (/1, 1, 1, 1/), n(:4), name, dat)
       CALL h5dclose_f(did, e)
    END SUBROUTINE wr_r4
+
+   SUBROUTINE wr_i1(gid, name, n, dat)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n(:), dat(:)
+      INTEGER(HID_T) :: sid, did
+      INTEGER :: e
+      CALL h5screate_simple_f(1, INT(n(:1), HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_INTEGER, sid, did, e)
+      CALL h5sclose_f(sid, e)
+      CALL io_write_integer1(did, (/1/), n(:1), name, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wr_i1
+
+   SUBROUTINE wr_i2(gid, name, n, dat)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n(:), dat(:, :)
+      INTEGER(HID_T) :: sid, did
+      INTEGER :: e
+      CALL h5screate_simple_f(2, INT(n(:2), HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_INTEGER, sid, did, e)
+      CALL h5sclose_f(sid, e)
+      CALL io_write_integer2(did, (/1, 1/), n(:2), name, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wr_i2
 
    SUBROUTINE wr_i3(gid, name, n, dat)
       INTEGER(HID_T), INTENT(IN) :: gid

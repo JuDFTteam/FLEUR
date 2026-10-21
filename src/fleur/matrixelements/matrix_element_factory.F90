@@ -79,6 +79,7 @@ MODULE m_matrix_element_factory
 
     PUBLIC :: matrix_element_factory, matrix_element_factory_reset, matrix_element_states
     PUBLIC :: matrix_element_release_anchor, matrix_element_radial
+    PUBLIC :: matrix_element_abc_of
 
 CONTAINS
 
@@ -219,6 +220,48 @@ CONTAINS
         CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
         radfun => radfun_store
     END SUBROUTINE matrix_element_radial
+
+    !> The matching coefficients of a state this module did not read.
+    !>
+    !> ensure_slot builds them for the eigenvectors of one k-point of the eig file and keys
+    !> them on that k-point. A state which is not in the file cannot be asked for that way,
+    !> and the cache must not hold it either because nothing identifies it: a symmetry image
+    !> of a state, whose coefficient vector the caller has just rotated, is the case this
+    !> exists for. It is built here and the caller owns it.
+    !>
+    !> Same three steps in the same order as ensure_slot, the re-expansion about the global
+    !> frame included. A consumer contracting these against anything else the factory
+    !> produced needs both sides in one frame, and that rotation is per atom, so doing it
+    !> afterwards on a quantity that has lost the atom index is not possible.
+    SUBROUTINE matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, fmpi, &
+                                     vtot, lapw, zmat, num_bands, jsp_rad, abc)
+
+        TYPE(t_input),    INTENT(IN) :: input
+        TYPE(t_atoms),    INTENT(IN) :: atoms
+        TYPE(t_sym),      INTENT(IN) :: sym
+        TYPE(t_cell),     INTENT(IN) :: cell
+        TYPE(t_noco),     INTENT(IN) :: noco
+        TYPE(t_nococonv), INTENT(IN) :: nococonv
+        TYPE(t_enpara),   INTENT(IN) :: enpara
+        TYPE(t_mpi),      INTENT(IN) :: fmpi
+        TYPE(t_potden),   INTENT(IN) :: vtot
+        TYPE(t_lapw),     INTENT(IN) :: lapw
+        TYPE(t_mat),      INTENT(IN) :: zmat
+        INTEGER,          INTENT(IN) :: num_bands, jsp_rad
+        TYPE(t_abc), ALLOCATABLE, INTENT(OUT) :: abc(:)   !> (ntype)
+
+        INTEGER :: n
+
+        CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
+        CALL ensure_wigner(atoms, sym, cell)
+        ALLOCATE(abc(atoms%ntype))
+        DO n = 1, atoms%ntype
+            CALL abc(n)%init(input, atoms, num_bands, n)
+            CALL abc(n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, radfun_store(n), &
+                                 noco, nococonv, jsp_rad, n, zmat)
+            CALL abc(n)%rot_to_unrotated(wgn_carrier, atoms, sym, n)
+        END DO
+    END SUBROUTINE matrix_element_abc_of
 
     !> Make sure the states of one k-point, their matching coefficients and the radial
     !> functions are in the cache, and say which slot holds them and how many bands they

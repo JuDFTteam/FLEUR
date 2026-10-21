@@ -69,6 +69,8 @@ MODULE m_types_wannierlib
     LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
     LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
     LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    orbitrans_input/, four structural files
+    LOGICAL :: dmn = .FALSE.     ! <export dmn="T"/>:          WF<spin>.dmn, for a standalone wannier90.x
+    LOGICAL :: symmetrizer = .FALSE. ! <export symmetrizer="T"/>: WF<spin>_sym.hdf, for WannierBerri
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -432,6 +434,8 @@ CONTAINS
     CALL mpi_bc(this%export%gauge, rank, mpi_comm)
     CALL mpi_bc(this%export%bloch, rank, mpi_comm)
     CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
+    CALL mpi_bc(this%export%dmn, rank, mpi_comm)
+    CALL mpi_bc(this%export%symmetrizer, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
@@ -684,6 +688,10 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
       this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
+      this%export%dmn = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@dmn'))
+      this%export%symmetrizer = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@symmetrizer'))
     END IF
 
     ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).

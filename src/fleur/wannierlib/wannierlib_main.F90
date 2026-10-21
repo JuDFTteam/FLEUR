@@ -30,6 +30,9 @@ MODULE m_wannierlib_main
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
+   USE m_wannierlib_export_sym, ONLY: wannierlib_export_sym
+   USE m_wannierlib_sym_kstar, ONLY: t_wl_kstar, wl_build_kstar
+   USE m_wannierlib_dband, ONLY: wl_build_dband
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans
    USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
@@ -106,6 +109,9 @@ CONTAINS
       TYPE(t_melem_request) :: request
       TYPE(t_wgauge_manifold) :: manifold
       TYPE(t_wgauge_domains) :: domains
+      TYPE(t_wl_kstar) :: kstar        ! k-point stars, for the .dmn and the symmetrizer
+      COMPLEX, ALLOCATABLE :: dband(:, :, :, :)   ! the group on the bands, when it can be had
+      LOGICAL :: l_dband, l_realph, l_tr
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       CHARACTER(LEN=6) :: spin_sfx
@@ -202,6 +208,77 @@ CONTAINS
          IF (this%export%basis) &
             CALL wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, &
                                          noco, nococonv, enpara, vtot, fmpi, eig_id, jspin)
+
+         !> The k-point stars under the space group. Both symmetry artefacts are indexed by a
+         !> star representative and an operation, so the partition is built ONCE here rather
+         !> than in each writer: two writers deriving it separately could disagree, and a
+         !> consumer handed a star table that does not match the matrices beside it
+         !> symmetrises at the wrong k -- it converges, the centres come out symmetric, and
+         !> the result is wrong.
+         !> <export dmn="T"> is declared in the schema and has no writer yet. Stopping is
+         !> the honest answer: a flag that is read, builds the stars and writes no file ends
+         !> the run with rc=0 and no product, which from outside is an export that worked.
+         IF (this%export%dmn) CALL juDFT_error( &
+            "wannierlib: <export dmn> is not implemented yet", &
+            hint="symmetrizer='T' writes the same stars and group as WF<spin>_sym.hdf", &
+            calledby="wannierlib_main")
+
+         IF (this%export%symmetrizer) THEN
+            !> Time reversal goes in when it is a symmetry of the Hamiltonian, which is to
+            !> say without magnetism. It is not a choice the user should have to make: a
+            !> magnet with it would be wrong and the smaller irreducible set would hide it,
+            !> and a non-magnet without it is merely a bigger set. Measured on bcc Fe with
+            !> spin-orbit: T by itself misses by 7.2e-03 while the operations that preserve
+            !> the moment close at 2.9e-12.
+            l_tr = (input%jspins == 1) .AND. (.NOT. noco%l_noco)
+            CALL wl_build_kstar(kpts, sym, fmpi, kstar, l_tr)
+
+            !> d_band asks for the state at one k expressed at another, and three things
+            !> stand in the way of that rotation. Two are parts not written yet: the
+            !> local-orbital rows, which belong to an atom and move with it, and the spin
+            !> half. The third is the basis itself -- a centrosymmetric crystal is solved in
+            !> REAL eigenvectors, and a non-symmorphic operation multiplies each coefficient
+            !> by exp(-2.pi.i.(k+G).tau), which a real array cannot hold. Where tau vanishes
+            !> the phase is 1 and a real basis is no obstacle, so the test is on tau and not
+            !> on the lattice. The decision is taken here instead of inside the export, so
+            !> that a run which cannot have d_band still gets the stars and the group; the
+            !> file carries has_d_band and the reason goes to the log.
+            !> input%l_real, and not a rule rebuilt from the symmetry: it is the very flag
+            !> eigen_hssetup hands to t_mat, so it cannot disagree with what the
+            !> eigenvectors turned out to be. Reconstructing it from sym%invs was tried and
+            !> came out FALSE for diamond, whose eigenvectors are real.
+            l_realph = input%l_real .AND. ANY(ABS(sym%tau(:, :sym%nop)) > 1e-12)
+            l_dband = (atoms%nlotot == 0) .AND. (.NOT. l_wannierlib_spinors) &
+                      .AND. (.NOT. l_realph)
+            IF (l_dband) THEN
+               CALL wl_build_dband(kstar, manifold, atoms, cell, input, kpts, sym, noco, &
+                                   nococonv, enpara, vtot, stars, fmpi, radfun, eig_id, &
+                                   jspin, l_wannierlib_spinors, dband)
+            ELSE IF (fmpi%irank == 0) THEN
+               WRITE (oUnit, '(/,a)') &
+                  "Wannier90/WannierBerri symmetry export: d_band NOT written"
+               IF (atoms%nlotot > 0) &
+                  WRITE (oUnit, '(a)') "  the basis has local orbitals"
+               IF (l_wannierlib_spinors) &
+                  WRITE (oUnit, '(a)') "  the states are spinors"
+               IF (l_realph) &
+                  WRITE (oUnit, '(a)') &
+                  "  the eigenvectors are real and an operation has tau /= 0"
+            END IF
+         END IF
+
+         !> The stars and the group, in FLEUR's own HDF. A reader on the consumer's side
+         !> turns them into that consumer's symmetrizer, so a change in its internal layout
+         !> does not reach Fortran. Written here, beside the .amn/.mmn/.eig of the same
+         !> channel, because the symmetry tables and the matrices have to share one k-point
+         !> ORDER: if the two ever part company every operation is applied at the wrong k and
+         !> nothing complains -- it converges, the centres come out symmetric, and the bands
+         !> are wrong.
+         IF (this%export%symmetrizer) THEN
+            CALL wannierlib_export_sym(kstar, manifold, wl, atoms, cell, kpts, sym, &
+                                       fmpi, jspin, l_wannierlib_spinors, dband)
+            IF (ALLOCATED(dband)) DEALLOCATE (dband)
+         END IF
          ! collinear jspins=2 (no SOC/noco): the two spin channels wannierise separately;
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
