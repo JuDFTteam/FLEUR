@@ -234,7 +234,18 @@ CONTAINS
     !> produced needs both sides in one frame, and that rotation is per atom, so doing it
     !> afterwards on a quantity that has lost the atom index is not possible.
     SUBROUTINE matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, fmpi, &
-                                     vtot, lapw, zmat, num_bands, jsp_rad, abc)
+                                     vtot, lapw, zmat, num_bands, jsp_local, abc)
+        !> The muffin-tin coefficients of one LOCAL spin direction, rebuilt from a given
+        !> eigenvector instead of read from the cache.
+        !>
+        !> jsp_local is that direction, and it is one question even though it moves two
+        !> things: the radial set the coefficients are contracted with, and -- where the
+        !> magnetisation is non-collinear -- the weight of each half of the spinor in the
+        !> atom's own frame. It is NOT a row offset into zmat. A non-collinear calc_abc
+        !> reads BOTH halves of the record and combines them with conjg(nococonv%umat) of
+        !> the type, so zmat has to arrive WHOLE: handing over one component of a split
+        !> spinor asks it to build a local direction out of half the state, and the
+        !> coefficients come back wrong by the frame rather than by a convention.
 
         TYPE(t_input),    INTENT(IN) :: input
         TYPE(t_atoms),    INTENT(IN) :: atoms
@@ -247,7 +258,7 @@ CONTAINS
         TYPE(t_potden),   INTENT(IN) :: vtot
         TYPE(t_lapw),     INTENT(IN) :: lapw
         TYPE(t_mat),      INTENT(IN) :: zmat
-        INTEGER,          INTENT(IN) :: num_bands, jsp_rad
+        INTEGER,          INTENT(IN) :: num_bands, jsp_local
         TYPE(t_abc), ALLOCATABLE, INTENT(OUT) :: abc(:)   !> (ntype)
 
         INTEGER :: n
@@ -258,7 +269,7 @@ CONTAINS
         DO n = 1, atoms%ntype
             CALL abc(n)%init(input, atoms, num_bands, n)
             CALL abc(n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, radfun_store(n), &
-                                 noco, nococonv, jsp_rad, n, zmat)
+                                 noco, nococonv, jsp_local, n, zmat)
             CALL abc(n)%rot_to_unrotated(wgn_carrier, atoms, sym, n)
         END DO
     END SUBROUTINE matrix_element_abc_of
