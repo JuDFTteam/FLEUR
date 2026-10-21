@@ -47,7 +47,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,  &
-       &     den, ispin, l_xyav, potdenType, psq, sternheimerJob, stars2, iDtype, iDir, rho0, iDir2 )
+       &     den, ispin, l_xyav, potdenType, psq, sternheimerJob, stars2, iDtype, iDir, rho0, iDir2, qexcess )
 
     
      
@@ -79,6 +79,7 @@ contains
 
     INTEGER, OPTIONAL, INTENT(IN)   :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)   :: iDir2
+    REAL, OPTIONAL, INTENT(IN)      :: qexcess
 
     complex                         :: psint, sa, sl, sm, qvac, fact, fc
     real                            :: f, fpo, gz, p, rmtl, s, fJ, gr, g
@@ -242,8 +243,7 @@ contains
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
         end do
-        !TODO: reactivate electric fields
-        !qvac = qvac - 2 * input%sigma
+        IF (PRESENT(qexcess) .AND. .NOT. l_dfptvgen) qvac = qvac - qexcess
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact

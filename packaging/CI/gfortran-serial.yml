@@ -3,7 +3,8 @@ build-gfortran-serial:
   stage: build
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
+    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build.serial
     - cd build.serial
     - make -j 2
   artifacts:
@@ -23,7 +24,8 @@ build-gfortran-hdf5-serial:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE
+    - FLEUR_INCLUDEDIR="/usr/include /usr/include/hdf5/openmpi" FLEUR_LIBRARIES="-L/usr/lib/x86_64-linux-gnu/hdf5/openmpi;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build
     - cd build
     - make -j 2
   rules:
@@ -51,7 +53,8 @@ build-gfortran-hdf5-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived"
+    - FLEUR_INCLUDEDIR="/usr/include /usr/include/hdf5/openmpi" FLEUR_LIBRARIES="-L/usr/lib/x86_64-linux-gnu/hdf5/openmpi;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived" $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build.debug
     - cd build.debug
     - make -j 2
   rules:

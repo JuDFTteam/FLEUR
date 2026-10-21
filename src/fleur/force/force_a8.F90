@@ -302,6 +302,16 @@ CONTAINS
 8050        FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060        FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
          END DO
+         IF (ANY(ABS(force%f_a21_soc)>0.0)) THEN
+            DO n=1,atoms%ntype
+               IF (atoms%l_geo(n)) THEN
+                  WRITE  (oUnit,FMT=8070) n
+                  WRITE  (oUnit,FMT=8080) (force%f_a21_soc(i,n),i=1,3)
+               END IF
+8070           FORMAT (' FORCES: EQUATION A21 (SOC) FOR ATOM TYPE',i4)
+8080           FORMAT (' FX_A21SOC=',2f10.6,' FY_A21SOC=',2f10.6,' FZ_A21SOC=',2f10.6)
+            END DO
+         END IF
       ELSE
          WRITE (oUnit,*) "If this was a serial calculation, the A21 force component would be written out here. In parallel it holds no meaning."
       END IF

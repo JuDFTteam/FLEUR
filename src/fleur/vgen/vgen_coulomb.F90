@@ -130,7 +130,7 @@ contains
     !     ! Also, the ionic qlm behave differently.
     call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
           &  den, ispin, .false., vCoul%potdenType, psq, sternheimerJob,&
-          & stars2, iDtype, iDir, dfptden0, iDir2 )
+          & stars2, iDtype, iDir, dfptden0, iDir2, qexcess=field%efield%qexcess )
     call timestop( "psqpw" )
 
     ! VACUUM POTENTIAL

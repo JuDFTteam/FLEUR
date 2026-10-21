@@ -274,7 +274,23 @@
          <xsd:annotation>
             <xsd:documentation>
                Magnetic field applied to whole unit cell (simple Zeeman term).
-               Note: Only affects MT spheres, not included in total energy integrals.
+               Note: Not included in total energy integrals.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.0" name="b_theta" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Polar angle (in radians) of the direction of b_field (same convention as soc/@theta).
+               Arbitrary directions require l_noco=T; in collinear SOC calculations the field
+               must be parallel to the spin quantization axis.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.0" name="b_phi" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Azimuthal angle (in radians) of the direction of b_field (same convention as soc/@phi).
             </xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
@@ -2939,15 +2955,10 @@
             ordinary DOS/band weights. See docs/densityMatrixDOS.md.
          </xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="l" use="optional" default="spd">
+      <xsd:attribute name="l" type="DensityMatrixLChannelsType" use="optional" default="spd">
          <xsd:annotation>
             <xsd:documentation>l channels to store, any subset of "spdf".</xsd:documentation>
          </xsd:annotation>
-         <xsd:simpleType>
-            <xsd:restriction base="xsd:string">
-               <xsd:pattern value="[spdf]{1,4}"/>
-            </xsd:restriction>
-         </xsd:simpleType>
       </xsd:attribute>
       <xsd:attribute name="lCross" type="xsd:string" use="optional" default="none">
          <xsd:annotation>
@@ -2957,24 +2968,31 @@
             </xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="symmetrize" use="optional" default="auto">
+      <xsd:attribute name="symmetrize" type="DensityMatrixSymmetrizeEnum" use="optional" default="auto">
          <xsd:annotation>
             <xsd:documentation>
                Symmetrize the matrices with the site symmetry and average over equivalent atoms (one matrix per atom type).
                "auto": symmetrize unless the k-points form a path. "F": store every selected atom unsymmetrized.
             </xsd:documentation>
          </xsd:annotation>
-         <xsd:simpleType>
-            <xsd:restriction base="xsd:string">
-               <xsd:enumeration value="auto"/>
-               <xsd:enumeration value="T"/>
-               <xsd:enumeration value="t"/>
-               <xsd:enumeration value="F"/>
-               <xsd:enumeration value="f"/>
-            </xsd:restriction>
-         </xsd:simpleType>
       </xsd:attribute>
    </xsd:complexType>
+
+   <xsd:simpleType name="DensityMatrixLChannelsType">
+      <xsd:restriction base="xsd:string">
+         <xsd:pattern value="[spdf]{1,4}"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="DensityMatrixSymmetrizeEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="auto"/>
+         <xsd:enumeration value="T"/>
+         <xsd:enumeration value="t"/>
+         <xsd:enumeration value="F"/>
+         <xsd:enumeration value="f"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="KPointListsType">
       <xsd:annotation>
@@ -3582,21 +3600,21 @@
       <xsd:annotation>
          <xsd:documentation>One Wannier-interpolated operator, projected onto the interpolated bands.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="name" use="required">
-         <xsd:simpleType>
-            <xsd:restriction base="xsd:string">
-               <xsd:enumeration value="hamiltonian"/>
-               <xsd:enumeration value="spin"/>
-               <xsd:enumeration value="orbital"/>
-               <xsd:enumeration value="spin_orbit"/>
-               <xsd:enumeration value="velocity"/>
-               <xsd:enumeration value="eigenstates"/>
-            </xsd:restriction>
-         </xsd:simpleType>
-      </xsd:attribute>
+      <xsd:attribute name="name" type="WannierlibOperatorEnum" use="required"/>
       <xsd:attribute name="comp" type="xsd:string" use="optional"/>
       <xsd:attribute name="total" type="FleurBool" use="optional" default="T"/>
    </xsd:complexType>
+
+   <xsd:simpleType name="WannierlibOperatorEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="hamiltonian"/>
+         <xsd:enumeration value="spin"/>
+         <xsd:enumeration value="orbital"/>
+         <xsd:enumeration value="spin_orbit"/>
+         <xsd:enumeration value="velocity"/>
+         <xsd:enumeration value="eigenstates"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="WannierlibDomainType">
       <xsd:annotation>
@@ -3611,22 +3629,22 @@
       <xsd:annotation>
          <xsd:documentation>One real-space Wannier operator matrix O(R), written in the Wannier90/FLEUR standalone format (no band interpolation).</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="name" use="required">
-         <xsd:simpleType>
-            <xsd:restriction base="xsd:string">
-               <xsd:enumeration value="hamiltonian"/>
-               <xsd:enumeration value="position"/>
-               <xsd:enumeration value="position_pw90"/>
-               <xsd:enumeration value="bmn"/>
-               <xsd:enumeration value="fmn"/>
-               <xsd:enumeration value="cmn"/>
-               <xsd:enumeration value="spin"/>
-               <xsd:enumeration value="orbital"/>
-               <xsd:enumeration value="spin_orbit"/>
-            </xsd:restriction>
-         </xsd:simpleType>
-      </xsd:attribute>
+      <xsd:attribute name="name" type="WannierlibOperatorREnum" use="required"/>
    </xsd:complexType>
+
+   <xsd:simpleType name="WannierlibOperatorREnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="hamiltonian"/>
+         <xsd:enumeration value="position"/>
+         <xsd:enumeration value="position_pw90"/>
+         <xsd:enumeration value="bmn"/>
+         <xsd:enumeration value="fmn"/>
+         <xsd:enumeration value="cmn"/>
+         <xsd:enumeration value="spin"/>
+         <xsd:enumeration value="orbital"/>
+         <xsd:enumeration value="spin_orbit"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="WannierlibOperatorsRType">
       <xsd:annotation>
@@ -4082,7 +4100,7 @@
       </xsd:attribute>
       <xsd:attribute name="l_rm_qhdf" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Remove existing q.hdf files before calculation.</xsd:documentation>
+            <xsd:documentation>Do not keep converged density perturbations in dfpt_cdn.hdf.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional">

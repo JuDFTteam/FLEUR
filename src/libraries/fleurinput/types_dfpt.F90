@@ -35,7 +35,7 @@ MODULE m_types_dfpt
       LOGICAL :: l_sumrule_scf  = .FALSE. ! Apply sumrule for dynmats in scf calculation 
       LOGICAL :: l_sumrule_intp  = .FALSE. ! Apply sumrule for dynmats in interpolation calculation
       LOGICAL :: l_bornhuang  = .FALSE. ! Project the force constants onto the invariance conditions
-      LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
+      LOGICAL :: l_rm_qhdf  = .FALSE. ! Do not keep converged density perturbations in dfpt_cdn.hdf
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: i_integration = 1   ! choose integration scheme for ph-linewidth (experimental)
@@ -60,7 +60,6 @@ MODULE m_types_dfpt
 
       INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
 
-      LOGICAL :: calcEigenVec    = .TRUE.
    CONTAINS
       PROCEDURE :: read_xml => read_xml_dfpt
       PROCEDURE :: mpi_bc => mpi_bc_dfpt
@@ -129,7 +128,7 @@ CONTAINS
 
    SUBROUTINE read_kpts_list(xml, listName, kpts_out)
       !! Read the k-point list <listName> from inp.xml/kpts.xml into a t_kpts
-      !! (populates nkpt, bk and wtkpt).
+      !! (populates nkpt, bk, wtkpt and the labelled special points).
       TYPE(t_xml),      INTENT(INOUT) :: xml
       CHARACTER(len=*), INTENT(IN)    :: listName
       TYPE(t_kpts),     INTENT(INOUT) :: kpts_out
@@ -140,7 +139,7 @@ CONTAINS
          IF (ALLOCATED(kpts_out%wtkpt)) DEALLOCATE(kpts_out%wtkpt)
          ALLOCATE(kpts_out%bk(3, kpts_out%nkpt))
          ALLOCATE(kpts_out%wtkpt(kpts_out%nkpt))
-         IF (.NOT. kpts_out%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(listName))) &
+         IF (.NOT. kpts_out%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(listName), l_labels=.TRUE.)) &
             CALL juDFT_error("Could not read kPointList '"//TRIM(listName)//"'", calledby="types_dfpt.F90")
       END IF
    END SUBROUTINE read_kpts_list
