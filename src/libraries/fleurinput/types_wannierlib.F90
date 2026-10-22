@@ -16,6 +16,7 @@ MODULE m_types_wannierlib
   USE m_constants,ONLY: ounit
   USE m_mpi_bc_tool
   USE m_types_xml
+  USE m_calculator, ONLY: evaluateList
   USE m_constants
   IMPLICIT NONE
   PRIVATE
@@ -65,13 +66,18 @@ MODULE m_types_wannierlib
   TYPE t_wannierlib_export
     SEQUENCE
     LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
-    LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
-    LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
     LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    input/, renamed, + four structural
     LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
     !> The field keeps the content as its name and the attribute names the consumer, as
-    !> w90 does for wannier90 and bloch for blochOperators.
+    !> w90 does for wannier90.
     LOGICAL :: symmetrizer = .FALSE. ! <export wannierberri="T"/>: WF<spin>_sym.hdf + the w90 set
+    !> The one flag here that names no consumer: .xsf and .vtk are read by XCrySDen and
+    !> by ParaView, and by more than those two, so the file says what it holds instead.
+    LOGICAL :: plot = .FALSE.    ! <export plotWF="T"/>:          WF<n>_<nnn>.xsf and .vts
+    !> Cost is one wann_real per grid point per band per k-point, so this number is the
+    !> whole price of the plot: 40^3 is 500x the work of 8^3. Left at 40^3, what it was
+    !> before it could be asked for.
+    INTEGER :: plot_grid(3) = [40, 40, 40]  ! <export plotGrid="40 40 40"/>
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -89,12 +95,6 @@ MODULE m_types_wannierlib
     !> and <interpolation> write is NOT here: those compute something first and writing it
     !> is the last step, while these copy out what the run already holds.
     TYPE(t_wannierlib_export) :: export
-    !> Opt-in: put the Wannier functions themselves on a real-space grid and write them
-    !> as XSF. Off by default because it costs a second pass over the k-points, reading
-    !> the states back once the gauge is known; nothing else in the run needs it.
-    !> XML @plotWF.
-    LOGICAL :: l_plot_wf = .FALSE.
-
     ! --- opt-in output domains (<domain> children of <interpolation>) ---
     ! One <domain> per set of k-points the operators are evaluated on, repeatable and
     ! without kinds: @listName (required) names a kPointList of kpts.xml, @suffix tails the
@@ -431,12 +431,11 @@ CONTAINS
     END DO
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
     CALL mpi_bc(this%export%w90, rank, mpi_comm)
-    CALL mpi_bc(this%export%gauge, rank, mpi_comm)
-    CALL mpi_bc(this%export%bloch, rank, mpi_comm)
     CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
     CALL mpi_bc(this%export%juwip, rank, mpi_comm)
+    CALL mpi_bc(this%export%plot, rank, mpi_comm)
+    CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%symmetrizer, rank, mpi_comm)
-    CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
@@ -512,6 +511,7 @@ CONTAINS
     CHARACTER(LEN=20) :: species_name
     TYPE(t_kpts) :: kpts_temp
     CHARACTER(len=40) :: kptsPath
+    REAL, ALLOCATABLE :: gridlist(:)
 
 
     xPathA = '/fleurInput/output/wannierlib'
@@ -524,9 +524,6 @@ CONTAINS
     IF (has_wannierize) THEN
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
     END IF
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotWF') == 1) &
-      this%l_plot_wf = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotWF'))
-
     ! Operator selection is now the <interpolation>/<operator> list (parsed below),
     ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.
 
@@ -680,14 +677,27 @@ CONTAINS
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%export%w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannier90'))
-      this%export%gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@gauge'))
-      this%export%bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
       this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
       this%export%juwip = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@juwip'))
+      this%export%plot = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@plotWF'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotGrid') == 1) THEN
+        !> Through a variable and not straight from the call: evaluateList takes its
+        !> string as INTENT(INOUT), as types_sliceplot does for the same attribute.
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotGrid')
+        CALL evaluateList(gridlist, sbuf)
+        IF (SIZE(gridlist) /= 3) CALL juDFT_error( &
+          'wannierlib: <export plotGrid=".."/> takes three numbers', &
+          calledby='read_xml_wannierlib')
+        !> Two points per direction is the least that spans the cell at all: the step is
+        !> v/(n-1), so n=1 divides by zero and n<1 is not a grid.
+        IF (ANY(NINT(gridlist) < 2)) CALL juDFT_error( &
+          'wannierlib: <export plotGrid=".."/> needs at least two points per direction', &
+          calledby='read_xml_wannierlib')
+        this%export%plot_grid = NINT(gridlist)
+      END IF
       this%export%symmetrizer = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
     END IF

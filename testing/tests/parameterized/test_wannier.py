@@ -183,8 +183,6 @@ EXPORT_FILES = {
     # The only case that asks for the Wannier90 set on its own, and the only one of these
     # with two spin channels, so the per-channel seedname is exercised at the same time.
     "WannFeAFMCol":  _W90_FILES + ["WF2.amn", "WF2.mmn", "WF2.eig"],   # wannier90
-    "WannAlN":       ["WF1_gauge.hdf"],                  # gauge
-    "WannFeFMy":     ["WF1_s0.dat"],                     # blochOperators
     # orbitrans writes a directory, and the fixture lists what is inside it by relative
     # path. All four are named: orbitrans reads all four, and a missing one stops it
     # long after the run that should have produced it is gone.
@@ -196,7 +194,14 @@ EXPORT_FILES = {
 # WITHOUT them, and that is the half which makes the other half an assertion: the .amn and
 # .mmn used to be written by any serial run whether or not the flag was set, so demanding
 # them where the flag is on would have passed with the flag removed.
+#> plotWF has no case of its own: on the default 40x40x40 grid it costs one wann_real per
+#> grid point per band per k-point, which took WannAlN from 20 seconds to over nine
+#> minutes -- too much for a suite that runs on every change, for a picture that feeds no
+#> other code. What stays here is the half that is free: no case asks for it, so no case
+#> may draw. The writer itself is checked by hand, with <export plotGrid="8 8 8"/>.
+_PLOT_FILES = ("WF1_001.xsf", "WF1_001.vts", "WF2_001.xsf", "WF2_001.vts")
 EXPORT_ARTEFACTS = sorted({name for names in EXPORT_FILES.values() for name in names}
+                          | set(_PLOT_FILES)
                           | {f"{ORBITRANS_DIR}/{n}" for n in ORBITRANS_NAME.values()}
                           | {op(c, n) for c in JUWIP_CASES for n in _OP_R_FILES})
 

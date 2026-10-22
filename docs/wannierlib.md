@@ -87,7 +87,6 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 | attribute | default | meaning |
 |---|---|---|
 | `wannierize` | `F` | run the wannierisation |
-| `plotWF` | `F` | write the Wannier functions as XSF files, one per function, on a 40x40x40 grid over one unit cell. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
 
 ### 2.3 `<bands>` — which states enter
 
@@ -235,8 +234,7 @@ consumer needs from this block, so what `wannier90` writes is a subset of what
 |---|---|
 | `wannier90` | `WF<n>.amn`, `.mmn`, `.eig` — what a standalone `wannier90.x` needs to repeat the same wannierisation. The `.mmn` of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. |
 | `wannierberri` | the three above **and** `WF<n>_sym.hdf` — the k-point stars under the space group, the projection table and `d_band`, the matrices representing each operation on the bands, with a time-reversal flag per operation. WannierBerri computes no electronic structure of its own: its wannierisation consumes the `.amn/.mmn/.eig` and takes the symmetry table as an argument beside them, which is why one flag writes both. Needs a full-zone mesh and a build with HDF5. |
-| `gauge` | `WF<n>_gauge.hdf` — `u_opt` and `u_mlwf`, the two factors Wannier90 returned. |
-| `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. Only written when `<operator name="spin">` was asked for, since otherwise there is nothing to write. |
+| `plotWF` | `WF<n>_<nnn>.xsf` and `WF<n>_<nnn>.vts`, one pair per Wannier function: the real part and the modulus on a real-space grid. XSF is what XCrySDen and VESTA read, `.vts` what ParaView reads. `plotGrid="nx ny nz"` sets the resolution (`40 40 40` by default, at least 2 per direction) and is the whole price of the plot: one state evaluated per grid point, band and k-point, so `40^3` is 500x the work of `8^3`. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
 | `orbitrans` | `input/` — the directory the orbitrans transport code opens, holding both halves of what it reads. `lattice`, `atom_centers`, `wann_centers` and `N_wann_atom` are written here: orbitrans otherwise recovers them with regular expressions from a `.wout`, which library mode never writes. Beside them go the operator matrices `<operatorsRs>` produced, **moved and renamed, not copied** — `rspauli.1` is written as `spin`, `anglmomrs.1` as `orbital`, `rssocmat.1` as `spin_orbit`, `WF1_hr.dat` as `hoppings`, `wig_vectors` as `rpts`. Only the operators that were asked for: nothing stands in for one that was not. A second spin channel keeps its own name, since orbitrans wants one 2N basis and that is a combination, not a name. |
 | `juwip` | `w90files/` — the directory JuWIP opens, with the same files under OUR names, which is what it reads. Moved, not copied, like the row above; the two flags therefore cannot be asked for at once and saying so is an error rather than a silent choice. |
 
@@ -249,8 +247,13 @@ every iteration, and rotates the result over the full zone with those matrices. 
 constrains the gauge throughout rather than being imposed at the end, and the cost follows
 the number of star representatives instead of the number of k-points.
 
-`gauge` and `blochOperators` are named for what they hold because they feed nobody: together
-they let a reader redo the sandwich that produced an exported operator and compare.
+`plotWF` is the one flag here not named after a consumer: those two files are read by
+several programs. It is also the only one whose output is a picture rather than an input to
+another code, which is why it is the only one with no case in the test suite -- on the
+default grid it takes a case from twenty seconds to over nine minutes. The grid is spanned
+by the lattice vectors, so the `.vts` carries every point's cartesian coordinate: an image
+dataset (`.vti`), which stores one spacing per cartesian axis, draws a hexagonal or fcc cell
+sheared into a box it does not live in, and the picture looks perfectly fine.
 
 ## 3. Species projections: `<wannierproj .../>`
 

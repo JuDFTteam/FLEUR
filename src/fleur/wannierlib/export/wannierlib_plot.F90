@@ -17,7 +17,8 @@
 !>
 !>  Nothing here is new physics. `wann_real` puts one Bloch state on one grid point --
 !>  muffin-tin by spherical harmonics, interstitial by plane waves -- `wann_plot_vac`
-!>  does the vacuum of a film, and `m_xsf_io` writes the format XCrySDen and VESTA read.
+!>  does the vacuum of a film, `m_xsf_io` writes the format XCrySDen and VESTA read, and
+!>  a .vts file goes beside it for ParaView, which does not read that one.
 !>  The same combination is what `wann_plot_um_dat` (FF, 2006) does in the classic path;
 !>  this is that algorithm with the gauge taken from memory instead of from a .chk file,
 !>  and the plotting region taken from inp.xml instead of from a side-channel plot_inp.
@@ -113,7 +114,7 @@ CONTAINS
       TYPE(t_mat), POINTER :: zmat_p(:)
       TYPE(t_abc), POINTER :: abc_p(:, :)
 
-      IF (.NOT. this%l_plot_wf) RETURN
+      IF (.NOT. this%export%plot) RETURN
       !> The spinor case would need both components summed and only their norm drawn, and
       !> the phase convention below stops meaning anything. Refused rather than guessed.
       IF (l_wannierlib_spinors) CALL juDFT_error( &
@@ -126,7 +127,7 @@ CONTAINS
       nw = this%num_wann
       jspin_rad = radial_slot(radfun, jspin)
 
-      CALL plot_region(cell, twodim, grid, vec1, vec2, vec3, zero)
+      CALL plot_region(cell, this%export%plot_grid, twodim, grid, vec1, vec2, vec3, zero)
       mesh = grid(1)*grid(2)*grid(3)
 
       ALLOCATE (wf(nw, mesh), source=CMPLX(0.0, 0.0), stat=ierr)
@@ -238,7 +239,7 @@ CONTAINS
 #endif
       wf = wf/REAL(kpts%nkptf)
 
-      IF (fmpi%irank == 0) CALL write_xsf(wf, atoms, cell, input, twodim, grid, &
+      IF (fmpi%irank == 0) CALL write_plots(wf, atoms, cell, input, twodim, grid, &
                                           vec1, vec2, vec3, zero, jspin)
 
       CALL timestop('wannierlib_plot_wf')
@@ -277,14 +278,15 @@ CONTAINS
    !> slice of somebody else's plot instead of the Wannier function. A region that is
    !> always the same is one less thing to get wrong; whether it is big enough is measured
    !> and reported rather than left to be assumed.
-   SUBROUTINE plot_region(cell, twodim, grid, vec1, vec2, vec3, zero)
+   SUBROUTINE plot_region(cell, want_grid, twodim, grid, vec1, vec2, vec3, zero)
       TYPE(t_cell), INTENT(IN)  :: cell
+      INTEGER, INTENT(IN)  :: want_grid(3)
       LOGICAL, INTENT(OUT) :: twodim
       INTEGER, INTENT(OUT) :: grid(3)
       REAL,    INTENT(OUT) :: vec1(3), vec2(3), vec3(3), zero(3)
 
       twodim = .FALSE.
-      grid   = [40, 40, 40]
+      grid   = want_grid
       vec1   = cell%amat(:, 1)
       vec2   = cell%amat(:, 2)
       vec3   = cell%amat(:, 3)
@@ -383,7 +385,7 @@ CONTAINS
    !> a two-sign isosurface plot is made of -- and the modulus. The imaginary part is not
    !> written but its weight is reported, because that number is the check on the phase
    !> fix below and a file nobody opens is not.
-   SUBROUTINE write_xsf(wf, atoms, cell, input, twodim, grid, vec1, vec2, vec3, zero, jspin)
+   SUBROUTINE write_plots(wf, atoms, cell, input, twodim, grid, vec1, vec2, vec3, zero, jspin)
       COMPLEX,       INTENT(INOUT) :: wf(:, :)
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell),  INTENT(IN) :: cell
@@ -452,10 +454,121 @@ CONTAINS
          END DO
          CALL xsf_WRITE_endblock(iunit, twodim)
          CLOSE (iunit)
+
+         !> The same function again for ParaView, which does not read XSF. Same grid, same
+         !> two fields, and the same column of wf -- the global phase above was taken off
+         !> once, so the two files cannot disagree about what they are showing.
+         WRITE (fname, '(a,i1,a,i3.3,a)') 'WF', jspin, '_', nplo, '.vts'
+         CALL write_vts(TRIM(fname), wf(nplo, :), twodim, grid, vec1, vec2, vec3, zero)
       END DO
 
-      WRITE (oUnit, '(a,i0,a)') '  wrote ', nw, ' XSF files (block A: real part, block B: modulus)'
-   END SUBROUTINE write_xsf
+      WRITE (oUnit, '(a,i0,a,i0,a)') '  wrote ', nw, ' .xsf and ', nw, ' .vts files '// &
+         '(real part and modulus in each)'
+   END SUBROUTINE write_plots
+
+
+   !> One Wannier function for ParaView, as a VTK structured grid (.vts).
+   !>
+   !> STRUCTURED GRID AND NOT IMAGE DATA (.vti), although the grid is regular: an image
+   !> dataset stores one spacing per CARTESIAN axis, and the three vectors spanned here are
+   !> the Bravais vectors, which meet at 60 degrees in an fcc or bcc cell. Written that way
+   !> a Wannier function comes out sheared into a box it does not live in -- a picture that
+   !> looks perfectly fine and is wrong. So every point carries its own cartesian coordinate.
+   !> This was measured the hard way in August 2026 on FeO2 before it was understood.
+   !>
+   !> Angstrom, like the XSF beside it, so the two agree with each other and with the atom
+   !> positions anyone loads next to them.
+   SUBROUTINE write_vts(fname, wfcol, twodim, grid, vec1, vec2, vec3, zero)
+      CHARACTER(LEN=*), INTENT(IN) :: fname
+      COMPLEX, INTENT(IN) :: wfcol(:)
+      LOGICAL, INTENT(IN) :: twodim
+      INTEGER, INTENT(IN) :: grid(3)
+      REAL,    INTENT(IN) :: vec1(3), vec2(3), vec3(3), zero(3)
+
+      INTEGER :: iunit, ix, iy, iz, nz, mesh, ipos
+      REAL    :: p(3)
+      CHARACTER(LEN=40) :: ext
+
+      !> A 2D region spans vec1 and vec2 only, and then the third dimension is a single
+      !> layer rather than grid(3) of them, which is also what wf was filled with.
+      nz   = MERGE(1, grid(3), twodim)
+      mesh = grid(1)*grid(2)*nz
+      WRITE (ext, '(6(i0,1x))') 0, grid(1) - 1, 0, grid(2) - 1, 0, nz - 1
+
+      OPEN (NEWUNIT=iunit, file=fname)
+      WRITE (iunit, '(a)') '<?xml version="1.0"?>'
+      !> The level to contour at, carried in the file rather than left in `out`: these are
+      !> copied to a laptop to make figures and the run directory stays behind. Chosen by
+      !> ENCLOSED CHARGE and not as a fraction of the maximum -- 0.45*max encloses under
+      !> half of the function and draws a stunted lobe, which is how the first pictures of
+      !> these came out.
+      WRITE (iunit, '(a,3(a,f10.6),a)') '<!-- isosurface by enclosed charge: ', &
+         '  70% ', iso_by_charge(wfcol, 0.70), &
+         '  85% ', iso_by_charge(wfcol, 0.85), &
+         '  95% ', iso_by_charge(wfcol, 0.95), '   (contour the real part at +c and -c) -->'
+      WRITE (iunit, '(a)') '<VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian">'
+      WRITE (iunit, '(a)') '  <StructuredGrid WholeExtent="'//TRIM(ext)//'">'
+      WRITE (iunit, '(a)') '    <Piece Extent="'//TRIM(ext)//'">'
+      WRITE (iunit, '(a)') '      <Points>'
+      WRITE (iunit, '(a)') '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+      !> x fastest, then y, then z: the order wf was filled in, and the order VTK reads.
+      !> The last point along each direction repeats the first cell image, so the vectors
+      !> span the whole cell and the step is v_i/(n_i - 1).
+      DO iz = 0, nz - 1
+         DO iy = 0, grid(2) - 1
+            DO ix = 0, grid(1) - 1
+               p = zero + vec1*(REAL(ix)/REAL(grid(1) - 1)) + vec2*(REAL(iy)/REAL(grid(2) - 1))
+               IF (.NOT. twodim) p = p + vec3*(REAL(iz)/REAL(grid(3) - 1))
+               WRITE (iunit, '(3(f14.7,1x))') p*bohr_to_angstrom_const
+            END DO
+         END DO
+      END DO
+      WRITE (iunit, '(a)') '        </DataArray>'
+      WRITE (iunit, '(a)') '      </Points>'
+      WRITE (iunit, '(a)') '      <PointData Scalars="real">'
+      WRITE (iunit, '(a)') '        <DataArray type="Float32" Name="real" format="ascii">'
+      DO ipos = 1, mesh
+         WRITE (iunit, '(es16.7)') REAL(wfcol(ipos))
+      END DO
+      WRITE (iunit, '(a)') '        </DataArray>'
+      WRITE (iunit, '(a)') '        <DataArray type="Float32" Name="modulus" format="ascii">'
+      DO ipos = 1, mesh
+         WRITE (iunit, '(es16.7)') ABS(wfcol(ipos))
+      END DO
+      WRITE (iunit, '(a)') '        </DataArray>'
+      WRITE (iunit, '(a)') '      </PointData>'
+      WRITE (iunit, '(a)') '    </Piece>'
+      WRITE (iunit, '(a)') '  </StructuredGrid>'
+      WRITE (iunit, '(a)') '</VTKFile>'
+      CLOSE (iunit)
+   END SUBROUTINE write_vts
+
+
+   !> The |w| at which the region |w| > c holds `frac` of the integral of |w|^2.
+   !>
+   !> By bisection rather than by sorting: the enclosed weight falls monotonically with c,
+   !> so forty halvings pin it down to one part in 10^12 of the peak, and nothing has to be
+   !> ordered. The volume element cancels, being the same at every point of the grid.
+   FUNCTION iso_by_charge(wfcol, frac) RESULT(c)
+      COMPLEX, INTENT(IN) :: wfcol(:)
+      REAL,    INTENT(IN) :: frac
+      REAL :: c, lo, hi, total, inside
+      INTEGER :: it
+
+      total = SUM(ABS(wfcol)**2)
+      c = 0.0
+      IF (total <= 0.0) RETURN
+      lo = 0.0; hi = MAXVAL(ABS(wfcol))
+      DO it = 1, 40
+         c = 0.5*(lo + hi)
+         inside = SUM(ABS(wfcol)**2, MASK=ABS(wfcol) > c)
+         IF (inside > frac*total) THEN
+            lo = c      ! still enclosing too much: the level has to come up
+         ELSE
+            hi = c
+         END IF
+      END DO
+   END FUNCTION iso_by_charge
 
 
 

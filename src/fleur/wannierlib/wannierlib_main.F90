@@ -34,10 +34,10 @@ MODULE m_wannierlib_main
    USE m_wannierlib_dband, ONLY: wl_build_dband
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans
    USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
-   USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge
+   USE m_wannierlib_gauge_results, ONLY: wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
 USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
-   USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, wannierlib_write_s0, &
+   USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, &
                                      wannierlib_write_mmn, wannierlib_write_amn
    USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
@@ -294,11 +294,6 @@ CONTAINS
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
 
-         ! wannierise this channel -> the gauge factors u_matrix (MLWF) and u_opt (disentangled)
-         !> Published before run_w90 so it is the operator as built, with no gauge on it.
-         IF (request%has_op_r('spin') .AND. ALLOCATED(melem%s0) .AND. this%export%bloch) &
-            CALL wannierlib_write_s0(fmpi, distk, kpts%nkptf, melem%s0, &
-                                     spin12(jspin)//'_s0.dat')
          CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
 
          !> The gauge goes to results before anything else touches it, so whoever
@@ -316,17 +311,11 @@ CONTAINS
                                     request%has_op_r('spinOrbit'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
 
-         !> Right here and not from v_ch: that one is only assembled on the collinear
-         !> two-channel path, while u_opt and u_matrix are in hand on both, so writing from
-         !> them covers the spinor route as well.
-         IF (this%export%gauge) &
-            CALL wannierlib_export_gauge(kpts, fmpi, jspin, u_opt, u_matrix)
-
          ! Draw the Wannier functions, if anybody asked. Here and not earlier because the
          ! gauge is what makes them: it costs a second pass over this rank's k-points to
          ! read the states back, and what comes out is num_wann grids rather than the
          ! whole basis tabulated at every k.
-         IF (this%l_plot_wf) &
+         IF (this%export%plot) &
             CALL wannierlib_plot_wf(this, atoms, cell, input, sym, stars, vacuum, noco, nococonv, &
                                     enpara, vtot, kpts, fmpi, eig_id, radfun, distk, &
                                     jspin, l_wannierlib_spinors, u_matrix, u_opt)

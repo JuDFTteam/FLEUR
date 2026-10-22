@@ -89,7 +89,7 @@
             <operator name="hamiltonian"/>
             <operator name="orbital"/>
          </operatorsRs>
-        <export gauge="T" wannierberri="T"/>
+        <export wannierberri="T"/>
       </wannierlib>
 
    </output>
