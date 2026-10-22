@@ -734,7 +734,7 @@ CONTAINS
 
       INTEGER :: ir, iop, nb, i, j, k, nc, ncut, npair
       INTEGER, ALLOCATABLE :: prod(:, :)
-      REAL :: dev_u, dev_1, dev, dev_p
+      REAL :: dev_u, dev_all, dev, dev_p, dev_id
       COMPLEX :: ph
       COMPLEX, ALLOCATABLE :: p(:, :)
 
@@ -748,6 +748,7 @@ CONTAINS
       !> the set a consumer has to restrict to. Swept here rather than taken from the
       !> eigenvalues, so that the number is a property of this table alone.
       ncut = 0
+      dev_all = 0.0
       DO nc = nb, 1, -1
          dev = 0.0
          DO ir = 1, star%nkirr
@@ -760,20 +761,19 @@ CONTAINS
                dev = MAX(dev, MAXVAL(ABS(p(:nc, :nc))))
             END DO
          END DO
+         IF (nc == nb) dev_all = dev
          IF (dev < 1e-6) THEN
             ncut = nc; dev_u = dev; EXIT
          END IF
-         IF (nc == nb) dev_1 = dev        ! guardado para el informe de la ventana entera
       END DO
 
-      dev = dev_1
-      dev_1 = 0.0
+      dev_id = 0.0
       DO ir = 1, star%nkirr
          p = dband(:, :, 1, ir)
          DO i = 1, nb
             p(i, i) = p(i, i) - CMPLX(1.0, 0.0)
          END DO
-         dev_1 = MAX(dev_1, MAXVAL(ABS(p)))
+         dev_id = MAX(dev_id, MAXVAL(ABS(p)))
       END DO
 
       !> D(i.j) = D(i) D(j) up to a global phase -- a non-symmorphic operation carries one,
@@ -823,14 +823,14 @@ CONTAINS
       WRITE (oUnit, '(a,i0,a,i0,a,i0,a)') "  table ", nb, "x", nb, " for ", &
          star%nkirr*star%nsym, " (star, operation) pairs"
       IF (ncut == 0) THEN
-         WRITE (oUnit, '(a,es10.3)') "  NO leading band set is closed; | D D^+ - 1 | = ", dev
+         WRITE (oUnit, '(a,es10.3)') "  NO leading band set is closed; | D D^+ - 1 | = ", dev_all
       ELSE
          WRITE (oUnit, '(a,i0,a,i0,a,es10.3)') "  closed up to band ", ncut, " of ", nb, &
             ", where | D D^+ - 1 | = ", dev_u
          IF (ncut < nb) WRITE (oUnit, '(a,es10.3,a)') &
-            "  over the whole window it is ", dev, ", which is the cut and not the table"
+            "  over the whole window it is ", dev_all, ", which is the cut and not the table"
       END IF
-      WRITE (oUnit, '(a,es10.3)') "  | D(identity) - 1 | max ", dev_1
+      WRITE (oUnit, '(a,es10.3)') "  | D(identity) - 1 | max ", dev_id
       WRITE (oUnit, '(a,i0)') "  little-group pairs checked = ", npair
       IF (npair > 0) WRITE (oUnit, '(a,es10.3)') &
          "  | D(i.j) - D(i)D(j) | max = ", dev_p
