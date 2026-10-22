@@ -89,6 +89,7 @@
           <operator name="spin"/>
           <operator name="orbital"/>
         </operatorsRs>
+        <export wannier90="T"/>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

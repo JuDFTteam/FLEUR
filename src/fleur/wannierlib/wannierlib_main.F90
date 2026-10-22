@@ -29,7 +29,6 @@ MODULE m_wannierlib_main
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wgauge_run, ONLY: wgauge_run
-   USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_sym, ONLY: wannierlib_export_sym
    USE m_wannierlib_sym_kstar, ONLY: t_wl_kstar, wl_build_kstar
    USE m_wannierlib_dband, ONLY: wl_build_dband
@@ -190,7 +189,10 @@ CONTAINS
          !> The flag alone decides. This used to write on one rank whatever was asked, which
          !> left the .mmn of a large mesh -- hundreds of megabytes of text, the reason the
          !> flag is opt-in at all -- on the disk of every serial run that never wanted it.
-         IF (this%export%w90) THEN
+         !> wannierberri asks for them too: WannierBerri does no DFT, so its wannierisation
+         !> consumes these three and takes the symmetry table as an argument beside them.
+         !> What wannier90="T" writes is a subset of what wannierberri="T" writes.
+         IF (this%export%w90 .OR. this%export%symmetrizer) THEN
             CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, mmn, mmn_full)
             IF (fmpi%irank == 0) THEN
                amn_file = spin12(jspin)//'.amn'
@@ -202,19 +204,9 @@ CONTAINS
             DEALLOCATE (mmn_full)
          END IF
 
-         !> The interstitial wave functions, for irrep and through it the site-symmetric
-         !> wannierisation in WannierBerri. Written here so that it lands next to the
-         !> .amn/.mmn/.eig of the same channel and shares their k-point ORDER -- if the two
-         !> orders ever part company, every symmetry operation is applied at the wrong k and
-         !> the failure is silent: it converges, the centres come out symmetric, and the
-         !> bands are wrong.
-         IF (this%export%basis) &
-            CALL wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, &
-                                         noco, nococonv, enpara, vtot, fmpi, eig_id, jspin)
-
-         !> The k-point stars under the space group. Both symmetry artefacts are indexed by a
-         !> star representative and an operation, so the partition is built ONCE here rather
-         !> than in each writer: two writers deriving it separately could disagree, and a
+         !> The k-point stars under the space group. The stars and the matrices are both
+         !> indexed by a star representative and an operation, so the partition is built ONCE
+         !> here rather than inside the writer: a table derived twice could disagree, and a
          !> consumer handed a star table that does not match the matrices beside it
          !> symmetrises at the wrong k -- it converges, the centres come out symmetric, and
          !> the result is wrong.

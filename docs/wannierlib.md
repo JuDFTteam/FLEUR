@@ -226,14 +226,15 @@ have anything to sum over. `comp` selects Cartesian components.
 
 ### 2.8 `<export>` — hand out matrices the run already holds
 
-One boolean per artefact, all `F` by default, all independent: they are not alternatives,
-and asking for one does not turn the others off.
+One boolean per **consumer**, all `F` by default, all independent: they are not
+alternatives, and asking for one never turns another off. A flag writes everything its
+consumer needs from this block, so what `wannier90` writes is a subset of what
+`wannierberri` writes.
 
 | attribute | writes |
 |---|---|
 | `wannier90` | `WF<n>.amn`, `.mmn`, `.eig` — what a standalone `wannier90.x` needs to repeat the same wannierisation. The `.mmn` of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. |
-| `wannierberri` | `WF<n>_basis.hdf` — the plane-wave index list and the interstitial eigenvector coefficients: the RAW basis, from which `irrep` derives the representations itself. For an analysis outside FLEUR, and the only external check on the matrices `symmetrizer` writes. Needs a full-zone mesh and a build with HDF5. |
-| `symmetrizer` | `WF<n>_sym.hdf` — the k-point stars under the space group, the projection table and `d_band`, the matrices representing each operation on the bands, with a time-reversal flag per operation. This is the user route into WannierBerri: its symmetrizer is built from these directly, with no re-derivation. Same mesh and HDF5 requirement. |
+| `wannierberri` | the three above **and** `WF<n>_sym.hdf` — the k-point stars under the space group, the projection table and `d_band`, the matrices representing each operation on the bands, with a time-reversal flag per operation. WannierBerri computes no electronic structure of its own: its wannierisation consumes the `.amn/.mmn/.eig` and takes the symmetry table as an argument beside them, which is why one flag writes both. Needs a full-zone mesh and a build with HDF5. |
 | `gauge` | `WF<n>_gauge.hdf` — `u_opt` and `u_mlwf`, the two factors Wannier90 returned. |
 | `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. Only written when `<operator name="spin">` was asked for, since otherwise there is nothing to write. |
 | `orbitrans` | `orbitrans_input/` — `lattice`, `atom_centers`, `wann_centers` and `N_wann_atom`, the four structural files the orbitrans transport code reads. It otherwise recovers them with regular expressions from a `.wout`, which library mode never writes. The operator matrices it also reads are what `<operatorsRs>` writes and are not duplicated here. |
@@ -241,11 +242,14 @@ and asking for one does not turn the others off.
 What `<operatorsRs>` and `<interpolation>` write is deliberately not here: those compute
 something first and writing it is the last step, while `<export>` only copies out.
 
-`wannierberri` and `symmetrizer` both feed WannierBerri and are not alternatives: the first
-hands over the basis and lets `irrep` derive the representations, the second hands over the
-representations FLEUR computed. Asking for both is how the second gets checked against an
-independent derivation of the first; a user who only wants to wannierise symmetrically needs
-`symmetrizer` alone, and pays none of the basis.
+What WannierBerri does with the symmetry table is worth knowing before choosing the mesh:
+it wannierises on the irreducible points alone, projects onto the symmetric subspace at
+every iteration, and rotates the result over the full zone with those matrices. The symmetry
+constrains the gauge throughout rather than being imposed at the end, and the cost follows
+the number of star representatives instead of the number of k-points.
+
+`gauge` and `blochOperators` are named for what they hold because they feed nobody: together
+they let a reader redo the sandwich that produced an exported operator and compare.
 
 ## 3. Species projections: `<wannierproj .../>`
 

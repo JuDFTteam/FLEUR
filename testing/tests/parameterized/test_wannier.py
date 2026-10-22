@@ -154,9 +154,11 @@ OPERATOR_FILES = {
 # blochOperators, the projection list for orbitrans, a full-zone mesh for wannierberri and
 # for the symmetrizer. Before this, six of the seven writers in the block ran in no test at
 # all -- they were reachable only by hand, and only the symmetrizer was ever checked.
+_W90_FILES = ["WF1.amn", "WF1.mmn", "WF1.eig"]
 EXPORT_FILES = {
-    "WannSiDiamond": ["WF1.amn", "WF1.mmn", "WF1.eig"],  # wannier90
-    "WannPt":        ["WF1_basis.hdf"],                  # wannierberri
+    # The only case that asks for the Wannier90 set on its own, and the only one of these
+    # with two spin channels, so the per-channel seedname is exercised at the same time.
+    "WannFeAFMCol":  _W90_FILES + ["WF2.amn", "WF2.mmn", "WF2.eig"],   # wannier90
     "WannAlN":       ["WF1_gauge.hdf"],                  # gauge
     "WannFeFMy":     ["WF1_s0.dat"],                     # blochOperators
     # orbitrans writes a directory, and the fixture lists what is inside it by relative
@@ -485,12 +487,25 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     want_files += INTERP_FILES.get(test_id, [])
     want_files += EXPORT_FILES.get(test_id, [])
     if test_id in SYM_EXPORT:
-        want_files.append("WF1_sym.hdf")
+        #> wannierberri="T" writes the Wannier90 set as well, and asking for it here is what
+        #> checks that: WannierBerri wannierises from those three and cannot use the matrices
+        #> without them. WannSiDiamond carries no wannier90="T" of its own, so if the
+        #> inclusion ever stops holding this is where it shows.
+        want_files += ["WF1_sym.hdf"] + _W90_FILES
     res = default_fleur_test(dir, files=want_files or None,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
+    expected = set(EXPORT_FILES.get(test_id, ()))
+    if test_id in SYM_EXPORT:
+        expected.update(_W90_FILES)
+    #> How many channels a run writes is a property of the run -- a collinear jspins=2 case
+    #> wannierises each channel on its own -- and not of the flag, so a case that exports the
+    #> set at all may leave the second channel beside the first. Asserted by name where it is
+    #> expected (WannFeAFMCol), tolerated here rather than listed per case.
+    if expected & set(_W90_FILES):
+        expected.update("WF2." + ext for ext in ("amn", "mmn", "eig"))
     for name in EXPORT_ARTEFACTS:
-        if name not in EXPORT_FILES.get(test_id, ()):
+        if name not in expected:
             assert name not in res, (
                 f"{name} was written although this case asks for no such export. The flag "
                 f"in <export> is what decides, and a writer that runs anyway puts files no "

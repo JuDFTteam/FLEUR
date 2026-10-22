@@ -65,11 +65,12 @@ MODULE m_types_wannierlib
   TYPE t_wannierlib_export
     SEQUENCE
     LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
-    LOGICAL :: basis = .FALSE.   ! <export wannierberri="T"/>:   WF<n>_basis.hdf
     LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
     LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
     LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    orbitrans_input/, four structural files
-    LOGICAL :: symmetrizer = .FALSE. ! <export symmetrizer="T"/>: WF<spin>_sym.hdf, for WannierBerri
+    !> The field keeps the content as its name and the attribute names the consumer, as
+    !> w90 does for wannier90 and bloch for blochOperators.
+    LOGICAL :: symmetrizer = .FALSE. ! <export wannierberri="T"/>: WF<spin>_sym.hdf + the w90 set
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -429,7 +430,6 @@ CONTAINS
     END DO
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
     CALL mpi_bc(this%export%w90, rank, mpi_comm)
-    CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%export%gauge, rank, mpi_comm)
     CALL mpi_bc(this%export%bloch, rank, mpi_comm)
     CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
@@ -678,8 +678,6 @@ CONTAINS
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%export%w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannier90'))
-      this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
       this%export%gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@gauge'))
       this%export%bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
@@ -687,7 +685,7 @@ CONTAINS
       this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
       this%export%symmetrizer = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@symmetrizer'))
+        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
     END IF
 
     ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).
