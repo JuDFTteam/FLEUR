@@ -206,7 +206,7 @@ CONTAINS
             !> the operation is that same rotation with time reversal, so the sign flips
             !> and the coefficients get conjugated below.
             l_anti = star%antiunit(iop)
-            jop = MERGE(iop - star%nop, iop, l_anti)
+            jop = star%op(MERGE(iop - star%nop, iop, l_anti))
             rsign = MERGE(-1, 1, l_anti)
             ginv = sym%mrot(:, :, sym%invtab(jop))
             rrot = rsign*TRANSPOSE(REAL(ginv))
@@ -715,15 +715,15 @@ CONTAINS
       ALLOCATE (prod(star%nsym, star%nsym))
       prod = 0
       DO i = 1, star%nsym
-         iop = MERGE(i - star%nop, i, star%antiunit(i))
+         iop = star%op(MERGE(i - star%nop, i, star%antiunit(i)))
          DO j = 1, star%nsym
-            jop = MERGE(j - star%nop, j, star%antiunit(j))
+            jop = star%op(MERGE(j - star%nop, j, star%antiunit(j)))
             mm = MATMUL(sym%mrot(:, :, iop), sym%mrot(:, :, jop))
             tt = MATMUL(REAL(sym%mrot(:, :, iop)), sym%tau(:, jop)) + sym%tau(:, iop)
             anti = star%antiunit(i) .NEQV. star%antiunit(j)
             DO kop = 1, star%nop
-               IF (.NOT. ALL(sym%mrot(:, :, kop) == mm)) CYCLE
-               dt = tt - sym%tau(:, kop)
+               IF (.NOT. ALL(sym%mrot(:, :, star%op(kop)) == mm)) CYCLE
+               dt = tt - sym%tau(:, star%op(kop))
                !> The translation is only defined modulo a lattice vector.
                IF (ANY(ABS(dt - ANINT(dt)) > 1e-6)) CYCLE
                prod(i, j) = MERGE(kop + star%nop, kop, anti)

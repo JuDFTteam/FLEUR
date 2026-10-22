@@ -30,11 +30,20 @@
 !> caller gates it on the run being non-magnetic, and a magnetic run gets the unitary group,
 !> which is right rather than merely smaller.
 !>
-!> The operation index is the one FLEUR uses, so a consumer that is also handed sym%mrot and
-!> sym%tau can line the two up. The reciprocal-space rotation is built exactly as gen_bz
-!> builds it, TRANSPOSE(mrot(invtab)), rather than from mrot directly: a k vector transforms
-!> under the inverse transpose, and getting that wrong permutes the star without raising
-!> anything.
+!> NOT EVERY OPERATION OF sym CAN BE USED. mapatom leaves sym%mapped_atom at zero wherever
+!> it could not place an atom: soc_sym rejects the operations that do not hold the spin
+!> quantisation axis, and the search runs inside one type, so one that carries an atom into
+!> another type leaves a zero as well. Both kinds are operations the muffin-tin rotation has
+!> no destination for, and what is left of them is closed under composition, so the stars are
+!> built over that subgroup rather than over sym%nop.
+!>
+!> The operation index is therefore an index into THIS list, and op(i) holds FLEUR's own
+!> index of each entry. The matrices written beside the stars are the ones op selects, so a
+!> consumer lines its operations up with those and never with sym%mrot.
+!>
+!> The reciprocal-space rotation is built exactly as gen_bz builds it,
+!> TRANSPOSE(mrot(invtab)), rather than from mrot directly: a k vector transforms under the
+!> inverse transpose, and getting that wrong permutes the star without raising anything.
 MODULE m_wannierlib_sym_kstar
    USE m_juDFT
    USE m_constants, ONLY: oUnit
@@ -47,7 +56,7 @@ MODULE m_wannierlib_sym_kstar
    !> mesh (1..nk, i.e. kpts%bkf), while k2kirr holds a star number (1..nkirr).
    TYPE t_wl_kstar
       INTEGER :: nkirr = 0                  !< stars found
-      INTEGER :: nsym = 0                   !< unitary operations used, = sym%nop
+      INTEGER :: nsym = 0                   !< operations used, antiunitary half included
       INTEGER :: nk = 0                     !< points of the full mesh, = kpts%nkptf
       INTEGER, ALLOCATABLE :: kirr(:)       !< (nkirr) the representative of each star
       INTEGER, ALLOCATABLE :: k2kirr(:)     !< (nk) the star this k belongs to
@@ -58,7 +67,12 @@ MODULE m_wannierlib_sym_kstar
       !> k -> -R k and conjugates. The first nop are always unitary and in FLEUR's own
       !> order, so an index below nop means the same operation with or without l_tr.
       LOGICAL, ALLOCATABLE :: antiunit(:)
-      INTEGER :: nop = 0                    !< unitary operations, = sym%nop
+      INTEGER :: nop = 0                    !< unitary operations used, <= sym%nop
+      !> (nop) FLEUR's own index of each operation used, and (nop) where the inverse of
+      !> each one sits in THIS list. The second is what the written file needs: an invtab
+      !> taken from sym would point at an operation that was not written.
+      INTEGER, ALLOCATABLE :: op(:)
+      INTEGER, ALLOCATABLE :: invtab(:)
    END TYPE t_wl_kstar
 
 CONTAINS
@@ -93,17 +107,17 @@ CONTAINS
          calledby="wl_build_kstar")
 
       star%nk = kpts%nkptf
-      star%nop = sym%nop
-      star%nsym = MERGE(2*sym%nop, sym%nop, l_tr)
+      CALL wl_usable_ops(sym, star)
+      star%nsym = MERGE(2*star%nop, star%nop, l_tr)
       ALLOCATE (rrot(3, 3, star%nsym), star%antiunit(star%nsym))
       star%antiunit = .FALSE.
-      DO iop = 1, sym%nop
-         rrot(:, :, iop) = TRANSPOSE(sym%mrot(:, :, sym%invtab(iop)))
+      DO iop = 1, star%nop
+         rrot(:, :, iop) = TRANSPOSE(sym%mrot(:, :, sym%invtab(star%op(iop))))
       END DO
       IF (l_tr) THEN
-         DO iop = 1, sym%nop
-            rrot(:, :, sym%nop + iop) = -rrot(:, :, iop)
-            star%antiunit(sym%nop + iop) = .TRUE.
+         DO iop = 1, star%nop
+            rrot(:, :, star%nop + iop) = -rrot(:, :, iop)
+            star%antiunit(star%nop + iop) = .TRUE.
          END DO
       END IF
 
@@ -139,8 +153,60 @@ CONTAINS
       END DO
 
       CALL wl_check_kstar(star)
-      IF (fmpi%irank == 0) CALL wl_report_kstar(star, kpts%nkpt3)
+      IF (fmpi%irank == 0) CALL wl_report_kstar(star, kpts%nkpt3, sym%nop)
    END SUBROUTINE wl_build_kstar
+
+   !> The operations the export can carry, as positions in sym. mapatom fills
+   !> sym%mapped_atom with the atom each operation sends every atom to and leaves a zero
+   !> where it found none, which is FLEUR saying the operation is not a symmetry of this
+   !> state: soc_sym strikes out the ones that do not hold the spin quantisation axis, and
+   !> the search runs inside one type, so one that leaves the type is struck out too.
+   !> Dropping them leaves a group -- holding the axis and keeping each type to itself are
+   !> both closed under composition -- and that is what makes a subgroup usable here rather
+   !> than merely smaller.
+   !>
+   !> It is not taken on trust. The inverse of every operation kept has to be kept as well,
+   !> and the stars built from the result go through wl_check_kstar, whose last gate fires
+   !> on an operation from outside the group.
+   SUBROUTINE wl_usable_ops(sym, star)
+      USE m_types_sym
+      TYPE(t_sym), INTENT(IN) :: sym
+      TYPE(t_wl_kstar), INTENT(INOUT) :: star
+
+      LOGICAL :: l_use(sym%nop)
+      INTEGER :: i, j
+
+      l_use = .TRUE.
+      IF (ALLOCATED(sym%mapped_atom)) THEN
+         DO i = 1, sym%nop
+            l_use(i) = ALL(sym%mapped_atom(i, :) > 0)
+         END DO
+      END IF
+
+      star%nop = COUNT(l_use)
+      ALLOCATE (star%op(star%nop))
+      j = 0
+      DO i = 1, sym%nop
+         IF (.NOT. l_use(i)) CYCLE
+         j = j + 1
+         star%op(j) = i
+      END DO
+      !> Both consumers want the identity first, and the caller has already checked that
+      !> sym itself starts with it.
+      IF (star%op(1) /= 1) CALL juDFT_error( &
+         "wannierlib: the identity is not among the usable operations", &
+         calledby="wl_usable_ops")
+
+      ALLOCATE (star%invtab(star%nop), source=0)
+      DO i = 1, star%nop
+         DO j = 1, star%nop
+            IF (star%op(j) == sym%invtab(star%op(i))) star%invtab(i) = j
+         END DO
+      END DO
+      IF (ANY(star%invtab == 0)) CALL juDFT_error( &
+         "wannierlib: the usable operations are not closed under inversion", &
+         calledby="wl_usable_ops")
+   END SUBROUTINE wl_usable_ops
 
    !> The gates. Each one fails on a different mistake and none of them needs any physics,
    !> which is the point of doing this before the representation matrices exist.
@@ -182,15 +248,18 @@ CONTAINS
       END DO
    END SUBROUTINE wl_check_kstar
 
-   SUBROUTINE wl_report_kstar(star, nkpt3)
+   SUBROUTINE wl_report_kstar(star, nkpt3, nop_all)
       TYPE(t_wl_kstar), INTENT(IN) :: star
-      INTEGER, INTENT(IN) :: nkpt3(3)
+      INTEGER, INTENT(IN) :: nkpt3(3), nop_all
       INTEGER :: ir, w, wmax
 
       WRITE (oUnit, '(/,a)') "Wannier90/WannierBerri symmetry export: k-point stars"
       WRITE (oUnit, '(a,2(i0,a),i0,a,i0)') "  mesh ", nkpt3(1), "x", nkpt3(2), "x", &
          nkpt3(3), ", points ", star%nk
       WRITE (oUnit, '(a,i0)') "  unitary operations used  ", star%nop
+      IF (star%nop < nop_all) &
+         WRITE (oUnit, '(a,i0,a)') "  of ", nop_all, &
+         " in sym; the others have no atom map, so they are not symmetries of this state"
       IF (star%nsym > star%nop) &
          WRITE (oUnit, '(a,i0,a)') "  with time reversal       ", star%nsym, " in all"
 

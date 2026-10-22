@@ -418,11 +418,12 @@ SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
               "WannFeFM": (True, False, True, DBAND_TOL),
               "WannFeAFM": (True, False, True, DBAND_TOL),
               "WannFeFMy": (True, False, True, DBAND_TOL),
-              #> Spin-orbit on a magnetisation the group does not preserve: soc_sym
-              #> rejects eight of the sixteen operations and mapatom leaves their atom
-              #> map at zero, so the export refuses the matrices and names that reason.
-              "WannFeAFMSOC": (False, False, False, DBAND_TOL_SOC),
-              "WannFeAFMSOCOps": (False, False, False, DBAND_TOL_SOC)}
+              #> Spin-orbit on a magnetisation the full group does not preserve: soc_sym
+              #> strikes out eight of the sixteen operations and mapatom leaves their atom
+              #> map at zero. The export drops those and represents the eight that are left,
+              #> so these two are what says a restricted group still comes out a group.
+              "WannFeAFMSOC": (True, False, True, DBAND_TOL_SOC),
+              "WannFeAFMSOCOps": (True, False, True, DBAND_TOL_SOC)}
 
 
 def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,
