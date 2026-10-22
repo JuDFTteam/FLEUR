@@ -15,6 +15,7 @@ MODULE m_wgauge_coeff_b
   USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
   USE m_types_wgauge_bmesh
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+  USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
 #ifdef CPP_MPI
   USE mpi
 #endif
@@ -122,7 +123,7 @@ CONTAINS
           END DO
         END DO
         CALL wgauge_write_realspace(b4, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'bmn', &
-                                   TRIM(fn)//'.dat', 0)
+                                   wannierlib_export_file(TRIM(fn)//'.dat'), 0)
         DEALLOCATE(b4)
       END BLOCK
       WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (B(R)=<0n|H (r-R)|Rm>, eV*Ang)'

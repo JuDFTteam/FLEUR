@@ -33,6 +33,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_sym_kstar, ONLY: t_wl_kstar, wl_build_kstar
    USE m_wannierlib_dband, ONLY: wl_build_dband
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans
+   USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
    USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
 USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
@@ -149,6 +150,11 @@ CONTAINS
       CALL manifold%init(wl%num_bands, wl%num_wann, wl%dis_win_min, wl%dis_win_max, &
                          wl%min_band, wl%max_band)
       CALL domains%init(this%n_domains, this%dom_kset, this%dom_suffix)
+
+      !> Before anything is written: a consumer flag in <export> sends every operator
+      !> file into that consumer's directory, under the name it opens, and the writers
+      !> below ask this module for the path instead of naming the file themselves.
+      CALL wannierlib_export_dir_set(this, fmpi%irank)
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &

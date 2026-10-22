@@ -26,14 +26,15 @@ MODULE m_wannierlib_export_orbitrans
    USE m_types_mpi
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
+   USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir
    IMPLICIT NONE
    PRIVATE
 
    PUBLIC :: wannierlib_export_orbitrans
 
-   !> A directory of their own: the names orbitrans uses are generic enough to collide
-   !> with anything else sitting in the run directory.
-   CHARACTER(LEN=*), PARAMETER :: ORB_DIR = 'orbitrans_input'
+   !> The same directory the operator matrices were written into, which for this flag is
+   !> `input/`: orbitrans opens all of them by a relative path and expects them together.
+   !> Taken from the resolver rather than repeated here, so there is one name for it.
 
 CONTAINS
 
@@ -68,7 +69,6 @@ CONTAINS
       !> The cell and the atoms do not depend on the spin channel, so the first one writes
       !> them and the rest leave them alone.
       IF (channel == 1) THEN
-         CALL orbitrans_make_dir()
          CALL orbitrans_check_lattice_rows(atoms, cell)
          CALL orbitrans_write_lattice(cell)
          CALL orbitrans_write_atom_centers(atoms)
@@ -80,21 +80,11 @@ CONTAINS
       IF (channel == n_channels) THEN
          CALL orbitrans_count_wann_per_atom(this, n_channels, nw_atom)
          CALL orbitrans_write_n_wann_atom(nw_atom)
-         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//ORB_DIR// &
+         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
             '/{lattice,atom_centers,wann_centers,N_wann_atom} for ', &
             n_channels*this%num_wann, ' Wannier functions'
       END IF
    END SUBROUTINE wannierlib_export_orbitrans
-
-   !> Fortran has no portable mkdir, so this is the one shell call in the export and it
-   !> is isolated here. A failure is raised rather than left to the opens below, which
-   !> would otherwise report a missing file and hide the cause.
-   SUBROUTINE orbitrans_make_dir()
-      INTEGER :: stat
-      CALL EXECUTE_COMMAND_LINE('mkdir -p '//ORB_DIR, exitstat=stat)
-      IF (stat /= 0) CALL juDFT_error('wannierlib: could not create '//ORB_DIR, &
-                                      calledby='wannierlib_export_orbitrans')
-   END SUBROUTINE orbitrans_make_dir
 
    !> Does a row of the lattice file really hold a Bravais vector?
    !>
@@ -142,7 +132,7 @@ CONTAINS
    SUBROUTINE orbitrans_write_lattice(cell)
       TYPE(t_cell), INTENT(IN) :: cell
       INTEGER :: iu, i
-      OPEN (newunit=iu, file=ORB_DIR//'/lattice', status='replace')
+      OPEN (newunit=iu, file=wannierlib_export_dir()//'/lattice', status='replace')
       DO i = 1, 3
          WRITE (iu, '(3(2x,f18.10))') cell%amat(:, i)
       END DO
@@ -154,7 +144,7 @@ CONTAINS
    SUBROUTINE orbitrans_write_atom_centers(atoms)
       TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER :: iu, ia
-      OPEN (newunit=iu, file=ORB_DIR//'/atom_centers', status='replace')
+      OPEN (newunit=iu, file=wannierlib_export_dir()//'/atom_centers', status='replace')
       DO ia = 1, atoms%nat
          WRITE (iu, '(i5,3(2x,f18.10))') ia, atoms%pos(:, ia)
       END DO
@@ -191,9 +181,9 @@ CONTAINS
 
       offset = (channel - 1)*num_wann
       IF (channel == 1) THEN
-         OPEN (newunit=iu, file=ORB_DIR//'/wann_centers', status='replace')
+         OPEN (newunit=iu, file=wannierlib_export_dir()//'/wann_centers', status='replace')
       ELSE
-         OPEN (newunit=iu, file=ORB_DIR//'/wann_centers', status='old', position='append')
+         OPEN (newunit=iu, file=wannierlib_export_dir()//'/wann_centers', status='old', position='append')
       END IF
       DO n = 1, num_wann
          WRITE (iu, '(i5,3(2x,f18.10))') offset + n, bmesh%centres(:, n)/bohr_to_angstrom_const
@@ -235,7 +225,7 @@ CONTAINS
    SUBROUTINE orbitrans_write_n_wann_atom(nw_atom)
       INTEGER, INTENT(IN) :: nw_atom(:)
       INTEGER :: iu, ia
-      OPEN (newunit=iu, file=ORB_DIR//'/N_wann_atom', status='replace')
+      OPEN (newunit=iu, file=wannierlib_export_dir()//'/N_wann_atom', status='replace')
       DO ia = 1, SIZE(nw_atom)
          WRITE (iu, '(i5)') nw_atom(ia)
       END DO

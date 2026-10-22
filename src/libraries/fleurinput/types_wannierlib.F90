@@ -67,7 +67,8 @@ MODULE m_types_wannierlib
     LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
     LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
     LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
-    LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    orbitrans_input/, four structural files
+    LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    input/, renamed, + four structural
+    LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
     !> The field keeps the content as its name and the attribute names the consumer, as
     !> w90 does for wannier90 and bloch for blochOperators.
     LOGICAL :: symmetrizer = .FALSE. ! <export wannierberri="T"/>: WF<spin>_sym.hdf + the w90 set
@@ -433,6 +434,7 @@ CONTAINS
     CALL mpi_bc(this%export%gauge, rank, mpi_comm)
     CALL mpi_bc(this%export%bloch, rank, mpi_comm)
     CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
+    CALL mpi_bc(this%export%juwip, rank, mpi_comm)
     CALL mpi_bc(this%export%symmetrizer, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
@@ -684,6 +686,8 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
       this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
+      this%export%juwip = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@juwip'))
       this%export%symmetrizer = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
     END IF

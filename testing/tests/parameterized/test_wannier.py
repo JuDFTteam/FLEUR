@@ -132,6 +132,30 @@ _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vect
 # alone.
 _OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1",
                    "rspauli.1", "wig_vectors"]
+# <export orbitrans="T"/> and juwip="T" do not copy the operator files: they decide where
+# <operatorsRs> writes them and under which name. The map is repeated here on purpose --
+# this is the only thing that can fail if the Fortran side stops moving them, because a
+# file that stays behind is simply a file the fixture does not find.
+#
+# orbitrans opens a relative input/ and INQUIREs for generic names; JuWIP opens w90files/
+# and reads ours unchanged. A second channel keeps its own name either way: WF2_hr.dat has
+# no counterpart in a code that wants one 2N basis.
+ORBITRANS_DIR, JUWIP_DIR = "input", "w90files"
+ORBITRANS_NAME = {"rspauli.1": "spin", "anglmomrs.1": "orbital", "rssocmat.1": "spin_orbit",
+                  "WF1_hr.dat": "hoppings", "wig_vectors": "rpts"}
+ORBITRANS_CASES = ("WannFeBcc",)
+JUWIP_CASES = ("WannPtSOCOps",)
+
+
+def op(test_id, canonical):
+    """Where this case leaves that operator file."""
+    if test_id in ORBITRANS_CASES:
+        return f"{ORBITRANS_DIR}/{ORBITRANS_NAME.get(canonical, canonical)}"
+    if test_id in JUWIP_CASES:
+        return f"{JUWIP_DIR}/{canonical}"
+    return canonical
+
+
 OPERATOR_FILES = {
     "WannPtSOCOps": _OP_R_FILES,
     "WannFeBccSOC":     _OP_R_FILES,
@@ -164,15 +188,17 @@ EXPORT_FILES = {
     # orbitrans writes a directory, and the fixture lists what is inside it by relative
     # path. All four are named: orbitrans reads all four, and a missing one stops it
     # long after the run that should have produced it is gone.
-    "WannFeBcc": ["orbitrans_input/lattice", "orbitrans_input/atom_centers",
-                  "orbitrans_input/wann_centers", "orbitrans_input/N_wann_atom"],
+    "WannFeBcc": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
+                  f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom"],
 }
 
 # Every artefact the block can write. A case that asked for none of them must come out
 # WITHOUT them, and that is the half which makes the other half an assertion: the .amn and
 # .mmn used to be written by any serial run whether or not the flag was set, so demanding
 # them where the flag is on would have passed with the flag removed.
-EXPORT_ARTEFACTS = sorted({name for names in EXPORT_FILES.values() for name in names})
+EXPORT_ARTEFACTS = sorted({name for names in EXPORT_FILES.values() for name in names}
+                          | {f"{ORBITRANS_DIR}/{n}" for n in ORBITRANS_NAME.values()}
+                          | {op(c, n) for c in JUWIP_CASES for n in _OP_R_FILES})
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
@@ -483,7 +509,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     gauge-invariant spread Omega_I, tight, with Omega >= Omega_I beside it. Tests that
     request <operators_r> or <export> also get what those wrote checked."""
     test_id = dir.split("/")[-1]
-    want_files = list(OPERATOR_FILES.get(test_id, ()))
+    want_files = [op(test_id, f) for f in OPERATOR_FILES.get(test_id, ())]
     want_files += INTERP_FILES.get(test_id, [])
     want_files += EXPORT_FILES.get(test_id, [])
     if test_id in SYM_EXPORT:
@@ -496,6 +522,11 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
     expected = set(EXPORT_FILES.get(test_id, ()))
+    #> A consumer flag renames and moves what <operatorsRs> asked for, and only that. A
+    #> run that asks for three operators gets three files: nothing stands in for the one
+    #> it did not ask for. WannFeBcc asks for no spinOrbit, so input/spin_orbit is in the
+    #> census above and in no expected set, which is what turns that into an assertion.
+    expected.update(op(test_id, f) for f in OPERATOR_FILES.get(test_id, ()))
     if test_id in SYM_EXPORT:
         expected.update(_W90_FILES)
     #> How many channels a run writes is a property of the run -- a collinear jspins=2 case
@@ -557,30 +588,30 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # so an operator that computes nothing passes every check made on its output.
         onsite_floor = ONSITE_MIN_GAUGE_LABILE.get(test_id, ONSITE_MIN)
         for name in [f for f in OPERATOR_FILES[test_id] if f in GENERIC_OP_FILES]:
-            assert onsite_weight(res[name]) > onsite_floor, (
-                f"{name}: only {onsite_weight(res[name]):.2f} % of |O(R)|^2 sits at R = 0 "
+            assert onsite_weight(res[op(test_id, name)]) > onsite_floor, (
+                f"{name}: only {onsite_weight(res[op(test_id, name)]):.2f} % of |O(R)|^2 sits at R = 0 "
                 f"(expected above {onsite_floor}). The operator no longer decays in real "
                 f"space, which is what a conjugation convention that disagrees with the "
                 f"gauge looks like -- and nothing else in this file would see it.")
-            assert nonzero_entries(res[name]) > 0, (
+            assert nonzero_entries(res[op(test_id, name)]) > 0, (
                 f"{name}: every entry is zero, so the operator wrote a correctly shaped "
                 "file with nothing in it")
 
     if "rspauli.1" in OPERATOR_FILES.get(test_id, ()):
-        worst = rspauli_r0_diagonal_max(res["rspauli.1"])
+        worst = rspauli_r0_diagonal_max(res[op(test_id, "rspauli.1")])
         assert worst < PAULI_BOUND, (
             f"rspauli.1: max |<w_0n|sigma|w_0n>| = {worst} exceeds the Pauli bound 1; "
             "the coarse operator pass is using an inconsistent (zMat, jspin) pairing")
 
     if test_id in NONMAGNETIC:
-        sums = rspauli_r0_diagonal_sums(res["rspauli.1"])
+        sums = rspauli_r0_diagonal_sums(res[op(test_id, "rspauli.1")])
         for comp, total in sorted(sums.items()):
             assert abs(total) < SPIN_SUM_TOL, (
                 f"rspauli.1: sum over the R=0 diagonal of component {comp} is {total}, "
                 f"but a non-magnetic system must give 0 (tol {SPIN_SUM_TOL})")
 
     if test_id in COLLINEAR_Z:
-        sums = rspauli_r0_diagonal_sums(res["rspauli.1"])
+        sums = rspauli_r0_diagonal_sums(res[op(test_id, "rspauli.1")])
         for comp in ("1", "2"):
             total = sums.get(comp, 0.0)
             assert abs(total) < SPIN_SUM_TOL, (
@@ -588,7 +619,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"collinear magnet along z must give 0 (tol {SPIN_SUM_TOL})")
 
     if test_id in SIGMA_Z_UNIT:
-        diag = [v for (i, j), v in anglmom_r0(res["rspauli.1"]).get("3", {}).items() if i == j]
+        diag = [v for (i, j), v in anglmom_r0(res[op(test_id, "rspauli.1")]).get("3", {}).items() if i == j]
         assert diag, "rspauli.1: no sigma_z entries on the R=0 diagonal"
         worst = max(abs(abs(v.real) - 1.0) for v in diag)
         assert worst < SIGMA_Z_TOL, (
@@ -596,14 +627,14 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"function lies wholly in one spin channel (tol {SIGMA_Z_TOL})")
 
     for name in [f for f in OPERATOR_FILES.get(test_id, ()) if f.startswith("anglmomrs")]:
-        worst = anglmom_r0_hermiticity(res[name])
+        worst = anglmom_r0_hermiticity(res[op(test_id, name)])
         assert worst < L_HERM_TOL, (
             f"{name}: L(R=0) is off hermitian by {worst}; <w_0i|L|w_0j> and "
             f"<w_0j|L|w_0i>* must agree (tol {L_HERM_TOL})")
 
     if test_id in L_SUM_ZERO:
         for name in [f for f in OPERATOR_FILES[test_id] if f.startswith("anglmomrs")]:
-            for comp, total in sorted(anglmom_r0_traces(res[name]).items()):
+            for comp, total in sorted(anglmom_r0_traces(res[op(test_id, name)]).items()):
                 assert abs(total) < L_SUM_TOL, (
                     f"{name}: trace of component {comp} is {total}, but this manifold "
                     f"carries no net orbital moment (tol {L_SUM_TOL})")
@@ -644,7 +675,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             "wrote a correctly shaped file with nothing in it")
 
     if test_id in L_TRANSVERSE_ZERO:
-        traces = anglmom_r0_traces(res["anglmomrs.1"])
+        traces = anglmom_r0_traces(res[op(test_id, "anglmomrs.1")])
         for comp in ("1", "2"):
             total = traces.get(comp, 0.0)
             assert abs(total) < L_SUM_TOL, (

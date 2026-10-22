@@ -33,6 +33,7 @@ MODULE m_wgauge_operators_r
   USE m_types_wgauge_bmesh
   USE m_wgauge_ft, ONLY : wgauge_ft_to_real, wgauge_ws_vectors, wgauge_ft_to_real_reduce
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+  USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
   USE m_wgauge_hamk, ONLY : wgauge_build_hamk
   USE m_wgauge_coeff_a, ONLY : wgauge_build_berry_aw_r, wgauge_check_berry_centres, wgauge_write_ar
   USE m_wgauge_coeff_b, ONLY : wgauge_write_bmn
@@ -57,7 +58,7 @@ CONTAINS
     fn = 'WF1_hr'
     IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_hr'
     ALLOCATE(hr4(nw, nw, nrpts, 1)); hr4(:, :, :, 1) = hr(1:nw, 1:nw, 1:nrpts)
-    CALL wgauge_write_realspace(hr4, irvec, ndegen, nrpts, nw, 1, 'hr', TRIM(fn)//'.dat', 0)
+    CALL wgauge_write_realspace(hr4, irvec, ndegen, nrpts, nw, 1, 'hr', wannierlib_export_file(TRIM(fn)//'.dat'), 0)
     DEALLOCATE(hr4)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (H(R), eV)'
   END SUBROUTINE wgauge_write_hr
@@ -168,7 +169,7 @@ CONTAINS
         IF (l_collinear) THEN
           CONTINUE
         ELSE
-          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
+          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., wannierlib_export_file('rspauli.1'))
         END IF
       CASE ('orbital')
         ! collinear: like the spin, L is written once as one 2N block-diagonal matrix after
@@ -179,7 +180,7 @@ CONTAINS
         ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 6)))
         o0l = SUM(l0_loc(:, :, :, :, wf_channel, :), DIM=4)
         CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., &
-                                          'anglmomrs.'//ACHAR(48+wf_channel))
+                                          wannierlib_export_file('anglmomrs.'//ACHAR(48+wf_channel)))
         DEALLOCATE(o0l)
       CASE ('spinOrbit')
         ! collinear: like spin and orbital, written once as one 2N matrix after both
@@ -187,7 +188,7 @@ CONTAINS
         IF (l_collinear) THEN
           CONTINUE
         ELSE
-          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
+          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., wannierlib_export_file('rssocmat.1'))
         END IF
       CASE DEFAULT
         !> Accepted by the request, so the gap is this dispatch and not the input.
@@ -249,7 +250,7 @@ CONTAINS
     INTEGER :: nrpts, ii, iu
     IF (done) RETURN
     CALL wgauge_ws_vectors(cell, kpts%nkpt3, irvec, ndegen, nrpts)
-    OPEN(newunit=iu, file='wig_vectors', status='replace')
+    OPEN(newunit=iu, file=wannierlib_export_file('wig_vectors'), status='replace')
     DO ii = 1, nrpts
       WRITE(iu, *) ii, irvec(1, ii), irvec(2, ii), irvec(3, ii), ndegen(ii)
     END DO

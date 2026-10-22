@@ -25,6 +25,7 @@ MODULE m_wgauge_spin_collinear
    USE m_types_mpi
    USE m_wgauge_ft, ONLY: wgauge_ft_to_real_reduce
    USE m_wgauge_io, ONLY: wgauge_write_realspace
+   USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
    IMPLICIT NONE
    PRIVATE
 
@@ -117,7 +118,7 @@ CONTAINS
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
       IF (fmpi%irank == 0) THEN
-         OPEN (newunit=iu, file='rspauli.1', status='replace')
+         OPEN (newunit=iu, file=wannierlib_export_file('rspauli.1'), status='replace')
          DO irpt = 1, nrpts
             DO j = 1, n2
                DO i = 1, n2
@@ -204,7 +205,7 @@ CONTAINS
          lr(:, :, :, kk) = l1; DEALLOCATE (l1)
       END DO
       IF (fmpi%irank == 0) THEN
-         OPEN (newunit=iu, file='anglmomrs.1', status='replace')
+         OPEN (newunit=iu, file=wannierlib_export_file('anglmomrs.1'), status='replace')
          DO irpt = 1, nrpts
             DO j = 1, n2
                DO i = 1, n2
@@ -301,7 +302,7 @@ CONTAINS
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
       IF (fmpi%irank == 0) THEN
-         CALL wgauge_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', 'rssocmat.1', fmpi%irank)
+         CALL wgauge_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', wannierlib_export_file('rssocmat.1'), fmpi%irank)
          WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote rssocmat.1 (2N collinear spin-orbit, ', nrpts, ' R-vectors, distributed FT)'
       END IF
       DEALLOCATE (soc_loc, gk_loc)
