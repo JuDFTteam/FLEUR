@@ -232,12 +232,20 @@ and asking for one does not turn the others off.
 | attribute | writes |
 |---|---|
 | `wannier90` | `WF<n>.amn`, `.mmn`, `.eig` — what a standalone `wannier90.x` needs to repeat the same wannierisation. The `.mmn` of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. |
-| `wannierberri` | `WF<n>_basis.hdf` — the plane-wave index list and the interstitial eigenvector coefficients, for symmetry analysis. Needs a full-zone mesh and a build with HDF5. |
+| `wannierberri` | `WF<n>_basis.hdf` — the plane-wave index list and the interstitial eigenvector coefficients: the RAW basis, from which `irrep` derives the representations itself. For an analysis outside FLEUR, and the only external check on the matrices `symmetrizer` writes. Needs a full-zone mesh and a build with HDF5. |
+| `symmetrizer` | `WF<n>_sym.hdf` — the k-point stars under the space group, the projection table and `d_band`, the matrices representing each operation on the bands, with a time-reversal flag per operation. This is the user route into WannierBerri: its symmetrizer is built from these directly, with no re-derivation. Same mesh and HDF5 requirement. |
 | `gauge` | `WF<n>_gauge.hdf` — `u_opt` and `u_mlwf`, the two factors Wannier90 returned. |
-| `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. |
+| `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. Only written when `<operator name="spin">` was asked for, since otherwise there is nothing to write. |
+| `orbitrans` | `orbitrans_input/` — `lattice`, `atom_centers`, `wann_centers` and `N_wann_atom`, the four structural files the orbitrans transport code reads. It otherwise recovers them with regular expressions from a `.wout`, which library mode never writes. The operator matrices it also reads are what `<operatorsRs>` writes and are not duplicated here. |
 
 What `<operatorsRs>` and `<interpolation>` write is deliberately not here: those compute
 something first and writing it is the last step, while `<export>` only copies out.
+
+`wannierberri` and `symmetrizer` both feed WannierBerri and are not alternatives: the first
+hands over the basis and lets `irrep` derive the representations, the second hands over the
+representations FLEUR computed. Asking for both is how the second gets checked against an
+independent derivation of the first; a user who only wants to wannierise symmetrically needs
+`symmetrizer` alone, and pays none of the basis.
 
 ## 3. Species projections: `<wannierproj .../>`
 

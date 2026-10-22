@@ -187,7 +187,10 @@ CONTAINS
          !> amn is complete on every rank after the reduce above; mmn is one k-slice per rank
          !> and has to be gathered first. Only rank 0 writes, and neither writer collects
          !> anything itself: what they are handed is already whole.
-         IF (this%export%w90 .OR. fmpi%isize == 1) THEN
+         !> The flag alone decides. This used to write on one rank whatever was asked, which
+         !> left the .mmn of a large mesh -- hundreds of megabytes of text, the reason the
+         !> flag is opt-in at all -- on the disk of every serial run that never wanted it.
+         IF (this%export%w90) THEN
             CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, mmn, mmn_full)
             IF (fmpi%irank == 0) THEN
                amn_file = spin12(jspin)//'.amn'
@@ -215,14 +218,6 @@ CONTAINS
          !> consumer handed a star table that does not match the matrices beside it
          !> symmetrises at the wrong k -- it converges, the centres come out symmetric, and
          !> the result is wrong.
-         !> <export dmn="T"> is declared in the schema and has no writer yet. Stopping is
-         !> the honest answer: a flag that is read, builds the stars and writes no file ends
-         !> the run with rc=0 and no product, which from outside is an export that worked.
-         IF (this%export%dmn) CALL juDFT_error( &
-            "wannierlib: <export dmn> is not implemented yet", &
-            hint="symmetrizer='T' writes the same stars and group as WF<spin>_sym.hdf", &
-            calledby="wannierlib_main")
-
          IF (this%export%symmetrizer) THEN
             !> Time reversal goes in when it is a symmetry of the Hamiltonian, which is to
             !> say without magnetism. It is not a choice the user should have to make: a

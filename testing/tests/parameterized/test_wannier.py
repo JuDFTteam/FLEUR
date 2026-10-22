@@ -149,6 +149,29 @@ OPERATOR_FILES = {
     "WannAlN":  ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
 }
 
+# Which case exercises each flag of <export>, and what it has to leave behind. One flag per
+# case, put where the case already holds what that writer needs: the spin operator for
+# blochOperators, the projection list for orbitrans, a full-zone mesh for wannierberri and
+# for the symmetrizer. Before this, six of the seven writers in the block ran in no test at
+# all -- they were reachable only by hand, and only the symmetrizer was ever checked.
+EXPORT_FILES = {
+    "WannSiDiamond": ["WF1.amn", "WF1.mmn", "WF1.eig"],  # wannier90
+    "WannPt":        ["WF1_basis.hdf"],                  # wannierberri
+    "WannAlN":       ["WF1_gauge.hdf"],                  # gauge
+    "WannFeFMy":     ["WF1_s0.dat"],                     # blochOperators
+    # orbitrans writes a directory, and the fixture lists what is inside it by relative
+    # path. All four are named: orbitrans reads all four, and a missing one stops it
+    # long after the run that should have produced it is gone.
+    "WannFeBcc": ["orbitrans_input/lattice", "orbitrans_input/atom_centers",
+                  "orbitrans_input/wann_centers", "orbitrans_input/N_wann_atom"],
+}
+
+# Every artefact the block can write. A case that asked for none of them must come out
+# WITHOUT them, and that is the half which makes the other half an assertion: the .amn and
+# .mmn used to be written by any serial run whether or not the flag was set, so demanding
+# them where the flag is on would have passed with the flag removed.
+EXPORT_ARTEFACTS = sorted({name for names in EXPORT_FILES.values() for name in names})
+
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
 GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
@@ -455,16 +478,24 @@ def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_
 @pytest.mark.parametrize(("dir", "desc", "cmdline", "mpi_procs"), all_tests)
 def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number):
     """Run the wannierlib test and, on top of the default out.xml checks, verify the
-    gauge-invariant spread Omega_I (tight) and the total Omega (bounded, not reproduced). Tests that
-    request <operators_r> also get their O(R) exports checked."""
+    gauge-invariant spread Omega_I, tight, with Omega >= Omega_I beside it. Tests that
+    request <operators_r> or <export> also get what those wrote checked."""
     test_id = dir.split("/")[-1]
     want_files = list(OPERATOR_FILES.get(test_id, ()))
     want_files += INTERP_FILES.get(test_id, [])
+    want_files += EXPORT_FILES.get(test_id, [])
     if test_id in SYM_EXPORT:
         want_files.append("WF1_sym.hdf")
     res = default_fleur_test(dir, files=want_files or None,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
+    for name in EXPORT_ARTEFACTS:
+        if name not in EXPORT_FILES.get(test_id, ()):
+            assert name not in res, (
+                f"{name} was written although this case asks for no such export. The flag "
+                f"in <export> is what decides, and a writer that runs anyway puts files no "
+                f"one wanted beside the run -- the .mmn of a large mesh is hundreds of "
+                f"megabytes of text, which is the whole reason these are opt-in")
     if test_id in SYM_EXPORT:
         _check_symmetrizer_export(res["out"], grep_number, *SYM_EXPORT[test_id])
 
