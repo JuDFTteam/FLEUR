@@ -261,7 +261,7 @@ CONTAINS
             !> eigenvectors turned out to be. Rebuilding it from sym%invs was tried and came
             !> out FALSE for diamond, whose eigenvectors are real.
             l_realph = input%l_real .AND. ANY(ABS(sym%tau(:, :sym%nop)) > 1e-12)
-            l_dband = (.NOT. l_realph) .AND. (.NOT. noco%l_noco)
+            l_dband = (.NOT. l_realph) .AND. (.NOT. (noco%l_noco .AND. noco%l_soc))
             IF (l_dband) THEN
                CALL wl_build_dband(kstar, manifold, atoms, cell, input, kpts, sym, noco, &
                                    nococonv, enpara, vtot, stars, fmpi, radfun, eig_id, &

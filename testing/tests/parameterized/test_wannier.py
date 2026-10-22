@@ -415,9 +415,9 @@ SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
               "WannAlN": (True, False, False, DBAND_TOL),
               "WannPt": (True, True, True, DBAND_TOL),
               "WannPtSOC": (True, True, True, DBAND_TOL_SOC),
-              "WannFeFM": (False, False, False, DBAND_TOL),
-              "WannFeAFM": (False, False, False, DBAND_TOL),
-              "WannFeFMy": (False, False, False, DBAND_TOL)}
+              "WannFeFM": (True, False, True, DBAND_TOL),
+              "WannFeAFM": (True, False, True, DBAND_TOL),
+              "WannFeFMy": (True, False, True, DBAND_TOL)}
 
 
 def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,

@@ -222,8 +222,20 @@ CONTAINS
             !> The orbital half, component by component. One permutation of reciprocal
             !> vectors serves both: a spinor's two components are expanded in the SAME
             !> basis, so what differs between them is the coefficients and nothing else.
-            IF (l_spinors) THEN
+            !> The lattice operation drags the spin only where spin-orbit coupling ties
+            !> the two together. Without it they are independent groups and the SU(2) of
+            !> the rotation does not belong here: sympsi asks grp_k for those matrices
+            !> under the same condition. Time reversal flips the spin regardless, so the
+            !> antiunitary factor stays. Measured on hcp Co: putting the rotation in where
+            !> it does not belong costs 9.9e-01 with the moments at beta = pi/2, where a
+            !> spurious rotation mixes the two halves of the spinor the most, and 6.4e-02
+            !> with them along z, where it is only a phase on a pure state.
+            IF (l_spinors .AND. (noco%l_soc .OR. (.NOT. noco%l_noco))) THEN
                CALL wl_su2(sym, cell, jop, l_anti, usp)
+            ELSE IF (l_spinors .AND. l_anti) THEN
+               usp = CMPLX(0.0, 0.0)
+               usp(1, 2) = CMPLX(-1.0, 0.0)
+               usp(2, 1) = CMPLX(1.0, 0.0)
             ELSE
                usp = EYE2
             END IF
