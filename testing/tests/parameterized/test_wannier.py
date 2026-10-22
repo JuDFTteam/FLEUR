@@ -417,7 +417,12 @@ SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
               "WannPtSOC": (True, True, True, DBAND_TOL_SOC),
               "WannFeFM": (True, False, True, DBAND_TOL),
               "WannFeAFM": (True, False, True, DBAND_TOL),
-              "WannFeFMy": (True, False, True, DBAND_TOL)}
+              "WannFeFMy": (True, False, True, DBAND_TOL),
+              #> Spin-orbit on a magnetisation the group does not preserve: soc_sym
+              #> rejects eight of the sixteen operations and mapatom leaves their atom
+              #> map at zero, so the export refuses the matrices and names that reason.
+              "WannFeAFMSOC": (False, False, False, DBAND_TOL_SOC),
+              "WannFeAFMSOCOps": (False, False, False, DBAND_TOL_SOC)}
 
 
 def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,
@@ -445,7 +450,7 @@ def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_
         f"matrices, the opposite of what this system allows. Which runs can have them is "
         f"decided in wannierlib_main, which writes the reason to this file")
     if not expect_dband:
-        assert "non-collinear" in txt or "eigenvectors are real" in txt, (
+        assert "no atom map" in txt or "eigenvectors are real" in txt, (
             "d_band was refused without naming a reason, and the reason is the only thing "
             "that tells a refusal from a failure")
         return

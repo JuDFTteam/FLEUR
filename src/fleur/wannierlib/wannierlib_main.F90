@@ -111,7 +111,7 @@ CONTAINS
       TYPE(t_wgauge_domains) :: domains
       TYPE(t_wl_kstar) :: kstar        ! k-point stars, for the .dmn and the symmetrizer
       COMPLEX, ALLOCATABLE :: dband(:, :, :, :)   ! the group on the bands, when it can be had
-      LOGICAL :: l_dband, l_realph, l_tr
+      LOGICAL :: l_dband, l_realph, l_map, l_tr
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       CHARACTER(LEN=6) :: spin_sfx
@@ -232,26 +232,19 @@ CONTAINS
             !> operation multiplies each coefficient by exp(-2.pi.i.(k+G).tau), which a real
             !> array cannot hold. Where tau vanishes the phase is 1 and a real basis is no
             !> obstacle, so the test is on tau and not on the lattice. The other is
-            !> non-collinear magnetism, where the rotation is written but not yet right.
-            !> The plumbing is in place and measured: the stacked record is carried whole
-            !> because calc_abc builds a local spin direction out of BOTH halves of it, the
-            !> spin rotation goes into the eigenvector before the coefficients are rebuilt
-            !> rather than into the overlap afterwards, each direction reads its own radial
-            !> set, and the rule carries the frame factor calc_abc's own line dictates. On
-            !> Mn3Ir, whose four moments sit at 120 degrees and out of plane, the identity
-            !> comes out at 2.7e-14. What is still red there is the rotation of the other
-            !> operations: no leading band set closes, and | D D^+ - 1 | is 9.97e-01. The
-            !> identity compares a state with itself, so a clean identity places the fault
-            !> in the per-operation rotation and not in the rebuild.
+            !> an operation that is not in the group at all. mapatom leaves
+            !> sym%mapped_atom at zero wherever soc_sym rejected an operation as
+            !> incompatible with the spin quantisation axis, so a zero there is FLEUR
+            !> saying the group is smaller than sym%nop under spin-orbit. The stars and the
+            !> little groups are built over sym%nop, so matrices taken over all of them
+            !> would represent operations that are not symmetries. They are refused until
+            !> the export restricts itself to that subgroup.
             !>
-            !> Fe cannot settle it either way. Its moments lie along z, which is a COLLINEAR
-            !> magnet driven through the non-collinear machinery: every spin frame is real
-            !> and diagonal, so both placements of a conjugation agree and the identity is
-            !> green whatever the frames do. Until a real non-collinear magnet is at the
-            !> rounding the matrices are refused, because the rule OVERWRITES the orders
-            !> carrying a local orbital and a wrong one there is invisible downstream.
-            !> Spin-orbit on its own is green: one potential serves both components, one
-            !> frame the crystal, and the 2x2 is the one wl_su2 builds.
+            !> Non-collinear magnetism with spin-orbit is not itself an obstacle. Measured
+            !> on hcp Co with the moments along z, over all twelve operations,
+            !> | D D^+ - 1 | comes out at 2.2e-14; with the moments in plane the two
+            !> operations that preserve the magnetisation give 2.5e-14 and the other ten
+            !> are not symmetries of that state.
             !>
             !> The decision is taken here instead of inside the export, so that a run which
             !> cannot have d_band still gets the stars and the group; the file carries
@@ -261,7 +254,9 @@ CONTAINS
             !> eigenvectors turned out to be. Rebuilding it from sym%invs was tried and came
             !> out FALSE for diamond, whose eigenvectors are real.
             l_realph = input%l_real .AND. ANY(ABS(sym%tau(:, :sym%nop)) > 1e-12)
-            l_dband = (.NOT. l_realph) .AND. (.NOT. (noco%l_noco .AND. noco%l_soc))
+            l_map = ALLOCATED(sym%mapped_atom)
+            IF (l_map) l_map = ALL(sym%mapped_atom(:sym%nop, :) > 0)
+            l_dband = (.NOT. l_realph) .AND. l_map
             IF (l_dband) THEN
                CALL wl_build_dband(kstar, manifold, atoms, cell, input, kpts, sym, noco, &
                                    nococonv, enpara, vtot, stars, fmpi, radfun, eig_id, &
@@ -269,8 +264,9 @@ CONTAINS
             ELSE IF (fmpi%irank == 0) THEN
                WRITE (oUnit, '(/,a)') &
                   "Wannier90/WannierBerri symmetry export: d_band NOT written"
-               IF (noco%l_noco) &
-                  WRITE (oUnit, '(a)') "  the magnetisation is non-collinear"
+               IF (.NOT. l_map) &
+                  WRITE (oUnit, '(a)') &
+                  "  an operation has no atom map, so it is not in the group"
                IF (l_realph) &
                   WRITE (oUnit, '(a)') &
                   "  the eigenvectors are real and an operation has tau /= 0"
