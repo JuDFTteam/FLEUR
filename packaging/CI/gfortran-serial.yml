@@ -1,20 +1,3 @@
-build-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-  stage: build
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF $FLEUR_CI_FEATURE_OPTIONS
-    - ./packaging/CI/check-configured-features.sh build.serial
-    - cd build.serial
-    - make -j 2
-  artifacts:
-    paths:
-      - build.serial
-    expire_in: 12h
-  rules:
-    - if: $CI_TASKS =~ /serial/    
-    - if: $CI_TASKS =~ /all/    
-  
 build-gfortran-hdf5-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
@@ -32,13 +15,13 @@ build-gfortran-hdf5-serial:
       - if: $CI_TASKS =~ /serial/    
       - if: $CI_TASKS =~ /all/    
 
-test-gfortran-serial:
+test-gfortran-hdf5-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   needs: 
-    - build-gfortran-serial
+    - build-gfortran-hdf5-serial
   variables:
-    BUILD_FOLDER: build.serial
+    BUILD_FOLDER: build
   rules:
     - if: $CI_TASKS =~ /serial/    
     - if: $CI_TASKS =~ /all/    
@@ -61,7 +44,7 @@ build-gfortran-hdf5-debug:
       - if: $CI_TASKS =~ /debug/    
       - if: $CI_TASKS =~ /all/    
 
-test-gfortran-serial-debug:
+test-gfortran-serial-hdf5-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   needs: 

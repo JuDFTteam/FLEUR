@@ -10,7 +10,7 @@ build-gfortran-hdf5:
   script:
     - cd $CI_PROJECT_DIR
     - VERBOSE=1 FLEUR_INCLUDEDIR="/usr/include /usr/include/hdf5/openmpi" FLEUR_LIBRARIES="-L/usr/lib/x86_64-linux-gnu/hdf5/openmpi;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi $FLEUR_CI_FEATURE_OPTIONS
-    - ./packaging/CI/check-configured-features.sh build true
+    - ./packaging/CI/check-configured-features.sh build false
     - cd build
     - make -j 2
   rules:
