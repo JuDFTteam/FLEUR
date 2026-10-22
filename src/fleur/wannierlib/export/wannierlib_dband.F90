@@ -54,6 +54,10 @@ MODULE m_wannierlib_dband
    PRIVATE
    PUBLIC :: wl_build_dband
 
+   !> The 2x2 identity, for the places where the spin halves do not mix.
+   COMPLEX, PARAMETER :: EYE2(2, 2) = RESHAPE([CMPLX(1.0, 0.0), CMPLX(0.0, 0.0), &
+                                               CMPLX(0.0, 0.0), CMPLX(1.0, 0.0)], [2, 2])
+
    !> The radial integrals of the b = 0 kernel, one table per LOCAL spin direction.
    !>
    !> One table was enough while one potential served both components, which is a
@@ -221,8 +225,7 @@ CONTAINS
             IF (l_spinors) THEN
                CALL wl_su2(sym, cell, jop, l_anti, usp)
             ELSE
-               usp = CMPLX(0.0, 0.0)
-               usp(1, 1) = CMPLX(1.0, 0.0)
+               usp = EYE2
             END IF
 
             IF (l_stack) THEN
@@ -291,19 +294,14 @@ CONTAINS
                      fspin(:, :, j) = MATMUL(MATMUL(amt, usp), CONJG(TRANSPOSE(amt)))
                   END IF
                ELSE
-                  fspin(1, 1, j) = CMPLX(1.0, 0.0)
-                  fspin(2, 2, j) = CMPLX(1.0, 0.0)
+                  fspin(:, :, j) = EYE2
                END IF
             END DO
             CALL wl_rotate_mt(atoms, sym, jop, l_anti, kimg, dwgn, n_comp, fspin, &
                               abc_irr, abc_rot, dev_u, dev_a, gap_lo)
             !> The spin rotation is inside the eigenvector where the record was stacked, so
             !> what is left to contract with is the identity.
-            IF (l_stack) THEN
-               usp = CMPLX(0.0, 0.0)
-               usp(1, 1) = CMPLX(1.0, 0.0)
-               usp(2, 2) = CMPLX(1.0, 0.0)
-            END IF
+            IF (l_stack) usp = EYE2
 
             !> The blocks the contraction actually reads, and no others: a diagonal 2x2
             !> leaves half of them out, and a stacked record leaves the off-diagonal ones
@@ -484,9 +482,6 @@ CONTAINS
       END DO
    END SUBROUTINE wl_rotate_coeffs
 
-   !> The two properties that hold whatever the convention, so that a run says whether the
-   !> table is worth writing without a reader on the other side: unitarity, and that the
-   !> identity came out the identity.
    !> The muffin-tin coefficients of the rotated state, by the rotation rule instead of from
    !> the rotated eigenvector.
    !>
@@ -534,7 +529,7 @@ CONTAINS
       TYPE(t_abc), INTENT(INOUT) :: dst(:, :)
       REAL, INTENT(INOUT) :: dev_u, dev_a, gap
 
-      INTEGER :: n, na, nb, ia, ja, l, j, lm1, lm2, nord, m, is, is2
+      INTEGER :: n, na, nb, ia, ja, l, j, lm1, lm2, nord, m, is, is2, nuc, nlm, nu
       LOGICAL :: l_lo
       REAL :: glat(3)
       COMPLEX :: ph
@@ -545,7 +540,17 @@ CONTAINS
          hint="sym%mapped_atom is filled by mapatom; this build left it out", &
          calledby="wl_rotate_mt")
 
+      !> Sized once for the largest type and used in slices, rather than allocated inside
+      !> the loop over l and the radial orders: the shapes only shrink from here.
+      nu = 0
       DO n = 1, atoms%ntype
+         nu = MAX(nu, SIZE(src(1, n)%cof, 1))
+      END DO
+      ALLOCATE (rot(nu, 2*atoms%lmaxd + 1, ncomp), blk(nu, 2*atoms%lmaxd + 1))
+      ALLOCATE (tflip(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd))
+
+      DO n = 1, atoms%ntype
+         nuc = SIZE(src(1, n)%cof, 1)
          DO na = 1, atoms%neq(n)
             ia = atoms%firstAtom(n) + na - 1
             ja = sym%mapped_atom(jop, ia)
@@ -566,6 +571,7 @@ CONTAINS
             DO l = 0, atoms%lmax(n)
                lm1 = l**2
                lm2 = l*(l + 2)
+               nlm = lm2 - lm1 + 1
                nord = MIN(src(1, n)%n_r(l), SIZE(src(1, n)%cof, 3))
                !> Whether this l can be controlled at all. A local orbital does not merely
                !> add an order of its own: abclocdn feeds its coefficient back into the A
@@ -578,70 +584,67 @@ CONTAINS
                   !> The conjugation itself, in the lm basis. conj(Y_lm) = (-1)^m Y_l,-m,
                   !> so conjugating the state is not conjugating its coefficients: m flips
                   !> and the sign rides along.
-                  IF (ALLOCATED(tflip)) DEALLOCATE (tflip)
-                  ALLOCATE (tflip(-l:l, -l:l), source=CMPLX(0.0, 0.0))
+                  tflip(-l:l, -l:l) = CMPLX(0.0, 0.0)
                   DO m = -l, l
                      tflip(-m, m) = CMPLX((-1.0)**m, 0.0)
                   END DO
                END IF
                DO j = 1, nord
-                  IF (ALLOCATED(rot)) DEALLOCATE (rot)
-                  ALLOCATE (rot(SIZE(src(1, n)%cof, 1), lm2 - lm1 + 1, ncomp))
                   DO is = 1, ncomp
-                  IF (l_anti) THEN
-                     !> The (-1)^l is the i**l that abcof leaves in these coefficients,
-                     !> turned into (-i)**l by the conjugation -- the same factor
-                     !> rot_to_unrotated carries as ifac**l. Measured on Pt, which has
-                     !> time reversal: 2.4e-15 this way, and 1.703 for every one of the
-                     !> seven other placements of the flip, of the two signs and of the
-                     !> conjugate of D. The l = 0 block passes under all of them, which is
-                     !> what says the atom map and the phase are not the question here.
-                     rot(:, :, is) = (-1.0)**l &
-                        *MATMUL(MATMUL(CONJG(src(is, n)%cof(:, lm1:lm2, j, na)), &
-                                       CONJG(dwgn(-l:l, -l:l, l, jop))), tflip)
-                  ELSE
-                     !> d_wgn goes in as it is, neither transposed nor conjugated. Measured
-                     !> against the rebuilt coefficients on wurtzite AlN, where a proper
-                     !> operation has a symmetric block and only an improper one tells the
-                     !> four placements apart: D passes everywhere, while the transpose and
-                     !> the conjugate each fail on one half of the group. t_abc%rotate and
-                     !> rot_to_unrotated conjugate because they go the other way, from the
-                     !> local frame to the global one; and the parity of an improper
-                     !> operation is already inside d_wgn, so it is not added here.
-                     rot(:, :, is) = MATMUL(src(is, n)%cof(:, lm1:lm2, j, na), &
-                                            dwgn(-l:l, -l:l, l, jop))
-                  END IF
+                     IF (l_anti) THEN
+                        !> The (-1)^l is the i**l that abcof leaves in these coefficients,
+                        !> turned into (-i)**l by the conjugation -- the same factor
+                        !> rot_to_unrotated carries as ifac**l. Measured on Pt, which has
+                        !> time reversal: 2.4e-15 this way, and 1.703 for every one of the
+                        !> seven other placements of the flip, of the two signs and of the
+                        !> conjugate of D. The l = 0 block passes under all of them, which is
+                        !> what says the atom map and the phase are not the question here.
+                        rot(:nuc, :nlm, is) = (-1.0)**l &
+                           *MATMUL(MATMUL(CONJG(src(is, n)%cof(:, lm1:lm2, j, na)), &
+                                          CONJG(dwgn(-l:l, -l:l, l, jop))), tflip(-l:l, -l:l))
+                     ELSE
+                        !> d_wgn goes in as it is, neither transposed nor conjugated. Measured
+                        !> against the rebuilt coefficients on wurtzite AlN, where a proper
+                        !> operation has a symmetric block and only an improper one tells the
+                        !> four placements apart: D passes everywhere, while the transpose and
+                        !> the conjugate each fail on one half of the group. t_abc%rotate and
+                        !> rot_to_unrotated conjugate because they go the other way, from the
+                        !> local frame to the global one; and the parity of an improper
+                        !> operation is already inside d_wgn, so it is not added here.
+                        rot(:nuc, :nlm, is) = MATMUL(src(is, n)%cof(:, lm1:lm2, j, na), &
+                                                     dwgn(-l:l, -l:l, l, jop))
+                     END IF
                   END DO
                   DO is = 1, ncomp
-                  IF (ALLOCATED(blk)) DEALLOCATE (blk)
-                  ALLOCATE (blk(SIZE(rot, 1), SIZE(rot, 2)), source=CMPLX(0.0, 0.0))
-                  DO is2 = 1, ncomp
-                     blk = blk + fspin(is, is2, n)*rot(:, :, is2)
-                  END DO
-                  blk = ph*blk
-                  IF (l_lo) THEN
-                     !> How far the rebuild was where the rule overrode it. Reported, not
-                     !> asserted: it is the evidence that the override did something. A
-                     !> number down at the rounding would say the local orbital rows never
-                     !> reached these coefficients, and then this whole branch is a no-op
-                     !> dressed as a fix.
-                     gap = MAX(gap, MAXVAL(ABS(blk - dst(is, n)%cof(:, lm1:lm2, j, nb))))
-                     dst(is, n)%cof(:, lm1:lm2, j, nb) = blk
-                  ELSE IF (l_anti) THEN
-                     !> The control: this channel's orders are also in dst, rebuilt from
-                     !> the rotated eigenvector by the routine that owns that job.
-                     dev_a = MAX(dev_a, MAXVAL(ABS(blk - dst(is, n)%cof(:, lm1:lm2, j, nb))))
-                  ELSE
-                     dev_u = MAX(dev_u, MAXVAL(ABS(blk - dst(is, n)%cof(:, lm1:lm2, j, nb))))
-                  END IF
-                  DEALLOCATE (blk)
+                     blk(:nuc, :nlm) = CMPLX(0.0, 0.0)
+                     DO is2 = 1, ncomp
+                        blk(:nuc, :nlm) = blk(:nuc, :nlm) &
+                                          + fspin(is, is2, n)*rot(:nuc, :nlm, is2)
+                     END DO
+                     blk(:nuc, :nlm) = ph*blk(:nuc, :nlm)
+                     IF (l_lo) THEN
+                        !> How far the rebuild was where the rule overrode it. Reported, not
+                        !> asserted: it is the evidence that the override did something. A
+                        !> number down at the rounding would say the local orbital rows never
+                        !> reached these coefficients, and then this whole branch is a no-op
+                        !> dressed as a fix.
+                        gap = MAX(gap, MAXVAL(ABS(blk(:nuc, :nlm) &
+                                                  - dst(is, n)%cof(:, lm1:lm2, j, nb))))
+                        dst(is, n)%cof(:, lm1:lm2, j, nb) = blk(:nuc, :nlm)
+                     ELSE IF (l_anti) THEN
+                        !> The control: this channel's orders are also in dst, rebuilt from
+                        !> the rotated eigenvector by the routine that owns that job.
+                        dev_a = MAX(dev_a, MAXVAL(ABS(blk(:nuc, :nlm) &
+                                                      - dst(is, n)%cof(:, lm1:lm2, j, nb))))
+                     ELSE
+                        dev_u = MAX(dev_u, MAXVAL(ABS(blk(:nuc, :nlm) &
+                                                      - dst(is, n)%cof(:, lm1:lm2, j, nb))))
+                     END IF
                   END DO
                END DO
             END DO
          END DO
       END DO
-      IF (ALLOCATED(tflip)) DEALLOCATE (tflip)
-      IF (ALLOCATED(rot)) DEALLOCATE (rot)
    END SUBROUTINE wl_rotate_mt
 
    !> The 2x2 the spin half of a symmetry operation contributes to the band table.
@@ -672,14 +675,6 @@ CONTAINS
       REAL :: alpha, beta, gamma
       COMPLEX :: d(2, 2), sy(2, 2)
 
-      !> The spin half of the operation, as the adjoint of the Wigner d of the Euler
-      !> angles: d_wigner reads its angles off the INVERSE rotation while euler reads
-      !> them off the direct one, so only the adjoint makes the two halves agree. An
-      !> antiunitary operation carries -i*sigma_y on top, which swaps the components.
-      !>
-      !> The choice is invisible on most operations: for a diagonal U the relative
-      !> phase is real at beta = 0 and 180 degrees, so conjugating changes nothing and
-      !> the wrong convention still passes. Only a 90 degree rotation sees it.
       CALL euler(jop, sym, cell, alpha, beta, gamma)
       d(1, 1) = COS(beta/2.0)*EXP(CMPLX(0.0, -(alpha + gamma)/2.0))
       d(1, 2) = -SIN(beta/2.0)*EXP(CMPLX(0.0, -(alpha - gamma)/2.0))
@@ -726,6 +721,9 @@ CONTAINS
       END DO
    END SUBROUTINE wl_group_table
 
+   !> The properties that hold whatever the convention, so that a run says whether the
+   !> table is worth writing without a reader on the other side: unitarity, that the
+   !> identity came out the identity, and the group product table.
    SUBROUTINE wl_report_dband(star, sym, dband)
       USE m_types_sym
       TYPE(t_wl_kstar), INTENT(IN) :: star
