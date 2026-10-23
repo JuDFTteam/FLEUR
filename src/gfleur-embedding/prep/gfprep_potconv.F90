@@ -182,6 +182,14 @@ CONTAINS
             nl = nl + w*kl**2
          END DO
       END DO
+      !harmonics of different l are orthogonal: the quadrature leaves only rounding
+      !noise (~1e-16) in these entries, which would pollute the high-l components
+      !of the density (the Poisson kernel r^(-l-1) amplifies them enormously)
+      DO lh = 0, sl%nlh(nsl)
+         DO it = 0, sb%nlh(nsb)
+            IF (sl%llh(lh, nsl) /= sb%llh(it, nsb)) tm(lh, it) = 0.0
+         END DO
+      END DO
       !norm of the bulk harmonics captured by the layer harmonics
       ALLOCATE (proj(0:sb%nlh(nsb)))
       DO lh = 0, sb%nlh(nsb)

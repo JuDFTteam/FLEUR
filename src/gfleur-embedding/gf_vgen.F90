@@ -174,6 +174,7 @@ CONTAINS
         ALLOCATE(vpw(ld%stars%ng3,jspins))
         ALLOCATE(rho(jmtd,0:nlhd,ld%fi%atoms%ntype,jspins))
         ALLOCATE(qpw(ld%stars%ng3,jspins))
+        vr = 0.0; vpw = 0.0; rho = 0.0; qpw = 0.0
 
         IF (gmpi%pe0) WRITE (oUnit,FMT = 8000)
 8000    FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)

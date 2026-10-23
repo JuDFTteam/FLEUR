@@ -39,9 +39,10 @@ modes that use the converted potential or perform charge self-consistency.
   run directory, as for a normal FLEUR calculation.
 
 The layer XML files are the source of the electronic-structure settings:
-basis parameters, local orbitals, LDA+U, non-collinearity, spin-orbit
-coupling, and the exchange-correlation potential are configured there, not in
-`gf_inp`.  All layers must have the same in-plane lattice, two-dimensional
+basis parameters, local orbitals and the exchange-correlation potential are
+configured there, not in `gf_inp`.  (LDA+U, spin-orbit coupling and
+non-collinearity are not supported by the Green's-function kernels, see
+below.)  All layers must have the same in-plane lattice, two-dimensional
 k-point set, number of spin channels, and non-collinear setting.
 
 ## Minimal `gf_inp`
@@ -154,6 +155,68 @@ HDF5 embedding-potential files from such a calculation:
 The saved embedding potential can only be reused with compatible
 embedding-plane geometry, in-plane lattice, two-dimensional reciprocal-vector
 basis, k-point mesh, spin treatment, and energy grid.
+
+## Lead embedding potentials from a complex band structure
+
+The embedding potentials of the left and right lead come from a complex band
+structure (CBS) calculation of one lattice period of the lead, run as a
+separate `gfleur` calculation with `nlayers=1` (one period = one layer, cut
+with `gfprep ... planes_per_layer=<planes of the period>`):
+
+```fortran
+&MODE tmat=t, gmat=t /
+&CBSMODE cbs=t /
+&SC iter=1 /
+```
+
+together with a `gf_io` whose first line is `default`, and a `gf_en` with the
+same energies as the later calculation.  The run writes `embpot11.hdf` (left
+lead) and `embpotN2.hdf` (right lead), the CBS (`CBS_eigenvalues.<spin>`,
+`CBS_bloch.<spin>`, or `CBS.hdf` with `hdfio=t`) and, in a serial run with
+`gf_cdn.hdf` present, the `Boundary` group needed for charge calculations.
+Notes:
+
+* Use the *primitive* period as lead.  The transfer matrix of a thick period
+  loses the evanescent states numerically and gives inaccurate embedding
+  potentials (a four-plane Cu period gave wrong stacks, the two-plane
+  period is exact).
+* Layers thinner than the muffin-tin diameter (one Cu plane, 3.4 a.u.) are
+  less accurate than thicker ones.
+* The lead and the stack must be prepared with the same bulk calculation,
+  Gmax scale and `kgrid`, and use the same `gf_en`.
+
+## Transport
+
+Transport needs `addemb=t`, `iter=1` and a `gf_io` with two read handles for
+the leads, left at `region=1, side=1`, right at `region=<nlayers>, side=2`:
+
+```fortran
+&MODE gmat=t, curr=3 /
+&EMB addemb=t /
+&SC iter=1 /
+```
+
+`curr=-1` (Landauer from the combined T matrix) is exact for `nlayers=1`; for
+stacks it multiplies the raw layer T matrices, which loses accuracy, so use
+`curr=3`, `4` or `16` (propagation of the embedding potential, `16` is the
+cheapest) for `nlayers>1`.
+
+`transcurrent` (`transcurrent.hdf` with `hdfio=t`) lists the transmission
+for every k of the full 2D Brillouin zone, columns `spin, kx, ky, E, T...`.
+Both edges of the grid (`k=-0.5` and `0.5`) are listed, so the conductance
+`G(E)` in units of `e^2/h` is the average of `T` over the `k` points of one
+energy with a weight of 1/2 for each coordinate that equals ±0.5 (a point
+with both coordinates on the edge has weight 1/4).
+
+For a perfect crystal, `T` at every k equals the number of right-moving Bloch
+states of the CBS, which is a useful test.
+
+## Not supported
+
+* Film (slab) input for `gfprep` and surface/vacuum embedding.
+* Non-collinear calculations in `gfprep`.
+* Spin-orbit coupling, LDA+U and Hubbard-1 are written into the layer inputs
+  by `gfprep` but are not used by the Green's-function kernels.
 
 ## Running
 
