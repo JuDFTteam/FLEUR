@@ -37,20 +37,25 @@
       !>
       !<-- Locals
       TYPE(t_atoms) :: atoms_loc
+      TYPE(t_input) :: input_loc
       LOGICAL       :: l_no_core
       !>
       l_no_core = .FALSE.
       IF (PRESENT(no_core)) l_no_core = no_core
+      !The layers are films for FLEUR, but the layered Coulomb solver needs the
+      !plain pseudo charge: no slab neutralisation against the vacuum charge.
+      input_loc = ld%fi%input
+      input_loc%film = .FALSE.
 
       IF (l_no_core) THEN
          atoms_loc = ld%fi%atoms
          atoms_loc%zatom = 0.0
          CALL psqpw(fmpi,atoms_loc,ld%sphhar,ld%stars,ld%fi%vacuum,      &
-     &              ld%fi%cell,ld%fi%input,ld%fi%sym,den,ispin,          &
+     &              ld%fi%cell,input_loc,ld%fi%sym,den,ispin,          &
      &              .FALSE.,den%potdenType,psq)
       ELSE
          CALL psqpw(fmpi,ld%fi%atoms,ld%sphhar,ld%stars,ld%fi%vacuum,    &
-     &              ld%fi%cell,ld%fi%input,ld%fi%sym,den,ispin,          &
+     &              ld%fi%cell,input_loc,ld%fi%sym,den,ispin,          &
      &              .FALSE.,den%potdenType,psq)
       ENDIF
       END SUBROUTINE
