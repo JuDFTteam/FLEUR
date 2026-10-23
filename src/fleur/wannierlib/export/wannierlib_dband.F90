@@ -210,13 +210,26 @@ CONTAINS
             rsign = MERGE(-1, 1, l_anti)
             ginv = sym%mrot(:, :, sym%invtab(jop))
             rrot = rsign*TRANSPOSE(REAL(ginv))
-            kimg = MATMUL(rrot, kpts%bkf(:, kirr))
+            !> AGAINST THE BASIS'S OWN k, NOT kpts%bkf. The two disagree: bkf holds the
+            !> mesh in [0,1) while lapw%init builds the basis about the same point written
+            !> in [-1/2,1/2), so for a k such as 2/3 they differ by a lattice vector. The
+            !> G labels below belong to the basis, so folding against bkf puts that lattice
+            !> vector into g0 and the permutation lands one shell away. Every mesh of the
+            !> test set is 2x2x2, where the two conventions agree at 0 and at 1/2 and the
+            !> mistake cannot show; an odd mesh is what brings it out -- measured on a 3x3x3
+            !> mesh, where 58 of 148 vectors had no image.
+            kimg = MATMUL(rrot, lapw_irr%bkpt)
             !> Rotating lands on the image point up to a reciprocal lattice vector. Folding
             !> it away here leaves both sides at one k and spares the overlap a gb. The
             !> label moves WITH g0, not against it: the physical vector k'+G' rewritten
             !> about bkf(jk) is bkf(jk) + (G' + g0). The other sign puts the vector 2*g0
             !> away and wl_gmap stops the run, which is how this was found.
-            g0 = NINT(kimg - kpts%bkf(:, jk))
+            g0 = NINT(kimg - lapw_img%bkpt)
+            !> The fold has to be exact: a rotated k that is not the image point up to a
+            !> lattice vector means the stars and the basis disagree about which k this is.
+            IF (ANY(ABS(kimg - lapw_img%bkpt - g0) > 1e-9)) CALL juDFT_error( &
+               "wannierlib: a rotated k-point is not its image up to a lattice vector", &
+               calledby="wl_build_dband")
 
             CALL wl_gmap(lapw_irr, lapw_img, ginv, g0, rsign, perm)
             !> The orbital half, component by component. One permutation of reciprocal

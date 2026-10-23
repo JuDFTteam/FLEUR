@@ -117,6 +117,14 @@ EXPECTED_OMEGA_I = {
     "WannFeAFMSOCOps": 16.719550182,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
                                       # only coverage of the spin operator on the noco branch.
                                       # Same system as WannFeAFMSOC, so it moved with it.
+    # Same system, same mesh and same reference as WannFeAFMSOC: the only difference is
+    # that its k-point list is written in the [-1/2,1/2) convention rather than [0,1).
+    # gen_bz folds kpts%bkf into [0,1) while lapw%bkpt keeps the numbers as the file spells
+    # them, so the two disagree by a lattice vector exactly when the list is written this
+    # way, and a rotation folded against the wrong one lands in the wrong G shell. Every
+    # other mesh here is asked for with #gamma@grid=, which writes [0,1) and cannot show it.
+    # Omega_I has to come out unchanged: how a k-point is spelled is not physics.
+    "WannFeAFMSOCKfold": 16.719550182,
 }
 OMEGA_I_TOL = 1.0e-5
 
@@ -425,7 +433,8 @@ SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
               #> back as the antiunitary half: these two are the only cases where time
               #> reversal is paired with a set of its own rather than with every operation.
               "WannFeAFMSOC": (True, True, True, DBAND_TOL_SOC),
-              "WannFeAFMSOCOps": (True, True, True, DBAND_TOL_SOC)}
+              "WannFeAFMSOCOps": (True, True, True, DBAND_TOL_SOC),
+              "WannFeAFMSOCKfold": (True, True, True, DBAND_TOL_SOC)}
 
 
 def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,

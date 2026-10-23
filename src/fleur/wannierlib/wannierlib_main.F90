@@ -65,13 +65,15 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
    PUBLIC :: wannierlib_main
 CONTAINS
 
-   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum)
+   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts_in, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_input), INTENT(IN) :: input
-      TYPE(t_kpts), INTENT(IN) :: kpts
+      TYPE(t_kpts), INTENT(IN) :: kpts_in
+      !> The k-points the whole library works with, spelled one way. See wl_align_kpts.
+      TYPE(t_kpts) :: kpts
       TYPE(t_sym), INTENT(IN) :: sym
       TYPE(t_noco), INTENT(IN) :: noco
       TYPE(t_nococonv), INTENT(IN) :: nococonv
@@ -123,6 +125,10 @@ CONTAINS
       ! A.1: input%l_real stays TRUE with inversion even under SOC (n_denmat=0), and
       ! reading a complex spinor into a real buffer kills the imaginary part of the MMN.
       spin12 = (/'WF1', 'WF2'/)
+
+      !> Before anything builds a basis: one spelling of each k-point from here on.
+      kpts = kpts_in
+      CALL wl_align_kpts(kpts)
 
       !> The factory cache is module state, and what it holds belongs to whoever ran last.
       !> Nothing guarantees they cleared it: secvar_soc does so on entry and on exit, this
@@ -384,6 +390,35 @@ CONTAINS
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
 
    END SUBROUTINE wannierlib_main
+
+   !> One spelling of each k-point, for every basis the library builds.
+   !>
+   !> t_lapw%init takes its k-point from kpts%bk, which holds the numbers as the k-point
+   !> list spells them, while gen_bz folds kpts%bkf into [0,1). A list written in the
+   !> [-1/2,1/2) convention -- which is what inpgen writes unless the mesh is asked for
+   !> with #gamma@grid= -- therefore has the basis built about one spelling while the
+   !> mesh, the b-vector table, the A and M matrices and Wannier90's own k-point list all
+   !> use the other. The two differ by a lattice vector, so every reciprocal vector matched
+   !> between two bases lands one shell away. Nothing aborts: WannFeAFM simply wannierises
+   !> to Omega_I = 30.582 instead of 16.719, and WannPt to 6.868 instead of 4.841.
+   !>
+   !> Both spellings name the same point, so bk takes bkf's, once, before the first basis
+   !> is built. Where they are not the same point there is nothing to choose between and
+   !> the library says so rather than pairing them wrongly.
+   SUBROUTINE wl_align_kpts(kpts)
+      TYPE(t_kpts), INTENT(INOUT) :: kpts
+      INTEGER :: ik, nk
+      REAL :: d(3)
+
+      nk = MIN(kpts%nkpt, kpts%nkptf)
+      DO ik = 1, nk
+         d = kpts%bkf(:, ik) - kpts%bk(:, ik)
+         IF (ANY(ABS(d - ANINT(d)) > 1e-9)) CALL juDFT_error( &
+            "wannierlib: kpts%bk and kpts%bkf do not hold the same k-points", &
+            calledby="wl_align_kpts")
+      END DO
+      kpts%bk(:, :nk) = kpts%bkf(:, :nk)
+   END SUBROUTINE wl_align_kpts
 
    !> Which rank owns each global k-point.
    !>
