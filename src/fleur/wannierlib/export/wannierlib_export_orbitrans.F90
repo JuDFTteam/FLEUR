@@ -222,6 +222,9 @@ CONTAINS
       END DO
    END SUBROUTINE orbitrans_count_wann_per_atom
 
+   !> One line per atom, in atom order, with how many Wannier functions sit on it. It is
+   !> what lets orbitrans cut the Wannier index into per-atom blocks, and the file has to
+   !> exist even where every atom carries the same number.
    SUBROUTINE orbitrans_write_n_wann_atom(nw_atom)
       INTEGER, INTENT(IN) :: nw_atom(:)
       INTEGER :: iu, ia

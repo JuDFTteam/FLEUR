@@ -102,11 +102,14 @@ CONTAINS
         anchor_slot = 0
     END SUBROUTINE reset_k_cache
 
+    !> Let the anchored k-point be overwritten again. Cheap to call more than once.
     SUBROUTINE matrix_element_release_anchor()
-        !> Let the anchored k-point be overwritten again. Cheap to call more than once.
         anchor_slot = 0
     END SUBROUTINE matrix_element_release_anchor
 
+    !> Give back everything a slot holds and mark it empty, so the next k-point can take it.
+    !> The identifying fields go to values no request can match, which is what keeps a slot
+    !> that was emptied from answering for the k-point it used to hold.
     SUBROUTINE clear_slot(sl)
         TYPE(t_k_slot), INTENT(INOUT) :: sl
         IF (ALLOCATED(sl%zmat))        DEALLOCATE(sl%zmat)
@@ -118,6 +121,10 @@ CONTAINS
         sl%stamp  = 0
     END SUBROUTINE clear_slot
 
+    !> Whether a slot already holds the states a request asks for: same eig file, same
+    !> k-point, same number of records, and the same band selection. The selection is part of
+    !> the identity and not a detail: a slot filled for every band does not answer a request
+    !> for a subset, because what it holds is indexed by the position in the subset.
     LOGICAL FUNCTION slot_matches(sl, eig_id, ikpt, nrec, ev_list)
         TYPE(t_k_slot), INTENT(IN)    :: sl
         INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec

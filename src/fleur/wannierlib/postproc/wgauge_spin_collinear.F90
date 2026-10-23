@@ -48,6 +48,13 @@ CONTAINS
          SIZE(v_ch, 4), ') and the manifold wants (', nb, ',', nw, ',*,2)'
    END FUNCTION manifold_sizes
 
+   !> The spin operator over the collinear 2N basis, in real space, as rspauli.1.
+   !>
+   !> A collinear run solves two independent eigenproblems, so the operator that mixes them
+   !> cannot be built inside either pass: each channel contributes its own diagonal block
+   !> through its gauge, and the cross-spin overlap x0 carries the off-diagonal one. That is
+   !> why this runs once both wannierisations have finished and takes both gauges at once.
+   !> The k-sum is done on each rank's slice and reduced before anything is written.
    SUBROUTINE wgauge_rspauli_collinear(num_wann, x0, v_ch, cell, kpts, distk, fmpi)
       INTEGER, INTENT(IN) :: num_wann
       !> The cross-spin overlap <up|dn> on this rank's k-slice, in the Bloch basis:

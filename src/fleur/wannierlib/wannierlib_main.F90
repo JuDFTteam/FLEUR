@@ -14,6 +14,33 @@
 !>  own -- the k-point distribution, the per-k abc coefficients of the collinear channels,
 !>  the Wannier gauge, and the b-mesh -- so that adding an operator never touches this file.
 !--------------------------------------------------------------------------------
+!> CONVENTIONS THIS LIBRARY DEPENDS ON, and who owns each one.
+!>
+!> Every line below was measured, and every one of them is a place where two codes can agree
+!> in words and disagree in memory. Each stays written where it is enforced, because a
+!> convention stated far from its code stops being checked against it; this is the door to
+!> them, not a second copy.
+!>
+!>   k-point spelling     kpts%bk holds the numbers the k-point list spells, kpts%bkf the
+!>                        fold into [0,1). Made one here        -> wl_align_kpts
+!>   k under a rotation   a k vector transforms by the inverse transpose of mrot
+!>                                                              -> wl_build_dband
+!>   reciprocal folding   a G label belongs to the k its own basis was built at, so the
+!>                        fold is taken against lapw%bkpt       -> wl_build_dband
+!>   radial set           a component of a spinor IS a spin direction and carries that
+!>                        direction's radial functions          -> wl_build_dband
+!>   local spin frame     a^loc = transpose(A) z, A = conjg(nococonv%umat)
+!>                                                              -> wl_rotate_coeffs
+!>   spherical harmonics  conj(Y_lm) = (-1)^m Y_l,-m, so conjugating a state is not
+!>                        conjugating its coefficients          -> wl_rotate_mt
+!>   magnetisation        it is AXIAL: it transforms with det(R).R, not with R
+!>                                                              -> wl_build_ops
+!>   overlap kernel       the mmn kernel conjugates its SECOND argument, so what comes back
+!>                        is the conjugate of <a|O|b>           -> wl_build_dband
+!>   lattice vectors      they are the COLUMNS of cell%amat     -> wannierlib_export_orbitrans
+!>   units on disk        the structural files are in Bohr      -> wannierlib_export_orbitrans
+!>   operation index      an exported index counts the exported subgroup, never sym
+!>                                                              -> wannierlib_export_sym
 MODULE m_wannierlib_main
    USE m_juDFT
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
@@ -65,6 +92,14 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
    PUBLIC :: wannierlib_main
 CONTAINS
 
+   !> Wannierise this spin channel and write what the input asked for.
+   !>
+   !> One coarse pass over the k-mesh builds the matrix elements, Wannier90 is driven in
+   !> library mode to produce the gauge, and everything after that -- the exports, the
+   !> interpolation, the real-space operators -- is read off the gauge rather than recomputed.
+   !> Where the states are spinors one pass carries both spin directions; otherwise this runs
+   !> once per channel and the channels never meet, which is what wgauge_spin_collinear is
+   !> for.
    SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts_in, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
@@ -476,13 +511,5 @@ CONTAINS
          v_ch(:, :, ik, jspin) = MATMUL(u_opt(:, :, ik), u_matrix(:, :, ik))
       END DO
    END SUBROUTINE wannierlib_keep_gauge
-
-
-
-
-
-
-
-
 
 END MODULE m_wannierlib_main

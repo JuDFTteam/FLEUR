@@ -170,33 +170,31 @@ CONTAINS
    END SUBROUTINE wl_build_kstar
 
    !> The cartesian rotation of a lattice operation. x_cart = amat.x_frac is FLEUR's own
-   !> idiom, so R = amat.mrot.amat^-1; the inverse is built from the adjugate rather than read
-   !> off bmat, which carries a 2.pi and a transpose not worth depending on here. A lattice
-   !> operation is an isometry, so R comes out orthogonal, and that is checked rather than
-   !> assumed: it is the only thing that says the convention is the right way round.
+   !> idiom, so R = amat.mrot.amat^-1, and the inverse is read off bmat rather than built
+   !> here, for the reason the body gives. A lattice operation is an isometry, so R comes
+   !> out orthogonal, and that is checked rather than assumed: it is the only thing that
+   !> says the convention is the right way round.
    SUBROUTINE wl_rcart(cell, mrot, r, det)
       USE m_types_cell
+      USE m_constants, ONLY: tpi_const
       TYPE(t_cell), INTENT(IN) :: cell
       INTEGER, INTENT(IN) :: mrot(3, 3)
       REAL, INTENT(OUT) :: r(3, 3), det
 
-      REAL :: a(3, 3), ai(3, 3), da, p(3, 3)
+      REAL :: p(3, 3)
       INTEGER :: i
 
-      a = cell%amat
-      ai(1, 1) = a(2, 2)*a(3, 3) - a(2, 3)*a(3, 2)
-      ai(1, 2) = a(1, 3)*a(3, 2) - a(1, 2)*a(3, 3)
-      ai(1, 3) = a(1, 2)*a(2, 3) - a(1, 3)*a(2, 2)
-      ai(2, 1) = a(2, 3)*a(3, 1) - a(2, 1)*a(3, 3)
-      ai(2, 2) = a(1, 1)*a(3, 3) - a(1, 3)*a(3, 1)
-      ai(2, 3) = a(1, 3)*a(2, 1) - a(1, 1)*a(2, 3)
-      ai(3, 1) = a(2, 1)*a(3, 2) - a(2, 2)*a(3, 1)
-      ai(3, 2) = a(1, 2)*a(3, 1) - a(1, 1)*a(3, 2)
-      ai(3, 3) = a(1, 1)*a(2, 2) - a(1, 2)*a(2, 1)
-      da = a(1, 1)*ai(1, 1) + a(1, 2)*ai(2, 1) + a(1, 3)*ai(3, 1)
-      IF (ABS(da) < 1e-12) CALL juDFT_error( &
-         "wannierlib: the Bravais matrix is singular", calledby="wl_rcart")
-      r = MATMUL(a, MATMUL(REAL(mrot), ai/da))
+      !> The inverse is not computed here: cell%bmat is 2.pi times it. MEASURED on wurtzite
+      !> AlN, which is as far from a symmetric amat as a cell gets -- MATMUL(amat, bmat/2pi)
+      !> is the identity to 2e-16 while the same product against its transpose is off by
+      !> 1.4, so the two are not interchangeable and this is the one that holds.
+      !>
+      !> xas_cart_rotation_from_sym is the same expression and has carried it since June;
+      !> over the twelve operations of that cell the two agree to 3e-15. They are not one
+      !> routine because the gate below is what this caller needs and that one does not
+      !> have it, and because a shared one belongs beside euler in m_grp_k rather than in
+      !> either caller -- which is a change to code neither of them owns.
+      r = MATMUL(cell%amat, MATMUL(REAL(mrot), cell%bmat/tpi_const))
 
       p = MATMUL(r, TRANSPOSE(r))
       DO i = 1, 3
@@ -406,6 +404,11 @@ CONTAINS
       END DO
    END SUBROUTINE wl_check_kstar
 
+   !> Report the stars to the out file: the mesh, how many operations were usable, how many
+   !> of sym were dropped for having no atom map, whether time reversal joined them as a set
+   !> of its own, and how far the reduction went. This is the only place a reader of the out
+   !> file learns that operations were dropped at all, which is why the count that was NOT
+   !> used is printed beside the one that was.
    SUBROUTINE wl_report_kstar(star, nkpt3, nop_all)
       TYPE(t_wl_kstar), INTENT(IN) :: star
       INTEGER, INTENT(IN) :: nkpt3(3), nop_all

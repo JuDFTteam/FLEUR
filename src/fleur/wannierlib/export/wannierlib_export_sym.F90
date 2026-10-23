@@ -28,9 +28,26 @@
 !>   D_wann      not written, and it does not have to be: the consumer builds the
 !>               representation of the group on the Wannier functions from the projections,
 !>               which /proj declares. What only FLEUR knows is the table, not the matrices.
-!>   d_band      not computed yet. An identity written in its place would put a number in a
-!>               FLEUR output that is not a measurement of anything; the reader supplies the
-!>               placeholder, and it says so in its own name.
+!>
+!> WHAT IS WRITTEN, AND THE VERSION THAT SAYS SO. The root carries a layout version: 2 for
+!> the file without band representations, 3 for the file with them. A reader decides from
+!> that one integer instead of probing for a group.
+!>   /kstar       kirr, k2kirr, k2kirr_sym, weight, kirr2k -- the stars, and which operation
+!>                carries each k of the mesh to the representative of its own.
+!>   /spacegroup  mrot, tau, invtab, antiunitary -- the operations the stars were built
+!>                from. NOT all of sym; see the index rule below.
+!>   /proj        what every Wannier function was projected from, which is what lets a
+!>                reader build D_wann for itself.
+!>   /d_band      re and im of (num_bands, num_bands, nsym, nkirr). Version 3 only: a run
+!>                whose eigenvectors are real, or whose atom map came out empty, writes
+!>                version 2 and the group is simply not there.
+!>   /meta        kpoints, amat, bmat, taual.
+!>
+!> THE OPERATION INDEX IS THIS FILE'S OWN, not sym's. /spacegroup holds only the operations
+!> that survived the atom map, in the order they are written, and every index in /kstar and
+!> every third index of /d_band counts in THAT order. A reader that uses one of them to
+!> index sym reads a different operation, and nothing in the file would contradict it.
+!> /antiunitary says which kind each slot is: those marked 1 act on the conjugated state.
 !>
 !> The lattice IS written, although inp.xml carries it too and a second copy can disagree
 !> with the first. The reason is that a symmetry consumer has to use the cell the operations
@@ -54,6 +71,10 @@ MODULE m_wannierlib_export_sym
    PUBLIC :: wannierlib_export_sym
 CONTAINS
 
+   !> Write WF<spin>_sym.hdf: the stars, the group they were built from, what each Wannier
+   !> function was projected from and, where it could be computed, the group's action on the
+   !> bands. Rank 0 writes and the other ranks return at once. The module header above is the
+   !> layout, the version rule and the list of what is left out on purpose.
    SUBROUTINE wannierlib_export_sym(star, manifold, wannierize, atoms, cell, kpts, sym, &
                                     fmpi, jspin, l_spinors, dband)
       USE m_types_cell; USE m_types_kpts; USE m_types_sym; USE m_types_mpi

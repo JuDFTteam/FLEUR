@@ -689,6 +689,12 @@ CONTAINS
    !> An antiunitary operation carries -i sigma_y on top of that, which SWAPS the two
    !> components: what it contributes is built from the OFF-DIAGONAL overlap blocks, and
    !> no phase on the diagonal pair can stand in for it.
+   !>
+   !> xas_su2_from_sym builds a 2x2 from the same euler angles and has done since June, but
+   !> it is NOT this matrix: it is the one before the adjoint above, and it has no
+   !> antiunitary branch. The two therefore cannot stand in for each other, and which of
+   !> them a caller needs depends on how it pairs the spin half with d_wigner's orbital
+   !> one. That pairing is what was measured here; what XAS needs is for XAS to say.
    SUBROUTINE wl_su2(sym, cell, jop, l_anti, u)
       USE m_types_sym; USE m_types_cell
       USE m_grp_k, ONLY: euler
@@ -716,6 +722,21 @@ CONTAINS
       END IF
    END SUBROUTINE wl_su2
 
+   !> The multiplication table of the exported group, in this export's own slot indices.
+   !>
+   !> prod(i,j) is the slot carrying the rotation and translation of i applied after j, or
+   !> zero where that product left the group -- which it may, because only the operations
+   !> FLEUR could map are exported and a subgroup of a group need not be closed once some of
+   !> its members are struck out. Antiunitary composed with antiunitary is unitary, so the
+   !> product is looked for among the slots of the resulting kind rather than all of them.
+   !> What uses the table is the check that D(i.j) = D(i)D(j), which is the one statement
+   !> about d_band that a wrong but self-consistent set of matrices cannot satisfy.
+   !>
+   !> sym%multab is FLEUR's own table and mapatom builds it outside the force branch, so it
+   !> is always there. It still cannot answer for these slots: it is indexed by sym's
+   !> numbering and knows nothing of the antiunitary half. It could serve as the lookup this
+   !> loop does by hand, at the price of depending on its argument order -- {R_j}{R_i} and
+   !> not the other way round -- and that trade has not been taken.
    SUBROUTINE wl_group_table(star, sym, prod)
       USE m_types_sym
       TYPE(t_wl_kstar), INTENT(IN) :: star

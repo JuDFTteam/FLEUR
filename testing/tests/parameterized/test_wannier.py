@@ -182,9 +182,8 @@ OPERATOR_FILES = {
 }
 
 # Which case exercises each flag of <export>, and what it has to leave behind. One flag per
-# case, put where the case already holds what that writer needs: the spin operator for
-# blochOperators, the projection list for orbitrans, a full-zone mesh for wannierberri and
-# for the symmetrizer. Before this, six of the seven writers in the block ran in no test at
+# case, put where the case already holds what that writer needs: the projection list for
+# orbitrans, a full-zone mesh for wannierberri and for the symmetrizer. Before this, six of the seven writers in the block ran in no test at
 # all -- they were reachable only by hand, and only the symmetrizer was ever checked.
 _W90_FILES = ["WF1.amn", "WF1.mmn", "WF1.eig"]
 EXPORT_FILES = {
