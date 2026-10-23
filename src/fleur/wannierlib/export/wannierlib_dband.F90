@@ -47,6 +47,7 @@ MODULE m_wannierlib_dband
    USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot
    USE m_matrix_element_factory, ONLY: matrix_element_states, matrix_element_abc_of
    USE m_melem_overlap, ONLY: melem_overlap_states
+   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
    USE m_melem_ujugaunt, ONLY: melem_ujugaunt
    USE m_types_abc
    USE m_types_radfun
@@ -75,11 +76,12 @@ CONTAINS
    !> needs, every rank asks for them in the same order, and the table is small next to the
    !> mmn; distributing it would buy a collective and a reason for the ranks to disagree.
    SUBROUTINE wl_build_dband(star, manifold, atoms, cell, input, kpts, sym, noco, nococonv, &
-                             enpara, vtot, stars, fmpi, radfun, eig_id, jspin, l_spinors, &
-                             dband)
+                             enpara, vtot, vacuum, stars, fmpi, radfun, eig_id, jspin, &
+                             l_spinors, dband)
       USE m_types_atoms; USE m_types_cell; USE m_types_input; USE m_types_kpts
       USE m_types_sym; USE m_types_noco; USE m_types_nococonv; USE m_types_enpara
       USE m_types_potden; USE m_types_stars; USE m_types_mpi; USE m_types_lapw
+      USE m_types_vacuum
       USE m_types_mat
       USE m_dwigner, ONLY: d_wigner
       TYPE(t_wl_kstar), INTENT(IN) :: star
@@ -93,6 +95,9 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN) :: nococonv
       TYPE(t_enpara), INTENT(IN) :: enpara
       TYPE(t_potden), INTENT(IN) :: vtot
+      !> Only a film uses it: the expansions stay unbuilt otherwise and the overlap
+      !> skips them, exactly as in the mmn.
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_stars), INTENT(IN) :: stars
       TYPE(t_mpi), INTENT(IN) :: fmpi
       TYPE(t_radfun), INTENT(IN) :: radfun(:)
@@ -115,6 +120,7 @@ CONTAINS
       INTEGER :: js, js2, jrec, krec, n_comp, jsp_loc(2), n_rad, ja, jb, i0, j0, nh
       COMPLEX :: usp(2, 2), amt(2, 2), fspin(2, 2, atoms%ntype)
       TYPE(t_mat) :: zperm
+      TYPE(t_melem_vacabc) :: vac_a, vac_b
       LOGICAL :: l_anti, l_stack, l_two_recs
       REAL :: dev_u, dev_a, gap_lo
 
@@ -351,6 +357,27 @@ CONTAINS
                      "wannierlib: the b=0 radial table holds no mixed pair of spin sets", &
                      hint="two components reading different potentials cannot overlap here", &
                      calledby="wl_build_dband")
+                  !> THE VACUUM IS A REGION LIKE THE OTHERS. On a film the eigenvectors
+                  !> are orthonormal over muffin tins, interstitial AND vacuum, so an
+                  !> overlap that stops at the interstitial is short by whatever share
+                  !> of the norm lives outside -- 13 % of it on a MoS2 monolayer, which
+                  !> a unitary-looking, block-diagonal d_band hides completely.
+                  !>
+                  !> Both sides live in the IMAGE basis already: the representative's
+                  !> coefficients were re-indexed into it rather than rotated, so each
+                  !> side is an ordinary coefficient vector over lapw_img and one call
+                  !> each is the whole of it. An operation that turns z over needs no
+                  !> branch either: it flipped the G_z labels during the re-indexing,
+                  !> and the expansion is rebuilt from those, so the two vacua swap
+                  !> themselves. That matters on an asymmetric film, where the two do
+                  !> not hold the same potential.
+                  IF (input%film) THEN
+                     CALL vac_a%calc(vacuum, cell, enpara, vtot, lapw_img, ja, &
+                                     zmat_p(jrec), nb, ioff=layout%row_offset(js))
+                     CALL vac_b%calc(vacuum, cell, enpara, vtot, lapw_img, jb, &
+                                     z_rot(krec), nb, &
+                                     ioff=MERGE(layout%row_offset(js2), 0, l_stack))
+                  END IF
                   CALL melem_overlap_states(stars, atoms, lapw_img, lapw_img, &
                                             zmat_p(jrec), z_rot(krec), &
                                             abc_p(MERGE(js, jspin, l_spinors), :), &
@@ -359,7 +386,7 @@ CONTAINS
                                             ujug(ja)%t, kdiff0, 1, &
                                             layout%row_offset(js), &
                                             MERGE(layout%row_offset(js2), 0, l_stack), &
-                                            oblk(:, :, js, js2))
+                                            oblk(:, :, js, js2), vac_a=vac_a, vac_b=vac_b)
                END DO
             END DO
             !> CONJUGATED. The overlap kernel is the mmn's, which puts its conjugation on

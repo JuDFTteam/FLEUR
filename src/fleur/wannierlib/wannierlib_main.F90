@@ -304,8 +304,8 @@ CONTAINS
             l_dband = .NOT. l_realph
             IF (l_dband) THEN
                CALL wl_build_dband(kstar, manifold, atoms, cell, input, kpts, sym, noco, &
-                                   nococonv, enpara, vtot, stars, fmpi, radfun, eig_id, &
-                                   jspin, l_wannierlib_spinors, dband)
+                                   nococonv, enpara, vtot, vacuum, stars, fmpi, radfun, &
+                                   eig_id, jspin, l_wannierlib_spinors, dband)
             ELSE IF (fmpi%irank == 0) THEN
                WRITE (oUnit, '(/,a)') &
                   "Wannier90/WannierBerri symmetry export: d_band NOT written"
