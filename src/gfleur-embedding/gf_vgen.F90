@@ -144,10 +144,9 @@ CONTAINS
 
     SUBROUTINE gf_vgen_make(gfinp,layer,gmpi,ld,vchk,jspins)
         !*****************************************************************
-        ! (Re)generate the potential from the charge density. In this
-        ! historically frozen build the newly generated potential is only
-        ! checked and plotted, not written back - gf_vgen_read reloads the
-        ! potential from gf_pot.hdf.
+        ! (Re)generate the potential from the charge density and write it
+        ! to gf_pot.hdf (the old file is renamed to gf_pot<N>.hdf);
+        ! gf_vgen_read reloads it afterwards.
         !*****************************************************************
         USE m_constants, ONLY : oUnit, pi_const
         USE m_gf_types
@@ -213,6 +212,10 @@ CONTAINS
             ENDDO
         ENDDO
 
-        IF (gmpi%pe0) WRITE(*,*) "gf_vgen:no new pot"
+        !<-- save the new potential; the previous gf_pot.hdf is kept as gf_pot<N>.hdf
+        !    (needed by gf_potdis for the difference to the old potential)
+        CALL gf_renamepot(GF_POTFILE,gmpi%iodop_subcom,layer)
+        CALL gf_wrtdop(GF_POTFILE,layer,jspins,gfinp,ld%fi%atoms,ld%stars,   &
+     &       ld%sphhar,vr,vpw,ld%fi%noco%l_noco,gmpi%self_subcom)
     END SUBROUTINE gf_vgen_make
 END
