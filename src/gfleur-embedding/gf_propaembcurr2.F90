@@ -47,7 +47,7 @@
       ALLOCATE( embpot_in(nv2,nv2) ) 
       ALLOCATE( embpot_out(nv2,nv2) ) 
                                                                         
-      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf)
+      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf,region2=layers%num_layers)
                                                                         
       embpot_in=2*g1 
                                                                         

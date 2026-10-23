@@ -31,6 +31,7 @@ CONTAINS
       USE m_gf_stepsanaly, ONLY: gf_initstepsanaly, gf_calcstepsanaly
       USE m_gf_io2dmat, ONLY: io2dmat_init => init
       USE m_gf_iotmat, ONLY: init_tmat_storage
+      USE m_gf_embedding, ONLY: gf_checkemb
       USE m_gaunt, ONLY: gaunt_init
       USE m_xmlOutput
 #ifdef CPP_HDF
@@ -152,6 +153,9 @@ CONTAINS
                                 SIZE(ld(1)%lapw_gf%global2dList, 2))
       END IF
 
+      !the embedding planes of the potential files must match the layer setup
+      IF (embinp%l_addemb) CALL gf_checkemb(layers, ld(1)%fi%cell%amat)
+
       !sanity checks on the input switches
       CALL priv_setup_test(embinp, gfmix)
 
@@ -249,6 +253,11 @@ CONTAINS
       IF (embinp%l_IEC .AND. embinp%l_addemb) ok = error( &
                                               "in IEC mode you must set addemb = F!")
       !>
+
+      IF (gfmix%iter == 0 .AND. (embinp%l_gmat .OR. embinp%l_CBS .OR. embinp%curr /= 0)) THEN
+         WRITE (*, *) "WARNING: iter=0 in &SC, the calculation itself is skipped (setup only)"
+         WRITE (oUnit, *) "WARNING: iter=0 in &SC, the calculation itself is skipped (setup only)"
+      END IF
 
       IF (.NOT. ok) CALL juDFT_error("GF-setup:setup_test")
 

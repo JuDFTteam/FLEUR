@@ -66,7 +66,7 @@
       !>                                                                
       !<--S: gf_getemb(G1,G2,region,en,nk,jspin,altpot)                 
                                                                         
-      SUBROUTINE gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,lapw_gf,altpot)
+      SUBROUTINE gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,lapw_gf,altpot,region2)
 !********************************************************************** 
 !     * This SUBROUTINE returns the correct embedding potentials for the
 !     * region, energy, kpoint and spin                                 
@@ -83,17 +83,21 @@
       INTEGER,INTENT(IN)            :: en,nk,jspin,region 
       COMPLEX,INTENT(OUT)           :: G1(:,:),G2(:,:) 
       LOGICAL,OPTIONAL,INTENT(IN)   :: altpot 
+      !region of the right potential (side 2), default: same as region
+      INTEGER,OPTIONAL,INTENT(IN)   :: region2
                                                                         
-      INTEGER :: key 
+      INTEGER :: key,reg2 
       LOGICAL :: notused 
       key = IO2D_EMB 
+      reg2 = region
+      IF (PRESENT(region2)) reg2 = region2
       IF(PRESENT(altpot)) THEN 
          IF(altpot) key = IO2D_EMBADV 
       ENDIF 
                                                                         
                                                                         
       notused=gf_read2dmat(key,region,1,en,nk,jspin,lapw_gf,G1) 
-      IF(.NOT.gf_read2dmat(key,region,2,en,nk,jspin,lapw_gf,G2)) THEN 
+      IF(.NOT.gf_read2dmat(key,reg2,2,en,nk,jspin,lapw_gf,G2)) THEN 
          !on second side we might have a vacuum                         
          !IF (region == 1) CALL gf_vacuum_embpot(en,nk,g2)
          CALL juDFT_warn("UUPS, no vacuum potential in gf_embedding")
@@ -404,7 +408,7 @@
          desc_right%dvec(1:2) = MATMUL(desc_left%ucell,(/gfinp%dp1      &
      &        ,gfinp%dp2/))                                             
          CALL gf_writedescriptor(1,1,desc_left) 
-         CALL gf_writedescriptor(1,2,desc_right) 
+         CALL gf_writedescriptor(SIZE(gfinp%napw),2,desc_right) 
          CALL gf_deallocEmbDesc(desc_left) 
          CALL gf_deallocEmbDesc(desc_right) 
       ENDIF 
@@ -439,8 +443,9 @@
                                                                         
       ev = MATMUL(t1,ev) 
       ! For region I, side 2                                            
+      !the right lead lives at the last region of the stack (nl,2)
       IF (layer == 0) THEN 
-         CALL priv_make_emb(curr,ev,ew,1,2,en,nk,jspin,lapw,lapw_gf,gfinp) 
+         CALL priv_make_emb(curr,ev,ew,SIZE(gfinp%napw),2,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ELSE 
          CALL priv_make_emb(curr,ev,ew,1,2,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ENDIF 

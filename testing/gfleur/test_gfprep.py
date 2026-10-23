@@ -147,8 +147,6 @@ def test_gfleur_reads_gfprep_setup(gfprep_run, tmp_path):
     assert f"layers : {NLAYERS}" in out
 
 
-@pytest.mark.xfail(reason="gfleur port: T-matrices are never written (gf_write_tmat has no caller)",
-                   strict=False)
 def test_gfleur_gmat_with_gfprep_potential(gfprep_run, tmp_path):
     """gfleur in gmat mode, which reads the converted potentials and gf_setup.hdf."""
     proc, out, log = _run_gfleur(gfprep_run, tmp_path, "tmat=t, gmat=t")

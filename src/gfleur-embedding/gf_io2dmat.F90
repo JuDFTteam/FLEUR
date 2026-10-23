@@ -135,13 +135,18 @@
       NAMELIST /IO/ mode,region,side,rw,id,spinrot,theta,phi,shift 
       if (l_noco) NO_HDF_TMP=.false.
       !>                                                                
+      l_tmatmemory = .FALSE.
       INQUIRE(FILE ='gf_io',EXIST = lexist) 
 
 
       IF (.NOT.(lexist)) THEN
         !No IO wanted
         if (gfinp%l_addemb)  CALL juDFT_error("addemb set without gf_io-file")
-        RETURN
+        IF (layers%num_layers==1) RETURN
+        !several layers: the temporary T-matrix/embedding storage is still needed
+        iohandles = 0
+        ALLOCATE(iohandle(0),iofile(0))
+        GOTO 998
       ENDIF
       !<-- Now read the gf_io file                                      
       OPEN(120,FILE ='gf_io',FORM ='formatted',STATUS ='old') 
@@ -151,8 +156,9 @@
       rewind 120
       if (default.eq."default") then
          close(120)
-	 open(120,FILE ='gf_io',FORM ='formatted',STATUS ='replace',DELIM="APOSTROPHE")
-         write(120,"(i10,'F')") 2
+         !the defaults are written to a scratch unit, the user's gf_io stays untouched
+         open(120,FORM ='formatted',STATUS ='scratch',DELIM="APOSTROPHE")
+         write(120,"(i10)") 2
          mode ="E";region= 1;side=1;rw="r";id=1;spinrot=.FALSE.;theta=0.0;phi = 0.0;shift = 0.0
          if (gfinp%l_cbs) rw="w"
          write(120,IO)
@@ -166,15 +172,19 @@
          write(120,FILE)
          name         ='embpotN2' 
          write(120,FILE)
-         close(120)
-         OPEN(120,FILE ='gf_io',FORM ='formatted',STATUS ='old')
+         rewind(120)
       endif
 
 
       !<-- first the IO-handles                                         
                                                                         
       READ(120,*) iohandles
-      IF (iohandles == 0) RETURN 
+      IF (iohandles == 0) THEN
+         CLOSE(120)
+         IF (layers%num_layers==1) RETURN
+         ALLOCATE(iohandle(0),iofile(0))
+         GOTO 998
+      ENDIF
       ALLOCATE(iohandle(iohandles)) 
                                                                         
       DO i = 1,iohandles 
@@ -304,6 +314,7 @@
          !>                                                             
       ENDDO 
   999 CLOSE(120) 
+  998 CONTINUE
                                                                         
       !>                                                                
                                                                         
@@ -653,12 +664,15 @@
          CALL io_READ(varid,(/1,1/),(/2,SIZE(gvecs_in,2)/),"gvecs_in",gvecs_in)
          CALL io_dclose(varid,hdferr) 
          !create mapping index                                          
-         ALLOCATE(io_file%gmap(SIZE(gvecs_in,2))) 
+         !gmap maps the index in the current global 2D list onto the index in
+         !the file (0 if the G-vector is not in the file)
+         ALLOCATE(io_file%gmap(SIZE(lapw_gf%global2Dlist,2))) 
          io_file%gmap = 0 
          DO n = 1,SIZE(gvecs_in,2) 
-            IF (ALL(ABS(gvecs_in(1:2,n)) <= lapw_gf%g_max(1:2)))           &
-     &           io_file%gmap(n) = lapw_gf%global2Dmap(gvecs_in(1          &
-     &           ,n),gvecs_in(2,n))                                     
+            IF (ALL(ABS(gvecs_in(1:2,n)) <= lapw_gf%g_max(1:2))) THEN
+               nn = lapw_gf%global2Dmap(gvecs_in(1,n),gvecs_in(2,n))
+               IF (nn>0) io_file%gmap(nn) = n
+            ENDIF
          ENDDO 
          !up to now io_file%matsize was the scaling factor              
          io_file%matscale=io_file%matsize 

@@ -145,7 +145,7 @@ CONTAINS
                     DEALLOCATE( tmat )
                 ENDIF
                 CALL gf_landauer(lapw_gf%nv2_tot,en,nk,jspin,cell              &
-                ,sym,lapw,lapw_gf,kpts%bk,gij(:,:,1),fmpi)
+                ,sym,lapw,lapw_gf,kpts%bk,gij(:,:,1),fmpi,layers)
             ENDIF
             IF (gfinp%curr ==1)THEN
                 CALL gf_propaembcurr(layers,lapw_gf%nv2_tot,en,nk,jspin,       &

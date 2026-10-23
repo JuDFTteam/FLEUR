@@ -6,7 +6,7 @@
       MODULE m_gf_landauer 
           IMPLICIT NONE
       CONTAINS 
-      SUBROUTINE gf_landauer(nv2,en,nk,jspin,cell,sym,lapw,lapw_gf,bkpts,gij,fmpi)
+      SUBROUTINE gf_landauer(nv2,en,nk,jspin,cell,sym,lapw,lapw_gf,bkpts,gij,fmpi,layers)
 !*********************************************************************  
 !     Subroutine to calculate current within the energy loop            
 !     calls subroutines from gf_current                                 
@@ -22,6 +22,7 @@
       IMPLICIT NONE 
       INTEGER ,INTENT(IN)               :: nv2,en,nk,jspin 
       type(t_gfmpi),intent(in)::fmpi
+      TYPE(t_layers),INTENT(IN)         :: layers
 
       TYPE(t_sym),INTENT(IN)            :: sym 
       TYPE(t_cell),INTENT(IN)           :: cell 
@@ -38,7 +39,7 @@
                                                                         
       !Load embedding potentials                                        
                                                                         
-      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf)
+      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf,region2=layers%num_layers)
       !calculate with landauer                                          
 #ifdef CPP_CUOVLP                                                       
       l_nohelpregion=.TRUE. 

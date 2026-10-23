@@ -125,9 +125,15 @@ This configuration reads `embpot11.hdf` and `embpotN2.hdf`.  The principal
 energy grid.  HDF5 files contain the matrix data together with their energy
 grid, in-plane k-points, reciprocal vectors, and symmetry metadata.
 
-The special first line `default` causes `gfleur` to replace `gf_io` with a
-two-boundary default that reads `embpot11.hdf` and `embpotN2.hdf`.  Do not use
-it for an existing custom configuration because it overwrites the file.
+The special first line `default` selects a two-boundary default that reads
+`embpot11.hdf` (region 1, side 1) and `embpotN2.hdf` (region `<nlayers>`,
+side 2).  In complex-band-structure mode (`&CBSMODE cbs=t`) the same default
+writes these two files instead, so a CBS run of a bulk-like layer produces the
+lead embedding potentials.  The defaults are built in memory, `gf_io` itself is
+never modified.
+
+Without a `gf_io` file, runs with `nlayers > 1` keep the layer T-matrices in
+memory; `addemb=t` requires `gf_io`.
 
 ### Practical requirements for T-matrix embedding potentials
 

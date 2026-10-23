@@ -49,7 +49,7 @@
      &                          lapw_gf,                                &
      &                          tmat)                                   
                                                                         
-      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf)
+      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf,region2=layers%num_layers)
       embpot_in=-2*g1 
       g2=2*g2 
       CALL gf_propaemb(.FALSE.,nv2,embpot_in,tmat,embpot_out) 

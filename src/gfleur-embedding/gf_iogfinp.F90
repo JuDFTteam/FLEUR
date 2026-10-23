@@ -229,7 +229,7 @@
             !READ SC
             gmax_pot = 50.0
             gmax_decouple = 10.0
-            trans = 0.0;c_sc=0.0;imix=1;maxiter=99;alpha=0.05;spinf=0.2
+            trans = 0.0;c_sc=0.0;imix=0;iter=1;maxiter=99;alpha=0.05;spinf=0.2
             gauss = .FALSE.;tria=.FALSE.;precond=0;k_kerker=0
             tkb = 0.005;delgau=0.0;g0scale=1.0;g0max=0.0
             READ(92,NML = SC)
