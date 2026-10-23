@@ -54,6 +54,10 @@ MODULE m_wannierlib_dband
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wl_build_dband
+   !> Public because the symmetry export writes these matrices to file. A second
+   !> implementation of the same lift would be free to drift from this one, and the
+   !> whole point of writing them out is that the consumer stops rebuilding them.
+   PUBLIC :: wl_su2
 
    !> The 2x2 identity, for the places where the spin halves do not mix.
    COMPLEX, PARAMETER :: EYE2(2, 2) = RESHAPE([CMPLX(1.0, 0.0), CMPLX(0.0, 0.0), &

@@ -30,12 +30,14 @@
 !>               which /proj declares. What only FLEUR knows is the table, not the matrices.
 !>
 !> WHAT IS WRITTEN, AND THE VERSION THAT SAYS SO. The root carries a layout version: 2 for
-!> the file without band representations, 3 for the file with them. A reader decides from
-!> that one integer instead of probing for a group.
+!> the file without band representations, 3 for the file with them, 4 for one that also
+!> carries the spinor lift. A reader decides from that one integer instead of probing.
 !>   /kstar       kirr, k2kirr, k2kirr_sym, weight, kirr2k -- the stars, and which operation
 !>                carries each k of the mesh to the representative of its own.
 !>   /spacegroup  mrot, tau, invtab, antiunitary -- the operations the stars were built
-!>                from. NOT all of sym; see the index rule below.
+!>                from. NOT all of sym; see the index rule below. Version 4 adds su2_re and
+!>                su2_im, (2, 2, nsym): the SU(2) d_band was actually built with, so that a
+!>                consumer stops having to guess which of the two lifts this run chose.
 !>   /proj        what every Wannier function was projected from, which is what lets a
 !>                reader build D_wann for itself.
 !>   /d_band      re and im of (num_bands, num_bands, nsym, nkirr). Version 3 only: a run
@@ -58,6 +60,7 @@ MODULE m_wannierlib_export_sym
    USE m_juDFT
    USE m_constants, ONLY: oUnit
    USE m_wannierlib_sym_kstar, ONLY: t_wl_kstar
+   USE m_wannierlib_dband, ONLY: wl_su2
    USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
    USE m_eulerrot, ONLY: eulerrot
 #ifdef CPP_HDF
@@ -103,6 +106,8 @@ CONTAINS
       INTEGER, ALLOCATABLE :: iatom(:), mr(:, :, :), iv(:), au(:)
       REAL, ALLOCATABLE :: ta(:, :)
       INTEGER :: iop, jop
+      REAL, ALLOCATABLE :: su2re(:, :, :), su2im(:, :, :)
+      COMPLEX :: u2(2, 2)
       REAL, ALLOCATABLE :: pos(:, :), shift(:, :), euler(:, :), amx(:, :, :)
 
       IF (fmpi%irank /= 0) RETURN
@@ -152,13 +157,32 @@ CONTAINS
          iv(iop) = star%invtab(iop)
          au(iop) = MERGE(1, 0, star%antiunit(iop))
       END DO
+      !> THE SPINOR LIFT, FLEUR'S OWN. A rotation of SO(3) has TWO matrices in SU(2),
+      !> differing by a sign, and nothing in mrot says which one a code picked. A consumer
+      !> that rebuilds the lift from the rotation therefore picks its own, and d_band -- which
+      !> was built with this one -- comes out off by a sign PER OPERATION. The sign is
+      !> invisible to unitarity, to the identity, to the block structure and to the group
+      !> product table, because the conjugate and the negative of a representation are
+      !> representations too.
+      !>
+      !> So it is written rather than described. Same slot order as mrot, and the antiunitary
+      !> half already carries its own i*sigma_y, so a consumer applies what it reads without
+      !> branching on antiunitary.
+      ALLOCATE (su2re(2, 2, star%nsym), su2im(2, 2, star%nsym))
+      DO iop = 1, star%nsym
+         CALL wl_su2(sym, cell, star%op(iop), star%antiunit(iop), u2)
+         su2re(:, :, iop) = REAL(u2)
+         su2im(:, :, iop) = AIMAG(u2)
+      END DO
       CALL h5gcreate_f(fid, 'spacegroup', gid, err)
       CALL wr_i3(gid, 'mrot', (/3, 3, star%nsym/), mr)
       CALL wr_r2(gid, 'tau', (/3, star%nsym/), ta)
       CALL wr_i1(gid, 'invtab', (/star%nsym/), iv)
       CALL wr_i1(gid, 'antiunitary', (/star%nsym/), au)
+      CALL wr_r3(gid, 'su2_re', (/2, 2, star%nsym/), su2re)
+      CALL wr_r3(gid, 'su2_im', (/2, 2, star%nsym/), su2im)
       CALL h5gclose_f(gid, err)
-      DEALLOCATE (mr, ta, iv, au)
+      DEALLOCATE (mr, ta, iv, au, su2re, su2im)
 
       !> ONE ENTRY PER WANNIER FUNCTION, in the order init left wannierize%proj in, which IS
       !> the column order of the .amn written beside this file. That order is the one thing
@@ -246,7 +270,7 @@ CONTAINS
       !> version and nkpt come from wl_hdf_root, which is the part of the contract every
       !> WF<spin>_<what>.hdf shares. time_reversal states that the stars were built under the
       !> unitary group alone: a consumer with an antiunitary slot fills it with .FALSE.
-      CALL wl_hdf_root(fid, MERGE(3, 2, l_dband), star%nk, gid)
+      CALL wl_hdf_root(fid, MERGE(4, 2, l_dband), star%nk, gid)
       CALL io_write_attint0(gid, 'nkirr', star%nkirr)
       CALL io_write_attint0(gid, 'nsym', star%nsym)
       CALL io_write_attint0(gid, 'num_bands', manifold%num_bands)
