@@ -1,7 +1,5 @@
 build-gfortran-hdf5-serial:
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
      paths:
@@ -18,9 +16,7 @@ build-gfortran-hdf5-serial:
       - if: $CI_TASKS =~ /all/    
 
 test-gfortran-hdf5-serial:
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   needs: 
     - build-gfortran-hdf5-serial
@@ -32,9 +28,7 @@ test-gfortran-hdf5-serial:
   
   
 build-gfortran-hdf5-debug:
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
      paths:
@@ -51,9 +45,7 @@ build-gfortran-hdf5-debug:
       - if: $CI_TASKS =~ /all/    
 
 test-gfortran-serial-hdf5-debug:
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   needs: 
     - build-gfortran-hdf5-debug

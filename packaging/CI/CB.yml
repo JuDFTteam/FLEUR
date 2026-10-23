@@ -1,7 +1,5 @@
 perf-gfortran:
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .perf-generic
   tags:
     - iffcluster1703
@@ -23,9 +21,7 @@ perf-gfortran:
 perf-intel:
   needs:
     - perf-gfortran
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
   tags:
     - iffcluster1703
@@ -46,9 +42,7 @@ perf-intel:
 perf-intel-ifx:
   needs:
     - perf-intel
-  image:
-    name: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
-    pull_policy: always
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
   tags:
     - iffcluster1703
