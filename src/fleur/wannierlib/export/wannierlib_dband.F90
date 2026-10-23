@@ -206,7 +206,7 @@ CONTAINS
             !> the operation is that same rotation with time reversal, so the sign flips
             !> and the coefficients get conjugated below.
             l_anti = star%antiunit(iop)
-            jop = star%op(MERGE(iop - star%nop, iop, l_anti))
+            jop = star%op(iop)
             rsign = MERGE(-1, 1, l_anti)
             ginv = sym%mrot(:, :, sym%invtab(jop))
             rrot = rsign*TRANSPOSE(REAL(ginv))
@@ -309,8 +309,8 @@ CONTAINS
                   fspin(:, :, j) = EYE2
                END IF
             END DO
-            CALL wl_rotate_mt(atoms, sym, jop, l_anti, kimg, dwgn, n_comp, fspin, &
-                              abc_irr, abc_rot, dev_u, dev_a, gap_lo)
+            CALL wl_rotate_mt(atoms, sym, jop, star%amap(:, iop), l_anti, kimg, dwgn, &
+                              n_comp, fspin, abc_irr, abc_rot, dev_u, dev_a, gap_lo)
             !> The spin rotation is inside the eigenvector where the record was stacked, so
             !> what is left to contract with is the identity.
             IF (l_stack) usp = EYE2
@@ -516,13 +516,13 @@ CONTAINS
    !>
    !> Map and phase come from where mapatom built the map: R.taual(a) + tau = taual(a') + L
    !> with L a lattice vector, and L is what the Bloch factor of the image point sees.
-   SUBROUTINE wl_rotate_mt(atoms, sym, jop, l_anti, kimg, dwgn, ncomp, fspin, src, dst, &
-                           dev_u, dev_a, gap)
+   SUBROUTINE wl_rotate_mt(atoms, sym, jop, amap, l_anti, kimg, dwgn, ncomp, fspin, &
+                           src, dst, dev_u, dev_a, gap)
       USE m_types_atoms; USE m_types_sym
       USE m_constants, ONLY: tpi_const, ImagUnit
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_sym), INTENT(IN) :: sym
-      INTEGER, INTENT(IN) :: jop
+      INTEGER, INTENT(IN) :: jop, amap(:)
       LOGICAL, INTENT(IN) :: l_anti
       REAL, INTENT(IN) :: kimg(3)
       COMPLEX, INTENT(IN) :: dwgn(-atoms%lmaxd:, -atoms%lmaxd:, 0:, :)
@@ -547,11 +547,6 @@ CONTAINS
       COMPLEX :: ph
       COMPLEX, ALLOCATABLE :: blk(:, :), tflip(:, :), rot(:, :, :)
 
-      IF (.NOT. ALLOCATED(sym%mapped_atom)) CALL juDFT_error( &
-         "wannierlib: d_band needs the atom map under the group", &
-         hint="sym%mapped_atom is filled by mapatom; this build left it out", &
-         calledby="wl_rotate_mt")
-
       !> Sized once for the largest type and used in slices, rather than allocated inside
       !> the loop over l and the radial orders: the shapes only shrink from here.
       nu = 0
@@ -565,7 +560,7 @@ CONTAINS
          nuc = SIZE(src(1, n)%cof, 1)
          DO na = 1, atoms%neq(n)
             ia = atoms%firstAtom(n) + na - 1
-            ja = sym%mapped_atom(jop, ia)
+            ja = amap(ia)
             IF (ja < 1) CALL juDFT_error("wannierlib: an atom is mapped nowhere", &
                                          calledby="wl_rotate_mt")
             nb = ja - atoms%firstAtom(n) + 1
@@ -715,18 +710,22 @@ CONTAINS
       ALLOCATE (prod(star%nsym, star%nsym))
       prod = 0
       DO i = 1, star%nsym
-         iop = star%op(MERGE(i - star%nop, i, star%antiunit(i)))
+         iop = star%op(i)
          DO j = 1, star%nsym
-            jop = star%op(MERGE(j - star%nop, j, star%antiunit(j)))
+            jop = star%op(j)
             mm = MATMUL(sym%mrot(:, :, iop), sym%mrot(:, :, jop))
             tt = MATMUL(REAL(sym%mrot(:, :, iop)), sym%tau(:, jop)) + sym%tau(:, iop)
             anti = star%antiunit(i) .NEQV. star%antiunit(j)
-            DO kop = 1, star%nop
-               IF (.NOT. ALL(sym%mrot(:, :, star%op(kop)) == mm)) CYCLE
-               dt = tt - sym%tau(:, star%op(kop))
+            !> The product of two slots is a slot of the same kind, and with the two
+            !> halves holding different rotations it has to be looked for among those.
+            DO k = 1, star%nsym
+               IF (star%antiunit(k) .NEQV. anti) CYCLE
+               kop = star%op(k)
+               IF (.NOT. ALL(sym%mrot(:, :, kop) == mm)) CYCLE
+               dt = tt - sym%tau(:, kop)
                !> The translation is only defined modulo a lattice vector.
                IF (ANY(ABS(dt - ANINT(dt)) > 1e-6)) CYCLE
-               prod(i, j) = MERGE(kop + star%nop, kop, anti)
+               prod(i, j) = k
                EXIT
             END DO
          END DO

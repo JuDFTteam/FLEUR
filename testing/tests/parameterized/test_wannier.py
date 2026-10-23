@@ -420,10 +420,12 @@ SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
               "WannFeFMy": (True, False, True, DBAND_TOL),
               #> Spin-orbit on a magnetisation the full group does not preserve: soc_sym
               #> strikes out eight of the sixteen operations and mapatom leaves their atom
-              #> map at zero. The export drops those and represents the eight that are left,
-              #> so these two are what says a restricted group still comes out a group.
-              "WannFeAFMSOC": (True, False, True, DBAND_TOL_SOC),
-              "WannFeAFMSOCOps": (True, False, True, DBAND_TOL_SOC)}
+              #> map at zero. The eight that are left carry the unitary half, and the eight
+              #> struck out are exactly the ones that REVERSE the moments, so they come
+              #> back as the antiunitary half: these two are the only cases where time
+              #> reversal is paired with a set of its own rather than with every operation.
+              "WannFeAFMSOC": (True, True, True, DBAND_TOL_SOC),
+              "WannFeAFMSOCOps": (True, True, True, DBAND_TOL_SOC)}
 
 
 def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,

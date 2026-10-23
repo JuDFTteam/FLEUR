@@ -125,10 +125,10 @@ CONTAINS
       !> converges. invtab follows the group: the inverse of T R is T R^-1.
       ALLOCATE (mr(3, 3, star%nsym), ta(3, star%nsym), iv(star%nsym), au(star%nsym))
       DO iop = 1, star%nsym
-         jop = MERGE(iop - star%nop, iop, star%antiunit(iop))
-         mr(:, :, iop) = sym%mrot(:, :, star%op(jop))
-         ta(:, iop) = sym%tau(:, star%op(jop))
-         iv(iop) = star%invtab(jop) + MERGE(star%nop, 0, star%antiunit(iop))
+         jop = star%op(iop)
+         mr(:, :, iop) = sym%mrot(:, :, jop)
+         ta(:, iop) = sym%tau(:, jop)
+         iv(iop) = star%invtab(iop)
          au(iop) = MERGE(1, 0, star%antiunit(iop))
       END DO
       CALL h5gcreate_f(fid, 'spacegroup', gid, err)

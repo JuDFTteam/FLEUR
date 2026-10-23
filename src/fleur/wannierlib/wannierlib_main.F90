@@ -111,7 +111,7 @@ CONTAINS
       TYPE(t_wgauge_domains) :: domains
       TYPE(t_wl_kstar) :: kstar        ! k-point stars, for the .dmn and the symmetrizer
       COMPLEX, ALLOCATABLE :: dband(:, :, :, :)   ! the group on the bands, when it can be had
-      LOGICAL :: l_dband, l_realph, l_tr
+      LOGICAL :: l_dband, l_realph, l_tr, l_mfilter
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       CHARACTER(LEN=6) :: spin_sfx
@@ -223,8 +223,18 @@ CONTAINS
             !> and a non-magnet without it is merely a bigger set. Measured on bcc Fe with
             !> spin-orbit: T by itself misses by 7.2e-03 while the operations that preserve
             !> the moment close at 2.9e-12.
-            l_tr = (input%jspins == 1) .AND. (.NOT. noco%l_noco)
-            CALL wl_build_kstar(kpts, sym, fmpi, kstar, l_tr)
+            !> Whether time reversal may be used, and whether the moments pick the
+            !> operations it pairs with. T alone maps a magnet onto the state with every
+            !> moment reversed, so it is never a symmetry there by itself -- measured on
+            !> bcc Fe with spin-orbit, where T misses by 7.2e-03. What IS a symmetry is T
+            !> composed with an operation that reverses the moments, and with spin-orbit
+            !> tying spin to the lattice those are a set of their own. Without spin-orbit
+            !> the lattice does not drag the spin and the question does not arise, and a
+            !> collinear channel has no second component for T to land in.
+            l_mfilter = noco%l_noco .AND. noco%l_soc
+            l_tr = ((input%jspins == 1) .AND. (.NOT. noco%l_noco)) .OR. l_mfilter
+            CALL wl_build_kstar(kpts, sym, atoms, cell, nococonv, fmpi, kstar, l_tr, &
+                                l_mfilter)
 
             !> d_band asks for the state at one k expressed at another, and the basis can
             !> stand in the way of that rotation: a centrosymmetric crystal is solved in
