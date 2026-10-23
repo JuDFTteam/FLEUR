@@ -1,5 +1,7 @@
 build-intel:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+    pull_policy: always
   stage: build
   artifacts:
      paths:
@@ -17,7 +19,9 @@ build-intel:
       - if: $CI_TASKS =~ /all/    
 
 test-intel:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+    pull_policy: always
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel"
@@ -30,7 +34,9 @@ test-intel:
 
   
 build-intel-debug:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+    pull_policy: always
   stage: build
   artifacts:
      paths:
@@ -48,7 +54,9 @@ build-intel-debug:
       - if: $CI_TASKS =~ /all/    
 
 test-intel-debug:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+    pull_policy: always
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel.debug"

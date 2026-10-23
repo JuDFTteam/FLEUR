@@ -1,5 +1,7 @@
 pages:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+    pull_policy: always
   stage: deploy
   needs: 
     - gfortran-coverage
@@ -48,7 +50,9 @@ intel-maqao:
   
 
 fortitude:
-  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:ford
+    pull_policy: always
   stage: html
   needs: []
   script:
@@ -64,7 +68,9 @@ fortitude:
 
 
 ford:
-  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:ford
+    pull_policy: always
   stage: html
   needs: []  
   script:
@@ -80,7 +86,9 @@ ford:
 
 
 gfortran-coverage:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image:
+    name: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+    pull_policy: always
   extends: .test-fleur
   stage: html
   needs: []
