@@ -189,7 +189,8 @@
               CALL zgemm('T','N',nloitype,                     &
      &              lmpmax*2,lapw_gf%nv_sphere(jspin),                            &
      &              cmplx(1.0,0.0),                                     &
-     &              gmat(:,lapw_gf%nv_sphere(jspin:)+basindex(nt+na,1)),           &
+     &              gmat(:,(lapw_gf%nv_sphere(jspin)+basindex(nt+na,1)):           &
+     &                    (lapw_gf%nv_sphere(jspin)+basindex(nt+na,1)+nloitype-1)),    &
      &              size(gmat,1),                                       &
      &              gf_ab_coef_matrix(lmpmax,na+nt,na+nt,jspin),lapw_gf%nv_sphere(jspin),    &
      &              cmplx(0.0,0.0),                                     &
