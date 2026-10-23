@@ -134,11 +134,17 @@ CONTAINS
       !> coefficients are rebuilt, and the overlap is then a plain sum over the directions.
       l_stack = l_spinors .AND. noco%l_noco
       l_two_recs = l_spinors .AND. .NOT. noco%l_noco
-      !> The local spin direction each component carries. Where the record is stacked it is
-      !> the component; otherwise one potential serves every component and it is the
-      !> channel. It selects the radial set and, in the non-collinear case, the frame.
+      !> The local spin direction each component carries. It selects the radial set and,
+      !> in the non-collinear case, the frame. A spinor's component IS that direction
+      !> whichever way the spinor arrived: after a collinear second variation the two
+      !> components are the two channels, and with jspins=2 those have their own potentials
+      !> and so their own radial sets. radial_slot clamps, so a spinor over a single
+      !> potential still reads slot 1 and the jspins=1 case is unchanged. Only a scalar
+      !> state takes the channel -- which is what the coefficients a few lines below have
+      !> always done, and contracting them with another direction's radial set is what
+      !> cost WannFeBccSOC and WannFeAFMColSOC four parts in a hundred.
       DO js = 1, n_comp
-         jsp_loc(js) = MERGE(js, radial_slot(radfun, jspin), l_stack)
+         jsp_loc(js) = MERGE(js, radial_slot(radfun, MERGE(js, jspin, l_spinors)), l_stack)
       END DO
       ALLOCATE (dband(nb, nb, star%nsym, star%nkirr), source=CMPLX(0.0, 0.0))
       !> <psi^s(Rk)|rot psi^s'(k)>, the overlap with NO spin rotation in it. The spin

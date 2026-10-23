@@ -426,6 +426,16 @@ SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
               "WannFeFM": (True, False, True, DBAND_TOL),
               "WannFeAFM": (True, False, True, DBAND_TOL),
               "WannFeFMy": (True, False, True, DBAND_TOL),
+              #> Collinear jspins=2 with spin-orbit, where the eig file holds TWO records and
+              #> the two components of the spinor are the two spin channels -- each with its
+              #> own potential, and so its own radial set. WannPtSOC is spinorial too, but
+              #> over a single potential, so the branch that picks a radial set per component
+              #> ran in no test at all: it contracted both components with one channel's
+              #> radial functions, was wrong by four parts in a hundred, and every case here
+              #> stayed green. Time reversal is absent, as it must be in a magnet with
+              #> spin-orbit, and these two are the only cases that pin that combination.
+              "WannFeBccSOC": (True, False, True, DBAND_TOL_SOC),
+              "WannFeAFMColSOC": (True, False, True, DBAND_TOL_SOC),
               #> Spin-orbit on a magnetisation the full group does not preserve: soc_sym
               #> strikes out eight of the sixteen operations and mapatom leaves their atom
               #> map at zero. The eight that are left carry the unitary half, and the eight
