@@ -21,14 +21,13 @@ module m_dfpt_write_epw
    !!                  so that EPW's rdw/sqrt(amass_a amass_b) (amass in amu_ry)
    !!                  yields eigenvalues omega^2 in Ry^2 (= 4 omega^2_Htr).
    !!   * masses    : amass = m[amu] * amu_ry   (QE internal Rydberg mass unit)
-   !!   * FT sign   : EPW builds the real-space objects with e^{-i k.R} (see
-   !!                 hambloch2wan/dynbloch2wan/ephbloch2wanp) and interpolates back
-   !!                 with e^{+i k.R}. FLEUR uses the opposite sign (e^{+i k.R}
-   !!                 forward, e^{-i k.R} backward). Because EPW re-interpolates from
-   !!                 the data we write, we make EPW reproduce FLEUR's result exactly
-   !!                 by *negating the WS lattice vectors* written to wigner.fmt while
-   !!                 keeping the stored tensor values. Then, per WS vector i,
-   !!                 EPW's  sum_i e^{+i k.(-R_i)} T_i  ==  FLEUR's e^{-i k.R_i} T_i.
+   !!   * WS lists  : on restart EPW does not read wigner.fmt; it regenerates its WS
+   !!                 lists (wigner_seitzkq, sort=.true.) and reads the data in that
+   !!                 order. Every R-indexed array is therefore written in EPW's order.
+   !!                 FLEUR interpolates back with e^{-i k.R}, EPW with e^{+i k.R}, so
+   !!                 the FLEUR value at R is stored at EPW's vector -R.
+   !!                 wigner.fmt is currently not read by EPW; it is written in EPW's
+   !!                 format and order (use_ws = .false.) for reference.
    !!   * degeneracy: EPW stores integer ndegen and divides by it; FLEUR stores a
    !!                 real weight = 1/ndegen. So ndegen = nint(1/weight).
    !!
@@ -40,6 +39,7 @@ module m_dfpt_write_epw
    use m_constants
    use m_matrix_interpolation,  only: t_wann_ft
    use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_ws_forward, build_ws_ft
+   use m_sort,                  only: sort
    use m_types_cell
    use m_types_fleurinput
    use m_types_kpts
@@ -78,6 +78,7 @@ contains
       complex, allocatable :: rdw(:,:,:)          ! (nmodes,nmodes,nrr_q)     dyn-matrix, real space
       integer, allocatable :: irvec_q(:,:)        ! (3,nrr_q) phonon WS vectors (own q-mesh)
       real,    allocatable :: weight_q(:)         ! (nrr_q)   phonon WS weights (= 1/ndegen)
+      integer, allocatable :: ord_k(:), ord_q(:), ord_g(:)   ! FLEUR index of EPW's i-th WS vector
       character(len=:), allocatable :: prefix
 
       nat     = fi%atoms%nat
@@ -102,17 +103,23 @@ contains
       ! --- dynamical matrix real space (R_q) on the coarse phonon q-mesh ---
       call build_rdw(fi, dynMats, nmodes, rdw, irvec_q, weight_q, nrr_q, qpts_dyn, sym_dyn)
 
+      call epw_ws_order(ftRealspace(1,ispin)%ws_k_Rvecs, ord_k)
+      call epw_ws_order(irvec_q, ord_q)
+      call epw_ws_order(ftRealspace(1,ispin)%ws_q_Rvecs, ord_g)
+
       write (oUnit,'(/,a)') "Writing EPW (epwread) restart files:"
       write (oUnit,'(a,5(1x,i0))') "   nbndsub, nmodes, nrr_k, nrr_q, nrr_g =", nbndsub, nmodes, nrr_k, nrr_q, nrr_g
       write (oUnit,'(a,a)')        "   prefix = ", prefix
+      write (oUnit,'(a,3(1x,i0),a,3(1x,i0))') "   EPW input must use nk1..3 =", fi%kpts%nkpt3, &
+                                              ",  nq1..3 =", qpts_dyn%nkpt3
 
       ! --- write files ---
       call write_crystal_fmt(fi, results, nbndsub, nmodes)
-      call write_epwdata_fmt(results, nbndsub, nmodes, nrr_k, nrr_q, nrr_g, nat, chw, rdw)
+      call write_epwdata_fmt(results, nbndsub, nmodes, nrr_k, nrr_q, nrr_g, nat, chw, rdw, ord_k, ord_q)
       call write_vme_dme_fmt(nbndsub, nrr_k)
-      call write_wigner_fmt(fi, ftRealspace(1,ispin), irvec_q, weight_q, nrr_k, nrr_q, nrr_g)
+      call write_wigner_fmt(fi, ftRealspace(1,ispin), irvec_q, weight_q, nrr_k, nrr_q, nrr_g, ord_k, ord_q, ord_g)
       call write_ukk_fmt(fi, prefix)
-      call write_epmatwp(fi, ftRealspace(:,ispin), nbndsub, nmodes, nrr_k, nrr_g, prefix)
+      call write_epmatwp(fi, ftRealspace(:,ispin), nbndsub, nmodes, nrr_k, nrr_g, prefix, ord_k, ord_g)
 
       write (oUnit,'(a)') "   ... EPW restart files written."
 
@@ -221,6 +228,19 @@ contains
 
    !---------------------------------------------------------------------------
 
+   subroutine epw_ws_order(Rvecs, ord)
+      !! ord(i) = index into Rvecs of EPW's i-th WS vector, where EPW's vector is -Rvecs(:,ord(i)).
+      !! Same key as EPW's wigner_seitzkq/wigner_seitzg sort.
+      integer,              intent(in)  :: Rvecs(:,:)
+      integer, allocatable, intent(out) :: ord(:)
+
+      real, allocatable :: key(:)
+
+      allocate(ord(size(Rvecs,2)), key(size(Rvecs,2)))
+      key = -(Rvecs(1,:) * 1.0e6 + Rvecs(2,:) * 1.0e3 + Rvecs(3,:) * 1.0)
+      call sort(ord, key)
+   end subroutine epw_ws_order
+
    subroutine write_crystal_fmt(fi, results, nbndsub, nmodes)
       !! crystal.fmt -- exact record order of EPW's epw_write (io.f90:219-235).
       type(t_fleurinput), intent(in) :: fi
@@ -266,11 +286,12 @@ contains
       close(iu)
    end subroutine write_crystal_fmt
 
-   subroutine write_epwdata_fmt(results, nbndsub, nmodes, nrr_k, nrr_q, nrr_g, nat, chw, rdw)
-      !! epwdata.fmt -- EPW's epw_write (io.f90:237-273).
+   subroutine write_epwdata_fmt(results, nbndsub, nmodes, nrr_k, nrr_q, nrr_g, nat, chw, rdw, ord_k, ord_q)
+      !! epwdata.fmt -- EPW's epw_write (io.f90:237-273), R index in EPW's order.
       type(t_results), intent(in) :: results
       integer,         intent(in) :: nbndsub, nmodes, nrr_k, nrr_q, nrr_g, nat
       complex,         intent(in) :: chw(:,:,:), rdw(:,:,:)
+      integer,         intent(in) :: ord_k(:), ord_q(:)
 
       integer :: iu, ibnd, jbnd, irk, imode, jmode, irq
       real    :: zstar(3,3,nat), epsi(3,3)   ! EPW stores these as REAL (18 reals in epwdata.fmt)
@@ -285,14 +306,14 @@ contains
       do ibnd = 1, nbndsub
          do jbnd = 1, nbndsub
             do irk = 1, nrr_k
-               write(iu,*) chw(ibnd, jbnd, irk)
+               write(iu,*) chw(ibnd, jbnd, ord_k(irk))
             end do
          end do
       end do
       do imode = 1, nmodes
          do jmode = 1, nmodes
             do irq = 1, nrr_q
-               write(iu,*) rdw(imode, jmode, irq)
+               write(iu,*) rdw(imode, jmode, ord_q(irq))
             end do
          end do
       end do
@@ -324,18 +345,17 @@ contains
       close(iud)
    end subroutine write_vme_dme_fmt
 
-   subroutine write_wigner_fmt(fi, ft, Rvecs_q, weight_q, nrr_k, nrr_q, nrr_g)
+   subroutine write_wigner_fmt(fi, ft, Rvecs_q, weight_q, nrr_k, nrr_q, nrr_g, ord_k, ord_q, ord_g)
       !! wigner.fmt -- EPW's epw_write_ws_data (io.f90:669-737), dims=dims2=1 case.
-      !! WS lattice vectors are NEGATED to convert FLEUR's FT sign to EPW's (see header).
-      !!   R_e (electron) and R_g (e-ph) blocks use the elph-tensor WS lists (k-mesh box);
-      !!   R_q (phonon)   block uses the independent dynamical-matrix WS list (q-mesh).
+      !! Lists EPW's WS vectors (negated FLEUR vectors, EPW order) as the data is stored.
       type(t_fleurinput), intent(in) :: fi
       type(t_wann_ft),    intent(in) :: ft
       integer,            intent(in) :: Rvecs_q(:,:)     ! (3,nrr_q) phonon WS vectors (un-negated)
       real,               intent(in) :: weight_q(:)      ! (nrr_q)   = 1/ndegen
       integer,            intent(in) :: nrr_k, nrr_q, nrr_g
+      integer,            intent(in) :: ord_k(:), ord_q(:), ord_g(:)
 
-      integer :: iu, ir, irvec(3)
+      integer :: iu, ir, j, irvec(3)
       real    :: alat
 
       alat = norm2(fi%cell%amat(:,1))
@@ -346,21 +366,24 @@ contains
       write(iu,1) nrr_k, nrr_q, nrr_g, 1, 1
       ! electron block (R_e) -- elph-tensor k-mesh WS list
       do ir = 1, nrr_k
-         irvec = -ft%ws_k_Rvecs(:,ir)
-         write(iu,2) irvec, ws_len(fi%cell%amat, ft%ws_k_Rvecs(:,ir), alat)
-         write(iu,1) nint(1.0/ft%ws_k_weightNZ(ir))
+         j = ord_k(ir)
+         irvec = -ft%ws_k_Rvecs(:,j)
+         write(iu,2) irvec, ws_len(fi%cell%amat, ft%ws_k_Rvecs(:,j), alat)
+         write(iu,1) nint(1.0/ft%ws_k_weightNZ(j))
       end do
       ! phonon block (R_q) -- dynamical-matrix q-mesh WS list
       do ir = 1, nrr_q
-         irvec = -Rvecs_q(:,ir)
-         write(iu,2) irvec, ws_len(fi%cell%amat, Rvecs_q(:,ir), alat)
-         write(iu,1) nint(1.0/weight_q(ir))
+         j = ord_q(ir)
+         irvec = -Rvecs_q(:,j)
+         write(iu,2) irvec, ws_len(fi%cell%amat, Rvecs_q(:,j), alat)
+         write(iu,1) nint(1.0/weight_q(j))
       end do
-      ! e-ph block (R_g) -- elph-tensor k-mesh WS list (R_p axis of the tensor)
+      ! e-ph block (R_g) -- elph-tensor q-mesh WS list (R_p axis of the tensor)
       do ir = 1, nrr_g
-         irvec = -ft%ws_q_Rvecs(:,ir)
-         write(iu,2) irvec, ws_len(fi%cell%amat, ft%ws_q_Rvecs(:,ir), alat)
-         write(iu,1) nint(1.0/ft%ws_q_weightNZ(ir))
+         j = ord_g(ir)
+         irvec = -ft%ws_q_Rvecs(:,j)
+         write(iu,2) irvec, ws_len(fi%cell%amat, ft%ws_q_Rvecs(:,j), alat)
+         write(iu,1) nint(1.0/ft%ws_q_weightNZ(j))
       end do
       close(iu)
    end subroutine write_wigner_fmt
@@ -404,13 +427,15 @@ contains
       close(iu)
    end subroutine write_ukk_fmt
 
-   subroutine write_epmatwp(fi, ft_spin, nbndsub, nmodes, nrr_k, nrr_g, prefix)
+   subroutine write_epmatwp(fi, ft_spin, nbndsub, nmodes, nrr_k, nrr_g, prefix, ord_k, ord_g)
       !! <prefix>.epmatwp -- direct-access unformatted, one record per irg,
       !! record = epmatwp(nbndsub,nbndsub,nrr_k,nmodes) (EPW serial branch, io.f90:338-351).
+      !! Both R indices in EPW's order.
       type(t_fleurinput), intent(in) :: fi
       type(t_wann_ft),    intent(in) :: ft_spin(:)          ! ftRealspace(:,ispin), size 3*nat
       integer,            intent(in) :: nbndsub, nmodes, nrr_k, nrr_g
       character(len=*),   intent(in) :: prefix
+      integer,            intent(in) :: ord_k(:), ord_g(:)
 
       integer :: iu, irg, imode, irk, lrepmatw, direct_io_factor, unf_recl
       real    :: dummy
@@ -425,7 +450,7 @@ contains
            form='unformatted', access='direct', recl=unf_recl)
       do irg = 1, nrr_g
          do imode = 1, nmodes
-            rec4d(:,:,:,imode) = htr2ry * ft_spin(imode)%matWannier(:,:,:,irg-1)
+            rec4d(:,:,:,imode) = htr2ry * ft_spin(imode)%matWannier(:,:,ord_k-1,ord_g(irg)-1)
          end do
          write(iu, rec=irg) rec4d
       end do
