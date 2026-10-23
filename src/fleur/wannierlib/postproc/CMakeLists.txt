@@ -17,4 +17,5 @@ src/fleur/wannierlib/postproc/wgauge_interpolate_op.F90
 src/fleur/wannierlib/postproc/wgauge_interpolate_velocity.F90
 src/fleur/wannierlib/postproc/wgauge_interpolate_eigenstates.F90
 src/fleur/wannierlib/postproc/wgauge_run.F90
+src/fleur/wannierlib/postproc/wannierlib_export_paths.F90
 )
