@@ -50,8 +50,10 @@
 	  function gf_ab_coef_matrix(lmpmax,minat,maxat,jspin)
 	  !returns the full matrix of ab-coefficients for the current spin
 	  integer,intent(in):: jspin,lmpmax,minat,maxat
-	  complex           :: gf_ab_coef_matrix(size(ab_coef,1),0:lmpmax-1,maxat-minat+1,size(ab_coef,4))
+	  !allocatable result: an automatic-size result would live on the stack and overflow it
+	  complex,allocatable :: gf_ab_coef_matrix(:,:,:,:)
 
+	  allocate(gf_ab_coef_matrix(size(ab_coef,1),0:lmpmax-1,maxat-minat+1,size(ab_coef,4)))
 	  if (ab_spin==1) then
 	  	gf_ab_coef_matrix=ab_coef(:,0:lmpmax-1,minat:maxat,:,1)
 	  else
