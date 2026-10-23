@@ -17,7 +17,7 @@
      &                           nv2,en,nk,jspin,lapw,lapw_gf,                  &
      &                           l_embed,cell,                          &
      &                           gij,                                   &
-     &                           tmat)                                  
+     &                           tmat,nlayers)                          
       USE m_gf_math, ONLY: mat_inverse 
       USE m_gf_io2dmat 
       USE m_gf_types
@@ -31,6 +31,9 @@
       TYPE(t_cell),INTENT(IN)       :: cell 
       COMPLEX, INTENT(OUT)          :: gij(2*nv2,2*nv2) 
       COMPLEX, OPTIONAL, INTENT(IN) :: tmat(2*nv2,2*nv2) 
+      !number of layers: the right lead sits at the last layer (default 1)
+      INTEGER, OPTIONAL, INTENT(IN) :: nlayers
+      INTEGER :: right
                                                                         
       COMPLEX, ALLOCATABLE :: tmat11(:,:) 
       COMPLEX, ALLOCATABLE :: tmat22(:,:) 
@@ -67,9 +70,11 @@
       DEALLOCATE(tmat11,tmat12,tmat21,tmat22) 
                                                                         
       IF(l_embed)THEN 
+           right = 1
+           IF (PRESENT(nlayers)) right = nlayers
            CALL gf_projembed(lapw,lapw_gf,en,nk,jspin,cell,.FALSE.,                         &
      &           .FALSE.,.FALSE.,1,                                     &
-     &           gij(:,:))                                              
+     &           gij(:,:),layer2=right)                                 
       ENDIF 
                                                                         
       END SUBROUTINE 

@@ -141,7 +141,7 @@ CONTAINS
                     lapw_gf%nv2_tot,en,nk,jspin,lapw,lapw_gf,               &
                     .TRUE.,cell,                                          &
                     gij(:,:,1),                                           &
-                    tmat)
+                    tmat,layers%num_layers)
                     DEALLOCATE( tmat )
                 ENDIF
                 CALL gf_landauer(lapw_gf%nv2_tot,en,nk,jspin,cell              &

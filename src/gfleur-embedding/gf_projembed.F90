@@ -11,7 +11,7 @@
      &           lapw,lapw_gf,en,nk,jspin,cell,l_fullgreen,             &
      &           l_nogno,l_nohelpregion,layer,                          &
      &           gij,                                                   &
-     &           g)                                                     
+     &           g,layer2)                                              
 !**************************************************************         
 !     Obtain the surface projection of the Green's function             
 !     with embedding potential from the surface projection of           
@@ -34,6 +34,8 @@
       TYPE(t_cell),INTENT(IN)::cell 
       LOGICAL,INTENT(IN) :: l_fullgreen,l_nogno,l_nohelpregion 
       INTEGER,INTENT(IN) :: layer 
+      !region of the right embedding potential, default: layer
+      INTEGER,INTENT(IN),OPTIONAL :: layer2
       COMPLEX,INTENT(INOUT)::gij(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
       COMPLEX,INTENT(INOUT),OPTIONAL::g(:,:) 
                                                                         
@@ -51,7 +53,7 @@
       COMPLEX,ALLOCATABLE::rssigggno(:,:) 
       INTEGER,ALLOCATABLE::ipiv(:) 
       COMPLEX alpha,beta 
-      INTEGER n1,info,matsize,n2 
+      INTEGER n1,info,matsize,n2,right 
       COMPLEX norm,exp1,f1 
                                                                         
                                                                         
@@ -62,7 +64,9 @@
                                                   !left emb-pot         
       CALL gf_getemb2(g1,1,layer,en,nk,jspin,lapw,lapw_gf) 
                                                   !right emb-pot        
-      CALL gf_getemb2(g2,2,layer,en,nk,jspin,lapw,lapw_gf) 
+      right = layer
+      IF (PRESENT(layer2)) right = layer2
+      CALL gf_getemb2(g2,2,right,en,nk,jspin,lapw,lapw_gf) 
                                                                         
 !      WRITE(*,*) "G1:",layer,en,nk,SUM(g1)                             
 !      WRITE(*,*) "G2:",layer,en,nk,SUM(g2)                             
