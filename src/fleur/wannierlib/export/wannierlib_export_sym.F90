@@ -79,7 +79,7 @@ CONTAINS
    !> bands. Rank 0 writes and the other ranks return at once. The module header above is the
    !> layout, the version rule and the list of what is left out on purpose.
    SUBROUTINE wannierlib_export_sym(star, manifold, wannierize, atoms, cell, kpts, sym, &
-                                    fmpi, jspin, l_spinors, dband)
+                                    fmpi, jspin, l_spinors, l_soc, dband)
       USE m_types_cell; USE m_types_kpts; USE m_types_sym; USE m_types_mpi
       USE m_types_atoms, ONLY: t_atoms
       USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
@@ -93,6 +93,13 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: jspin
       LOGICAL, INTENT(IN) :: l_spinors
+      !> Whether spin-orbit coupling was on. It is NOT derivable from l_spinors, which is
+      !> true for noco without soc as well, and a consumer needs the two apart: without soc
+      !> the two spin channels are independent and the .amn does not rotate the spinor,
+      !> while a representation built from the projections does, so the consumer has to take
+      !> that rotation back out. Getting it wrong is silent -- the projections stay
+      !> orthonormal and the centres stay symmetric.
+      LOGICAL, INTENT(IN) :: l_soc
       !> The group on the bands. Optional and allowed to arrive unallocated, because a run
       !> with local orbitals or with spinor states cannot build it yet and still wants the
       !> rest of this file; has_d_band below says which of the two the reader is holding.
@@ -285,6 +292,10 @@ CONTAINS
       !> /proj/spin works but is a guess, and a projection whose spin the user fixed in a
       !> collinear run carries the same marks.
       CALL io_write_attint0(gid, 'spinor', MERGE(1, 0, l_spinors))
+      !> l_soc splits the spinor runs in two, which spinor alone does not: see the argument.
+      !> Added after version 4, so a reader has to probe for it and fall back for the files
+      !> written before -- its absence does not mean soc was off.
+      CALL io_write_attint0(gid, 'l_soc', MERGE(1, 0, l_soc))
       CALL h5gclose_f(gid, err)
       CALL h5fclose_f(fid, err)
 
