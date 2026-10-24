@@ -74,6 +74,9 @@ MODULE m_wannierlib_sym_kstar
       !> are not the same rotations shifted by nop: read op, never iop - nop.
       LOGICAL, ALLOCATABLE :: antiunit(:)
       INTEGER :: nop = 0                    !< unitary operations used, <= sym%nop
+      !> operations sym offers that the MOMENTS rule out: they neither hold nor
+      !> reverse them, so they are no symmetry with or without time reversal.
+      INTEGER :: ntilt = 0
       !> (nsym) FLEUR's own index of the rotation each slot carries, and (nsym) where the
       !> inverse of each slot sits in THIS list. The second is what the written file needs:
       !> an invtab taken from sym would point at an operation that was not written.
@@ -287,8 +290,9 @@ CONTAINS
       LOGICAL :: l_u(sym%nop), l_a(sym%nop), l_ok
       INTEGER :: amap(atoms%nat, sym%nop)
       REAL :: m(3, atoms%nat), r(3, 3), det
-      INTEGER :: i, j, ia
+      INTEGER :: i, j, ia, ntilt
 
+      ntilt = 0
       l_u = .TRUE.
       IF (ALLOCATED(sym%mapped_atom)) THEN
          DO i = 1, sym%nop
@@ -317,15 +321,40 @@ CONTAINS
                   l_a(i) = .FALSE.
             END DO
             IF (.NOT. l_u(i)) CYCLE
+            !> An operation that REVERSES every moment is a symmetry with time reversal and
+            !> not without it, so it belongs in the antiunitary half. mapped_atom filters on
+            !> the spin quantisation axis alone, which does not see a moment turned in the
+            !> plane, and keeps such an operation in the unitary half; the two halves then
+            !> overlap and the operation would be counted twice. It is moved rather than
+            !> treated as a contradiction. The operations that hold the moments are a
+            !> subgroup and the ones that reverse them its coset, so the unitary half stays
+            !> closed -- which the inversion gate below checks and does not take on trust.
+            IF (l_a(i)) THEN
+               l_u(i) = .FALSE.
+               CYCLE
+            END IF
+            !> Neither held nor reversed: the operation TILTS the moments, so it is no
+            !> symmetry of this state with or without time reversal and it goes into
+            !> neither half. mapped_atom does not see this, because it filters on the spin
+            !> quantisation axis alone and a moment turned inside the plane keeps its atom
+            !> map, so sym offers operations the magnetic state does not have.
+            !>
+            !> MEASURED on hcp Co with a basal moment: of twelve operations two hold the
+            !> moments, two reverse them and eight tilt them, the threefold ones. The count
+            !> is reported rather than swallowed, because a group cut from twelve to four
+            !> in silence is what later reads as a bug. What is left is still checked: the
+            !> ones that hold the moments are a subgroup and the ones that reverse them its
+            !> coset, and the inversion gate below fails if that is not what came out.
             DO ia = 1, atoms%nat
-               IF (ANY(ABS(det*MATMUL(r, m(:, ia)) - m(:, amap(ia, i))) > 1e-6)) &
-                  CALL juDFT_error( &
-                  "wannierlib: an operation of the group does not hold the moments", &
-                  hint="the spin quantisation axis and the moment directions disagree", &
-                  calledby="wl_build_ops")
+               IF (ANY(ABS(det*MATMUL(r, m(:, ia)) - m(:, amap(ia, i))) > 1e-6)) THEN
+                  l_u(i) = .FALSE.
+                  ntilt = ntilt + 1
+                  EXIT
+               END IF
             END DO
          END DO
       END IF
+      star%ntilt = ntilt
 
       star%nop = COUNT(l_u)
       star%nsym = star%nop + COUNT(l_a)
@@ -420,7 +449,10 @@ CONTAINS
       WRITE (oUnit, '(a,i0)') "  unitary operations used  ", star%nop
       IF (star%nop < nop_all) &
          WRITE (oUnit, '(a,i0,a)') "  of ", nop_all, &
-         " in sym; the others have no atom map, so they are not symmetries of this state"
+         " in sym; the rest are not symmetries of this state"
+      IF (star%ntilt > 0) &
+         WRITE (oUnit, '(a,i0,a)') "  of those, by the moments ", star%ntilt, &
+         "; the rotation turns them, so no operation of the group holds them"
       IF (star%nsym > star%nop) &
          WRITE (oUnit, '(a,i0,a)') "  with time reversal       ", star%nsym, " in all"
 
