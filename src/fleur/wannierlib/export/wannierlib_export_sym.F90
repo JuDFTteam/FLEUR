@@ -29,20 +29,28 @@
 !>               representation of the group on the Wannier functions from the projections,
 !>               which /proj declares. What only FLEUR knows is the table, not the matrices.
 !>
-!> WHAT IS WRITTEN, AND THE VERSION THAT SAYS SO. The root carries a layout version: 2 for
-!> the file without band representations, 3 for the file with them, 4 for one that also
-!> carries the spinor lift. A reader decides from that one integer instead of probing.
+!> WHAT IS WRITTEN. The root carries a layout version, and it describes the SHAPE of the
+!> file and not what one run happened to put in it: every run writes the same number. What
+!> a run left out is answered by has_d_band and by probing for the dataset. The number
+!> rises only for a change a reader CANNOT probe for, so adding a dataset or an attribute
+!> leaves it where it is; 1 to 3 are files from before the spinor lift, 4 is this layout.
+!> So the number must NOT be read as a statement about the band representations: a file
+!> without them is this layout with one group absent, not an older layout.
 !>   /kstar       kirr, k2kirr, k2kirr_sym, weight, kirr2k -- the stars, and which operation
 !>                carries each k of the mesh to the representative of its own.
 !>   /spacegroup  mrot, tau, invtab, antiunitary -- the operations the stars were built
-!>                from. NOT all of sym; see the index rule below. Version 4 adds su2_re and
-!>                su2_im, (2, 2, nsym): the SU(2) d_band was actually built with, so that a
-!>                consumer stops having to guess which of the two lifts this run chose.
+!>                from. NOT all of sym; see the index rule below. Since version 4 also
+!>                su2_re and su2_im, (2, 2, nsym): the SU(2) d_band was built with, written
+!>                even by a run that could not build d_band itself, so that a consumer
+!>                stops having to guess which of the two lifts this run chose.
 !>   /proj        what every Wannier function was projected from, which is what lets a
 !>                reader build D_wann for itself.
-!>   /d_band      re and im of (num_bands, num_bands, nsym, nkirr). Version 3 only: a run
-!>                whose eigenvectors are real, or whose atom map came out empty, writes
-!>                version 2 and the group is simply not there.
+!>   /d_band      re and im of (num_bands, num_bands, nsym, nkirr). OPTIONAL, and the only
+!>                part of the file that is: a run whose eigenvectors are real and whose
+!>                group has a non-symmorphic operation cannot hold the phase that rotation
+!>                needs, and one whose atom map came out empty has no operations to
+!>                represent. Either way the group is absent, has_d_band says so and the out
+!>                file names the reason. The version does not move for it.
 !>   /meta        kpoints, amat, bmat, taual.
 !>
 !> THE OPERATION INDEX IS THIS FILE'S OWN, not sym's. /spacegroup holds only the operations
@@ -72,6 +80,11 @@ MODULE m_wannierlib_export_sym
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_export_sym
+
+   !> The layout version written at the root, as the module header defines it: one number
+   !> for the shape of the file, the same for every run, and not a statement about what
+   !> this run could compute.
+   INTEGER, PARAMETER :: WL_SYM_LAYOUT = 4
 CONTAINS
 
    !> Write WF<spin>_sym.hdf: the stars, the group they were built from, what each Wannier
@@ -275,9 +288,11 @@ CONTAINS
       CALL h5gclose_f(gid, err)
 
       !> version and nkpt come from wl_hdf_root, which is the part of the contract every
-      !> WF<spin>_<what>.hdf shares. time_reversal states that the stars were built under the
-      !> unitary group alone: a consumer with an antiunitary slot fills it with .FALSE.
-      CALL wl_hdf_root(fid, MERGE(4, 2, l_dband), star%nk, gid)
+      !> WF<spin>_<what>.hdf shares. The version is the layout and says nothing about this
+      !> run; has_d_band below is what says whether the band representations are here.
+      !> time_reversal states that the stars were built under the unitary group alone: a
+      !> consumer with an antiunitary slot fills it with .FALSE.
+      CALL wl_hdf_root(fid, WL_SYM_LAYOUT, star%nk, gid)
       CALL io_write_attint0(gid, 'nkirr', star%nkirr)
       CALL io_write_attint0(gid, 'nsym', star%nsym)
       CALL io_write_attint0(gid, 'num_bands', manifold%num_bands)
