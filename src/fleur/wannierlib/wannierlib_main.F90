@@ -323,8 +323,8 @@ CONTAINS
          !> are wrong.
          IF (this%export%symmetrizer) THEN
             CALL wannierlib_export_sym(kstar, manifold, wl, atoms, cell, kpts, sym, &
-                                       fmpi, jspin, l_wannierlib_spinors, noco%l_soc, &
-                                       dband)
+                                       nococonv, fmpi, jspin, l_wannierlib_spinors, &
+                                       noco%l_soc, dband)
             IF (ALLOCATED(dband)) DEALLOCATE (dband)
          END IF
          ! collinear jspins=2 (no SOC/noco): the two spin channels wannierise separately;

@@ -51,7 +51,13 @@
 !>                needs, and one whose atom map came out empty has no operations to
 !>                represent. Either way the group is absent, has_d_band says so and the out
 !>                file names the reason. The version does not move for it.
-!>   /meta        kpoints, amat, bmat, taual.
+!>   /meta        kpoints, amat, bmat, taual, and alph and beta -- ONE PER ATOM, the
+!>                local spin frame the calculation USED. Not what the input asked for: a
+!>                spin spiral adds 2.pi.qss.taual to alph, so a consumer that rebuilt the
+!>                frames from the input file would be a spiral term short. The pair is the
+!>                one nococonv builds chi from, which is the rotation a frame correction
+!>                needs; the moment DIRECTION would not do, because it leaves alph free
+!>                wherever beta is 0 or pi and the SU(2) of a turn about z is not 1.
 !>
 !> THE OPERATION INDEX IS THIS FILE'S OWN, not sym's. /spacegroup holds only the operations
 !> that survived the atom map, in the order they are written, and every index in /kstar and
@@ -92,8 +98,9 @@ CONTAINS
    !> bands. Rank 0 writes and the other ranks return at once. The module header above is the
    !> layout, the version rule and the list of what is left out on purpose.
    SUBROUTINE wannierlib_export_sym(star, manifold, wannierize, atoms, cell, kpts, sym, &
-                                    fmpi, jspin, l_spinors, l_soc, dband)
+                                    nococonv, fmpi, jspin, l_spinors, l_soc, dband)
       USE m_types_cell; USE m_types_kpts; USE m_types_sym; USE m_types_mpi
+      USE m_types_nococonv, ONLY: t_nococonv
       USE m_types_atoms, ONLY: t_atoms
       USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
       TYPE(t_wl_kstar), INTENT(IN) :: star
@@ -103,6 +110,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_kpts), INTENT(IN) :: kpts
       TYPE(t_sym), INTENT(IN) :: sym
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: jspin
       LOGICAL, INTENT(IN) :: l_spinors
@@ -129,6 +137,8 @@ CONTAINS
       REAL, ALLOCATABLE :: su2re(:, :, :), su2im(:, :, :)
       COMPLEX :: u2(2, 2)
       REAL, ALLOCATABLE :: pos(:, :), shift(:, :), euler(:, :), amx(:, :, :)
+      REAL, ALLOCATABLE :: alph_at(:), beta_at(:)
+      INTEGER :: itype, ia
 
       IF (fmpi%irank /= 0) RETURN
       !> wl_build_kstar either filled this or stopped the run, so an empty table here means
@@ -285,6 +295,24 @@ CONTAINS
       CALL wr_r2(gid, 'amat', (/3, 3/), cell%amat)
       CALL wr_r2(gid, 'bmat', (/3, 3/), cell%bmat)
       CALL wr_r2(gid, 'taual', (/3, atoms%nat/), atoms%taual(:, :atoms%nat))
+      !> One pair per ATOM, expanded from the one pair per TYPE that FLEUR keeps, the way
+      !> wl_moments expands it for the directions. Equivalent atoms share a frame because
+      !> the nocoParams are a property of the group and not of the atom.
+      IF (.NOT. ALLOCATED(nococonv%alph)) CALL juDFT_error( &
+         "wannierlib: the local spin frames are not set", &
+         hint="nococonv%init assigns them from the input; the export ran before it", &
+         calledby="wannierlib_export_sym")
+      ALLOCATE (alph_at(atoms%nat), beta_at(atoms%nat))
+      DO itype = 1, atoms%ntype
+         DO ia = 1, atoms%neq(itype)
+            na = atoms%firstAtom(itype) + ia - 1
+            alph_at(na) = nococonv%alph(itype)
+            beta_at(na) = nococonv%beta(itype)
+         END DO
+      END DO
+      CALL wr_r1(gid, 'alph', (/atoms%nat/), alph_at)
+      CALL wr_r1(gid, 'beta', (/atoms%nat/), beta_at)
+      DEALLOCATE (alph_at, beta_at)
       CALL h5gclose_f(gid, err)
 
       !> version and nkpt come from wl_hdf_root, which is the part of the contract every
