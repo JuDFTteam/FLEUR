@@ -58,7 +58,7 @@ CONTAINS
       END DO
 
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
-                        this%op_r_name, this%ops%name, this%ops%total, &
+                        this%op_r_name, this%ops%name, &
                         op_r_needs, op_needs, this%l_ws_distance)
       !> On a film the three regions are all covered now: the pair overlap, the spin
       !> operator and the momentum each have their vacuum half, so nothing is refused by

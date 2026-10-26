@@ -3608,8 +3608,6 @@
          <xsd:documentation>One Wannier-interpolated operator, projected onto the interpolated bands.</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="name" type="WannierlibOperatorEnum" use="required"/>
-      <xsd:attribute name="comp" type="xsd:string" use="optional"/>
-      <xsd:attribute name="total" type="FleurBool" use="optional" default="T"/>
    </xsd:complexType>
 
    <xsd:simpleType name="WannierlibOperatorEnum">

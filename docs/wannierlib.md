@@ -215,9 +215,6 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 | `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
 | `eigenstates` | `bands_wann_eigenstates.dat` |
 
-`total="T"` (the default) asks for the site-summed projection; only `spin` and `orbital`
-have anything to sum over. `comp` selects Cartesian components.
-
 > The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
 > particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
 > names, because not everything that has an O(R) has an interpolation driver and the other

@@ -27,10 +27,9 @@ MODULE m_types_melem_request
       LOGICAL :: l_operators_r = .FALSE.
       INTEGER :: n_op_r = 0
       CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
-      !> Band interpolation. op_total selects the site-summed projection.
+      !> Band interpolation: the names to project onto the interpolated bands.
       INTEGER :: n_ops = 0
       CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)
-      INTEGER,           ALLOCATABLE :: op_total(:)
       !> Which CATALOGUE entry each name above needs built, '' when none does. The caller
       !> resolves it, because the tables that spell the names belong to whoever offers
       !> them: two callers can expose the same matrix under different names, and neither
@@ -54,13 +53,12 @@ MODULE m_types_melem_request
 CONTAINS
 
    SUBROUTINE melem_request_init(this, l_spin, l_orbmom, l_socop, l_operators_r, &
-                                 op_r_name, op_name, op_total, op_r_needs, op_needs, &
+                                 op_r_name, op_name, op_r_needs, op_needs, &
                                  l_ws_distance)
       CLASS(t_melem_request), INTENT(OUT) :: this
       LOGICAL,          INTENT(IN) :: l_spin, l_orbmom, l_socop, l_operators_r
       CHARACTER(LEN=*), INTENT(IN) :: op_r_name(:)   !> the O(R) list, possibly empty
       CHARACTER(LEN=*), INTENT(IN) :: op_name(:)     !> the interpolation list, possibly empty
-      INTEGER,          INTENT(IN) :: op_total(:)
       CHARACTER(LEN=*), INTENT(IN) :: op_r_needs(:)  !> catalogue entry per O(R) name
       CHARACTER(LEN=*), INTENT(IN) :: op_needs(:)    !> catalogue entry per interpolated name
       LOGICAL,          INTENT(IN) :: l_ws_distance
@@ -76,14 +74,10 @@ CONTAINS
       this%op_r_name     = op_r_name
       this%n_ops         = SIZE(op_name)
       this%op_name       = op_name
-      this%op_total      = op_total
       this%op_r_needs    = op_r_needs
       this%op_needs      = op_needs
       this%l_ws_distance = l_ws_distance
 
-      IF (SIZE(op_total) /= SIZE(op_name)) &
-         CALL judft_error("t_melem_request: every interpolated operator needs its own total flag", &
-                          calledby="melem_request_init")
       IF (SIZE(op_needs) /= SIZE(op_name) .OR. SIZE(op_r_needs) /= SIZE(op_r_name)) &
          CALL judft_error("t_melem_request: every name needs its resolved catalogue entry", &
                           calledby="melem_request_init")

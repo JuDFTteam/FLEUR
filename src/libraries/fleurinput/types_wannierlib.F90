@@ -47,13 +47,11 @@ MODULE m_types_wannierlib
     CHARACTER(LEN=20) :: species = ''
   END TYPE t_wannierlib_proj
 
-  !> One <operator> of <interpolation>: which operator, which components of it, and
-  !> whether the site-summed projection is wanted.
+  !> One <operator> of <interpolation>: which operator to project onto the
+  !> interpolated bands. Declaring it is what asks for it.
   TYPE t_wannierlib_op
     SEQUENCE
     CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spinOrbit/velocity/...
-    CHARACTER(LEN=32) :: comp = ''   ! requested components; '' = all of the operator rank
-    INTEGER :: total = 1             ! 1 = write the summed-over-atoms projection
   END TYPE t_wannierlib_op
 
   !> The <export> block: copy out matrices the run already holds, for someone outside.
@@ -426,8 +424,6 @@ CONTAINS
 #endif
     DO iop = 1, nops
       CALL mpi_bc(rank, mpi_comm, this%ops(iop)%name)
-      CALL mpi_bc(rank, mpi_comm, this%ops(iop)%comp)
-      CALL mpi_bc(this%ops(iop)%total, rank, mpi_comm)
     END DO
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
     CALL mpi_bc(this%export%w90, rank, mpi_comm)
@@ -643,13 +639,6 @@ CONTAINS
     DO iProj = 1, nOpsRead
       WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/interpolation/operator[', iProj, ']'
       this%ops(iProj)%name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
-      this%ops(iProj)%comp = ''
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@comp') == 1) &
-         this%ops(iProj)%comp = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@comp'))
-      this%ops(iProj)%total = 1
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@total') == 1) THEN
-        IF (.NOT. evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@total'))) this%ops(iProj)%total = 0
-      END IF
 
       ! derive convenience flags that gate the coarse-mesh provider calls.
       ! Class-C operators auto-request their prerequisite coarse matrices:
