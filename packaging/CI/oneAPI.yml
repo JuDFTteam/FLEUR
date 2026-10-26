@@ -1,5 +1,5 @@
 build-intel:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   stage: build
   artifacts:
      paths:
@@ -17,7 +17,7 @@ build-intel:
       - if: $CI_TASKS =~ /all/    
 
 test-intel:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel"
@@ -30,7 +30,7 @@ test-intel:
 
   
 build-intel-debug:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   stage: build
   artifacts:
      paths:
@@ -48,7 +48,7 @@ build-intel-debug:
       - if: $CI_TASKS =~ /all/    
 
 test-intel-debug:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel.debug"

@@ -1,5 +1,5 @@
 build-gfortran-hdf5:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran_23102026
   stage: build
   variables:
     FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier TRUE -includedir /opt/fleur-deps/mpi/include -libdir /opt/fleur-deps/mpi/lib"
@@ -24,7 +24,7 @@ build-gfortran-hdf5:
     
 
 test-gfortran-hdf5: 
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran_23102026
   extends: .test-fleur
   variables:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
@@ -40,7 +40,7 @@ test-gfortran-hdf5:
     - when: on_success  
 
 fast-test-gfortran-hdf5: 
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran_23102026
   extends: .test-fleur
   stage: fast-test
   variables:
@@ -55,7 +55,7 @@ fast-test-gfortran-hdf5:
     - when: on_success
 
 #masci-test-gfortran-hdf5: 
-#  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+#  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran_23102026
 #  extends: .test-fleur
 #  variables:
 #    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
