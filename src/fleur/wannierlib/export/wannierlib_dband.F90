@@ -123,10 +123,13 @@ CONTAINS
       TYPE(t_spinor_layout) :: layout, layout_irr
       COMPLEX, ALLOCATABLE :: oblk(:, :, :, :)
       TYPE(t_ujug_slot) :: ujug(2)
-      INTEGER, ALLOCATABLE :: ev_list(:), perm(:)
-      REAL :: kdiff0(3, 1), rrot(3, 3), kimg(3)
+      INTEGER, ALLOCATABLE :: ev_list(:)
+      !> One permutation per interstitial spin channel: (vector, channel).
+      INTEGER, ALLOCATABLE :: perm(:, :)
+      REAL :: kdiff0(3, 1), rrot(3, 3), kimg(3), qsh(3, 2)
       INTEGER :: ir, iop, jop, kirr, jk, nb, ginv(3, 3), g0(3), j, rsign
       INTEGER :: js, js2, jrec, krec, n_comp, jsp_loc(2), n_rad, ja, jb, i0, j0, nh
+      INTEGER :: nintsp, ich(2)
       COMPLEX :: usp(2, 2), amt(2, 2), fspin(2, 2, atoms%ntype)
       TYPE(t_mat) :: zperm
       TYPE(t_melem_vacabc) :: vac_a, vac_b
@@ -160,6 +163,20 @@ CONTAINS
       !> cost WannFeBccSOC and WannFeAFMColSOC four parts in a hundred.
       DO js = 1, n_comp
          jsp_loc(js) = MERGE(js, radial_slot(radfun, MERGE(js, jspin, l_spinors)), l_stack)
+      END DO
+      !> The interstitial spin channels, and where each one's Bloch vector sits. A spin
+      !> spiral builds the basis twice and a spinor component IS a channel there; with
+      !> anything else there is one channel and both components read it. The shift is
+      !> what lapw%vk carries, (is-1.5)*qss, and it is zero without a spiral, which
+      !> leaves every other case on exactly the path it was on.
+      nintsp = MERGE(2, 1, noco%l_ss)
+      qsh = 0.0
+      IF (noco%l_ss) THEN
+         qsh(:, 1) = -nococonv%qss/2
+         qsh(:, 2) = +nococonv%qss/2
+      END IF
+      DO js = 1, 2
+         ich(js) = MERGE(js, 1, noco%l_ss)
       END DO
       ALLOCATE (dband(nb, nb, star%nsym, star%nkirr), source=CMPLX(0.0, 0.0))
       !> <psi^s(Rk)|rot psi^s'(k)>, the overlap with NO spin rotation in it. The spin
@@ -252,10 +269,14 @@ CONTAINS
                "wannierlib: a rotated k-point is not its image up to a lattice vector", &
                calledby="wl_build_dband")
 
-            CALL wl_gmap(lapw_irr, lapw_img, ginv, g0, rsign, perm)
-            !> The orbital half, component by component. One permutation of reciprocal
-            !> vectors serves both: a spinor's two components are expanded in the SAME
-            !> basis, so what differs between them is the coefficients and nothing else.
+            CALL wl_gmap(lapw_irr, lapw_img, ginv, g0, rsign, nintsp, perm)
+            !> The orbital half, component by component, each with ITS OWN permutation.
+            !> Without a spin spiral the two components are expanded in the same basis
+            !> and the two permutations are one, so what differs between the components
+            !> is the coefficients and nothing else. A spiral is the case where that
+            !> stops being true: |G + k + (is-1.5) qss| < rkmax selects a different set
+            !> per channel, and nv(1) /= nv(2) at every k whose k.qss is not a
+            !> half-integer multiple.
             !> The lattice operation drags the spin only where spin-orbit coupling ties
             !> the two together. Without it they are independent groups and the SU(2) of
             !> the rotation does not belong here: sympsi asks grp_k for those matrices
@@ -279,20 +300,36 @@ CONTAINS
                !> halves afterwards: z_rot^s = sum_s' U(s,s') (perm z)^s'. Two passes and
                !> not one, because every component of the mixture reads every component of
                !> the permuted copy.
-               nh = layout%row_dn
                CALL zperm%init(.FALSE., z_irr(1)%matsize1, nb)
                CALL zperm%clear()
                CALL z_rot(1)%init(.FALSE., z_irr(1)%matsize1, nb)
                CALL z_rot(1)%clear()
                DO js = 1, 2
-                  CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm, sym%tau(:, jop), l_anti, &
+                  CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm(:, ich(js)), &
+                                        sym%tau(:, jop), l_anti, ich(js), qsh(:, ich(js)), &
                                         z_irr(1), zperm, layout_irr%row_offset(js), &
                                         layout%row_offset(js))
                END DO
                DO js = 1, 2
                   i0 = layout%row_offset(js)
+                  !> row_size and not row_dn: the offset of the second block is the size
+                  !> of the first only while the two match, which a spiral breaks.
+                  nh = layout%row_size(js)
                   DO js2 = 1, 2
+                     IF (ABS(usp(js, js2)) < 1e-14) CYCLE
                      j0 = layout%row_offset(js2)
+                     !> Mixing one block into the other needs the two to be the same
+                     !> length. A spiral makes them differ, and the pairing an
+                     !> antiunitary operation would then need is CROSSED: time reversal
+                     !> turns qss over, so channel is at k meets channel 3-is at the
+                     !> image, and the swapped nv of a paired k-point is exactly that.
+                     !> Nothing in hand has both -- a spiral breaks time reversal, so
+                     !> the exported group has none -- so it is refused rather than
+                     !> written untested.
+                     IF (layout%row_size(js) /= layout%row_size(js2)) CALL juDFT_error( &
+                        "wannierlib: cannot mix two spinor blocks of different length", &
+                        hint="a spiral pairs the channels crossed under time reversal", &
+                        calledby="wl_build_dband")
                      z_rot(1)%data_c(i0 + 1:i0 + nh, :) = z_rot(1)%data_c(i0 + 1:i0 + nh, :) &
                         + usp(js, js2)*zperm%data_c(j0 + 1:j0 + nh, :)
                   END DO
@@ -310,8 +347,9 @@ CONTAINS
                   CALL z_rot(js)%init(.FALSE., z_irr(js)%matsize1, &
                                       z_irr(js)%matsize2)
                   CALL z_rot(js)%clear()
-                  CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm, sym%tau(:, jop), l_anti, &
-                                        z_irr(js), z_rot(js))
+                  !> Not a spiral: l_ss needs l_noco, which takes the branch above.
+                  CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm(:, 1), sym%tau(:, jop), &
+                                        l_anti, 1, qsh(:, 1), z_irr(js), z_rot(js))
                   CALL matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, &
                                              fmpi, vtot, lapw_img, z_rot(js), nb, jsp_loc(js), &
                                              abc_one)
@@ -459,52 +497,64 @@ CONTAINS
    !> map is not invertible. Either way the coefficient vector would be built from part of
    !> the state, with a norm that looks right because what is missing is a few of the
    !> shortest vectors.
-   SUBROUTINE wl_gmap(lapw_a, lapw_b, ginv, g0, rsign, perm)
+   SUBROUTINE wl_gmap(lapw_a, lapw_b, ginv, g0, rsign, nintsp, perm)
       USE m_types_lapw
       TYPE(t_lapw), INTENT(IN) :: lapw_a, lapw_b
       INTEGER, INTENT(IN) :: ginv(3, 3), g0(3), rsign
-      INTEGER, ALLOCATABLE, INTENT(INOUT) :: perm(:)
+      !> Interstitial spin channels to map, 2 under a spin spiral and 1 otherwise. Each
+      !> gets its OWN permutation: a spiral selects channel is with
+      !> |G + k + (is-1.5) qss| < rkmax, so the two channels hold different sets of
+      !> reciprocal vectors and one map cannot serve both. The rotation keeps a channel
+      !> to itself because every operation of a spiral's group leaves qss alone, so
+      !> R(k + (is-1.5) qss) is the image point's own channel is.
+      INTEGER, INTENT(IN) :: nintsp
+      INTEGER, ALLOCATABLE, INTENT(INOUT) :: perm(:, :)
 
       INTEGER, ALLOCATABLE :: box(:, :, :), seen(:)
-      INTEGER :: lo(3), hi(3), g(3), i, nva, nvb
-
-      nva = lapw_a%nv(1)
-      nvb = lapw_b%nv(1)
-      IF (nva /= nvb) CALL juDFT_error( &
-         "wannierlib: a k-point and its symmetry image have different basis sizes", &
-         calledby="wl_gmap")
-
-      lo(1) = MINVAL(lapw_b%k1(:nvb, 1)); hi(1) = MAXVAL(lapw_b%k1(:nvb, 1))
-      lo(2) = MINVAL(lapw_b%k2(:nvb, 1)); hi(2) = MAXVAL(lapw_b%k2(:nvb, 1))
-      lo(3) = MINVAL(lapw_b%k3(:nvb, 1)); hi(3) = MAXVAL(lapw_b%k3(:nvb, 1))
-      ALLOCATE (box(lo(1):hi(1), lo(2):hi(2), lo(3):hi(3)), source=0)
-      DO i = 1, nvb
-         box(lapw_b%k1(i, 1), lapw_b%k2(i, 1), lapw_b%k3(i, 1)) = i
-      END DO
+      INTEGER :: lo(3), hi(3), g(3), i, nva, nvb, is
 
       IF (ALLOCATED(perm)) DEALLOCATE (perm)
-      ALLOCATE (perm(nva), source=0)
-      DO i = 1, nva
-         g = rsign*MATMUL(TRANSPOSE(ginv), &
-                          (/lapw_a%k1(i, 1), lapw_a%k2(i, 1), lapw_a%k3(i, 1)/)) + g0
-         IF (ANY(g < lo) .OR. ANY(g > hi)) CALL juDFT_error( &
-            "wannierlib: a rotated reciprocal vector is outside the image basis", &
-            calledby="wl_gmap")
-         perm(i) = box(g(1), g(2), g(3))
-         IF (perm(i) == 0) CALL juDFT_error( &
-            "wannierlib: a rotated reciprocal vector is not in the image basis", &
-            calledby="wl_gmap")
-      END DO
-      DEALLOCATE (box)
+      ALLOCATE (perm(MAXVAL(lapw_a%nv(:nintsp)), nintsp), source=0)
 
-      ALLOCATE (seen(nva), source=0)
-      DO i = 1, nva
-         IF (seen(perm(i)) /= 0) CALL juDFT_error( &
-            "wannierlib: two reciprocal vectors rotate onto the same one", &
+      DO is = 1, nintsp
+         nva = lapw_a%nv(is)
+         nvb = lapw_b%nv(is)
+         !> Compared WITHIN a channel. Comparing nv(1) on both sides passes a spiral
+         !> whatever the other channel does, which is how the silent failure got out.
+         IF (nva /= nvb) CALL juDFT_error( &
+            "wannierlib: a k-point and its symmetry image have different basis sizes", &
             calledby="wl_gmap")
-         seen(perm(i)) = i
+
+         lo(1) = MINVAL(lapw_b%k1(:nvb, is)); hi(1) = MAXVAL(lapw_b%k1(:nvb, is))
+         lo(2) = MINVAL(lapw_b%k2(:nvb, is)); hi(2) = MAXVAL(lapw_b%k2(:nvb, is))
+         lo(3) = MINVAL(lapw_b%k3(:nvb, is)); hi(3) = MAXVAL(lapw_b%k3(:nvb, is))
+         ALLOCATE (box(lo(1):hi(1), lo(2):hi(2), lo(3):hi(3)), source=0)
+         DO i = 1, nvb
+            box(lapw_b%k1(i, is), lapw_b%k2(i, is), lapw_b%k3(i, is)) = i
+         END DO
+
+         DO i = 1, nva
+            g = rsign*MATMUL(TRANSPOSE(ginv), &
+                             (/lapw_a%k1(i, is), lapw_a%k2(i, is), lapw_a%k3(i, is)/)) + g0
+            IF (ANY(g < lo) .OR. ANY(g > hi)) CALL juDFT_error( &
+               "wannierlib: a rotated reciprocal vector is outside the image basis", &
+               calledby="wl_gmap")
+            perm(i, is) = box(g(1), g(2), g(3))
+            IF (perm(i, is) == 0) CALL juDFT_error( &
+               "wannierlib: a rotated reciprocal vector is not in the image basis", &
+               calledby="wl_gmap")
+         END DO
+         DEALLOCATE (box)
+
+         ALLOCATE (seen(nva), source=0)
+         DO i = 1, nva
+            IF (seen(perm(i, is)) /= 0) CALL juDFT_error( &
+               "wannierlib: two reciprocal vectors rotate onto the same one", &
+               calledby="wl_gmap")
+            seen(perm(i, is)) = i
+         END DO
+         DEALLOCATE (seen)
       END DO
-      DEALLOCATE (seen)
    END SUBROUTINE wl_gmap
 
    !> The states as complex, whatever the solver stored them as. A centrosymmetric
@@ -537,12 +587,21 @@ CONTAINS
    !> translation, exp(-2 pi i (k' + G').tau) with k' + G' the vector AFTER folding, which is
    !> the same vector before it. A symmorphic group leaves it at one, so a case whose tau is
    !> all zero does not exercise this line at all.
-   SUBROUTINE wl_rotate_coeffs(lapw_a, lapw_b, perm, tau, l_anti, z_a, z_b, ioff_a, ioff_b)
+   SUBROUTINE wl_rotate_coeffs(lapw_a, lapw_b, perm, tau, l_anti, iintsp, qshift, &
+                               z_a, z_b, ioff_a, ioff_b)
       USE m_types_lapw; USE m_types_mat
       TYPE(t_lapw), INTENT(IN) :: lapw_a, lapw_b
       INTEGER, INTENT(IN) :: perm(:)
       REAL, INTENT(IN) :: tau(3)
       LOGICAL, INTENT(IN) :: l_anti
+      !> Which interstitial spin channel's reciprocal vectors these coefficients are
+      !> expanded in, and how far that channel's Bloch vector sits from bkpt. Under a
+      !> spin spiral the physical vector of channel is at label G is
+      !> bkpt + G + (is-1.5) qss -- that is what lapw%vk holds -- and it is the
+      !> PHYSICAL vector the translation sees, so qshift belongs in the phase below.
+      !> Both are the trivial values away from a spiral: channel 1 and no shift.
+      INTEGER, INTENT(IN) :: iintsp
+      REAL, INTENT(IN) :: qshift(3)
       TYPE(t_mat), INTENT(IN) :: z_a
       TYPE(t_mat), INTENT(INOUT) :: z_b
       !> Row at which this component's block begins on each side. Zero unless the spinor
@@ -567,11 +626,11 @@ CONTAINS
          hint="wl_build_dband casts them; see wl_as_complex", &
          calledby="wl_rotate_coeffs")
 
-      DO i = 1, lapw_a%nv(1)
+      DO i = 1, lapw_a%nv(iintsp)
          j = perm(i)
-         arg = -tpi_const*DOT_PRODUCT(lapw_b%bkpt + &
-                                      (/REAL(lapw_b%k1(j, 1)), REAL(lapw_b%k2(j, 1)), &
-                                        REAL(lapw_b%k3(j, 1))/), tau)
+         arg = -tpi_const*DOT_PRODUCT(lapw_b%bkpt + qshift + &
+                                      (/REAL(lapw_b%k1(j, iintsp)), REAL(lapw_b%k2(j, iintsp)), &
+                                        REAL(lapw_b%k3(j, iintsp))/), tau)
          ph = EXP(ImagUnit*arg)
          IF (l_anti) THEN
             z_b%data_c(ib + j, :) = ph*CONJG(z_a%data_c(ia + i, :))
