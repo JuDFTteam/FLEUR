@@ -133,7 +133,7 @@ CONTAINS
       COMPLEX :: usp(2, 2), amt(2, 2), fspin(2, 2, atoms%ntype)
       TYPE(t_mat) :: zperm
       TYPE(t_melem_vacabc) :: vac_a, vac_b
-      LOGICAL :: l_anti, l_stack, l_two_recs
+      LOGICAL :: l_anti, l_stack, l_two_recs, l_closed
       REAL :: dev_u, dev_a, gap_lo
 
       nb = manifold%num_bands
@@ -482,7 +482,22 @@ CONTAINS
          IF (atoms%nlotot > 0) WRITE (oUnit, '(a,es10.3)') &
             "  how far the rebuild was where overridden ", gap_lo
       END IF
-      IF (fmpi%irank == 0) CALL wl_report_dband(star, sym, dband)
+      !> A table with no unitary leading set is not handed on. wl_report_dband has just
+      !> swept for the largest closed set and says whether one was found; the export writes
+      !> has_d_band from ALLOCATED(dband), so releasing it here is what makes the file say
+      !> the matrices are absent. Measured over the park: seven runs reach this point with
+      !> | D D^+ - 1 | near one and not a single little-group pair checked -- Si with eight
+      !> bands, bcc Fe with six -- and each wrote a file announcing representations that
+      !> compose to nothing. The band count decides, not the crystal: the same Si with four
+      !> bands closes at 2.5e-14.
+      IF (fmpi%irank == 0) THEN
+         CALL wl_report_dband(star, sym, dband, l_closed)
+         IF (.NOT. l_closed) THEN
+            WRITE (oUnit, '(a)') &
+               "  no leading band set is closed, so d_band is NOT written"
+            DEALLOCATE (dband)
+         END IF
+      END IF
       DEALLOCATE (oblk)
    END SUBROUTINE wl_build_dband
 
@@ -902,11 +917,14 @@ CONTAINS
    !> The properties that hold whatever the convention, so that a run says whether the
    !> table is worth writing without a reader on the other side: unitarity, that the
    !> identity came out the identity, and the group product table.
-   SUBROUTINE wl_report_dband(star, sym, dband)
+   SUBROUTINE wl_report_dband(star, sym, dband, l_closed)
       USE m_types_sym
       TYPE(t_wl_kstar), INTENT(IN) :: star
       TYPE(t_sym), INTENT(IN) :: sym
       COMPLEX, INTENT(IN) :: dband(:, :, :, :)
+      !> Whether a leading band set came out unitary. Everything else this routine reports
+      !> is a number in the log; this one decides whether the caller keeps the table.
+      LOGICAL, INTENT(OUT) :: l_closed
 
       INTEGER :: ir, iop, nb, i, j, k, nc, ncut, npair
       INTEGER, ALLOCATABLE :: prod(:, :)
@@ -1010,6 +1028,7 @@ CONTAINS
       WRITE (oUnit, '(a,i0)') "  little-group pairs checked = ", npair
       IF (npair > 0) WRITE (oUnit, '(a,es10.3)') &
          "  | D(i.j) - D(i)D(j) | max = ", dev_p
+      l_closed = ncut > 0
       DEALLOCATE (p)
    END SUBROUTINE wl_report_dband
 
