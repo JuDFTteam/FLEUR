@@ -111,6 +111,11 @@ CONTAINS
 
       TYPE(t_lapw) :: lapw_irr, lapw_img
       TYPE(t_mat) :: z_irr(2), z_rot(2)
+      !> The image record as complex, where the solver stored it real, and what the
+      !> overlap is handed: the scratch when it had to be cast, the record itself
+      !> when it was complex already.
+      TYPE(t_mat), TARGET :: z_img
+      TYPE(t_mat), POINTER :: za
       TYPE(t_mat), POINTER :: zmat_p(:)
       TYPE(t_abc), POINTER :: abc_p(:, :)
       TYPE(t_abc), ALLOCATABLE :: abc_rot(:, :), abc_irr(:, :), abc_one(:)
@@ -200,10 +205,10 @@ CONTAINS
          CALL layout_irr%init(input, noco, lapw_irr, atoms, l_both_spinors=l_two_recs)
          !> A stacked record is copied once and whole; the coefficients come per local
          !> direction either way, because the factory builds a set per component.
-         IF (l_stack) z_irr(1) = zmat_p(1)
+         IF (l_stack) CALL wl_as_complex(zmat_p(1), z_irr(1))
          DO js = 1, n_comp
             jrec = MERGE(js, jspin, l_two_recs)
-            IF (.NOT. l_stack) z_irr(js) = zmat_p(jrec)
+            IF (.NOT. l_stack) CALL wl_as_complex(zmat_p(jrec), z_irr(js))
             abc_irr(js, :) = abc_p(MERGE(js, jspin, l_spinors), :)
          END DO
 
@@ -302,7 +307,7 @@ CONTAINS
                END DO
             ELSE
                DO js = 1, n_comp
-                  CALL z_rot(js)%init(z_irr(js)%l_real, z_irr(js)%matsize1, &
+                  CALL z_rot(js)%init(.FALSE., z_irr(js)%matsize1, &
                                       z_irr(js)%matsize2)
                   CALL z_rot(js)%clear()
                   CALL wl_rotate_coeffs(lapw_irr, lapw_img, perm, sym%tau(:, jop), l_anti, &
@@ -355,6 +360,18 @@ CONTAINS
                   IF (ABS(usp(js, js2)) < 1e-14) CYCLE
                   jrec = MERGE(1, MERGE(js, jspin, l_two_recs), l_stack)
                   krec = MERGE(1, js2, l_stack)
+                  !> The image point's own record is the left side, and it has to be
+                  !> stored the way the rotated side is: melem_overlap picks its branch
+                  !> from the FIRST matrix and then reads BOTH through it, so a real
+                  !> record here would send it to read data_r of a side that only has
+                  !> data_c. A record that is already complex is pointed at, which leaves
+                  !> the usual case without a copy on this path.
+                  IF (zmat_p(jrec)%l_real) THEN
+                     CALL wl_as_complex(zmat_p(jrec), z_img)
+                     za => z_img
+                  ELSE
+                     za => zmat_p(jrec)
+                  END IF
                   ja = radial_slot(radfun, jsp_loc(js))
                   jb = radial_slot(radfun, jsp_loc(js2))
                   IF (ja /= jb) CALL juDFT_error( &
@@ -377,13 +394,13 @@ CONTAINS
                   !> not hold the same potential.
                   IF (input%film) THEN
                      CALL vac_a%calc(vacuum, cell, enpara, vtot, lapw_img, ja, &
-                                     zmat_p(jrec), nb, ioff=layout%row_offset(js))
+                                     za, nb, ioff=layout%row_offset(js))
                      CALL vac_b%calc(vacuum, cell, enpara, vtot, lapw_img, jb, &
                                      z_rot(krec), nb, &
                                      ioff=MERGE(layout%row_offset(js2), 0, l_stack))
                   END IF
                   CALL melem_overlap_states(stars, atoms, lapw_img, lapw_img, &
-                                            zmat_p(jrec), z_rot(krec), &
+                                            za, z_rot(krec), &
                                             abc_p(MERGE(js, jspin, l_spinors), :), &
                                             abc_rot(js2, :), ja, jb, &
                                             lapw_img%bkpt, lapw_img%bkpt, [0, 0, 0], &
@@ -490,6 +507,30 @@ CONTAINS
       DEALLOCATE (seen)
    END SUBROUTINE wl_gmap
 
+   !> The states as complex, whatever the solver stored them as. A centrosymmetric
+   !> non-magnetic run keeps them real, in the same basis and with a zero imaginary part,
+   !> and the rotation below multiplies every coefficient by exp(-2.pi.i.(k+G).tau), which
+   !> only a complex array can hold. melem_nabla_int casts the same records for the same
+   !> reason. A record that is already complex is copied unchanged.
+   SUBROUTINE wl_as_complex(z_in, z_out)
+      USE m_types_mat
+      TYPE(t_mat), INTENT(IN) :: z_in
+      TYPE(t_mat), INTENT(INOUT) :: z_out
+
+      IF (.NOT. z_in%l_real) THEN
+         z_out = z_in
+         RETURN
+      END IF
+
+      IF (ALLOCATED(z_out%data_r)) DEALLOCATE (z_out%data_r)
+      IF (ALLOCATED(z_out%data_c)) DEALLOCATE (z_out%data_c)
+      z_out%l_real = .FALSE.
+      z_out%matsize1 = z_in%matsize1
+      z_out%matsize2 = z_in%matsize2
+      ALLOCATE (z_out%data_c(SIZE(z_in%data_r, 1), SIZE(z_in%data_r, 2)))
+      z_out%data_c = CMPLX(z_in%data_r, 0.0)
+   END SUBROUTINE wl_as_complex
+
    !> The rotated coefficient vector, in the image point's basis.
    !>
    !> The non-symmorphic factor is the phase the rotated plane wave picks up from the
@@ -517,13 +558,13 @@ CONTAINS
       IF (PRESENT(ioff_a)) ia = ioff_a
       IF (PRESENT(ioff_b)) ib = ioff_b
 
-      !> Unreachable from wannierlib_main, which refuses d_band for this combination and
-      !> writes the stars alone. It stays as the contract of this routine: a caller that
-      !> hands over a real z together with a non-symmorphic operation is asking for a
-      !> complex phase on a real array, and silently dropping it would look like a gauge.
-      IF (z_a%l_real .AND. ANY(ABS(tau) > 1e-12)) CALL juDFT_error( &
-         "wannierlib: a real eigenvector cannot carry the non-symmorphic phase", &
-         hint="d_band is refused for this combination; see wannierlib_main", &
+      !> The contract of this routine: the phase below is complex, so both sides have to
+      !> be stored that way. wl_build_dband casts every record before the loop, so a real
+      !> one here is a caller that skipped the cast, and dropping the phase on it silently
+      !> would look like a gauge.
+      IF (z_a%l_real .OR. z_b%l_real) CALL juDFT_error( &
+         "wannierlib: the rotation needs the states stored as complex", &
+         hint="wl_build_dband casts them; see wl_as_complex", &
          calledby="wl_rotate_coeffs")
 
       DO i = 1, lapw_a%nv(1)
@@ -531,15 +572,11 @@ CONTAINS
          arg = -tpi_const*DOT_PRODUCT(lapw_b%bkpt + &
                                       (/REAL(lapw_b%k1(j, 1)), REAL(lapw_b%k2(j, 1)), &
                                         REAL(lapw_b%k3(j, 1))/), tau)
-         IF (z_a%l_real) THEN
-            z_b%data_r(ib + j, :) = z_a%data_r(ia + i, :)   ! conjugating real data is a no-op
+         ph = EXP(ImagUnit*arg)
+         IF (l_anti) THEN
+            z_b%data_c(ib + j, :) = ph*CONJG(z_a%data_c(ia + i, :))
          ELSE
-            ph = EXP(ImagUnit*arg)
-            IF (l_anti) THEN
-               z_b%data_c(ib + j, :) = ph*CONJG(z_a%data_c(ia + i, :))
-            ELSE
-               z_b%data_c(ib + j, :) = ph*z_a%data_c(ia + i, :)
-            END IF
+            z_b%data_c(ib + j, :) = ph*z_a%data_c(ia + i, :)
          END IF
       END DO
    END SUBROUTINE wl_rotate_coeffs
