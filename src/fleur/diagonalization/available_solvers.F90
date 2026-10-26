@@ -29,27 +29,27 @@ contains
       CLASS(t_solver), allocatable, INTENT(OUT) :: all_solvers
       select case (i)
       case (1)
-         all_solvers = get_solver_stop()
+         allocate (all_solvers, source=get_solver_stop())
       case (2)
-         all_solvers = get_solver_dummy()
+         allocate (all_solvers, source=get_solver_dummy())
       case (3)
-         all_solvers = get_solver_debugout()
+         allocate (all_solvers, source=get_solver_debugout())
       case (4)
-         all_solvers = get_solver_lapack()
+         allocate (all_solvers, source=get_solver_lapack())
       case (5)
-         all_solvers = get_solver_scalapack()
+         allocate (all_solvers, source=get_solver_scalapack())
       case (6)
-         all_solvers = get_solver_chase()
+         allocate (all_solvers, source=get_solver_chase())
       case (7)
-         all_solvers = get_solver_elsi()
+         allocate (all_solvers, source=get_solver_elsi())
       case (8)
-         all_solvers = get_solver_magma()
+         allocate (all_solvers, source=get_solver_magma())
       case (9)
-         all_solvers = get_solver_cuda()
+         allocate (all_solvers, source=get_solver_cuda())
       case (10)
-         all_solvers = get_solver_elpa()
+         allocate (all_solvers, source=get_solver_elpa())
       case (11)
-         all_solvers = get_solver_nvlamath()
+         allocate (all_solvers, source=get_solver_nvlamath())
       case default
          call judft_bug("Illegal request for solver")
       end select
@@ -107,7 +107,7 @@ contains
             ! trensformation + standard solver
             trans_name = diag_name(:index(diag_name, "+") - 1)
             diag_name = diag_name(index(diag_name, "+") + 1:)
-            diag_transform = select_by_name(trans_name)
+            allocate (diag_transform, source=select_by_name(trans_name))
          end if
          !check if "-sp" was given
          if (index(diag_name, "-") .gt. 0) then
@@ -115,7 +115,7 @@ contains
             diag_name = diag_name(:index(diag_name, "-") - 1)
          end if
          !select solver from name
-         diag_solver = select_by_name(diag_name)
+         allocate (diag_solver, source=select_by_name(diag_name))
       else
          !defaults
          do i = first_real_solver, num_solvers
