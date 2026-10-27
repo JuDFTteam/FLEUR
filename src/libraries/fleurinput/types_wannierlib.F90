@@ -69,7 +69,7 @@ MODULE m_types_wannierlib
     !> The field keeps the content as its name and the attribute names the consumer, as
     !> w90 does for wannier90.
     LOGICAL :: basis = .FALSE.        ! <export irrep="T"/>:   WF<spin>_basis.hdf
-    !> The one flag here that names no consumer: .xsf and .vtk are read by XCrySDen and
+    !> The one flag here that names no consumer: .xsf and .vts are read by XCrySDen and
     !> by ParaView, and by more than those two, so the file says what it holds instead.
     LOGICAL :: plot = .FALSE.    ! <export plotWF="T"/>:          WF<n>_<nnn>.xsf and .vts
     !> Cost is one wann_real per grid point per band per k-point, so this number is the
