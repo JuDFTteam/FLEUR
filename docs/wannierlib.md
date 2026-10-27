@@ -31,8 +31,10 @@ inpgen -inp.xml -kpt "wann8#gamma@grid=8,8,8" -noKsym
 Then point `<kPointListSelection listName="wann8"/>` at that list. The SCF itself may keep
 using the symmetry-reduced mesh.
 
-**The number of k-points must divide the number of MPI ranks exactly.** If it does not,
-FLEUR does *not* abort — it **hangs** on one k-point.
+**Choose a rank count that divides the number of k-points.** FLEUR prints the counts that
+do (`Most efficient MPI parallelization for:`), and a count that does not is slower rather
+than forbidden — but it has been measured to **hang** on one k-point instead of reporting
+anything: with 16 ranks, 1000 and 2744 k-points hang while 512, 1728 and 4096 finish.
 
 **Numbers in `inp.xml` are plain decimals.** FLEUR's expression parser reads digits, one
 decimal point and a leading sign, and stops at anything else, so `1.0e-10` fails with
@@ -412,7 +414,7 @@ Energies in Hartree; `convTol` as a plain decimal, never `1.0e-5`.
 
 - **Give `disWinMin` and `disWinMax`**, and measure them on the wannierisation mesh. See 2.4.
 - **Plain decimals only.** `1.0e-10` is not a number to FLEUR's parser.
-- **`n_k` must divide the MPI ranks exactly**, or the run hangs instead of failing.
+- **Pick MPI ranks that divide `n_k`**, or the run can hang on one k-point without saying so.
 - **The wannierisation mesh is full-zone and gamma-centred** (`inpgen ... -noKsym`).
 - With `jspins=2` and no SOC the two spin channels wannierise **separately**, and the whole
   pipeline runs once per channel; with noco or SOC the states are spinors and there is one
