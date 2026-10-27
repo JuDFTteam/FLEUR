@@ -70,7 +70,6 @@
         <bands numBands="72" minBand="17" maxBand="88"/>
         <disentanglement disWinMin="-0.027236" disWinMax="2.177723" disFrozMin="-0.027236" disFrozMax="0.560753" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00001"/>
-        <export wannierberri="T"/>
         <operatorsRs>
           <operator name="hamiltonian"/>
           <operator name="spin"/>

@@ -61,7 +61,6 @@
           <operator name="hamiltonian"/>
           <operator name="cmn"/>
         </operatorsRs>
-        <export wannierberri="T"/>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

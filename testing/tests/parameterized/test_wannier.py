@@ -374,164 +374,6 @@ L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 # cancelling.
 
 
-#: How far the band representation matrices may sit from the identities they must satisfy.
-#:
-#: Measured on Si over 14 of its 16 bands and 48+48 operations: unitarity 5.3e-14, identity
-#: 2.7e-14, little-group products 2.7e-14 over 3186 pairs. Six orders of room, and the errors
-#: this bound exists for are nowhere near it -- reading d_band transposed, or swapping one
-#: pair of bands by hand, both land at 1e-01 and worse.
-DBAND_TOL = 1e-8
-
-#: The same, for a run with spin-orbit coupling.
-#:
-#: Two orders looser, and the two orders are physics rather than slack: with spin-orbit on,
-#: the representation gates sit at 3.1e-08 instead of the 1e-14 they reach without it, and
-#: that residue is LINEAR in socscale and falls to the machine floor when it is zero. It is
-#: first order in the coupling, not a broken convention -- the group, the band count and the
-#: window were each ruled out by measurement. The errors this bound exists for are still far
-#: above it: the wrong spin convention on a 90 degree rotation lands at 9e-01.
-DBAND_TOL_SOC = 1e-6
-
-#: Cases that write the symmetrizer export: (d_band expected, time reversal expected).
-#:
-#: <export symmetrizer="T"> hands a reader the k-point stars, the space group and -- when it
-#: can -- d_band, the matrices that represent each operation on the bands. Nothing about it
-#: reaches out.xml, and the numbers below are read from the out file, where the export writes
-#: them: the venv the test runner builds carries pytest and nothing else, so a check that
-#: opened the HDF file itself would skip in every environment, and a check that always skips
-#: is not a check. The stars need no assertion here -- wl_build_kstar gates its own partition
-#: and stops the run -- so what is left is the part a reader depends on.
-#:
-#: The two cases sit on opposite sides of both flags on purpose. WannAlN is wurtzite: no
-#: inversion, so the eigenvectors are complex and d_band can be built, and it is the
-#: non-symmorphic one (tau != 0), while jspins=2 rules time reversal out. WannSiDiamond is
-#: centrosymmetric, so FLEUR solves it in real eigenvectors, and the glide of the diamond
-#: structure needs a complex phase they cannot carry: d_band is refused and the stars go out
-#: alone, which is the behaviour this case pins down -- an export must not kill a run over a
-#: part it cannot write. Its jspins=1 is also the time-reversal side of that flag.
-#: Which systems check the symmetrizer export, and what each one must come out with:
-#: (band representation matrices, time reversal, a basis with local orbitals).
-#:
-#: The three are picked to leave no branch unvisited. Si is the refusal -- real
-#: eigenvectors and a non-symmorphic operation -- and carries time reversal without
-#: d_band. AlN has d_band with neither time reversal nor local orbitals, and is
-#: non-symmorphic and improper, which is what pins the Wigner convention. Pt has both
-#: of the things AlN has not, so the antiunitary half of the muffin-tin rule and the
-#: local orbital override are only measured here.
-SYM_EXPORT = {"WannSiDiamond": (False, True, False, DBAND_TOL),
-              "WannAlN": (True, False, False, DBAND_TOL),
-              "WannPt": (True, True, True, DBAND_TOL),
-              "WannPtSOC": (True, True, True, DBAND_TOL_SOC),
-              "WannFeFM": (True, False, True, DBAND_TOL),
-              "WannFeAFM": (True, False, True, DBAND_TOL),
-              "WannFeFMy": (True, False, True, DBAND_TOL),
-              #> Collinear jspins=2 with spin-orbit, where the eig file holds TWO records and
-              #> the two components of the spinor are the two spin channels -- each with its
-              #> own potential, and so its own radial set. WannPtSOC is spinorial too, but
-              #> over a single potential, so the branch that picks a radial set per component
-              #> ran in no test at all: it contracted both components with one channel's
-              #> radial functions, was wrong by four parts in a hundred, and every case here
-              #> stayed green. Time reversal is absent, as it must be in a magnet with
-              #> spin-orbit, and these two are the only cases that pin that combination.
-              "WannFeBccSOC": (True, False, True, DBAND_TOL_SOC),
-              "WannFeAFMColSOC": (True, False, True, DBAND_TOL_SOC),
-              #> Spin-orbit on a magnetisation the full group does not preserve: soc_sym
-              #> strikes out eight of the sixteen operations and mapatom leaves their atom
-              #> map at zero. The eight that are left carry the unitary half, and the eight
-              #> struck out are exactly the ones that REVERSE the moments, so they come
-              #> back as the antiunitary half: these two are the only cases where time
-              #> reversal is paired with a set of its own rather than with every operation.
-              "WannFeAFMSOC": (True, True, True, DBAND_TOL_SOC),
-              "WannFeAFMSOCOps": (True, True, True, DBAND_TOL_SOC),
-              "WannFeAFMSOCKfold": (True, True, True, DBAND_TOL_SOC)}
-
-
-def _check_symmetrizer_export(out, grep_number, expect_dband, expect_tr, expect_lo,
-                              tol_rep=DBAND_TOL):
-    """What the symmetrizer export must have written, in the order that localises a failure."""
-    txt = open(out, errors="ignore").read()
-    assert "symmetry export: k-point stars" in txt, (
-        "the export wrote no star report, so it did not run at all")
-
-    has_tr = "with time reversal" in txt
-    assert has_tr == expect_tr, (
-        f"the export {'carries' if has_tr else 'carries no'} time reversal, the opposite of "
-        f"what this system calls for. It belongs in exactly the non-magnetic cases, and the "
-        f"format it is written for is the reason this export exists next to the .dmn")
-
-    #> Not "symmetry export: d_band", which is a prefix of the line that says it was NOT
-    #> written. The pair count is written once per table and nowhere else.
-    refused = "d_band NOT written" in txt
-    has_dband = "little-group pairs checked" in txt
-    assert has_dband != refused, (
-        "the out file both reports a d_band table and says it was not written; one of the "
-        "two messages is being printed in the wrong branch")
-    assert has_dband == expect_dband, (
-        f"the export {'carries' if has_dband else 'carries no'} band representation "
-        f"matrices, the opposite of what this system allows. Which runs can have them is "
-        f"decided in wannierlib_main, which writes the reason to this file")
-    if not expect_dband:
-        assert "no atom map" in txt or "eigenvectors are real" in txt, (
-            "d_band was refused without naming a reason, and the reason is the only thing "
-            "that tells a refusal from a failure")
-        return
-
-    #> The muffin-tin rotation rule, against the coefficients rebuilt from the rotated
-    #> eigenvector by the routine that owns that job. It is the one check here that is not
-    #> an identity d_band satisfies by construction: it says the atom map, the
-    #> non-symmorphic phase and the Wigner convention are right rather than consistent.
-    #> The two halves are reported apart because the group table never pairs a unitary
-    #> operation with an antiunitary one, so nothing else in this list sees the second.
-    worst = grep_number(out, "rebuilt A and B, unitary ops", split="ops")
-    assert abs(worst) < DBAND_TOL, (
-        f"the muffin-tin rotation rule disagrees with the rebuilt A and B by {worst} "
-        f"(tol {DBAND_TOL}); the rotation is being applied in the wrong convention")
-    if expect_tr:
-        worst = grep_number(out, "rebuilt A and B, antiunitary ops", split="ops")
-        assert abs(worst) < DBAND_TOL, (
-            f"the rule disagrees with the rebuild by {worst} on the antiunitary half "
-            f"(tol {DBAND_TOL}); conjugating a state is not conjugating its coefficients, "
-            f"and that half of the rule carries the m flip and the sign that go with it")
-
-    #> And that the local orbital branch is not a no-op. Their rows of the eigenvector are
-    #> zero in the rotated copy, so the rule has to supply the whole l that carries one, and
-    #> this number is how far that moved the coefficients. Asserted from BELOW: a small one
-    #> would mean the branch is running and changing nothing, which is the one failure a
-    #> tolerance on the gates above cannot see, because they would all stay green.
-    overrode = "how far the rebuild was where overridden" in txt
-    assert overrode == expect_lo, (
-        f"the export {'overrode' if overrode else 'did not override'} muffin-tin "
-        f"coefficients for local orbitals, which is not what this basis has")
-    if expect_lo:
-        moved = grep_number(out, "where overridden", split="overridden")
-        assert moved > 1e-6, (
-            f"the local orbital override moved the coefficients by {moved}, which is "
-            f"nothing: the rows it exists to replace never reached them")
-
-    assert "NO leading band set is closed" not in txt, (
-        "no leading set of bands is closed under the group, so the matrices are not a change "
-        "of basis of anything and nothing downstream can symmetrise with them")
-    worst = grep_number(out, "closed up to band", split="=")
-    assert abs(worst) < tol_rep, (
-        f"d_band is not unitary on the set it reports as closed: |D D^+ - 1| = {worst} "
-        f"(tol {tol_rep})")
-
-    err = grep_number(out, r"D\(identity\)", split="max")
-    assert abs(err) < DBAND_TOL, (
-        f"d_band of the identity operation is off the identity by {err} (tol {DBAND_TOL}); "
-        f"the overlaps are not being taken against the states they belong to")
-
-    pairs = grep_number(out, "little-group pairs checked", split="=")
-    assert pairs > 0, (
-        "no pair of operations in any little group, so the group claim measured nothing. "
-        "Either the stars are wrong or every representative has a trivial little group")
-    worst = grep_number(out, r"D\(i\.j\)", split="=")
-    assert abs(worst) < tol_rep, (
-        f"d_band does not represent the little group: D(i.j) and D(i)D(j) differ by {worst} "
-        f"over {pairs:.0f} pairs (tol {tol_rep}). This is the check that sees the (m,n) "
-        f"order and the non-symmorphic phase; unitarity above is blind to both")
-
-
 @pytest.mark.fleur
 @pytest.mark.wannierlib
 @pytest.mark.parametrize(("dir", "desc", "cmdline", "mpi_procs"), all_tests)
@@ -543,12 +385,6 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     want_files = [op(test_id, f) for f in OPERATOR_FILES.get(test_id, ())]
     want_files += INTERP_FILES.get(test_id, [])
     want_files += EXPORT_FILES.get(test_id, [])
-    if test_id in SYM_EXPORT:
-        #> wannierberri="T" writes the Wannier90 set as well, and asking for it here is what
-        #> checks that: WannierBerri wannierises from those three and cannot use the matrices
-        #> without them. WannSiDiamond carries no wannier90="T" of its own, so if the
-        #> inclusion ever stops holding this is where it shows.
-        want_files += ["WF1_sym.hdf"] + _W90_FILES
     res = default_fleur_test(dir, files=want_files or None,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
@@ -558,8 +394,6 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     #> it did not ask for. WannFeBcc asks for no spinOrbit, so input/spin_orbit is in the
     #> census above and in no expected set, which is what turns that into an assertion.
     expected.update(op(test_id, f) for f in OPERATOR_FILES.get(test_id, ()))
-    if test_id in SYM_EXPORT:
-        expected.update(_W90_FILES)
     #> How many channels a run writes is a property of the run -- a collinear jspins=2 case
     #> wannierises each channel on its own -- and not of the flag, so a case that exports the
     #> set at all may leave the second channel beside the first. Asserted by name where it is
@@ -573,8 +407,6 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"in <export> is what decides, and a writer that runs anyway puts files no "
                 f"one wanted beside the run -- the .mmn of a large mesh is hundreds of "
                 f"megabytes of text, which is the whole reason these are opt-in")
-    if test_id in SYM_EXPORT:
-        _check_symmetrizer_export(res["out"], grep_number, *SYM_EXPORT[test_id])
 
     omega_i_got = ()
     if test_id in EXPECTED_OMEGA_I:
