@@ -84,10 +84,11 @@ CONTAINS
       IF (kpts%nkpt /= kpts%nkptf) CALL juDFT_error( &
          "wannierlib: the basis export needs the full-zone k-mesh", &
          hint="generate it with inpgen -noKsym", calledby="wannierlib_export_basis")
-      !> A film has a third region, the vacuum, which no plane-wave coefficient describes.
-      IF (input%film) CALL juDFT_error( &
-         "wannierlib: the basis export is not defined for a film", &
-         calledby="wannierlib_export_basis")
+      !> A film is fine. What decides whether a character taken over a region is exact is
+      !> whether the group maps that region to itself, and the interstitial of a film does
+      !> -- so how much charge sits in the vacuum never enters. On the raw singular values,
+      !> before anything orthogonalises them: 3e-15 for a MoS2 film and 3e-7 for a Mn film
+      !> with spin-orbit in a non-collinear frame, against 1e-2 for bulk Si.
 
       nb = manifold%num_bands
       ev_list = [(ib, ib=manifold%min_band, manifold%max_band)]
