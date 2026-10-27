@@ -68,7 +68,7 @@ MODULE m_types_wannierlib
     LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
     !> The field keeps the content as its name and the attribute names the consumer, as
     !> w90 does for wannier90.
-    LOGICAL :: symmetrizer = .FALSE. ! <export wannierberri="T"/>: WF<spin>_sym.hdf + the w90 set
+    LOGICAL :: basis = .FALSE.        ! <export irrep="T"/>:   WF<spin>_basis.hdf
     !> The one flag here that names no consumer: .xsf and .vtk are read by XCrySDen and
     !> by ParaView, and by more than those two, so the file says what it holds instead.
     LOGICAL :: plot = .FALSE.    ! <export plotWF="T"/>:          WF<n>_<nnn>.xsf and .vts
@@ -431,7 +431,7 @@ CONTAINS
     CALL mpi_bc(this%export%juwip, rank, mpi_comm)
     CALL mpi_bc(this%export%plot, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
-    CALL mpi_bc(this%export%symmetrizer, rank, mpi_comm)
+    CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
@@ -687,8 +687,17 @@ CONTAINS
           calledby='read_xml_wannierlib')
         this%export%plot_grid = NINT(gridlist)
       END IF
-      this%export%symmetrizer = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
+      this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@irrep'))
+      !> wannierberri="T" is a superset of the two flags above rather than a third artefact:
+      !> that wannierization consumes the .amn/.mmn/.eig and takes its symmetry table from
+      !> what irrep reads out of the interstitial, so one flag asks for everything the route
+      !> needs and nobody has to remember to light two.
+      IF (evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))) THEN
+        this%export%w90 = .TRUE.
+        this%export%basis = .TRUE.
+      END IF
     END IF
 
     ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).

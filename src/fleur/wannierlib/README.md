@@ -54,7 +54,8 @@ the spin-orbit operator is `spinOrbit` in both. The accepted names of each live 
 the accepted list in the message.
 
 `<export>` is a third, separate thing: it hands out matrices the run already holds, one
-boolean per artefact (`wannier90`, `wannierberri`, `gauge`, `blochOperators`), all off by
+boolean per consumer (`wannier90`, `irrep`, `wannierberri`, `plotWF`, `orbitrans`,
+`juwip`), all off by
 default and none of them exclusive. It computes nothing.
 
 ## Output domains
