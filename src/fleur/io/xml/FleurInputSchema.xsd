@@ -3683,15 +3683,43 @@
 
    <xsd:complexType name="WannierlibExportType">
       <xsd:annotation>
-         <xsd:documentation>Hand out matrices the run already holds, for a reader outside it. One boolean per CONSUMER, all off by default and independent: they are not alternatives, and asking for one never turns another off. A flag writes everything its consumer needs FROM THIS BLOCK, so what wannier90="T" writes is a subset of what wannierberri="T" writes. What &lt;operatorsRs&gt; and &lt;interpolation&gt; write is deliberately NOT here - those compute something first and writing it is the last step, while these only copy out - and orbitrans reads those matrices as well, which is why the rule says "from this block". wannier90="T" writes WF&lt;spin&gt;.amn, .mmn and .eig, the three files a standalone wannier90.x needs to repeat the same wannierization; the .mmn of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. irrep="T" writes WF&lt;spin&gt;_basis.hdf: the plane-wave index list and the eigenvector coefficients over the interstitial, which is what irrep reads to do the symmetry analysis. The interstitial is invariant under the space group, so the characters taken over it are exact and the muffin-tin parts are not needed - which is what lets that analysis live outside this code. FLEUR dumps and describes: the cell, the k-list, the eigenvalues and the spin angles are not repeated here, they stay in inp.xml, kpts.xml and out.xml and the reader derives them, and the file declares its own layout so a consumer never has to know how FLEUR stacks spinors. wannierberri="T" writes those three AND that file, because its site-symmetric wannierization consumes the .amn/.mmn/.eig and takes its symmetry table from what irrep builds out of the interstitial: it is a superset of the two flags above rather than a third artefact. It wannierizes on the irreducible points alone, projects onto the symmetric subspace at every iteration and rotates the result over the full zone, so the symmetry is a constraint on the gauge rather than something imposed afterwards. Both need a full-zone k-mesh (inpgen -noKsym) and a build with HDF5. A FILM is written like any other cell: the group maps the interstitial to itself there too, so the characters taken over it stay exact and the charge in the vacuum does not enter. A film does describe its cell differently -- bravaisMatrixFilm and filmPos, whose third number is a length rather than a fraction -- so the reader has to understand those. plotWF="T" writes the Wannier functions themselves on a real-space grid, one pair of files per function: WF&lt;spin&gt;_&lt;nnn&gt;.xsf for XCrySDen and VESTA, which is the format Wannier90 writes, and WF&lt;spin&gt;_&lt;nnn&gt;.vts for ParaView, which does not read XSF. Both carry the same two fields, the real part and the modulus, on the same grid. It is the one flag here that names no consumer, because those files are read by more than one program. The region is one unit cell centred on the origin; plotGrid="nx ny nz" sets the resolution, 40 40 40 by default, and that number is the whole price of the plot - one state evaluated per grid point per band per k-point, so 40^3 is 500 times the work of 8^3. At least two points per direction are needed, since the step is v/(n-1). The share of each function sitting on the edge of the box is reported, so a clipped picture is visible rather than silent. It costs a second pass over the k-points and is not available for spinor Wannier functions (noco or SOC). The last two flags name a code rather than a file, because what they hand over is a DIRECTORY. orbitrans="T" writes input/ and juwip="T" writes w90files/, the relative paths those two codes open. Each holds the operator matrices &lt;operatorsRs&gt; produced - moved into it and, for orbitrans, renamed to the generic names it opens: spin, orbital, spin_orbit, hoppings, rpts. Moved, not copied: there is one rendering of each operator and the flag decides where it lands, so the two cannot be asked for at once and that is an error rather than a silent choice. Only what &lt;operatorsRs&gt; was asked for is there; a flag never stands in for an operator that was not requested, and a second spin channel keeps its own name because one 2N basis is a combination and not a rename. orbitrans="T" adds the four structural files that code also reads - lattice, atom_centers, wann_centers and N_wann_atom. They were recovered with regular expressions from a Wannier90 .wout, which library mode never writes, so a run could not feed that code without borrowing them from elsewhere; here they come from cell%amat, atoms%pos, the centres Wannier90 reported and the projection list, to full precision.</xsd:documentation>
+         <xsd:documentation>Files handed out for a reader outside FLEUR: one boolean per consumer, all off by default and independent.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="wannier90" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="wannierberri" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="irrep" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="orbitrans" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="juwip" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional"/>
-      <xsd:attribute default="40 40 40" name="plotGrid" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F" name="wannier90" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes WF&lt;spin&gt;.amn, .mmn and .eig, what a standalone wannier90.x needs. Opt-in: the .mmn is bulky.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="wannierberri" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes the wannier90 files and WF&lt;spin&gt;_basis.hdf: the union of wannier90="T" and irrep="T".</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="irrep" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes WF&lt;spin&gt;_basis.hdf, the interstitial plane waves and coefficients irrep reads. Needs a full-zone mesh and HDF5.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="orbitrans" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes input/, the directory orbitrans opens, with the &lt;operatorsRs&gt; matrices renamed and the four structural files.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="juwip" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes w90files/ with the &lt;operatorsRs&gt; matrices. Not combinable with orbitrans: the matrices are moved, not copied.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts. Not available for spinor Wannier functions.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="40 40 40" name="plotGrid" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Resolution of the plotWF grid, "nx ny nz"; the cost is one state per grid point, band and k-point.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOutputType">
