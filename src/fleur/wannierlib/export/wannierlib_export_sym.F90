@@ -51,9 +51,12 @@
 !>                needs, and one whose atom map came out empty has no operations to
 !>                represent. Either way the group is absent, has_d_band says so and the out
 !>                file names the reason. The version does not move for it.
-!>   /meta        kpoints, amat, bmat, taual, and alph and beta -- ONE PER ATOM, the
-!>                local spin frame the calculation USED. Not what the input asked for: a
-!>                spin spiral adds 2.pi.qss.taual to alph, so a consumer that rebuilt the
+!>   /meta        kpoints, amat, bmat, taual, itype and nz, and alph and beta -- the
+!>                last four ONE PER ATOM. itype and nz say what sits on each position;
+!>                without them taual cannot be turned back into a structure, nor the
+!>                space group with it. alph and beta are the local spin frame the
+!>                calculation USED, not what the input asked for: a spin spiral adds
+!>                2.pi.qss.taual to alph, so a consumer that rebuilt the
 !>                frames from the input file would be a spiral term short. The pair is the
 !>                one nococonv builds chi from, which is the rotation a frame correction
 !>                needs; the moment DIRECTION would not do, because it leaves alph free
@@ -138,6 +141,7 @@ CONTAINS
       COMPLEX :: u2(2, 2)
       REAL, ALLOCATABLE :: pos(:, :), shift(:, :), euler(:, :), amx(:, :, :)
       REAL, ALLOCATABLE :: alph_at(:), beta_at(:)
+      INTEGER, ALLOCATABLE :: itype_at(:), nz_at(:)
       INTEGER :: itype, ia
 
       IF (fmpi%irank /= 0) RETURN
@@ -303,16 +307,27 @@ CONTAINS
          hint="nococonv%init assigns them from the input; the export ran before it", &
          calledby="wannierlib_export_sym")
       ALLOCATE (alph_at(atoms%nat), beta_at(atoms%nat))
+      ALLOCATE (itype_at(atoms%nat), nz_at(atoms%nat))
       DO itype = 1, atoms%ntype
          DO ia = 1, atoms%neq(itype)
             na = atoms%firstAtom(itype) + ia - 1
             alph_at(na) = nococonv%alph(itype)
             beta_at(na) = nococonv%beta(itype)
+            itype_at(na) = itype
+            nz_at(na) = atoms%nz(itype)
          END DO
       END DO
       CALL wr_r1(gid, 'alph', (/atoms%nat/), alph_at)
       CALL wr_r1(gid, 'beta', (/atoms%nat/), beta_at)
-      DEALLOCATE (alph_at, beta_at)
+      !> What sits on each position. taual alone leaves a consumer unable to rebuild
+      !> the structure, and the group with it: in wurtzite AlN six ways of assigning
+      !> two species to the four atoms all reproduce the twelve operations written
+      !> here, and they belong to three different space groups. itype is the DECLARED
+      !> type, which is what the symmetry was built from -- one element declared as
+      !> two species halves the group -- so a reader groups by that and not by nz.
+      CALL wr_i1(gid, 'itype', (/atoms%nat/), itype_at)
+      CALL wr_i1(gid, 'nz', (/atoms%nat/), nz_at)
+      DEALLOCATE (alph_at, beta_at, itype_at, nz_at)
       CALL h5gclose_f(gid, err)
 
       !> version and nkpt come from wl_hdf_root, which is the part of the contract every
