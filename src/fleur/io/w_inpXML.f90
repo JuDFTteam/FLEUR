@@ -136,12 +136,46 @@ CONTAINS
       CHARACTER(len=7) :: str
       REAL :: tempTaual(3, atoms%nat), scpos(3)
       REAL :: amatTemp(3, 3), bmatTemp(3, 3)
+      LOGICAL :: l_wannOpt
+      INTEGER :: wannNumBands, wannMinBand, wannMaxBand, wannSemicore
+      INTEGER :: ityp_w, ilo_w, ios_w
+      CHARACTER(len=1000) :: wannArg
 
       l_include = l_includeIn .or. .not. present(filename)
       l_explicit = l_explicitIn .OR. .not. present(filename)
       l_nocoOpt = noco%l_noco .OR. juDFT_was_argument("-noco")
       l_gfOpt = gfinp%n>0 .OR. juDFT_was_argument("-greensf")
       l_dfptOpt = dfpt%l_dfpt .OR. juDFT_was_argument("-dfpt")
+
+      !-wann asks for a <wannierlib> band window around the bands to
+      !wannierize. The window opens above the semicore states, which are the
+      !local orbitals written as type SCLO further down: a positive qn_ello,
+      !and neither a relLO nor an APW LO. Each contributes 2l+1 states per
+      !equivalent atom, and twice that where the eigenvectors are spinors.
+      l_wannOpt = juDFT_was_argument("-wann")
+      wannNumBands = 0
+      wannMinBand = 0
+      wannMaxBand = 0
+      wannSemicore = 0
+      IF (l_wannOpt) THEN
+         wannArg = juDFT_string_for_argument("-wann")
+         READ (wannArg, *, iostat=ios_w) wannNumBands
+         IF (ios_w /= 0 .OR. wannNumBands < 1) CALL juDFT_error( &
+              "-wann needs a positive number of bands", calledby="w_inpXML", &
+              hint="Write it as -wann 36. A flag passed as the value is swallowed silently.")
+         wannSemicore = 0
+         DO ityp_w = 1, atoms%ntype
+            DO ilo_w = 1, atoms%nlo(ityp_w)
+               IF (enpara%qn_ello(ilo_w, ityp_w, 1) < 0) CYCLE
+               IF (atoms%l_relLO(ilo_w, ityp_w)) CYCLE
+               IF (atoms%l_dulo(ilo_w, ityp_w)) CYCLE
+               wannSemicore = wannSemicore + atoms%neq(ityp_w)*(2*atoms%llo(ilo_w, ityp_w) + 1)
+            END DO
+         END DO
+         IF (noco%l_soc .OR. noco%l_noco) wannSemicore = 2*wannSemicore
+         wannMinBand = wannSemicore + 1
+         wannMaxBand = wannSemicore + wannNumBands
+      END IF
 
       band = .false.
       nw = 1
@@ -165,7 +199,8 @@ CONTAINS
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
 110   FORMAT('      <cutoffs Kmax="', a, '" Gmax="', a, '" GmaxXC="', a, '" numbands="', i0, '"/>')
       
-      WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
+      WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), &
+                           MERGE(wannMaxBand, input%gw_neigd, l_wannOpt)
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
 120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '" sdNocoIR="', l1, '"/>')
@@ -709,6 +744,20 @@ WRITE (fileNum, 242) fr(1.0)
 430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', a, '" energyUp="', a, '"/>')
       WRITE (fileNum, 430) banddos%l_mcd,fr(banddos%e_mcd_lo), fr(banddos%e_mcd_up)
 
+      IF (l_wannOpt) THEN
+446      FORMAT('         <bands numBands="', i0, '" minBand="', i0, '" maxBand="', i0, '"/>')
+         WRITE (fileNum, '(a)') '      <!-- Two edits are needed here once the SCF has converged:'
+         WRITE (fileNum, '(a)') '           set wannierize="T", and set disFrozMax to an absolute'
+         WRITE (fileNum, '(a)') '           energy in Htr measured from the converged Fermi energy,'
+         WRITE (fileNum, '(a)') '           for instance E_F + 0.1837 for 5 eV above it. num_wann is'
+         WRITE (fileNum, '(a)') '           fixed by the <wannierproj> entries of the species, which'
+         WRITE (fileNum, '(a)') '           inpgen does not write. -->'
+         WRITE (fileNum, '(a)') '      <wannierlib wannierize="F">'
+         WRITE (fileNum, 446) wannNumBands, wannMinBand, wannMaxBand
+         WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" numIter="3000" convTol="0.00000000001" convWindow="10" mixRatio="0.5"/>'
+         WRITE (fileNum, '(a)') '         <wannierization numIter="10000" convTol="0.00000000001" convWindow="10" precond="F"/>'
+         WRITE (fileNum, '(a)') '      </wannierlib>'
+      END IF
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN
          WRITE (fileNum, '(a)') '  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->'

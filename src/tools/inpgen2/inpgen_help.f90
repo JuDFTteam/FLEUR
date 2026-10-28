@@ -51,6 +51,9 @@ CONTAINS
     CALL new_argument(0,"-noKsym","For the generation of the k-point set: Only use identity as symmetry operation","")
     CALL new_argument(0,"-noInpgenComment","Disable printing inpgen input as a comment to the inp.xml file","")
 
+    CALL new_argument(1,"-wann","Number of bands to wannierize: write a <wannierlib> band window to inp.xml","")
+    CALL new_argument(0,"-spinor","Spinor (l_noco) setup for a collinear magnetic configuration","")
+
     CALL new_argument(0,"-precise","Short for '-profile precise'","")
     CALL new_argument(1,"-profile","Generate default parameters according to provided profile name. This can be one of 'fast','moderate', or 'precise'.","")
 
@@ -89,6 +92,8 @@ CONTAINS
     CALL print_argument("-version")
     CALL print_argument("-dropXMLSchema")
     CALL print_argument("-profile")
+    CALL print_argument("-wann")
+    CALL print_argument("-spinor")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 
