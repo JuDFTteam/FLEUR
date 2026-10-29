@@ -37,10 +37,13 @@ MODULE m_types_melem_optable
       INTEGER :: ncomp = 0
    END TYPE t_melem_operator
 
-   TYPE(t_melem_operator), PARAMETER, PUBLIC :: MELEM_OPERATORS(3) = [ &
-      t_melem_operator('spin',       3), &
-      t_melem_operator('orbital',    3), &
-      t_melem_operator('spinOrbit', 4)]
+   TYPE(t_melem_operator), PARAMETER, PUBLIC :: MELEM_OPERATORS(4) = [ &
+      t_melem_operator('spin',           3), &
+      t_melem_operator('orbital',        3), &
+      t_melem_operator('spinOrbit',      4), &
+      !> The exchange torque T = -mu_B sigma x Omega_xc. Its weight is the exchange
+      !> field rather than a plain overlap, and it is muffin-tin only.
+      t_melem_operator('exchangeTorque', 3)]
 
    ! ------------------------------------------------- how the wannierization exposes things
    TYPE, PUBLIC :: t_melem_exposed
@@ -70,7 +73,7 @@ MODULE m_types_melem_optable
 
    !> <operatorsRs>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(9) = [ &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(10) = [ &
       t_melem_exposed('hamiltonian', '',           0, '', '', .FALSE.), &
       t_melem_exposed('position',    '',           0, '', '', .FALSE.), &
       !> Second Berry connection, in the postw90 convention: Eq. (44) WYSV06 on the
@@ -85,7 +88,11 @@ MODULE m_types_melem_optable
       t_melem_exposed('cmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('spin',        'spin',       3, '', '', .FALSE.), &
       t_melem_exposed('orbital',     'orbital',    3, '', '', .FALSE.), &
-      t_melem_exposed('spinOrbit',  'spinOrbit', 4, '', '', .FALSE.)]
+      t_melem_exposed('spinOrbit',  'spinOrbit', 4, '', '', .FALSE.), &
+      !> Collinearly this writes the cross-spin block, which is the same object the
+      !> classic route writes as updown.perpmag. Over spinors it writes the three
+      !> Cartesian components.
+      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.)]
 
    PUBLIC :: melem_exposed_find, melem_exposed_names
 

@@ -71,7 +71,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE wgauge_write_operators_r(this, request, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
+                                          s0_loc, l0_loc, soc4_loc, t0_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_melem_request), INTENT(IN) :: request
     TYPE(t_cell), INTENT(IN) :: cell
@@ -82,6 +82,8 @@ CONTAINS
     !> Per-rank coarse slices. ALLOCATABLE because a slice nobody asked for is not
     !> built at all: every use below sits behind the request that would have built it.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :, :), soc4_loc(:, :, :, :)
+    !> The exchange torque, three Cartesian components like the spin it is built from.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: t0_loc(:, :, :, :)
     !> (nw,nw,3,3,nk_loc) the geometric tensor, already contracted over the pairs of
     !> neighbours and already gauged, because that has to happen where the wavefunctions are.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
@@ -171,6 +173,15 @@ CONTAINS
         ELSE
           CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., wannierlib_export_file('rspauli.1'))
         END IF
+      CASE ('exchangeTorque')
+        !> T = -m_hat x <sigma B_xc>, the same three components the spin has and the same
+        !> reduce, since the local blocks were already assembled on the coarse mesh.
+        ! collinear: the cross-spin block is what the classic route calls updown.perpmag,
+        ! and it is a Bloch-basis quantity. It is written whole by melem_torque_write_updown
+        ! (main) rather than transformed to R per channel here.
+        IF (l_collinear) CYCLE
+        CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, t0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., &
+                                          wannierlib_export_file('rstorque.1'))
       CASE ('orbital')
         ! collinear: like the spin, L is written once as one 2N block-diagonal matrix after
         ! both wannierisations by wgauge_anglmom_collinear (main), not per channel here.

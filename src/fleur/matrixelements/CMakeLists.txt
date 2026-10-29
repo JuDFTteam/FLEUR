@@ -18,11 +18,14 @@ src/fleur/matrixelements/melem_nabla_int.F90
 src/fleur/matrixelements/melem_nabla_vac.F90
 src/fleur/matrixelements/melem_nabla_sph.F90
 src/fleur/matrixelements/melem_spin.F90
+src/fleur/matrixelements/melem_torque.F90
 src/fleur/matrixelements/melem_check.F90
 src/fleur/matrixelements/melem_coarse.F90
 src/fleur/matrixelements/types_matelements.F90
 src/fleur/matrixelements/types_matelements_soc.F90
 src/fleur/matrixelements/types_matelements_spin.F90
+src/fleur/matrixelements/types_melem_beff.F90
+src/fleur/matrixelements/types_matelements_torque.F90
 src/fleur/matrixelements/types_matelements_orbital.F90
 src/fleur/matrixelements/types_matelements_template.F90
 src/fleur/matrixelements/matrix_element_factory.F90

@@ -3648,6 +3648,11 @@
          <xsd:enumeration value="spin"/>
          <xsd:enumeration value="orbital"/>
          <xsd:enumeration value="spinOrbit"/>
+         <!-- exchangeTorque: the up-down block of the exchange field B_xc, which is the
+              exchange torque of Freimuth et al., PRB 90, 174423 (2014). The classic
+              Wannier route calls this job "perpmag" and the Bloch-basis matrices are
+              still written to updown.perpmag. Not to be confused with wann_torque. -->
+         <xsd:enumeration value="exchangeTorque"/>
       </xsd:restriction>
    </xsd:simpleType>
 

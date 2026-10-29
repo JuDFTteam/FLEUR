@@ -38,6 +38,10 @@ MODULE m_melem_coarse
    USE m_types_matelements_soc, ONLY: t_matelements_soc
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
+   USE m_types_matelements_torque, ONLY: t_matelements_torque
+   USE m_melem_torque, ONLY: melem_torque_axis, melem_torque_from_blocks, &
+                             melem_torque_perp_check
+   USE m_types_sphhar, ONLY: t_sphhar
    USE m_matrix_element_factory, ONLY: matrix_element_factory
    USE m_melem_check, ONLY: melem_check_provider, melem_check_matrix
    IMPLICIT NONE
@@ -59,6 +63,11 @@ MODULE m_melem_coarse
       !> is built here with the other coarse matrices even though the operator itself cannot
       !> be assembled until both channels are wannierised.
       COMPLEX, ALLOCATABLE :: x0(:, :, :)         !< (nb,nb,nk_loc)
+      !> Exchange torque T = -mu_B sigma x Omega_xc, muffin-tin only. Over spinors the
+      !> three Cartesian components; collinearly only the cross-spin block, for the same
+      !> reason x0 is only that: the combined 2N operator needs both gauges.
+      COMPLEX, ALLOCATABLE :: t0(:, :, :, :)      !< (nb,nb,3,nk_loc)
+      COMPLEX, ALLOCATABLE :: tx0(:, :, :)        !< (nb,nb,nk_loc)
       !> How many independent eigenproblems the states come from: two when jspins=2 without
       !> spinors, one otherwise. It is a fact about the calculation, where the flags it
       !> replaces were a copy of what the request already said, kept next to it and able to
@@ -89,14 +98,15 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_spinors   !< noco%l_noco .OR. noco%l_soc
 
       INTEGER :: nkc_loc
-      LOGICAL :: l_ch_orb, l_ch_spin, l_ch_soc
+      LOGICAL :: l_ch_orb, l_ch_spin, l_ch_soc, l_ch_torque
 
       ! Operator Bloch matrices on the coarse mesh: the k-loop is DISTRIBUTED over ranks (each
       ! its distk slice, so the reads the factory does for it are parallel too) into per-rank
       ! local arrays. Every consumer works on those slices plus a distributed FT-reduce, so the
       ! full mesh is never assembled.
       this%n_channels = MERGE(2, 1, input%jspins == 2 .AND. .NOT. l_spinors)
-      this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop) .AND. l_spinors
+      this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop &
+                       .OR. request%needs_op('exchangeTorque')) .AND. l_spinors
       !> L is spin-diagonal, so each channel has its own and either list is reason enough
       !> to build it. The cross-spin overlap is only ever wanted by the real-space export:
       !> the interpolated spin operator does not exist here, see the guard below.
@@ -109,6 +119,9 @@ CONTAINS
       !> a spin character that varies with k, and the exported S(R) and L(R) stop being
       !> localised. Like the spin, it needs both gauges, so it is a real-space export only.
       l_ch_soc  = this%n_channels == 2 .AND. request%has_op_r('spinOrbit')
+      !> Collinearly the torque is the cross-spin block and nothing else, exactly as the
+      !> spin operator is: the Cartesian components need both gauges.
+      l_ch_torque = this%n_channels == 2 .AND. request%has_op_r('exchangeTorque')
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
       IF (this%l_active) THEN
@@ -156,10 +169,16 @@ CONTAINS
          ALLOCATE (this%x0(window%num_bands, window%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
                    source=cmplx(0.0, 0.0))
       END IF
+      IF (this%l_active .AND. request%needs_op('exchangeTorque')) THEN
+         ALLOCATE (this%t0(window%num_bands, window%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
+      IF (l_ch_torque) THEN
+         ALLOCATE (this%tx0(window%num_bands, window%num_bands, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
    END SUBROUTINE melem_coarse_init
 
    SUBROUTINE melem_coarse_calc(this, request, window, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                stars, enpara, fmpi, vtot, eig_id, distk, vacuum)
+                                stars, enpara, fmpi, vtot, eig_id, distk, vacuum, sphhar)
       !> One pass over this rank's k-slice, building every requested operator through the
       !> factory. Spin channels that wannierise separately are a loop, not a second pass:
       !> what differs between one spinor and two channels is which index the result carries
@@ -183,14 +202,21 @@ CONTAINS
       !> Only a film has one, and only the spin operator needs it here: its four blocks are
       !> overlaps over the whole cell, and on a film that is three regions and not two.
       TYPE(t_vacuum), INTENT(IN), OPTIONAL :: vacuum
+      !> The lattice-harmonic expansion. Only the exchange torque needs it here: its
+      !> weight is the non-spherical exchange field, where every other operator weighs
+      !> either a plain overlap or the spherical channel alone.
+      TYPE(t_sphhar), INTENT(IN), OPTIONAL :: sphhar
 
       TYPE(t_lapw) :: lapw
       TYPE(t_matelements_spin) :: spinop
       TYPE(t_matelements_soc) :: socop
       TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)   ! (nat, channel)
+      TYPE(t_matelements_torque) :: torqop
       TYPE(t_rsoc) :: rsoc
       INTEGER, ALLOCATABLE :: ev_list(:)
-      LOGICAL :: l_spinor_records, l_do_spin, l_do_orb, l_do_soc
+      LOGICAL :: l_spinor_records, l_do_spin, l_do_orb, l_do_soc, l_do_torque
+      LOGICAL :: l_taxis_common, l_tperp
+      REAL    :: taxis(3)
       INTEGER :: ikpt, itype, il, na, iatom, ib, ch, a
 
       !> With two channels only the real-space list can be served, since the interpolated
@@ -222,12 +248,36 @@ CONTAINS
          l_do_spin = request%has_op_r('spin')
          l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital')
          l_do_soc  = request%has_op_r('spinOrbit')
-         IF (.NOT. (l_do_spin .OR. l_do_orb .OR. l_do_soc)) RETURN
+         l_do_torque = request%has_op_r('exchangeTorque')
+         IF (.NOT. (l_do_spin .OR. l_do_orb .OR. l_do_soc .OR. l_do_torque)) RETURN
       ELSE
          IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinors -> slices are stubs
          l_do_spin = request%l_spin
          l_do_orb  = request%l_orbmom
          l_do_soc  = request%l_socop
+         l_do_torque = request%needs_op('exchangeTorque')
+      END IF
+
+      !> The torque writes whole band matrices per k, like the spin and orbital
+      !> operators and unlike spinOrbit, which distributes its column index itself.
+      !> With n_size > 1 init_mat would hand it t_mpimat blocks holding only part of
+      !> each column block, and it would fill them as if they were whole.
+      IF (l_do_torque) THEN
+         IF (fmpi%n_size /= 1) CALL judft_error( &
+            "melem_coarse_calc: the exchange-torque operator needs whole matrices per rank", &
+            hint="run k-parallel (n_size = 1); eigenvector parallelism is not supported here", &
+            calledby="melem_coarse_calc")
+         IF (.NOT.PRESENT(sphhar)) CALL judft_error( &
+            "melem_coarse: the exchange torque needs the lattice harmonics", &
+            hint="pass sphhar down to melem_coarse_calc; without it the non-spherical "// &
+                 "part of the exchange field is not there", calledby="melem_coarse_calc")
+         IF (input%jspins /= 2) CALL judft_error( &
+            "melem_coarse: the exchange torque needs a spin-polarised calculation", &
+            hint="B_xc = (V_up - V_dn)/2 vanishes identically for jspins=1", &
+            calledby="melem_coarse_calc")
+         !> Nothing in it depends on k: the weight is a property of the potential and
+         !> the radial functions, and the states arrive through the factory.
+         CALL torqop%init(atoms, sym, sphhar, nococonv, input, vtot)
       END IF
 
       !> The relativistic radial SOC integrals and the L.S angular matrix depend on the
@@ -319,6 +369,36 @@ CONTAINS
                !> other one, not of itself -- so only finite and non-zero are asked of it.
                IF (ikpt == 1) CALL melem_check_matrix(this%x0(:, :, il:il), 'spin cross-block', &
                                                      ikpt, l_hermitian=.FALSE.)
+            END IF
+         END IF
+
+         IF (l_do_torque) THEN
+            CALL matrix_element_factory(torqop, eig_id, ikpt, input, atoms, sym, cell, noco, &
+                                        nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
+                                        l_both_spinors=l_spinor_records, kpts=kpts)
+            IF (ikpt == 1) CALL melem_check_provider(torqop, 'exchangeTorque', ikpt)
+            IF (this%n_channels == 1) THEN
+               !> The cross product is site-local, so the components only mean anything
+               !> when every site shares a moment direction. Refuse rather than pick one.
+               CALL melem_torque_axis(atoms, nococonv, taxis, l_taxis_common)
+               IF (.NOT. l_taxis_common) CALL judft_error( &
+                  "melem_coarse: the exchange torque needs every site to share a moment "// &
+                  "direction", hint="the cross product with Omega_xc is site-local, and "// &
+                  "the provider has already summed the sites", calledby="melem_coarse_calc")
+               CALL melem_torque_from_blocks(torqop%mat(1,1)%data_c, torqop%mat(2,2)%data_c, &
+                                             torqop%mat(1,2)%data_c, torqop%mat(2,1)%data_c, &
+                                             taxis, this%t0(:, :, :, il))
+               IF (ikpt == 1) CALL melem_check_matrix(this%t0(:, :, :, il), &
+                                                      'exchangeTorque (assembled)', ikpt)
+               !> T.m = 0 holds by construction, so this needs no reference to compare
+               !> against. It fails on a sign in the Pauli assembly and on a wrong axis.
+               IF (ikpt <= 3) CALL melem_torque_perp_check(this%t0(:, :, :, il), taxis, &
+                                                           ikpt, 1.0e-8, l_tperp)
+            ELSE
+               !> This block IS updown.perpmag of the classic route.
+               this%tx0(:, :, il) = torqop%mat(1, 2)%data_c
+               IF (ikpt == 1) CALL melem_check_matrix(this%tx0(:, :, il:il), &
+                                 'exchangeTorque cross-block', ikpt, l_hermitian=.FALSE.)
             END IF
          END IF
 
@@ -444,6 +524,8 @@ CONTAINS
       IF (ALLOCATED(this%soc0)) DEALLOCATE (this%soc0)
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
+      IF (ALLOCATED(this%t0)) DEALLOCATE (this%t0)
+      IF (ALLOCATED(this%tx0)) DEALLOCATE (this%tx0)
       this%n_channels = 1
       !> l_active gates both the allocations above and the calc pass, so leaving it set
       !> would describe slices that are no longer there.

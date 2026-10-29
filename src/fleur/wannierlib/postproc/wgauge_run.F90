@@ -112,7 +112,7 @@ CONTAINS
 
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
       CALL wgauge_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
-                                   coarse%s0, coarse%l0, coarse%soc4, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
+                                   coarse%s0, coarse%l0, coarse%soc4, coarse%t0, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
 
       !> MDRS, switched on once for every operator and every output domain rather than per

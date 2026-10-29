@@ -44,6 +44,8 @@ MODULE m_wannierlib_main
   USE m_wannierlib_cf, ONLY: wannierlib_uiu, wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
+   USE m_melem_torque, ONLY: melem_torque_write_updown
+   USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans
@@ -87,11 +89,14 @@ CONTAINS
    !> Where the states are spinors one pass carries both spin directions; otherwise this runs
    !> once per channel and the channels never meet, which is what wgauge_spin_collinear is
    !> for.
-   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts_in, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum)
+   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts_in, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum, sphhar)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_vacuum), INTENT(IN) :: vacuum
+      !> Only the exchange torque reads it, and only to build the non-spherical part
+      !> of the exchange field. Every other operator weighs an overlap.
+      TYPE(t_sphhar), INTENT(IN) :: sphhar
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_kpts), INTENT(IN) :: kpts_in
       !> The k-points the whole library works with, spelled one way. See wl_align_kpts.
@@ -183,7 +188,7 @@ CONTAINS
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
-                      stars, enpara, fmpi, vtot, eig_id, distk, vacuum=vacuum)
+                      stars, enpara, fmpi, vtot, eig_id, distk, vacuum=vacuum, sphhar=sphhar)
 
       !> wl, not this: wannierlib_main takes the input object as INTENT(IN), so the windows
       !> the derivation fills in live only in the copy. Handing w90 the original passes it
@@ -331,6 +336,11 @@ CONTAINS
       ! term in the eigenproblem that produced it.
       IF (melem%n_channels == 2 .AND. request%has_op_r('spinOrbit')) &
          CALL wgauge_soc_collinear(this%num_wann, melem%soc4, v_ch, cell, kpts, distk, fmpi)
+      !> The exchange torque, and the one that needs no gauge at all: updown.perpmag is a
+      !> Bloch-basis object, so what is written is the cross-spin block as the k-loop built
+      !> it. Here and not in the channel loop because that block spans both channels.
+      IF (melem%n_channels == 2 .AND. request%has_op_r('exchangeTorque')) &
+         CALL melem_torque_write_updown(melem%tx0, kpts, distk, fmpi)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the
