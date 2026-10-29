@@ -61,7 +61,7 @@ MODULE m_types_melem_optable
    END TYPE t_melem_exposed
 
    !> <interpolation>/<operator name="..">
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(6) = [ &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(7) = [ &
       t_melem_exposed('hamiltonian',    '',           0, 'bands_wann_interpol',     &
                       'bands_wann_interpol_ev', .FALSE.), &
       t_melem_exposed('spin',           'spin',       3, 'bands_wann_spin',         '', .TRUE.), &
@@ -69,7 +69,12 @@ MODULE m_types_melem_optable
       t_melem_exposed('spinOrbit',     'spinOrbit', 1, 'bands_wann_spin_orbit',   '', .FALSE.), &
       t_melem_exposed('velocity',       '',           0, 'bands_wann_velocity',     &
                       'bands_wann_berrycurv', .FALSE.), &
-      t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.)]
+      t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.), &
+      !> Only with spinors: collinearly the torque is the cross-spin Bloch block and
+      !> there is no single matrix over the two channels to interpolate, exactly as
+      !> for the spin. T(R) decays like the other on-site operators (95-98 % of
+      !> |T(R)|^2 at R = 0), so the interpolation has something local to resum.
+      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, 'bands_wann_torque', '', .FALSE.)]
 
    !> <operatorsRs>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.

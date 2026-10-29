@@ -195,6 +195,11 @@ CONTAINS
             CASE ('spinOrbit')
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, kfrac, hg, outname(iop, 1), irank, mpi_comm)
+            CASE ('exchangeTorque')
+               ! T = -(s x m), three Cartesian components like the spin, and like it
+               ! only defined with spinors -- the collinear case is refused upstream.
+               CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                               coarse%t0, gk_loc, 3, kfrac, hg, outname(iop, 1), irank, mpi_comm)
             CASE ('velocity')
                ! Wannier Berry connection A^(W)_alpha(R): built distributed from the local overlaps
                ! and reduced (collective, all ranks); the centre check (rank 0) calibrates conj/sign.

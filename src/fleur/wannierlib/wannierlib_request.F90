@@ -97,6 +97,12 @@ CONTAINS
             hint="ask for it in <operatorsRs>: there both channels are combined into the "// &
                  "2N rssocmat.1, which is the only form this operator has here", &
             calledby="wannierlib_main")
+         IF (request%needs_op('exchangeTorque', interp_only=.TRUE.)) CALL judft_error( &
+            "the exchange torque cannot be interpolated when the two spin channels "// &
+            "are wannierised separately", &
+            hint="ask for it in <operatorsRs>: collinearly this operator is the "// &
+                 "up-down Bloch block alone, written to updown.perpmag", &
+            calledby="wannierlib_main")
       END IF
 
    END SUBROUTINE wannierlib_build_request

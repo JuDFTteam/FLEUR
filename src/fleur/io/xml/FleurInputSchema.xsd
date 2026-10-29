@@ -3618,6 +3618,7 @@
          <xsd:enumeration value="spinOrbit"/>
          <xsd:enumeration value="velocity"/>
          <xsd:enumeration value="eigenstates"/>
+         <xsd:enumeration value="exchangeTorque"/>
       </xsd:restriction>
    </xsd:simpleType>
 

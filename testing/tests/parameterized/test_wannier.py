@@ -237,16 +237,16 @@ EXPORT_ARTEFACTS = sorted({name for names in EXPORT_FILES.values() for name in n
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
-GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
+GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1", "rstorque.1")
 
 # An operator that is conjugated with respect to the gauge it is paired with is invisible to
 # every other check here: conj(O) is Hermitian when O is, keeps its eigenvalues, obeys the
 # same sum rules and respects the same bounds. What it does break is the decay in real
 # space, because the Wannier gauge is built in one convention and the operator arrives in
 # the other. Measured over the thirteen cases, the on-site share runs 73-100 % for the spin,
-# 86-99 % for the orbital and 73-91 % for the spin-orbit operator; the two conjugation bugs
-# this guards against left 13 % and 2 %. Fifty is the gap between the two populations, not a
-# tolerance on any one of them.
+# 86-99 % for the orbital and 73-91 % for the spin-orbit; the exchange torque has a single
+# case and sits at 95 %. The two conjugation bugs this guards against left 13 % and 2 %.
+# Fifty is the gap between the two populations, not a tolerance on any one of them.
 ONSITE_MIN = 50.0
 
 # Localization in R is gauge-dependent by construction: Omega_I is the invariant part of the
@@ -332,6 +332,11 @@ INTERP_EXACT_TOL = 1.0e-8
 # spin channel. Absence is the check: a driver that silently stops writing is otherwise
 # invisible, since every value test below would pass on a file that is not there.
 INTERP_FILES = {
+    #> The torque interpolates only with spinors, so this case writes ONE channel and the
+    #> names carry no _spin suffix. Measured, not assumed: guessing "_spin1" here would
+    #> have made the assertion below fail for the wrong reason.
+    "WannFeTilt": ["bands_wann_interpol.dat", "bands_wann_interpol_ev.dat",
+                   "bands_wann_torque.dat"],
     "WannFeBccInterp": [
         "bands_wann_%s%s_spin%d.dat" % (base, dom, ch)
         for base in ("interpol", "interpol_ev", "orbmom", "velocity", "berrycurv",
@@ -399,6 +404,14 @@ L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 # 2.2e-7, right at that floor; with the sign of T_x flipped it is 1.1e+00, so the margin
 # to a real error is six orders.
 TORQUE_PERP = {"WannFeTilt": (0.6, 0.9)}      # (alpha, beta) of <nocoParams>
+# <T>_nn on the interpolated bands VANISHES in this case, and that is the prediction rather
+# than an empty file: both atoms share (alpha, beta) and l_soc="F", so the moment is collinear
+# and the eigenstates are eigenstates of sigma.m_hat. Then <s> || m_hat and <T> = -<s> x m_hat
+# is zero exactly. What keeps this from being a check on a file of zeros is the energy column
+# of the same rows, asserted beside it: that is what proves the driver ran at all.
+# To exercise a NON-zero interpolated torque the case needs SOC, which tilts <s> off m_hat.
+TORQUE_INTERP_ZERO = ("WannFeTilt",)
+TORQUE_INTERP_ZERO_TOL = 1.0e-8
 TORQUE_PERP_TOL = 1.0e-6
 
 
@@ -651,3 +664,22 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         assert abs(trace - ref) < PERPMAG_TRACE_TOL * max(abs(ref), 1.0), (
             f"{name}: sum_k Tr(M M+) = {trace} against reference {ref} "
             f"(tol {PERPMAG_TRACE_TOL} relative)")
+
+    # The interpolated torque, projected on the Wannier-Hamiltonian eigenstates.
+    if test_id in TORQUE_INTERP_ZERO:
+        rows = dat_rows(res["bands_wann_torque.dat"])
+        assert rows, "bands_wann_torque.dat has no data rows"
+        nw = (len(rows[0]) - 1) // 4        # kdist + per band: E and three components
+        assert nw > 0 and len(rows[0]) == 1 + 4 * nw, (
+            f"bands_wann_torque.dat has {len(rows[0])} columns, which is not 1 + 4*num_wann: "
+            f"the layout is kdist then E_n and three Cartesian components per band")
+        energies = [r[1 + n * 4] for r in rows for n in range(nw)]
+        assert max(abs(e) for e in energies) > 1.0, (
+            "bands_wann_torque.dat: the energy column is zero too, so this file is empty "
+            "rather than vanishing -- the zero torque below would mean nothing")
+        worst = max(abs(r[1 + n * 4 + 1 + c])
+                    for r in rows for n in range(nw) for c in range(3))
+        assert worst < TORQUE_INTERP_ZERO_TOL, (
+            f"bands_wann_torque.dat: max |<T>_nn| = {worst}, but with a collinear moment and "
+            f"no SOC the eigenstates are eigenstates of sigma.m_hat, so <s> is parallel to "
+            f"m_hat and <T> = -<s> x m_hat vanishes (tol {TORQUE_INTERP_ZERO_TOL})")

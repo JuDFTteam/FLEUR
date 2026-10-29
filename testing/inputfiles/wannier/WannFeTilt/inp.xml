@@ -74,6 +74,11 @@
           <operator name="hamiltonian"/>
           <operator name="exchangeTorque"/>
         </operatorsRs>
+        <interpolation>
+          <domain listName="w222"/>
+          <operator name="hamiltonian"/>
+          <operator name="exchangeTorque"/>
+        </interpolation>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
