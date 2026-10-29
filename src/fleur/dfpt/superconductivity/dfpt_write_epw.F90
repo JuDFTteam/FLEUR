@@ -39,6 +39,7 @@ module m_dfpt_write_epw
    use m_constants
    use m_matrix_interpolation,  only: t_wann_ft
    use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_ws_forward, build_ws_ft
+   use m_dfpt_sumrules,         only: dfpt_born_huang
    use m_sort,                  only: sort
    use m_types_cell
    use m_types_fleurinput
@@ -168,6 +169,7 @@ contains
       !!
       !! Scaling into EPW's convention (see module header):
       !!   rdw block(a,b) = 4 * amu_ry * sqrt(m_a m_b) * D_norm(R).
+      !! With l_bornhuang, rdw is projected onto the invariance conditions.
       type(t_fleurinput),   intent(in)  :: fi
       complex,              intent(in)  :: dynMats(:,:,:)
       integer,              intent(in)  :: nmodes
@@ -220,10 +222,17 @@ contains
          i0 = 3*(ia-1)
          do ja = 1, fi%atoms%nat
             j0 = 3*(ja-1)
-            fac = htr2ry**2 * amu_ry * sqrt(atomicMasses_const(fi%atoms%nz(ia)) * atomicMasses_const(fi%atoms%nz(ja)))
+            fac = htr2ry**2 * amu_ry * sqrt(atomicMasses_const(fi%atoms%nz(fi%atoms%itype(ia))) * atomicMasses_const(fi%atoms%nz(fi%atoms%itype(ja))))
             rdw(i0+1:i0+3, j0+1:j0+3, :) = fac * rdw(i0+1:i0+3, j0+1:j0+3, :)
          end do
       end do
+
+      ! rdw is now proportional to the de-normalized force constants
+      if (fi%dfpt%l_bornhuang) then
+         call timestart("Born-Huang projection")
+         call dfpt_born_huang(fi%atoms, fi%cell, nq, nrr_q, Rvecs_q, weightNZ_q, rdw)
+         call timestop("Born-Huang projection")
+      end if
    end subroutine build_rdw
 
    !---------------------------------------------------------------------------
