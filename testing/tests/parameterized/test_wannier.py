@@ -1,4 +1,5 @@
 
+import math
 import os
 import re
 import subprocess
@@ -14,10 +15,16 @@ pass (<operators_r>). WannFeAFMCol is the only case that reaches that collinear
 path with more than one atom type, which is what distinguishes an index mix-up
 between spin and atom type from a layout that happens to coincide in memory.
 WannFeBccInterp covers the interpolation drivers, on three output domains.
+The two torque cases cover the two branches of the exchange torque, which share no
+code past the provider: WannFeBccTorque is collinear and writes the cross-spin block
+in the Bloch basis (updown.perpmag), WannFeTilt is noco with the moment off the
+Cartesian axes and writes the three Cartesian components in real space.
 """
 from read_tests import read_tests
 from wannier_files import (anglmom_r0,
                             onsite_weight,
+                            perpmag_census,
+                            torque_perp_residual,
                             anglmom_r0_hermiticity,
                             anglmom_r0_traces,
                             as_tuple,
@@ -93,6 +100,10 @@ EXPECTED_OMEGA_I = {
     # Omega_I is identical to the last digit, as it must be: without SOC the physics is
     # isotropic and turning the moment cannot change the optimal subspace.
     "WannFeFMy":    16.711628612,
+    # WannFeFM with the moment off the Cartesian axes (alpha=0.6, beta=0.9) and the
+    # exchange torque asked for. Omega_I is again identical: without SOC nothing in the
+    # subspace knows where the moment points.
+    "WannFeTilt":   16.711628612,
     "WannFeAFM":    16.718923683,  # fcc Fe AFM, noco (jspins=2), no SOC
     # fcc Fe AFM, noco (jspins=2) + SOC. This is the only case that is both noco and SOC, so
     # it is the only one that exercises hsmt_soc_offdiag -- the SOC block between the two
@@ -106,6 +117,10 @@ EXPECTED_OMEGA_I = {
     # separate eigenproblems, so each is wannierised on its own and there is one Omega per
     # channel. Values in channel order. This is the only test of that combination.
     "WannFeBcc": (2.606816455, 2.686252738),
+    # Same system and the same two channels as WannFeBcc, with <operator
+    # name="exchangeTorque"/> added. Identical to the last digit, as it must be: asking
+    # for one more operator cannot move the subspace the disentanglement picked.
+    "WannFeBccTorque": (2.606816455, 2.686252738),
     # Same run as WannFeBcc; this case exists for the interpolation files beside it, and the
     # two report Omega_I to the last digit alike.
     "WannFeBccInterp": (2.606816455, 2.686252738),
@@ -179,6 +194,14 @@ OPERATOR_FILES = {
     # spin sum rule is already covered by the cases above.
     "WannMoS2": ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
     "WannAlN":  ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
+    # WannFeBcc plus the exchange torque. Collinearly that operator is the cross-spin
+    # block in the BLOCH basis -- the object the classic route writes as updown.perpmag,
+    # byte for byte -- so it is not one of the O(R) files and has no R index.
+    "WannFeBccTorque": _OP_R_FILES_2CH + ["updown.perpmag"],
+    # Over spinors the same operator is three Cartesian components in real space, so
+    # here it IS an O(R) file. No spin or orbital asked for: this case exists for the
+    # perpendicularity identity and the rest is covered above.
+    "WannFeTilt": ["WF1_hr.dat", "rstorque.1", "wig_vectors"],
 }
 
 # Which case exercises each flag of <export>, and what it has to leave behind. One flag per
@@ -357,6 +380,46 @@ L_TRANSVERSE_ZERO = ("WannFeBccSOC",)
 # exactly zero even though the individual |<w_n|L|w_n>| are not (the Wannier gauge is
 # complex). num_wann == num_bands == 6, so the caveat below does not apply.
 L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
+
+
+# T = -(s x m_hat), so T.m_hat vanishes identically -- a rule with no reference attached,
+# which is what makes it worth asserting: it cannot go stale and it fails on a sign in the
+# Pauli assembly, on blocks taken in the conjugate convention, and on an axis that does not
+# match the one the blocks were rotated into.
+#
+# IT IS ONLY A TEST OFF THE CARTESIAN AXES. With m_hat = z the third component is computed
+# as -(s_x*0 - s_y*0): zero by arithmetic, without ever reading s, and the projection is
+# then exactly 0.0 whatever the assembly did. Measured both ways on this case -- 0.000E+00
+# at beta=0 against 1.36E-16 at beta=0.9 -- so a passing check at beta=0 says nothing. The
+# moment here is at alpha=0.6, beta=0.9, where m_hat = (0.647, 0.442, 0.622) has no zero
+# component and the projection is a cancellation of six non-zero terms.
+#
+# The tolerance is set by the FILE, not by the physics: O(R) is written with eight
+# decimals, so with |T|max = 3.4e-2 the ratio cannot resolve below 3e-7. Measured residual
+# 2.2e-7, right at that floor; with the sign of T_x flipped it is 1.1e+00, so the margin
+# to a real error is six orders.
+TORQUE_PERP = {"WannFeTilt": (0.6, 0.9)}      # (alpha, beta) of <nocoParams>
+TORQUE_PERP_TOL = 1.0e-6
+
+
+# sum_k Tr(M M+) of the cross-spin block, pinned loosely on purpose. The trace is invariant
+# under a unitary rotation within either spin's degenerate multiplets, but that is not the
+# only freedom a run has. Measured on this case at w222, itmax=1, changing nothing but the
+# toolchain and the parallel layout, as (ranks, threads) -> value:
+#
+#   ifx 2026.1.0   (1,1) 5.197337e-02   (1,20) 5.191069e-02
+#                  (2,1) 5.193487e-02   (2,20) 5.188908e-02
+#   ifx 2025.0.1   (1,1) 5.204809e-02   (1,20) 5.204118e-02
+#                  (2,1) 5.198472e-02   (2,20) 5.204978e-02
+#
+# The reduction order reaches the density that itmax=1 diagonalises, so the compiler moves
+# this as much as the rank count does: 1.4e-3 between the two toolchains at a fixed layout,
+# 1.6e-3 across layouts within one. The value above is the first row, and one percent covers
+# the whole table with room to spare -- including gfortran at the two threads the CI uses,
+# which no tolerance tied to one toolchain would survive. That makes this an order check and
+# not a reference: a conjugation or an index slip in the cross-spin block moves it by orders.
+PERPMAG_TRACE = {"WannFeBccTorque": 5.197337e-02}
+PERPMAG_TRACE_TOL = 1.0e-2
 # Both rules need num_wann == num_bands. A disentangled manifold does not inherit time
 # reversal, so the sum over it is not the physical moment: on w222 every k is its own
 # time-reversal partner, the cancellation has to happen within each k, and that needs the
@@ -555,3 +618,36 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"without SOC every Bloch state is a pure spinor, so |<s>| must be 1; the "
             f"smallest of {len(vals)} values is {worst:.6f}. The azimuthal rotation of the "
             f"spin operator is the usual cause -- it only shows up when alpha != 0.")
+
+    # The exchange torque is perpendicular to the moment: see TORQUE_PERP above.
+    if test_id in TORQUE_PERP:
+        alpha, beta = TORQUE_PERP[test_id]
+        axis = (math.sin(beta) * math.cos(alpha),
+                math.sin(beta) * math.sin(alpha),
+                math.cos(beta))
+        # The premise of the check, asserted rather than assumed: on a Cartesian axis the
+        # projection is zero by arithmetic and this would pass without measuring anything.
+        assert min(abs(c) for c in axis) > 0.1, (
+            f"m_hat = {axis} has a near-zero component, so T.m_hat is zero by arithmetic "
+            f"and this assertion cannot fail -- put the moment off the Cartesian axes")
+        worst = torque_perp_residual(res[op(test_id, "rstorque.1")], axis)
+        assert worst < TORQUE_PERP_TOL, (
+            f"rstorque.1: max |T.m| / max|T| = {worst}, but T = -(s x m_hat) is "
+            f"perpendicular to m_hat by construction (tol {TORQUE_PERP_TOL}, which is the "
+            f"resolution of the eight-decimal file, not a physical bound)")
+
+    # Collinearly the torque is the cross-spin block in the Bloch basis: updown.perpmag.
+    if test_id in PERPMAG_TRACE:
+        name = op(test_id, "updown.perpmag")
+        nb, nk, nw, rows, complete, trace, peak = perpmag_census(res[name])
+        assert complete, (
+            f"{name}: {rows} rows for {nb}x{nw} bands over {nk} k-points, and not every "
+            f"(band, band, k) is present. The classic route writes the block whole and a "
+            f"consumer indexes it by position, so a gap is silently read as a zero")
+        assert peak > 0.0, (
+            f"{name}: every entry is zero, so the run wrote a correctly shaped file with "
+            f"nothing in it")
+        ref = PERPMAG_TRACE[test_id]
+        assert abs(trace - ref) < PERPMAG_TRACE_TOL * max(abs(ref), 1.0), (
+            f"{name}: sum_k Tr(M M+) = {trace} against reference {ref} "
+            f"(tol {PERPMAG_TRACE_TOL} relative)")

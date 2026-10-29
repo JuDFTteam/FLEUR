@@ -196,3 +196,5 @@ Testset: Wannier
 | +   | Si diamond, two equivalent atoms in one group | wannier/WannSiDiamond | wannierlib,bulk |         |         | 1   |
 | +   | MoS2 monolayer, mirror (det=-1) and vacuum   | wannier/WannMoS2 | wannierlib,film |         |         | 1   |
 | +   | AlN wurtzite, screw axis (tau!=0)            | wannier/WannAlN | wannierlib,bulk |         |         | 1   |
+| +   | bcc Fe collinear, exchange torque (perpmag)  | wannier/WannFeBccTorque | wannierlib,bulk |         |         | 1   |
+| +   | fcc Fe noco, torque with the moment tilted   | wannier/WannFeTilt | wannierlib,bulk |         |         | 1   |
