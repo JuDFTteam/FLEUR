@@ -24,11 +24,9 @@ MODULE m_melem_torque
    USE m_melem_spin, ONLY: melem_pauli_from_blocks
    USE m_types_kpts
    USE m_types_mpi
-   USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_torque_axis, melem_torque_from_blocks, melem_torque_perp_check
-   PUBLIC :: melem_torque_write_updown
 CONTAINS
 
    !> The magnetisation direction shared by every site, in the global frame.
@@ -122,69 +120,5 @@ CONTAINS
 
       DEALLOCATE(proj)
    END SUBROUTINE melem_torque_perp_check
-
-   !> The cross-spin exchange-field block over the whole mesh, in the Bloch basis and in
-   !> the format the classic route writes as updown.perpmag: a title, nbnd/nkpt/nbnd, and
-   !> one free-format record per element.
-   !>
-   !> Written before any gauge on purpose. updown.perpmag is a Bloch-basis quantity -- it
-   !> is what wann_updown produces and what its consumers read -- so rotating it first
-   !> would make it a different object that happens to share a name.
-   !>
-   !> Index order follows wann_perpmag.f: the FIRST index is the bra and carries spin up,
-   !> the second is the ket and carries spin down.
-   SUBROUTINE melem_torque_write_updown(tx0, kpts, distk, fmpi)
-      USE m_constants, ONLY: oUnit
-#ifdef CPP_MPI
-      USE mpi
-#endif
-      !> (nbnd, nbnd, nk_loc) on this rank, in ascending global-k order.
-      COMPLEX, INTENT(IN) :: tx0(:, :, :)
-      TYPE(t_kpts), INTENT(IN) :: kpts
-      INTEGER, INTENT(IN) :: distk(:)
-      TYPE(t_mpi), INTENT(IN) :: fmpi
-
-      INTEGER :: nb, nkl, kl, gk, i, j, k, iu, ierr
-      COMPLEX, ALLOCATABLE :: full(:, :, :)
-
-      nb = SIZE(tx0, 1)
-      nkl = COUNT(distk == fmpi%irank)
-      IF (SIZE(tx0, 3) < nkl) CALL juDFT_error( &
-         'melem_torque_write_updown: fewer blocks than k-points on this rank', &
-         calledby='melem_torque_write_updown')
-
-      !> Every rank holds whole matrices for its own k and zeros elsewhere, so the mesh is
-      !> assembled with one sum rather than a gather with displacements.
-      ALLOCATE (full(nb, nb, kpts%nkptf), source=CMPLX(0.0, 0.0))
-      kl = 0
-      DO i = 1, SIZE(distk)
-         IF (distk(i) /= fmpi%irank) CYCLE
-         kl = kl + 1
-         full(:, :, i) = tx0(:, :, kl)
-      END DO
-#ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE, full, SIZE(full), MPI_DOUBLE_COMPLEX, MPI_SUM, &
-                         fmpi%mpi_comm, ierr)
-#endif
-
-      IF (fmpi%irank == 0) THEN
-         OPEN (newunit=iu, file=wannierlib_export_file('updown.perpmag'), status='replace', &
-               recl=1000)
-         WRITE (iu, *) 'Overlaps of the wavefunct. with Beff'
-         WRITE (iu, '(i5,i7,i5)') nb, kpts%nkptf, nb
-         DO k = 1, kpts%nkptf
-            DO j = 1, nb
-               DO i = 1, nb
-                  WRITE (iu, *) i, j, k, REAL(full(i, j, k)), AIMAG(full(i, j, k))
-               END DO
-            END DO
-         END DO
-         CLOSE (iu)
-         WRITE (oUnit, '(a,i0,a,i0,a)') &
-            'wannierlib: wrote updown.perpmag (exchange torque, Bloch basis, ', nb, &
-            ' bands, ', kpts%nkptf, ' k-points)'
-      END IF
-      DEALLOCATE (full)
-   END SUBROUTINE melem_torque_write_updown
 
 END MODULE m_melem_torque

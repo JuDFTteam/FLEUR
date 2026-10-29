@@ -44,7 +44,6 @@ MODULE m_wannierlib_main
   USE m_wannierlib_cf, ONLY: wannierlib_uiu, wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
-   USE m_melem_torque, ONLY: melem_torque_write_updown
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
@@ -55,7 +54,8 @@ USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
 USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
    USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, &
                                      wannierlib_write_mmn, wannierlib_write_amn
-   USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
+   USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear, &
+                                 wgauge_perpmag_collinear
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_atoms
@@ -340,7 +340,7 @@ CONTAINS
       !> Bloch-basis object, so what is written is the cross-spin block as the k-loop built
       !> it. Here and not in the channel loop because that block spans both channels.
       IF (melem%n_channels == 2 .AND. request%has_op_r('exchangeTorque')) &
-         CALL melem_torque_write_updown(melem%tx0, kpts, distk, fmpi)
+         CALL wgauge_perpmag_collinear(melem%tx0, kpts, distk, fmpi)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the

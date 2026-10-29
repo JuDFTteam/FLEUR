@@ -17,6 +17,10 @@
 !>  spatial part alone, so <up|L|dn> carries the spin overlap <up|dn> = 0 as a factor and
 !>  the cross block vanishes identically. The 2N matrix is block-diagonal, and the two
 !>  blocks are each channel's own L in its own gauge.
+!>
+!>  The exchange torque is the exception that stays in the Bloch basis: its ingredient is
+!>  the cross-spin block of the exchange field, which the classic route writes as
+!>  updown.perpmag for its consumers to read, so it is written as the k-loop built it.
 MODULE m_wgauge_spin_collinear
    USE m_juDFT
    USE m_constants, ONLY: ImagUnit, oUnit
@@ -30,6 +34,7 @@ MODULE m_wgauge_spin_collinear
    PRIVATE
 
    PUBLIC :: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
+   PUBLIC :: wgauge_perpmag_collinear
 
 CONTAINS
 
@@ -316,5 +321,68 @@ CONTAINS
       IF (ALLOCATED(sr)) DEALLOCATE (sr)
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
    END SUBROUTINE wgauge_soc_collinear
+
+   !> The cross-spin exchange-field block over the whole mesh, in the Bloch basis and in
+   !> the format the classic route writes as updown.perpmag: a title, nbnd/nkpt/nbnd, and
+   !> one free-format record per element.
+   !>
+   !> Written before any gauge on purpose. updown.perpmag is a Bloch-basis quantity -- it
+   !> is what wann_updown produces and what its consumers read -- so rotating it first
+   !> would make it a different object that happens to share a name.
+   !>
+   !> Index order follows wann_perpmag.f: the FIRST index is the bra and carries spin up,
+   !> the second is the ket and carries spin down.
+   SUBROUTINE wgauge_perpmag_collinear(tx0, kpts, distk, fmpi)
+#ifdef CPP_MPI
+      USE mpi
+#endif
+      !> (nbnd, nbnd, nk_loc) on this rank, in ascending global-k order.
+      COMPLEX, INTENT(IN) :: tx0(:, :, :)
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      INTEGER, INTENT(IN) :: distk(:)
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+
+      INTEGER :: nb, nkl, kl, gk, i, j, k, iu, ierr
+      COMPLEX, ALLOCATABLE :: full(:, :, :)
+
+      nb = SIZE(tx0, 1)
+      nkl = COUNT(distk == fmpi%irank)
+      IF (SIZE(tx0, 3) < nkl) CALL juDFT_error( &
+         'wgauge_perpmag_collinear: fewer blocks than k-points on this rank', &
+         calledby='wgauge_perpmag_collinear')
+
+      !> Every rank holds whole matrices for its own k and zeros elsewhere, so the mesh is
+      !> assembled with one sum rather than a gather with displacements.
+      ALLOCATE (full(nb, nb, kpts%nkptf), source=CMPLX(0.0, 0.0))
+      kl = 0
+      DO i = 1, SIZE(distk)
+         IF (distk(i) /= fmpi%irank) CYCLE
+         kl = kl + 1
+         full(:, :, i) = tx0(:, :, kl)
+      END DO
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, full, SIZE(full), MPI_DOUBLE_COMPLEX, MPI_SUM, &
+                         fmpi%mpi_comm, ierr)
+#endif
+
+      IF (fmpi%irank == 0) THEN
+         OPEN (newunit=iu, file=wannierlib_export_file('updown.perpmag'), status='replace', &
+               recl=1000)
+         WRITE (iu, *) 'Overlaps of the wavefunct. with Beff'
+         WRITE (iu, '(i5,i7,i5)') nb, kpts%nkptf, nb
+         DO k = 1, kpts%nkptf
+            DO j = 1, nb
+               DO i = 1, nb
+                  WRITE (iu, *) i, j, k, REAL(full(i, j, k)), AIMAG(full(i, j, k))
+               END DO
+            END DO
+         END DO
+         CLOSE (iu)
+         WRITE (oUnit, '(a,i0,a,i0,a)') &
+            'wannierlib: wrote updown.perpmag (exchange torque, Bloch basis, ', nb, &
+            ' bands, ', kpts%nkptf, ' k-points)'
+      END IF
+      DEALLOCATE (full)
+   END SUBROUTINE wgauge_perpmag_collinear
 
 END MODULE m_wgauge_spin_collinear

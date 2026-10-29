@@ -177,7 +177,7 @@ CONTAINS
         !> T = -m_hat x <sigma B_xc>, the same three components the spin has and the same
         !> reduce, since the local blocks were already assembled on the coarse mesh.
         ! collinear: the cross-spin block is what the classic route calls updown.perpmag,
-        ! and it is a Bloch-basis quantity. It is written whole by melem_torque_write_updown
+        ! and it is a Bloch-basis quantity. It is written whole by wgauge_perpmag_collinear
         ! (main) rather than transformed to R per channel here.
         IF (l_collinear) CYCLE
         CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, t0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., &
