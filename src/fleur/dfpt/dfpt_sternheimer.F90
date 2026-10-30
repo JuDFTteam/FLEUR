@@ -90,9 +90,9 @@ CONTAINS
       INTEGER :: ierr
 #endif
 
-      INTEGER :: archiveType, iter, killcont(6), iterm, realiter !remove iterm WIP
+      INTEGER :: archiveType, iter, killcont(6), realiter
       REAL    :: bqpt(3), bmqpt(3)
-      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_existm, l_metal
+      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_metal
 
 
       TYPE(t_banddos)  :: banddosdummy
@@ -129,7 +129,6 @@ CONTAINS
          starsmq%ufft = stars%ufft
 
          CALL denIn1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-         !INQUIRE(FILE=TRIM(dfpt_tag)//'m.hdf',EXIST=l_existm)
       END IF
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
       IF (ANY(fi%noco%l_unrestrictMT)) THEN
@@ -152,16 +151,11 @@ CONTAINS
 
       ! Set the iteration counters to 0 and optionally read in the density perturbation
       iter = 0
-      !iterm = 0
       l_cont = (iter < fi%input%itmax)
       IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results1%ef, results1%last_distance, l_dummy, denIn1,  &
                                                       inFilename=TRIM(dfpt_tag))
-      !IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-      !                                                fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
-      !                                                results1m%ef, results1m%last_distance, l_dummy, denIn1m,  &
-      !                                                inFilename=TRIM(dfpt_tag)//'m')
 
       IF (fmpi%irank==0.AND..NOT.l_exist) denIn1%iter = 1
       ! we store in q*hdf only the z(1) response of the density response. Add the gradient here. 
@@ -197,9 +191,6 @@ CONTAINS
          CALL denIn1%distribute(fmpi%mpi_comm)
 
          IF (l_minusq) CALL herm_den1(denIn1, starsq, starsmq, denIn1m)
-         !IF (l_minusq) THEN
-         !   CALL denIn1m%distribute(fmpi%mpi_comm)
-         !END IF
          ! Generate the potential perturbation:
          ! Vext1 for the starting perturbation
          ! Veff1 every other time
@@ -340,11 +331,6 @@ CONTAINS
             IF (sternheimerJob%l_IBScorrection) denIn1%mtIm(:,0:,iDtype,:) = denIn1%mtIm(:,0:,iDtype,:) + grRho%mtIm(:,0:,iDtype,:)
             CALL denIn1%distribute(fmpi%mpi_comm)
 
-            !IF (l_minusq) THEN
-            !   IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
-            !   CALL denIn1m%distribute(fmpi%mpi_comm)
-            !END IF
-
             l_cont = .FALSE.
             IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
             CALL timestop("Sternheimer Iteration")
@@ -360,7 +346,7 @@ CONTAINS
                           fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                           enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                           archiveType,xcpot,denOut1,bqpt,iDtype,iDir,l_real,&
-                          qm_eig_id,dfpt_eigm_id)!,starsmq,results1m)
+                          qm_eig_id,dfpt_eigm_id)
          CALL timestop("generation of new charge density (total)")
 
          IF (l_minusq) THEN
@@ -385,10 +371,6 @@ CONTAINS
             IF (sternheimerJob%l_IBScorrection) denIn1%mtIm(:,0:,iDtype,:) = denIn1%mtIm(:,0:,iDtype,:) - grRho%mtIm(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
-            !IF (l_minusq) THEN
-            !   denIn1m = denOut1m
-            !   IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-            !END IF
 
             CYCLE scfloop
          END IF
@@ -403,19 +385,11 @@ CONTAINS
             IF (sternheimerJob%l_IBScorrection) denIn1%mtIm(:,0:,iDtype,:) = denIn1%mtIm(:,0:,iDtype,:) - grRho%mtIm(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
-            !IF (l_minusq) THEN
-            !   denIn1m = denOut1m
-            !   IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-            !END IF
             CYCLE scfloop
          END IF
 
 
          CALL denIn1%distribute(fmpi%mpi_comm)
-
-         !IF (l_minusq) THEN
-         !   CALL denIn1m%distribute(fmpi%mpi_comm)
-         !END IF
 
 
 
@@ -430,11 +404,6 @@ CONTAINS
          IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          IF (sternheimerJob%l_IBScorrection) denIn1%mtIm(:,0:,iDtype,:) = denIn1%mtIm(:,0:,iDtype,:) + grRho%mtIm(:,0:,iDtype,:)
          CALL denIn1%distribute(fmpi%mpi_comm)
-
-         !IF (l_minusq) THEN
-         !   IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
-         !   CALL denIn1m%distribute(fmpi%mpi_comm)
-         !END IF
 
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
@@ -455,20 +424,6 @@ CONTAINS
 
          CALL denIn1%distribute(fmpi%mpi_comm)
 
-         !IF (l_minusq) THEN
-         !   CALL timestart("DFPT mixing")
-         !   CALL mix_charge(field2, fmpi, starsmq, &
-         !                   fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
-         !                   archiveType, xcpot, iterm, denIn1m, denOut1m, results1m, l_runhia=.false.,sliceplot=fi%sliceplot,&
-         !                   dfpt_tag=dfpt_tag)
-         !   IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_tag)
-         !   CALL timestop("DFPT mixing")
-         !
-         !   IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-         !
-         !   CALL denIn1m%distribute(fmpi%mpi_comm)
-         !END IF
-
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
@@ -484,13 +439,6 @@ CONTAINS
          CALL MPI_BCAST(results1%last_distance, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
-
-         !IF (l_minusq) THEN
-!#ifdef CPP_MPI
-         !   CALL MPI_BCAST(results1m%last_distance, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-         !   CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
-!#endif
-         !END IF
 
          l_cont = l_cont .AND. (iter < fi%input%itmax)
          l_cont = l_cont .AND. ((fi%input%mindistance <= results1%last_distance))
