@@ -166,7 +166,7 @@
          <FermiEnergy value="0.1788108983" units="Htr"/>
          <phonon>
             <dynMat>
-               <frequencies iqpt="1" q_x=".00000000" q_y=".00000000" q_z=".00000000" unit="1/cm">-49.2621715378      -47.6397491509      -47.6380358667</frequencies>
+               <frequencies iqpt="1" q_x=".00000000" q_y=".00000000" q_z=".00000000" unit="1/cm">-49.7942023919      -48.1542595588      -48.1525277486</frequencies>
             </dynMat>
          </phonon>
       </iteration>
