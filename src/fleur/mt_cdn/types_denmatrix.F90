@@ -247,7 +247,7 @@ contains
       real, optional, intent(in)    :: we1(ne)   !! \(\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}\)
 
       complex :: coef, cil, cmv
-      complex :: temp(ne)
+      complex :: temp(ne),tempm(ne)
       real:: fact
       integer :: jmem, l, lh, llp, llpmax, lm, lmp, lp, lv, m, mp, mv, na, natom, nn, ns, nt, lphi, lplow, icoef, jcoef, mpp,lpp,lpmin0,lpmax0,lpmin,lo,lop,lpmax
       integer :: n_l(atoms%nlod)
@@ -260,8 +260,8 @@ contains
       if (l_dfpt) l_gamma = (norm2(bqpt)<=1e-8) 
       this%l_triang = l_less_effort
       ns = sym%ntypsy(atoms%firstAtom(itype))
-      !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
-      !!$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abcpr, abc1m, l_minusq, l_gamma, l_dfpt, n_l)
+      !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, jcoef, nt, temp, tempm, cil, lmp, coef) &
+      !!$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abcpr, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l)
       do lh = 0, sphhar%nlh(ns)
          do jmem = 1, sphhar%nmem(lh, ns)
             lv = sphhar%llh(lh, ns)
@@ -295,7 +295,11 @@ contains
                         do icoef = 1, size(abc%cof, 3) !Loop over radial functions/cofs (usually 0=u and 1=\dot u)
                            if (l_dfpt) then
                               temp(:) = coef*we(:)*abc1%cof(:, lm, icoef, nt)
-                              if (.not. l_minusq) temp(:) = temp(:)*2.0 
+                              if (l_minusq) then
+                                 tempm(:) = coef*we(:)*abcpr%cof(:, lm, icoef, nt)
+                              else
+                                 temp(:) = temp(:)*2.0 
+                              end if
                               if (l_gamma) temp(:) = temp(:) + coef*we1(:)*abcpr%cof(:, lm, icoef, nt)
                            else
                               temp(:) = coef*we(:)*abcpr%cof(:, lm, icoef, nt)
@@ -306,8 +310,7 @@ contains
                                                     & + dot_product(abc%cof(:, lmp, jcoef, nt), temp(:))
                               if (l_minusq) then
                                  this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
-                                                          & + dot_product(abc1m%cof(:, lmp, jcoef, nt), &
-                                                               & abcpr%cof(:, lm, icoef, nt)) 
+                                                          & + dot_product(abc1m%cof(:, lmp, jcoef, nt),tempm(:))
                               end if
                            end do
                         end do
@@ -323,7 +326,7 @@ contains
       call timestop("rhonmt")
    end subroutine rhonmt
 
-   subroutine to_full_density(denmat, ispin, ispinpr, itype, input, sphhar, atoms, noco, sym, radfun, rho, rhoIm, moments)
+   subroutine to_full_density(denmat, ispin, ispinpr, itype, input, sphhar, atoms, noco, sym, radfun, rho, rhoIm, moments, l_minusq)
       !! Current situation:
       !!
       !! This routine calculates density contributions
@@ -347,14 +350,19 @@ contains
 
       real, intent(inout), optional    :: rhoIm(:, 0:,:,:)
       type(t_moments), optional, intent(INOUT) :: moments
+      logical, optional, intent(in)   :: l_minusq
 
-      integer :: lh, l, lp, llp, j, i, ii, spin
+      integer :: lh, l, lp, llp, j, i, ii, spin, isp
       complex :: cs
       integer, parameter:: lcf = 3
-      logical :: l_dfpt
+      logical :: l_dfpt, l_mq
 
       l_dfpt = present(rhoIm)
+      l_mq = .false.
+      if (present(l_minusq)) l_mq = l_minusq
       spin = merge(ispin, 3, ispin == ispinpr)
+      ! explicit -q: block (2,1) is rho_12 (comp 3), block (1,2) is rho_21 (comp 4)
+      isp = merge(3, 4, ispin == 2)
       if (spin == 3 .and. .not. noco%l_mperp) return !no local off-diagonal pert
       do lh = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(itype)))
          do l = 0, atoms%lmax(itype)
@@ -375,8 +383,11 @@ contains
                   end do
                   
                   if (l_dfpt) then
-                     if (spin == 3) then !noco case
-                        rho(j, lh, itype, 3:4) = rho(j, lh, itype, 3:4) + 0.5*real(cs)/atoms%neq(itype) !remove double counting 
+                     if (spin == 3 .and. l_mq) then
+                        rho(j, lh, itype, isp) = rho(j, lh, itype, isp) + real(cs)/atoms%neq(itype) ! no factor 2 from rhomat
+                        rhoIm(j, lh, itype, isp) = rhoIm(j, lh, itype, isp) + aimag(cs)/atoms%neq(itype)
+                     else if (spin == 3) then !noco case
+                        rho(j, lh, itype, 3:4) = rho(j, lh, itype, 3:4) + 0.5*real(cs)/atoms%neq(itype) !removes factor 2 from rhomt
                         rhoIm(j, lh, itype, 3:4) = rhoIm(j, lh, itype, 3:4) + 0.5*aimag(cs)/atoms%neq(itype)
                      else
                         rho(j, lh, itype, spin) = rho(j, lh, itype, spin) + real(cs)/atoms%neq(itype)

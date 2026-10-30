@@ -140,10 +140,10 @@ CONTAINS
       ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
       ALLOCATE(denIn1_pw(starsq%ng3),rho_pw(stars%ng3))
       IF (fi%noco%l_noco) THEN
-         ALLOCATE(vpw12(stars%ng3)) !WIP
+         ALLOCATE(vpw12(stars%ng3)) !WIP, maybe put this into some other hermicity routine
          DO iStar = 1, stars%ng3
             iStarM = stars%ig(-stars%kv3(1,iStar),-stars%kv3(2,iStar),-stars%kv3(3,iStar))
-            IF (iStarM.EQ.0) CALL juDFT_error("star set not closed under inversion",calledby="dfpt_dynmat_row")
+            IF (iStarM.EQ.0) CALL juDFT_bug("star set not closed under inversion",calledby="dfpt_dynmat_row")
             vpw12(iStar) = CONJG(vTot%pw(iStarM,3))
          END DO
       END IF
