@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,6 +14,9 @@
 MODULE m_types_xml
    USE m_juDFT
    USE m_calculator
+   USE iso_c_binding
+   USE m_juDFT_stop
+   USE m_judft_sysinfo
    IMPLICIT NONE
    PRIVATE
 
@@ -58,7 +61,6 @@ CONTAINS
    end subroutine
 
    subroutine drop_schema_files(version, output_version)
-      USE iso_c_binding
       character(len=4, kind=c_char), intent(in):: version
       character(len=4, kind=c_char), intent(in):: output_version
       integer :: errorStatus
@@ -97,7 +99,6 @@ CONTAINS
    end subroutine
 
    subroutine validate_with_schema(version, output_version)
-      use iso_c_binding
       character(len=4, kind=c_char), intent(in):: version
       character(len=4, kind=c_char), intent(in):: output_version
       integer :: errorStatus
@@ -111,7 +112,6 @@ CONTAINS
    end
 
    SUBROUTINE init(xml, filename_add, old_version)
-      USE iso_c_binding
 
       CLASS(t_xml), INTENT(INOUT) :: xml
       CHARACTER(len=*), INTENT(IN) :: filename_add
@@ -208,7 +208,6 @@ CONTAINS
    END FUNCTION get_nlo
 
    SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
-      use m_juDFT_stop
       IMPLICIT NONE
 
       CHARACTER(*),         INTENT(IN)  :: string
@@ -469,11 +468,11 @@ CONTAINS
 
    SUBROUTINE InitInterface()
 
-      USE iso_c_binding
-
       IMPLICIT NONE
 
       INTEGER :: errorStatus
+
+
 
       INTERFACE
          FUNCTION initializeXMLInterface() BIND(C, name="initializeXMLInterface")
@@ -482,17 +481,19 @@ CONTAINS
          END FUNCTION initializeXMLInterface
       END INTERFACE
 
+      call fp_error_check(.false.) 
+      !XML library init generates a FPE. We want to ignore this one and check for real errors after initialization.
+      !Error checking could be re-enabled after initialization. 
       errorStatus = 0
       errorStatus = initializeXMLInterface()
       IF (errorStatus .NE. 0) THEN
          CALL juDFT_error("Could not initialize XML interface.", calledby="xmlInitInterface")
       END IF
-
+      !call fp_error_check(.true.)
    END SUBROUTINE InitInterface
 
    SUBROUTINE ParseSchema(schemaFilename)
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -518,7 +519,6 @@ CONTAINS
 
    SUBROUTINE ParseDoc(docFilename)
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -545,7 +545,6 @@ CONTAINS
 
    SUBROUTINE ValidateDoc()
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -569,7 +568,6 @@ CONTAINS
 
    SUBROUTINE InitXPath()
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -592,7 +590,6 @@ CONTAINS
 
    FUNCTION GetNumberOfNodes(xml, xPath)
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -614,7 +611,6 @@ CONTAINS
 
    FUNCTION GetAttributeValue(xml, xPath, l_nocheck)
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -670,7 +666,6 @@ CONTAINS
 
    subroutine GetAttributeValue_List(xml, xPath, list)
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -743,7 +738,6 @@ CONTAINS
 
    SUBROUTINE SetAttributeValue(xPath, VALUE)
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -766,14 +760,14 @@ CONTAINS
          WRITE (*, *) 'Error in trying to setting attribute value from XPath:'
          WRITE (*, *) TRIM(ADJUSTL(xPath))
          WRITE (*, *) TRIM(ADJUSTL(VALUE))
-         CALL juDFT_error("Attribute value could not be set.", calledby="xmlSetAttributeValue")
+         CALL juDFT_error("Attribute value could not be set.", calledby="xmlSetAttributeValue", &
+                          hint="-xmlXPath can only change attributes and elements that are present in inp.xml")
       END IF
 
    END SUBROUTINE SetAttributeValue
 
    SUBROUTINE FreeResources()
 
-      USE iso_c_binding
 
       IMPLICIT NONE
 
@@ -790,13 +784,11 @@ CONTAINS
       errorStatus = freeXMLResources()
       IF (errorStatus .NE. 0) THEN
          CALL juDFT_error("Could not free XML resources.", calledby="xmlFreeResources")
-         STOP 'Error!'
       END IF
 
    END SUBROUTINE FreeResources
 
    subroutine writexml(fileNum)
-      USE iso_c_binding
       interface
          subroutine write_xml_file() bind(C, name="write_xml_file")
          end subroutine

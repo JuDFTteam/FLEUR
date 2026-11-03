@@ -1,16 +1,24 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_dfpt_hs_int
+   USE m_hs_int_direct
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_hs_int, dfpt_dynmat_hs_int
 CONTAINS
    ! Constructs the interstitial perturbed Hamiltonian and overlap matrix
    SUBROUTINE dfpt_hs_int(sternheimerJob,noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, hmat, smat, killcont)
 
-      USE m_types
-      USE m_hs_int_direct
       
 
       IMPLICIT NONE
@@ -73,8 +81,6 @@ CONTAINS
 
    SUBROUTINE dfpt_dynmat_hs_int(noco, starsq, stars, lapwq, lapw, fmpi, bbmat, isp, theta1_pw0, theta1_pw, smat1, hmat1, smat1q, hmat1q, killcont)
 
-      USE m_types
-      USE m_hs_int_direct
 
       IMPLICIT NONE
 

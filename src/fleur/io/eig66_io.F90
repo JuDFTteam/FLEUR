@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,26 @@ MODULE m_eig66_io
 use m_juDFT
    use m_types_mat
    USE m_eig66_data
+   USE m_eig66_hdf, ONLY: open_eig_hdf => open_eig, close_eig_hdf => close_eig, read_eig_hdf => read_eig, &
+      write_eig_hdf => write_eig
+   USE m_eig66_DA, ONLY: open_eig_DA => open_eig, close_eig_DA => close_eig, read_eig_DA => read_eig, &
+      write_eig_DA => write_eig
+   USE m_eig66_mem, ONLY: open_eig_mem => open_eig, close_eig_MEM => close_eig, read_eig_mem => read_eig, &
+      write_eig_MEM => write_eig
+   USE m_eig66_MPI, ONLY: open_eig_mpi => open_eig, close_eig_MPI => close_eig, read_eig_MPI => read_eig, &
+      write_eig_MPI => write_eig, reset_eig_MPI => reset_eig
+   USE m_types_nococonv
+   USE m_trafo
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_noco
+   USE m_types_sym
+#ifdef CPP_MPI
+   USE mpi
+#endif
    IMPLICIT NONE
    PRIVATE
 
@@ -18,10 +38,6 @@ CONTAINS
    FUNCTION open_eig(mpi_comm, nmat, neig, nkpts, jspins, &
                      l_noco, l_create, l_real, l_soc, l_readonly, l_olap, n_size, mode_in, filename) &
       RESULT(id)
-      USE m_eig66_hdf, ONLY: open_eig_hdf => open_eig
-      USE m_eig66_DA, ONLY: open_eig_DA => open_eig
-      USE m_eig66_mem, ONLY: open_eig_mem => open_eig
-      USE m_eig66_MPI, ONLY: open_eig_mpi => open_eig
       IMPLICIT NONE
       INTEGER, INTENT(IN)          :: nmat, neig, nkpts, jspins, mpi_comm
       LOGICAL, INTENT(IN)          :: l_noco, l_readonly, l_create, l_real, l_soc, l_olap
@@ -92,10 +108,6 @@ CONTAINS
    END FUNCTION open_eig
 
    SUBROUTINE close_eig(id, filename)
-      USE m_eig66_hdf, ONLY: close_eig_hdf => close_eig
-      USE m_eig66_DA, ONLY: close_eig_DA => close_eig
-      USE m_eig66_mem, ONLY: close_eig_MEM => close_eig
-      USE m_eig66_MPI, ONLY: close_eig_MPI => close_eig
       IMPLICIT NONE
       INTEGER, INTENT(IN)                   :: id
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
@@ -118,9 +130,6 @@ CONTAINS
    END SUBROUTINE close_eig
 
    subroutine read_eig(id, nk, jspin, neig, eig, list, zmat, smat,kpts,input,noco,nococonv,sym,atoms,cell)
-      use m_types
-      use m_types_nococonv
-      use m_trafo
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
@@ -165,10 +174,6 @@ CONTAINS
    end subroutine read_eig
 
    SUBROUTINE read_eig_ibz(id, nk, jspin, neig, eig, list, zmat, smat)
-      USE m_eig66_hdf, ONLY: read_eig_hdf => read_eig
-      USE m_eig66_DA, ONLY: read_eig_DA => read_eig
-      USE m_eig66_mem, ONLY: read_eig_mem => read_eig
-      USE m_eig66_MPI, ONLY: read_eig_MPI => read_eig
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
@@ -193,10 +198,6 @@ CONTAINS
    END SUBROUTINE read_eig_ibz
 
    SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, n_start, n_end, zmat, smat)
-      USE m_eig66_hdf, ONLY: write_eig_hdf => write_eig
-      USE m_eig66_DA, ONLY: write_eig_DA => write_eig
-      USE m_eig66_mem, ONLY: write_eig_MEM => write_eig
-      USE m_eig66_MPI, ONLY: write_eig_MPI => write_eig
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total, n_start, n_end
@@ -219,7 +220,6 @@ CONTAINS
    END SUBROUTINE write_eig
 
    SUBROUTINE reset_eig(id, l_soc)
-      USE m_eig66_MPI, ONLY: reset_eig_MPI => reset_eig
       INTEGER, INTENT(IN) :: id
       LOGICAL, INTENT(IN) :: l_soc
 

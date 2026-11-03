@@ -1,5 +1,28 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_types_mpdata
+   use m_judft
+   use m_types_kpts
+   use m_types_mpi
+   use m_types_mpinp
+   use m_constants
+   use m_intgrf, only: intgrf_init, intgrf
+   use m_sort
+   use m_types_hybinp
+   use ieee_arithmetic
+   use m_types_fleurinput_base, only: REAL_NOT_INITALIZED
+   use m_types_hybdat
+   use m_types_atoms
+   use m_types_cell
    implicit none
+   private
+   public :: mpdata_n_vac_fun, mpdata_num_gpts, mpdata_gen_gvec, mpdata_check_orthonormality, mpdata_check_radbasfn, &
+      mpdata_calc_olap_radbasfn, mpdata_filter_radbasfn, mpdata_diagonialize_olap, mpdata_trafo_to_orthonorm_bas, &
+      mpdata_add_l0_fun, mpdata_reduce_linear_dep, mpdata_normalize, mpdata_init, set_max_indx_p_1, mpdata_free, &
+      mpdata_set_nl, set_num_radfun_per_l_mpdata, t_mpdata
 
    type t_mpdata
       integer, allocatable   :: g(:, :) ! (3, num_gpts)
@@ -14,8 +37,19 @@ module m_types_mpdata
       integer, allocatable   :: l2(:, :, :) !(n, l, itype)
       integer, allocatable   :: n1(:, :, :) !(n, l, itype)
       integer, allocatable   :: n2(:, :, :) !(n, l, itype)
+
+      ! films: in-plane vectors and length groups of the VAC block, and its z-functions
+      integer, allocatable   :: g_vac(:, :)
+      integer, allocatable   :: n_g_vac(:)
+      integer, allocatable   :: gptm_ptr_vac(:, :)
+      integer, allocatable   :: glen_ptr_vac(:, :)
+      real, allocatable      :: glen_vac(:)
+      integer, allocatable   :: num_zbasfn_vac(:, :)
+      real, allocatable      :: zbasfn_vac(:, :, :, :)
+      integer                :: nmz_vac = 0
    CONTAINS
       procedure :: num_gpts => mpdata_num_gpts
+      procedure :: n_vac_fun => mpdata_n_vac_fun
       procedure :: gen_gvec => mpdata_gen_gvec
       procedure :: check_orthonormality => mpdata_check_orthonormality
       procedure :: check_radbasfn => mpdata_check_radbasfn
@@ -33,6 +67,22 @@ module m_types_mpdata
       !generic   :: write(unformatted) => write_mpdata
    end type t_mpdata
 contains
+   function mpdata_n_vac_fun(mpdata, ik, nvac) result(n)
+      implicit none
+      class(t_mpdata), intent(in) :: mpdata
+      integer, intent(in)         :: ik, nvac
+
+      integer :: n, i, ivac
+
+      n = 0
+      if (.not. allocated(mpdata%num_zbasfn_vac)) return
+      do ivac = 1, nvac
+         do i = 1, mpdata%n_g_vac(ik)
+            n = n + mpdata%num_zbasfn_vac(mpdata%glen_ptr_vac(i, ik), ivac)
+         end do
+      end do
+   end function mpdata_n_vac_fun
+
    function mpdata_num_gpts(mpdata)
       implicit NONE
       class(t_mpdata), intent(in) :: mpdata
@@ -42,14 +92,6 @@ contains
    end function mpdata_num_gpts
 
    subroutine mpdata_gen_gvec(mpdata, mpinp, cell, kpts, mpi)
-      use m_judft
-      use m_types_setup
-      use m_types_kpts
-      use m_types_mpi
-      use m_types_mpinp
-      USE m_constants
-      use m_intgrf, only: intgrf_init, intgrf
-      use m_sort
       implicit NONE
       class(t_mpdata), intent(inout) :: mpdata
       type(t_mpinp), intent(in)      :: mpinp
@@ -181,11 +223,6 @@ contains
 
    subroutine mpdata_check_orthonormality(mpdata, atoms, mpi, l, itype, gridf)
 
-      use m_judft
-      use m_types_setup
-      use m_types_mpi
-      USE m_constants
-      use m_intgrf, only: intgrf
 
       implicit none
 
@@ -237,9 +274,6 @@ contains
    end subroutine mpdata_check_orthonormality
 
    subroutine mpdata_check_radbasfn(mpdata, atoms, hybinp)
-      use m_judft
-      use m_types_hybinp
-      use m_types_setup
       implicit none
       class(t_mpdata), intent(in) :: mpdata
       type(t_atoms), intent(in)    :: atoms
@@ -255,11 +289,6 @@ contains
    end subroutine mpdata_check_radbasfn
 
    SUBROUTINE mpdata_calc_olap_radbasfn(mpdata, atoms, l, itype, gridf, olap)
-      USE ieee_arithmetic
-      use m_intgrf, only: intgrf
-      use m_types_setup
-      use m_judft
-      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED
 
       implicit NONE
       class(t_mpdata), intent(in)       :: mpdata
@@ -297,8 +326,6 @@ contains
 
    subroutine mpdata_filter_radbasfn(mpdata, mpinp, l, itype, n_radbasfn, eig, eigv)
       ! Get rid of linear dependencies (eigenvalue <= mpdata%linear_dep_tol)
-      use m_judft
-      use m_types_mpinp
       implicit none
       class(t_mpdata), intent(inout)        :: mpdata
       type(t_mpinp), intent(in)             :: mpinp
@@ -326,8 +353,6 @@ contains
    end subroutine mpdata_filter_radbasfn
 
    subroutine mpdata_diagonialize_olap(olap, eig_val, eig_vec)
-      use m_judft
-      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED
       implicit NONE
       real, intent(in)  :: olap(:, :)
       real, allocatable :: eig_val(:), eig_vec(:, :)
@@ -366,7 +391,6 @@ contains
    end subroutine mpdata_diagonialize_olap
 
    subroutine mpdata_trafo_to_orthonorm_bas(mpdata, full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
-      use m_judft
       implicit NONE
       class(t_mpdata), intent(inout)  :: mpdata
       integer, intent(in)              :: full_n_radbasfn, n_grid_pt, l, itype
@@ -386,10 +410,6 @@ contains
    end subroutine mpdata_trafo_to_orthonorm_bas
 
    subroutine mpdata_add_l0_fun(mpdata, atoms, hybinp, n_grid_pt, l, itype, gridf)
-      use m_types_setup
-      use m_types_hybinp
-      use m_intgrf, only: intgrf
-      use m_judft
       implicit none
       class(t_mpdata), intent(inout) :: mpdata
       type(t_atoms), intent(in)       :: atoms
@@ -444,11 +464,6 @@ contains
    end subroutine mpdata_add_l0_fun
 
    subroutine mpdata_reduce_linear_dep(mpdata, mpinp, atoms, mpi, hybinp, gridf, iterHF)
-      use m_types_setup
-      use m_types_hybinp
-      use m_types_mpi
-      use m_judft
-      use m_types_mpinp
       implicit none
       class(t_mpdata)               :: mpdata
       type(t_mpinp), intent(in)     :: mpinp
@@ -499,10 +514,6 @@ contains
    end subroutine
 
    subroutine mpdata_normalize(mpdata, atoms, hybinp, gridf)
-      use m_intgrf, only: intgrf
-      use m_types_hybinp
-      use m_types_setup
-      use m_judft
       implicit NONE
 
       class(t_mpdata), intent(inout):: mpdata
@@ -528,10 +539,6 @@ contains
    end subroutine mpdata_normalize
 
    subroutine mpdata_init(mpdata, hybinp, hybdat, atoms)
-      use m_types_setup
-      use m_types_hybinp
-      use m_types_hybdat
-      use m_judft
       implicit none
       class(t_mpdata)           :: mpdata
       type(t_hybinp), intent(in) :: hybinp
@@ -562,8 +569,6 @@ contains
    end subroutine mpdata_init
 
    subroutine set_max_indx_p_1(mpdata, atoms, hybinp)
-      use m_types_atoms
-      use m_types_hybinp
       implicit none
       class(t_mpdata)             :: mpdata
       type(t_atoms), intent(in)   :: atoms
@@ -616,7 +621,6 @@ contains
    end subroutine mpdata_set_nl
 
    subroutine set_num_radfun_per_l_mpdata(mpdata, atoms)
-      use m_types_setup
       implicit NONE
       class(t_mpdata) :: mpdata
       type(t_atoms)   :: atoms

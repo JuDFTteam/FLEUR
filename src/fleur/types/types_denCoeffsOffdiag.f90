@@ -1,11 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_denCoeffsOffdiag
 
+   USE m_int21
+   USE m_int21lo
+   USE m_types_atoms
+   USE m_types_noco
+   USE m_types_sphhar
 IMPLICIT NONE
 
 PRIVATE
@@ -59,7 +64,6 @@ CONTAINS
 
 SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco,sphhar,l_jDOS, l_fmpl)
 
-   USE m_types_setup
 
    IMPLICIT NONE
 
@@ -167,9 +171,6 @@ END SUBROUTINE denCoeffsOffdiag_init
 
 SUBROUTINE addRadFunScalarProducts(thisDenCoeffsOffdiag, atoms, f, g, flo, iType)
 
-   USE m_types_setup
-   USE m_int21       ! integrate (spin) off-diagonal radial functions
-   USE m_int21lo     ! -"- for u_lo
 
    IMPLICIT NONE
 

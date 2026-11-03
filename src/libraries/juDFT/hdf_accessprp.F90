@@ -141,7 +141,6 @@ module m_hdf_accessprp
 
       FUNCTION hdf_access_prp(filename)
 
-      USE m_juDFT_internalParams
 
       !return the access_prp from the list
       character(len=*),intent(in) :: filename

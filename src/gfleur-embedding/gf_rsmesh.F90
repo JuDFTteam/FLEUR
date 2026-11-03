@@ -22,6 +22,10 @@
 !*****************************************************************      
       USE m_gf_fft,ONLY:gf_fft3d,GF_FFT_TO_G_SPACE,GF_FFT_TO_REAL_SPACE 
       use m_juDFT 
+      use m_constants, only: pi_const, oUnit, pimach
+      use m_gf_types
+      use hdf5
+      use m_hdf_tools
       IMPLICIT NONE
       PRIVATE 
       TYPE t_rsdata 
@@ -128,8 +132,6 @@
 !*****************************************************************      
 ! DESC: Sets Box and grid of rs to value corresponding to stars         
 !*****************************************************************      
-      USE m_constants, ONLY: pi_const, oUnit 
-      USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_stars),INTENT(IN)   ::stars 
@@ -161,7 +163,6 @@
 !*****************************************************************      
 ! DESC: Transforms data to rez. Space                                   
 !*****************************************************************      
-      USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(IN) ::rs 
@@ -191,7 +192,6 @@
 !*****************************************************************      
 ! DESC: Transforms data to rez. Space                                   
 !*****************************************************************      
-      USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(INOUT) ::rs 
@@ -222,8 +222,6 @@
 !                                                                       
 !                        Daniel Wortmann, Fri Oct 18 10:53:49 2002      
 !*****************************************************************      
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(IN) ::rs 
@@ -252,8 +250,6 @@
 !                                                                       
 !                        Daniel Wortmann, Fri Oct 18 10:53:49 2002      
 !*****************************************************************      
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(IN) ::rs 
@@ -331,8 +327,6 @@
 !                                                                       
 !                        Daniel Wortmann, Fri Oct 18 10:53:49 2002      
 !*****************************************************************      
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(OUT) ::rs 
@@ -354,8 +348,6 @@
 !                                                                       
 !                        Daniel Wortmann, Fri Oct 18 10:53:49 2002      
 !*****************************************************************      
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(OUT) :: rs 

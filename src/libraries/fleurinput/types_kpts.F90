@@ -8,6 +8,14 @@ MODULE m_types_kpts
    USE m_judft
    USE m_types_fleurinput_base
    USE m_constants
+   USE m_mpi_bc_tool
+   USE m_calculator
+   USE m_types_xml
+   USE m_types_sym
+   USE m_types_input
+   USE m_types_cell
+   USE m_tetcon
+   USE m_triang
    IMPLICIT NONE
    PRIVATE
    type t_eibz
@@ -108,7 +116,6 @@ CONTAINS
       is_kpt = kpts%get_nk(kpoint) > 0
    end function kpts_is_kpt
    SUBROUTINE mpi_bc_kpts(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_kpts), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -141,26 +148,61 @@ CONTAINS
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
 
-   recursive logical function read_kpts_by_name(this,filename,name)
-      USE m_calculator
+   !> l_labels asks for the high-symmetry names as well, and defaults to off: this reader
+   !> does not fill them otherwise, and reference banddos.hdf files elsewhere in the tree
+   !> record that absence in their kptSPLabels. Reading them unconditionally -- which is
+   !> what read_xml_kpts does -- means refreshing those references in the same commit.
+   recursive logical function read_kpts_by_name(this,filename,name,l_labels)
       CLASS(t_kpts), INTENT(inout):: this
       character(len=*),INTENT(IN) :: filename,name
-      
-      character(len=150):: line
-      integer           :: error,n,fid
+      logical,INTENT(IN),OPTIONAL :: l_labels
+
+      character(len=150):: line,raw
+      integer           :: error,n,fid,nlines,nlab,i
+      logical           :: l_lab
+      character(len=50),allocatable :: lname(:)
+      integer,allocatable           :: lidx(:)
+
+      l_lab=.false.
+      IF (present(l_labels)) l_lab=l_labels
 
       OPEN(newunit=fid,file=filename,action='READ')
       read_kpts_by_name=.false.
       DO while(.not. read_kpts_by_name)
          read(fid,"(a)",iostat=error) line
-         IF (error.ne.0) exit 
+         IF (error.ne.0) exit
          IF (index(line,"kPointList ")>0) THEN
             line=line(index(line,'name="')+6:)
             line=line(:index(line,'"')-1)
             if (line==trim(name)) THEN
                !Found kpointlist with correct name
-               DO n=1,this%nkpt
+               !The count attribute of the kPointList is optional in the schema,
+               !so first count the kPoint elements up to the closing tag
+               this%nkpt=0
+               nlines=0
+               DO
+                  read(fid,"(a)",iostat=error) line
+                  IF (error.ne.0) exit
+                  nlines=nlines+1
+                  IF (index(line,"</kPointList")>0) exit
+                  IF (index(line,"<kPoint")>0) this%nkpt=this%nkpt+1
+               ENDDO
+               IF (allocated(this%bk)) deallocate(this%bk)
+               IF (allocated(this%wtkpt)) deallocate(this%wtkpt)
+               ALLOCATE(this%bk(3,this%nkpt))
+               ALLOCATE(this%wtkpt(this%nkpt))
+               !Go back to the first line after the kPointList tag and read the data
+               DO n=1,nlines
+                  backspace(fid)
+               ENDDO
+               n=0
+               nlab=0
+               IF (l_lab) ALLOCATE(lname(this%nkpt),lidx(this%nkpt))
+               DO while (n<this%nkpt)
                   read(fid,"(a)") line
+                  IF (index(line,"<kPoint")==0) cycle
+                  n=n+1
+                  raw=line
                   line=line(index(line,"weight"):)
                   line=line(index(line,'"')+1:)
                   this%wtkpt(n)=evaluateFirstOnly(line(:index(line,'"')-1))
@@ -168,24 +210,46 @@ CONTAINS
                   this%bk(1, n) = evaluatefirst(line)
                   this%bk(2, n) = evaluatefirst(line)
                   this%bk(3, n) = evaluatefirst(line)
-               ENDDO   
+                  IF (l_lab) THEN
+                     IF (index(raw,'label="')>0) THEN
+                        raw=raw(index(raw,'label="')+7:)
+                        IF (index(raw,'"')>1) THEN
+                           nlab=nlab+1
+                           lname(nlab)=raw(:index(raw,'"')-1)
+                           lidx(nlab)=n
+                        ENDIF
+                     ENDIF
+                  ENDIF
+               ENDDO
+               IF (l_lab.AND.nlab>0) THEN
+                  IF (allocated(this%specialPointIndices)) deallocate(this%specialPointIndices)
+                  IF (allocated(this%specialPointNames)) deallocate(this%specialPointNames)
+                  IF (allocated(this%specialPoints)) deallocate(this%specialPoints)
+                  this%numSpecialPoints=nlab
+                  ALLOCATE(this%specialPointIndices(nlab),this%specialPointNames(nlab))
+                  ALLOCATE(this%specialPoints(3,nlab))
+                  DO i=1,nlab
+                     this%specialPointIndices(i)=lidx(i)
+                     this%specialPointNames(i)=lname(i)
+                     this%specialPoints(:,i)=this%bk(:,lidx(i))
+                  ENDDO
+               ENDIF
+               IF (allocated(lname)) deallocate(lname,lidx)
                read_kpts_by_name=.true.
-            endif   
+            endif
          ENDIF
          if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
             line=line(index(line,'href="')+6:)
             line=line(:index(line,'"')-1)
             !relative paths are relative to the including file
             if (line(1:1)/='/') line=filename(:index(filename,'/',back=.true.))//line
-            read_kpts_by_name=this%read_kpts_by_name(line,name)
+            read_kpts_by_name=this%read_kpts_by_name(line,name,l_lab)
          endif
       enddo
       close(fid)
-   end function      
+   end function
 
    SUBROUTINE read_xml_kptsByIndex(this, filename_add, xml, kptsIndex)
-      USE m_types_xml
-      USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       CHARACTER(len=*), INTENT(IN) :: filename_add
       TYPE(t_xml), INTENT(INOUT) ::xml
@@ -226,6 +290,8 @@ CONTAINS
                IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
             CASE ('path')
                this%kptsKind = KPTS_KIND_PATH
+            CASE ('plane')
+               this%kptsKind = KPTS_KIND_PLANE
             CASE ('tria')
                this%kptsKind = KPTS_KIND_TRIA
             CASE ('tria-bulk')
@@ -251,10 +317,14 @@ CONTAINS
                WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
          END SELECT
       END IF
-      this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
+      !The number of k-points is determined by counting the kPoint elements;
+      !the count attribute is optional in the schema and only cross-checked if present
       numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
-      IF (numNodes.NE.this%nkpt) THEN
-         CALL judft_error("Inconsistent number of k-points in kPointList: "//TRIM(ADJUSTL(this%kptsName)))
+      this%nkpt = numNodes
+      IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@count').EQ.1) THEN
+         IF (evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@count')).NE.this%nkpt) THEN
+            CALL judft_error("Inconsistent number of k-points in kPointList: "//TRIM(ADJUSTL(this%kptsName)))
+         END IF
       END IF
 
       ! count special points
@@ -291,10 +361,10 @@ CONTAINS
          END DO
       END IF
 
-      ALLOCATE (this%bk(3, this%nkpt))
-      ALLOCATE (this%wtkpt(this%nkpt))
       if (.not. this%read_kpts_by_name(TRIM(filename_add)//"inp.xml",this%kptsName)) THEN
          print *,"WARNING, new k-point reader could not be used. Please check your inp.xml/kpts.xml"
+         ALLOCATE (this%bk(3, this%nkpt))
+         ALLOCATE (this%wtkpt(this%nkpt))
          DO i = 1, this%nkpt
             WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
             this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight',.true.))
@@ -342,8 +412,6 @@ CONTAINS
    END SUBROUTINE read_xml_kptsByIndex
 
    SUBROUTINE read_xml_kpts(this, xml)
-      USE m_types_xml
-      USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT) ::xml
 
@@ -529,7 +597,6 @@ CONTAINS
    END SUBROUTINE add_special_line
 
    subroutine init_EIBZ(EIBZ, kpts, sym, nk)
-      USE m_types_sym
       implicit none
       class(t_eibz), intent(inout)   :: EIBZ
       type(t_kpts), intent(in)       :: kpts
@@ -541,13 +608,6 @@ CONTAINS
    end subroutine init_EIBZ
 
    SUBROUTINE initTetra(kpts,input,cell,sym,l_soc_or_ss)
-      USE m_juDFT
-      USE m_constants
-      USE m_types_input
-      USE m_types_cell
-      USE m_types_sym
-      USE m_tetcon
-      USE m_triang
       CLASS(t_kpts),    INTENT(INOUT) :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -725,9 +785,6 @@ CONTAINS
    END SUBROUTINE initTetra
 
    SUBROUTINE tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
-      USE m_types_cell
-      USE m_juDFT
-      USE m_constants
       CLASS(t_kpts),          INTENT(INOUT)  :: kpts
       LOGICAL,                INTENT(IN)     :: film
       TYPE(t_cell),           INTENT(IN)     :: cell
@@ -894,9 +951,6 @@ CONTAINS
    END SUBROUTINE tetrahedron_regular
 
    SUBROUTINE get_tetra(cell,grid,ntetra,vol,tetra)
-      USE m_types_cell
-      USE m_juDFT
-      USE m_constants
       TYPE(t_cell),  INTENT(IN)     :: cell
       INTEGER,       INTENT(IN)     :: grid(:)
       INTEGER,       INTENT(INOUT)  :: ntetra
@@ -952,8 +1006,6 @@ CONTAINS
 
 
    SUBROUTINE init_kpts(kpts, sym, film, l_eibz, l_timeReversalCheck)
-      use m_juDFT
-      USE m_types_sym
       CLASS(t_kpts), INTENT(inout):: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: film, l_eibz
@@ -1003,8 +1055,6 @@ CONTAINS
       !     bkp    ::    k-point parent
       !     bksym  ::    symmetry operation, that connects the parent
       !                  k-point with the current one
-      USE m_juDFT
-      USE m_types_sym
       TYPE(t_kpts), INTENT(INOUT) :: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: l_timeReversalCheck
@@ -1086,8 +1136,6 @@ CONTAINS
    END SUBROUTINE gen_bz
    
    SUBROUTINE gen_bz_internal(kpts, sym, rrot, nsym)
-      USE m_juDFT
-      USE m_types_sym
       TYPE(t_kpts), INTENT(INOUT) :: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       REAL, INTENT(IN)            :: rrot(3, 3, 2*sym%nop)
@@ -1192,8 +1240,6 @@ CONTAINS
    end function nkpt3_kpts
 
    subroutine calc_nkpt_EIBZ(eibz, kpts, sym, nk)
-      USE m_types_sym
-      USE m_juDFT
       IMPLICIT NONE
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts),  INTENT(IN)     :: kpts
@@ -1280,7 +1326,6 @@ CONTAINS
    END subroutine calc_nkpt_EIBZ
 
    subroutine calc_pointer_EIBZ(eibz, kpts, sym, nk)
-      USE m_types_sym
       implicit none
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts), INTENT(IN)      :: kpts
@@ -1346,7 +1391,6 @@ CONTAINS
    end subroutine calc_pointer_EIBZ
 
    subroutine calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
-      USE m_types_sym
       implicit none
       class(t_kpts), intent(in) :: kpts
       type(t_sym), intent(in)   :: sym
@@ -1384,7 +1428,6 @@ CONTAINS
 
    SUBROUTINE calcCommonFractions(kpts,commonFractions)
 
-      USE m_constants
 
       IMPLICIT NONE
 

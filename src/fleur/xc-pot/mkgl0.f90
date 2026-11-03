@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_mkgl0
 !      ------------------------------------------------------------------
 !      make quantities for vxcallg. for paramag. case
@@ -8,10 +13,13 @@ MODULE m_mkgl0
 !      gggr: grad(ro)*grad(agr),
 !      grgru,d: grad(ro)*grad(rou),for rod., gzgr: grad(zeta)*grad(ro).
 !      ------------------------------------------------------------------
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mkgl0
 CONTAINS
    SUBROUTINE mkgl0(jspins,rad, densi,drri,ddrri, grad)
 
-      USE m_types
       IMPLICIT NONE
 
       INTEGER, INTENT (IN) :: jspins

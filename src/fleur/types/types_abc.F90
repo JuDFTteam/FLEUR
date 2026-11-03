@@ -16,6 +16,25 @@ MODULE m_types_abc
 #define zgemm_acc zgemm
 #endif
    use m_judft
+   use m_types_atoms
+   use m_types_input
+   use m_types_sym
+   use m_types_cell
+   use m_types_lapw
+   use m_types_radfun
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_enpara
+   use m_constants
+   use m_ylm
+   use m_setabc1lo
+   use m_hsmt_fjgj
+   use m_hsmt_ab
+   use m_abcoeff_store
+   use m_types_mat
+   use m_types_force
+   use m_dwigner
+   use m_types_hybinp
    IMPLICIT NONE
 
    PRIVATE
@@ -62,52 +81,45 @@ MODULE m_types_abc
 
 CONTAINS
 
-   SUBROUTINE abc_init(this, input, atoms, n_r_in , noccbd, itype)
+   SUBROUTINE abc_init(this, input, atoms, noccbd, itype)
 
-      USE m_types_atoms
-      USE m_types_input
 
       IMPLICIT NONE
 
       CLASS(t_abc), INTENT(INOUT) :: this
-      INTEGER, INTENT(IN)   :: n_r_in(0:)
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_input), INTENT(IN)    :: input
 
       INTEGER, INTENT(IN)    :: itype, noccbd
+      INTEGER :: n_r(0:atoms%lmaxd)
+
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("abc_init: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (noccbd < 1) THEN
+         CALL judft_error("abc_init: noccbd must be >= 1", calledby="types_abc")
+      END IF
+      n_r = atoms%num_radial_functions_per_l(itype)
+
+      IF (MAXVAL(n_r) < 1) THEN
+         CALL judft_error("abc_init: radial function count must be >= 1", calledby="types_abc")
+      END IF
 
       IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof,this%n_r)
-      allocate(this%n_r(0:size(n_r_in)-1))
-      this%n_r(0:)=n_r_in(0:)
+      allocate(this%n_r(0:ubound(n_r,1)))
+      this%n_r = n_r
       ALLOCATE (this%cof(noccbd, 0:atoms%lmax(itype)*(atoms%lmax(itype) + 2), maxval(this%n_r), atoms%neq(itype)))
       this%cof = CMPLX(0.0, 0.0)
 
    END SUBROUTINE abc_init
 
-   subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, usdus, &
+   subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                        noco, nococonv, jspin, itype, zMat)
-      USE m_juDFT
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_lapw
-      USE m_types_usdus
-      USE m_types_noco
-      USE m_types_nococonv
-      USE m_types_enpara
-      USE m_constants
-      USE m_ylm
-      USE m_setabc1lo
-      USE m_hsmt_fjgj
-      USE m_hsmt_ab
-      USE m_abcoeff_store
-      USE m_types_mat
 
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)             :: input
-      TYPE(t_usdus), INTENT(IN)             :: usdus
+      TYPE(t_radfun), INTENT(IN)            :: rf !radial basis of iType
       TYPE(t_lapw), INTENT(IN)              :: lapw
 
       TYPE(t_noco), INTENT(IN)              :: noco
@@ -126,7 +138,8 @@ CONTAINS
 
 ! Local scalars
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l
-      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, n_l(0:atoms%lmaxd), nbasf
+      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf, islot
+      INTEGER :: boff(0:atoms%lmaxd)
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym
@@ -151,6 +164,36 @@ CONTAINS
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
       END IF
+      IF (.NOT.ALLOCATED(this%cof)) THEN
+         CALL judft_error("calc_abc: coefficients not initialized (call init first)", calledby="types_abc")
+      END IF
+      IF (.NOT.ALLOCATED(this%n_r)) THEN
+         CALL judft_error("calc_abc: radial-function metadata not initialized", calledby="types_abc")
+      END IF
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("calc_abc: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (jspin < 1 .OR. jspin > input%jspins) THEN
+         CALL judft_error("calc_abc: invalid spin index", calledby="types_abc")
+      END IF
+      IF (ne < 1 .OR. ne > SIZE(this%cof,1)) THEN
+         CALL judft_error("calc_abc: ne out of bounds for initialized coefficient storage", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%n_r,1) /= 0 .OR. UBOUND(this%n_r,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("calc_abc: n_r metadata inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%cof,2) /= 0) THEN
+         CALL judft_error("calc_abc: coefficient lm dimension must be 0-based", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,2) /= atoms%lmax(itype)*(atoms%lmax(itype) + 2) + 1) THEN
+         CALL judft_error("calc_abc: coefficient lm dimension inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,3) < MAXVAL(this%n_r(0:atoms%lmax(itype)))) THEN
+         CALL judft_error("calc_abc: coefficient radial dimension too small", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,4) /= atoms%neq(itype)) THEN
+         CALL judft_error("calc_abc: coefficient atom dimension inconsistent with neq(itype)", calledby="types_abc")
+      END IF
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
@@ -166,18 +209,19 @@ CONTAINS
       
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
-      CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
+      CALL fjgj%calculate(input, atoms, cell, lapw, noco, rf, iType, jspin)
 !$acc update device (fjgj%fj,fjgj%gj)
       CALL timestop("fjgj coefficients")
 
-      CALL setabc1lo(atoms, iType, usdus, jspin, alo1, blo1, clo1)
+      CALL setabc1lo(atoms, iType, rf, jspin, alo1, blo1, clo1)
 
 ! generate the spinors (chi)
       IF (noco%l_noco) ccchi = conjg(nococonv%umat(itype))
-      n_l = 2
 
 ! loop over atoms
       DO iAtom_l = 1, atoms%neq(itype)
@@ -245,9 +289,21 @@ CONTAINS
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE.)
+            ! Own the abCoeffs device mapping here instead of letting hsmt_ab do it.
+            ! hsmt_ab's `enter data` names its own dummy argument, whose descriptor is
+            ! never released by the `exit data delete(abCoeffs)` below -- that names
+            ! the caller's descriptor, a different address.  The orphaned entry then
+            ! sits in the present table over stack that gets reused, and a later
+            ! `enter data` on anything overlapping it (fjgj, above) aborts with
+            ! "variable in data clause is partially present on the device".
+            ! Skipped when the abCoeffs cache is active: it owns the allocation.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+               ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
+               !$acc enter data create(abCoeffs)
+            END IF
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
-            abSize = abSize/2
             CALL timestop("hsmt_ab")
 
 ! Obtaining A, B coefficients for eigenfunctions
@@ -256,15 +312,20 @@ CONTAINS
 ! variant with zgemm
 
 !$acc host_data use_device(work_c,abCoeffs,abTemp)
-CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
+CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
 !$acc end host_data
 !$acc update self(abTemp)
 !stop "DEBUG"
-!$OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
-            DO lm = 0, absize - 1
+            ! A for all lm, B only for LAPW channels (none for APW)
+            boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
+!$OMP PARALLEL DO default(shared) private(i,l,m,lm)
+            DO l = 0, atoms%lmax(iType)
+            DO m = -l, l
+            lm = l*(l+1) + m
             DO i = 1, ne
                this%cof(i, lm, 1, iAtom_l) = this%cof(i, lm, 1, iAtom_l) + abTemp(i, lm)
-               this%cof(i, lm, 2, iAtom_l) = this%cof(i, lm, 2, iAtom_l) + abTemp(i, absize + lm)
+               IF (boff(l)>=0) this%cof(i, lm, 2, iAtom_l) = this%cof(i, lm, 2, iAtom_l) + abTemp(i, boff(l) + l + m)
+            END DO
             END DO
             END DO
 !$OMP END PARALLEL DO
@@ -274,16 +335,15 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
 !!$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
-            n_l = 2
             DO lo = 1, atoms%nlo(iType)
                l = atoms%llo(lo, itype)
-               n_l(l) = n_l(l) + 1
+               islot = atoms%slot_of_lo(lo, itype)
                DO nkvec = 1, lapw%nkvec(lo, iAtom)
                   iLAPW = lapw%kvec(nkvec, lo, iAtom)
                   fg(:) = MERGE(lapw%gvec(:, iLAPW, iintsp), lapw%gvec(:, iLAPW, jspin), noco%l_ss) + qss + lapw%qPhon
@@ -332,7 +392,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                         ctmp = term1*conjg(ylm(lm + 1))*work_lo(i)
                         this%cof(i, lm, 1, iatom_l) = this%cof(i, lm, 1, iatom_l) + ctmp*alo1(lo, jspin)
                         this%cof(i, lm, 2, iatom_l) = this%cof(i, lm, 2, iatom_l) + ctmp*blo1(lo, jspin)
-                        this%cof(i, lm, n_l(l), iatom_l) = this%cof(i, lm, n_l(l), iatom_l) + ctmp*clo1(lo, jspin)
+                        this%cof(i, lm, islot, iatom_l) = this%cof(i, lm, islot, iatom_l) + ctmp*clo1(lo, jspin)
                      END DO
           !!$acc end loop
                   END DO
@@ -348,22 +408,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom_l = 1, atoms%neq(itype)
             iatom = iatom_l - 1 + atoms%firstAtom(itype)
             IF (sym%invsat(iAtom) .EQ. 1) THEN
@@ -386,31 +432,13 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
    end subroutine calc_abc
 
-   subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, usdus, &
+   subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                              noco, nococonv, jspin, itype, zMat,eig,force)
-      USE m_juDFT
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_force
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_lapw
-      USE m_types_usdus
-      USE m_types_noco
-      USE m_types_nococonv
-      USE m_types_enpara
-      USE m_constants
-      USE m_ylm
-      USE m_setabc1lo
-      USE m_hsmt_fjgj
-      USE m_hsmt_ab
-      USE m_abcoeff_store
-      USE m_types_mat
 
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)             :: input
-      TYPE(t_usdus), INTENT(IN)             :: usdus
+      TYPE(t_radfun), INTENT(IN)            :: rf !radial basis of iType
       TYPE(t_lapw), INTENT(IN)              :: lapw
 
       TYPE(t_noco), INTENT(IN)              :: noco
@@ -431,7 +459,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
 ! Local scalars
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l,j
-      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, n_l(0:atoms%lmaxd), nbasf
+      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf, nA, nB
+      INTEGER :: boff(0:atoms%lmaxd)
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym
@@ -465,6 +494,36 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
       END IF
+      IF (.NOT.ALLOCATED(this%cof)) THEN
+         CALL judft_error("calc_force_abc: coefficients not initialized (call init first)", calledby="types_abc")
+      END IF
+      IF (.NOT.ALLOCATED(this%n_r)) THEN
+         CALL judft_error("calc_force_abc: radial-function metadata not initialized", calledby="types_abc")
+      END IF
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("calc_force_abc: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (jspin < 1 .OR. jspin > input%jspins) THEN
+         CALL judft_error("calc_force_abc: invalid spin index", calledby="types_abc")
+      END IF
+      IF (ne < 1 .OR. ne > SIZE(this%cof,1)) THEN
+         CALL judft_error("calc_force_abc: ne out of bounds for initialized coefficient storage", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%n_r,1) /= 0 .OR. UBOUND(this%n_r,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("calc_force_abc: n_r metadata inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%cof,2) /= 0) THEN
+         CALL judft_error("calc_force_abc: coefficient lm dimension must be 0-based", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,2) /= atoms%lmax(itype)*(atoms%lmax(itype) + 2) + 1) THEN
+         CALL judft_error("calc_force_abc: coefficient lm dimension inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,3) < MAXVAL(this%n_r(0:atoms%lmax(itype)))) THEN
+         CALL judft_error("calc_force_abc: coefficient radial dimension too small", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,4) /= atoms%neq(itype)) THEN
+         CALL judft_error("calc_force_abc: coefficient atom dimension inconsistent with neq(itype)", calledby="types_abc")
+      END IF
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
@@ -479,18 +538,19 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
-      CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
+      CALL fjgj%calculate(input, atoms, cell, lapw, noco, rf, iType, jspin)
 !$acc update device (fjgj%fj,fjgj%gj)
       CALL timestop("fjgj coefficients")
 
-      CALL setabc1lo(atoms, iType, usdus, jspin, alo1, blo1, clo1)
+      CALL setabc1lo(atoms, iType, rf, jspin, alo1, blo1, clo1)
 
       ! generate the spinors (chi)
       IF (noco%l_noco) ccchi = conjg(nococonv%umat(itype))
-      n_l = 2
 
 ! loop over atoms
       DO iAtom_l = 1, atoms%neq(itype)
@@ -509,9 +569,25 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE.)
+            ! Own the abCoeffs device mapping here instead of letting hsmt_ab do it.
+            ! hsmt_ab's `enter data` names its own dummy argument, whose descriptor is
+            ! never released by the `exit data delete(abCoeffs)` below -- that names
+            ! the caller's descriptor, a different address.  The orphaned entry then
+            ! sits in the present table over stack that gets reused, and a later
+            ! `enter data` on anything overlapping it (fjgj, above) aborts with
+            ! "variable in data clause is partially present on the device".
+            ! Skipped when the abCoeffs cache is active: it owns the allocation.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+               ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
+               !$acc enter data create(abCoeffs)
+            END IF
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
-            abSize = abSize/2
+            ! rows 1..nA: A for all lm; rows nA+1..abSize: B of the LAPW channels (boff)
+            nA = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
+            nB = abSize - nA
+            boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
             CALL timestop("hsmt_ab")
 ! Force contributions
 
@@ -530,38 +606,41 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             workTrans_cf = CMPLX(0.0, 0.0)
             helpMat_force = CMPLX(0.0, 0.0)
       
-            CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
+            CALL zgemm("N", "T", ne, nA, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
                        CMPLX(1.0, 0.0), force%e1cof(:, :, iAtom), ne)
-            CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + abSize, 1), &
-                       size(abcoeffs, 1), CMPLX(1.0, 0.0), force%e2cof(:, :, iAtom), ne)
+            IF (nB > 0) THEN
+               CALL zgemm("N", "T", ne, nB, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + nA, 1), &
+                          size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
+               CALL add_udot_rows(force%e2cof(:, :, iAtom), helpMat_force, boff(0:atoms%lmax(iType)), nA)
+            END IF
             DO i = 1, 3
                DO iLAPW = 1, nvmax
                   workTrans_cf(:, iLAPW) = work_c(iLAPW, :)*fgpl(i, iLAPW)
                END DO
-      
-               CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
+
+               CALL zgemm("N", "T", ne, nA, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
                           abCoeffs, size(abCoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-               force%aveccof(i, :, :, iAtom) = force%aveccof(i, :, :, iAtom) + helpMat_force(:, :)
-               CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
-                          abCoeffs(1 + abSize, 1), size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-               force%bveccof(i, :, :, iAtom) = force%bveccof(i, :, :, iAtom) + helpMat_force(:, :)
+               force%aveccof(i, :, 0:nA-1, iAtom) = force%aveccof(i, :, 0:nA-1, iAtom) + helpMat_force(:, :nA)
+               IF (nB > 0) THEN
+                  CALL zgemm("N", "T", ne, nB, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
+                             abCoeffs(1 + nA, 1), size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
+                  CALL add_udot_rows(force%bveccof(i, :, :, iAtom), helpMat_force, boff(0:atoms%lmax(iType)), nA)
+               END IF
             END DO
             CALL timestop("force contributions")
             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
 !!$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
-            n_l = 2
             DO lo = 1, atoms%nlo(iType)
                l = atoms%llo(lo, itype)
-               n_l(l) = n_l(l) + 1
                DO nkvec = 1, lapw%nkvec(lo, iAtom)
                   iLAPW = lapw%kvec(nkvec, lo, iAtom)
                   fg(:) = MERGE(lapw%gvec(:, iLAPW, iintsp), lapw%gvec(:, iLAPW, jspin), noco%l_ss) + qss + lapw%qPhon
@@ -613,7 +692,12 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                          DO j = 1,3
                           force%aveccof(j,i,lm,iatom)   = force%aveccof(j,i,lm,iatom)   + fgp(j)*ctmp*alo1(lo,jspin)
                           force%bveccof(j,i,lm,iatom)   = force%bveccof(j,i,lm,iatom)   + fgp(j)*ctmp*blo1(lo,jspin)
-                          force%cveccof(j,m,i,lo,iatom) = force%cveccof(j,m,i,lo,iatom) + fgp(j)*ctmp*clo1(lo,jspin)
+                          IF (atoms%l_dulo(lo,itype)) THEN
+                             ! APW LO: its udot part belongs to the slot-2 vector, like cof(:,:,2)
+                             force%bveccof(j,i,lm,iatom) = force%bveccof(j,i,lm,iatom) + fgp(j)*ctmp*clo1(lo,jspin)
+                          ELSE
+                             force%cveccof(j,m,i,lo,iatom) = force%cveccof(j,m,i,lo,iatom) + fgp(j)*ctmp*clo1(lo,jspin)
+                          END IF
                         END DO
                        END DO
                      END DO
@@ -631,22 +715,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       DEALLOCATE (work_c)
 
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom = atoms%firstatom(itype),atoms%firstAtom(itype)+atoms%neq(itype)-1
             IF (sym%invsat(iAtom) .EQ. 1) THEN
                jAtom = sym%invsatnr(iAtom)
@@ -680,7 +750,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
    end subroutine calc_force_abc
 
    function rotate(abc, alpha, beta, gamma, lmax) result(abc_rot)
-      USE m_dwigner
 
       IMPLICIT NONE
       class(t_abc), INTENT(IN)           :: abc
@@ -722,10 +791,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !     *                                                             *
 !     * Christoph Friedrich Mar/2005                                *
 !     ***************************************************************
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_atoms
-      USE m_juDFT
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: abc
       TYPE(t_hybinp), INTENT(IN) :: hybinp
@@ -766,10 +831,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
    END SUBROUTINE rot_to_unrotated
 
    subroutine fill_work_array(zmat, noco, atoms, lapw, ccchi, iintsp, nvmax, jspin, ne, work_c)
-      use m_types_mat
-      use m_types_noco
-      use m_types_atoms
-      use m_types_lapw
       type(t_mat), intent(in)::zMat
       type(t_noco), intent(in)::noco
       type(t_atoms), intent(in)::atoms
@@ -830,5 +891,21 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
       CALL timestop("fill work array")
    end subroutine fill_work_array
+
+   SUBROUTINE add_udot_rows(cof, bcol, boff, nA)
+      !! cof(:,lm) += bcol(:,j) for the udot coefficients of the LAPW channels,
+      !! j = boff(l)+l+m+1-nA the column of (l,m) after the nA A-coefficients
+      COMPLEX, INTENT(INOUT) :: cof(:,0:)
+      COMPLEX, INTENT(IN)    :: bcol(:,:)
+      INTEGER, INTENT(IN)    :: boff(0:), nA
+      INTEGER :: l, m, n
+      n = SIZE(bcol,1)
+      DO l = 0, UBOUND(boff,1)
+         IF (boff(l) < 0) CYCLE
+         DO m = -l, l
+            cof(:n, l*(l+1)+m) = cof(:n, l*(l+1)+m) + bcol(:, boff(l)+l+m+1-nA)
+         END DO
+      END DO
+   END SUBROUTINE add_udot_rows
 
 END MODULE m_types_abc

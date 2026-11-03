@@ -1,11 +1,26 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
       MODULE m_cdnsp
       USE m_juDFT
+      USE m_intgr, ONLY: intgr3
+      USE m_constants
+      USE m_cdn_io
+      USE m_types_atoms
+      USE m_types_cell
+      USE m_types_input
+      USE m_types_noco
+      USE m_types_potden
+      USE m_types_sphhar
+      USE m_types_stars
+      USE m_types_sym
+      USE m_types_vacuum
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: cdnsp
 !     *******************************************************
 !     sets up the starting density for the spin-polarized
 !     calculation from a paramagnetic density
@@ -15,10 +30,6 @@
       CONTAINS
         SUBROUTINE cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco ,cell)
 
-          USE m_intgr, ONLY : intgr3
-          USE m_constants
-          USE m_cdn_io
-          USE m_types
           IMPLICIT NONE
           !     ..
           TYPE(t_stars),INTENT(IN)     :: stars

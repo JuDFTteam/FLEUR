@@ -2,6 +2,9 @@
 c.........................................................felim
 c energy limits setup and checking
 c
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: felim
       CONTAINS
       SUBROUTINE felim(
      >                 mrad,lll,zz,nqn,vv,rc,

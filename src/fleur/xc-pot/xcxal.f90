@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -29,6 +29,8 @@ MODULE m_xcxal
    USE m_constants, ONLY : pi_const
    USE m_relcor
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vxcxal, excxal
 
    REAL, PARAMETER, PRIVATE :: one = 1.0 , three = 3.0 , four = 4.0
    REAL, PARAMETER, PRIVATE :: thrd = one/three , d_15 = 1.e-15

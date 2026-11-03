@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_spratm
 
 !------------------------------------------------------------------
@@ -27,11 +32,15 @@ MODULE m_spratm
 !
 !........................................................ spratm
 
+   USE m_core
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: spratm
 CONTAINS
 
-   SUBROUTINE spratm(msh,vr,br,z,rnot,dx,jtop,ectab,ntab,ltab,sume,rhochr,rhospn)
+   SUBROUTINE spratm(msh,vr,br,z,rnot,dx,jtop,ectab,ntab,ltab,sume,rhochr,rhospn,&
+                     nshell_out,nqntab_out,lqntab_out,bhff_out,isomerShift_out)
 
-      USE m_core
 
       IMPLICIT NONE
 
@@ -42,6 +51,8 @@ CONTAINS
       REAL,    INTENT (IN) :: br(msh),vr(msh)
       REAL,    INTENT (OUT):: rhochr(msh),rhospn(msh)
       REAL,    INTENT (INOUT):: ectab(100)
+      INTEGER, INTENT (OUT):: nshell_out,nqntab_out(15),lqntab_out(15)
+      REAL,    INTENT (OUT):: bhff_out(15),isomerShift_out(15)
 
       REAL rr,stval
       INTEGER ic,ir,nshell,n_old,l_old
@@ -83,7 +94,7 @@ CONTAINS
       END DO
       stval = log(rnot)
 
-      CALL core(msh,vt,bt,z,stval,dx,nshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn)
+      CALL core(msh,vt,bt,z,stval,dx,nshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn,bhff_out,isomerShift_out)
 
       ! Ry -> Hr
       sume = 0.0
@@ -91,6 +102,10 @@ CONTAINS
          ectab(ic) = ectab(ic)/2.
          sume = sume + ectab(ic)
       END DO
+
+      nshell_out = nshell
+      nqntab_out(1:nshell) = nqntab(1:nshell)
+      lqntab_out(1:nshell) = lqntab(1:nshell)
 
    END SUBROUTINE spratm
 END MODULE m_spratm

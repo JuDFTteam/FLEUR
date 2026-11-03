@@ -4,16 +4,16 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_help
+  USE m_compile_descr
+  USE m_constants
+  USE m_juDFT
+  USE m_check_arguments
+  USE m_available_solvers, ONLY: list_solvers
   IMPLICIT NONE
   PRIVATE
   PUBLIC fleur_help
 CONTAINS
   SUBROUTINE fleur_help()
-    USE m_compile_descr
-    USE m_constants
-    USE m_juDFT
-    USE m_check_arguments
-    USE m_available_solvers,ONLY: list_solvers
     IMPLICIT NONE
 
     CHARACTER(:), ALLOCATABLE:: infostring
@@ -90,7 +90,6 @@ CONTAINS
   END SUBROUTINE fleur_help
 
   SUBROUTINE add_fleur_arguments()
-    USE m_check_arguments
 
     CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","")
     CALL new_argument(0,"-dropXMLSchema","Write out the default XML schema files","")

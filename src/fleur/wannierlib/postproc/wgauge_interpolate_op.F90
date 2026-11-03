@@ -1,0 +1,167 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+!>  Operator-agnostic Wannier-gauge interpolation driver (framework Class A/B/C).
+!>
+!>  Given the Bloch-basis operator matrices O0_alpha(k) (nb x nb, alpha=1..ncomp),
+!>  it does the shared pipeline for ANY operator:
+!>    O_W,alpha(k) = V^dagger O0_alpha(k) V ,   V = U_dis U
+!>    O_alpha(k')  = FT[ O_W,alpha ]            (shared core m_wgauge_ft)
+!>    <O_alpha>_n(k') = [ C^dagger O_alpha(k') C ]_nn
+!>
+!>  E_n(k') and C(k') arrive already built, shared with every other driver of the same
+!>  domain: the expectation values written here are projected on the same eigenvectors the
+!>  band file carries, and cannot disagree with it.
+!>  and writes <outfile>.dat: kdist, [ E_n(eV), <O_1>_n, ..., <O_ncomp>_n ] per band.
+!>
+!>  A new operator only supplies its O0(k) (a provider) and calls this with the
+!>  right ncomp/outfile -- steps above are never rewritten. Master rank only.
+MODULE m_wgauge_interpolate_op
+  USE m_juDFT
+  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
+  USE m_constants, ONLY : oUnit, hartree_to_ev_const
+  USE m_types_cell
+  USE m_types_kpts
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_wgauge_hamk, ONLY : t_wgauge_hgauge
+  USE m_wgauge_ft, ONLY : wgauge_ft_to_real_reduce, wgauge_ft_rtok
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wgauge_interpolate_operator
+CONTAINS
+
+  SUBROUTINE wgauge_interpolate_operator(this, cell, kpts, u_matrix, u_opt, o0_loc, gk_loc, &
+                                        ncomp, kfrac, hg, outfile, irank, mpicm, bound)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (num_wann, num_wann, nk)  MLWF gauge (full mesh)
+    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (num_bands, num_wann, nk) disentangled (full mesh)
+    COMPLEX, INTENT(IN) :: o0_loc(:, :, :, :)     ! (num_bands, num_bands, ncomp, nk_loc) this rank's Bloch slice
+    INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
+    INTEGER, INTENT(IN) :: ncomp
+    TYPE(t_wgauge_hgauge), INTENT(IN) :: hg   !> the domain's bands, already diagonalized
+    CHARACTER(LEN=*), INTENT(IN) :: outfile
+    !> The domain's k-set and the names its files take, both decided by the caller: the
+    !> k-points come from a named kPointList and the names from the exposure table plus the
+    !> domain suffix. Unallocated off rank 0, which never reaches them.
+    REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
+    INTEGER, INTENT(IN) :: irank, mpicm
+    !> The physical bound on <O>, for the operators that have one: |<sigma>| <= 1. Checked
+    !> and warned about, not enforced. Without this line an overshoot passes unnoticed: the
+    !> file is written, the bands are good, and only the operator lies.
+    !>
+    !> Wannier interpolation is exact ON the coarse mesh whatever O(R) looks like, and
+    !> between its points only as good as the decay of O(R). The gauge is chosen to make
+    !> H(R) short-ranged; nothing asks the same of any other operator. Measured on bcc Fe
+    !> relative to R=0 and out to 14 Ang: |H(R)| falls to 1.1e-4 while |S(R)| flattens at
+    !> 5e-2, ~450x larger. Refining the coarse mesh does not converge it -- max |<sigma>|
+    !> reads 1.62, 1.55, 1.42, 1.66, 1.65 for 8^3..16^3, no trend -- and MDRS cannot help,
+    !> since it reselects replicas rather than making the coefficients decay.
+    !>
+    !> Without SOC the same run is exact: spin commutes with H, every Wannier function is a
+    !> pure spinor, S_z(R) is a single delta at R=0 and |<sigma>| comes out 1.000000. The
+    !> non-decaying weight is there too, but it sits in the transverse spin-flip block that
+    !> no band expectation value sees. SOC mixes the sectors and lets it through, so it
+    !> unmasks the tail rather than creating it.
+    !>
+    !> So the useful question before trusting an interpolated operator is not the mesh but:
+    !> does its O(R) decay? Integrated quantities survive anyway (the spin moment comes out
+    !> at 2.252 against 2.254 on the converged coarse mesh); pointwise values do not.
+    REAL, INTENT(IN), OPTIONAL :: bound
+
+    INTEGER :: num_wann, num_bands, m, ip, np, iu, a
+    INTEGER :: nkl, kl, nrpts
+    REAL    :: omax
+    REAL,    ALLOCATABLE :: oexp(:), orow(:, :)
+    CHARACTER(LEN=120) :: hdr
+    COMPLEX, ALLOCATABLE :: o_interp(:, :, :, :)
+    COMPLEX, ALLOCATABLE :: vloc(:, :, :), tmp(:, :), oc(:, :, :)
+    COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
+    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
+
+    num_wann  = this%num_wann
+    num_bands = this%num_bands
+    CALL timestart('wgauge_interpolate_operator')
+
+    ! ---- PHASE A (ALL ranks): O_W,alpha(k) = V(gk)^dagger O0_alpha V(gk) on this rank's k-slice,
+    !      then coarse -> real space O_alpha(R) via the distributed FT-reduce (collective). ----
+    nkl = SIZE(gk_loc)
+    ALLOCATE(vloc(num_bands, num_wann, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    DO kl = 1, nkl
+      vloc(:, :, kl) = MATMUL(u_opt(:, :, gk_loc(kl)), u_matrix(:, :, gk_loc(kl)))
+    END DO
+    ALLOCATE(ow_loc(num_wann, num_wann, ncomp, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    ALLOCATE(tmp(num_bands, num_wann))
+    DO kl = 1, nkl
+      DO a = 1, ncomp
+        tmp = MATMUL(o0_loc(:, :, a, kl), vloc(:, :, kl))
+        ow_loc(:, :, a, kl) = MATMUL(CONJG(TRANSPOSE(vloc(:, :, kl))), tmp)
+      END DO
+    END DO
+    DEALLOCATE(tmp, vloc)
+    DO a = 1, ncomp
+      CALL wgauge_ft_to_real_reduce(cell, kpts, ow_loc(:, :, a, :), gk_loc, mpicm, o1, irvec, ndegen, nrpts)
+      IF (a == 1) ALLOCATE(o_r(num_wann, num_wann, nrpts, ncomp))
+      o_r(:, :, :, a) = o1; DEALLOCATE(o1)
+    END DO
+    DEALLOCATE(ow_loc)
+
+    ! only rank 0 does the R -> fine-path interpolation, diagonalization and write
+    IF (irank /= 0) THEN
+      IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
+      IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
+      CALL timestop('wgauge_interpolate_operator'); RETURN
+    END IF
+
+    np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
+
+    ! ---- the operator R -> k' (O_alpha(R) is already assembled by the distributed reduce above) ----
+    ALLOCATE(o_interp(num_wann, num_wann, ncomp, np))
+    BLOCK
+      COMPLEX, ALLOCATABLE :: o_one(:, :, :)
+      DO a = 1, ncomp
+        CALL wgauge_ft_rtok(o_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, o_one)
+        o_interp(:, :, a, :) = o_one
+      END DO
+    END BLOCK
+    DEALLOCATE(o_r, irvec, ndegen)
+
+    ! ---- project the operator on the bands of this domain, write ----
+    ALLOCATE(oc(num_wann, num_wann, ncomp), oexp(ncomp), orow(ncomp, num_wann))
+
+    omax = 0.0
+    WRITE(hdr,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
+    CALL wgauge_bands_open(iu, outfile, hdr)
+    DO ip = 1, np
+      DO a = 1, ncomp
+        oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), hg%cvec(:, :, ip))
+      END DO
+      DO m = 1, num_wann
+        DO a = 1, ncomp
+          oexp(a) = REAL(DOT_PRODUCT(hg%cvec(:, m, ip), oc(:, m, a)))
+        END DO
+        omax = MAX(omax, SQRT(SUM(oexp(:)**2)))
+        orow(:, m) = oexp(:)
+      END DO
+      CALL wgauge_bands_row(iu, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), orow, '2x,f14.9')
+    END DO
+    CLOSE(iu)
+    WRITE(oUnit,'(a,es12.5)') 'wannierlib operator interpolation: max |<O>| over the domain = ', omax
+    IF (PRESENT(bound)) THEN
+      IF (omax > bound*(1.0 + 1.0e-6)) THEN
+        WRITE(oUnit,'(a,es12.5,a,es12.5,a)') &
+          'wannierlib operator interpolation: WARNING max |<O>| = ', omax, &
+          ' exceeds the physical bound ', bound, &
+          ' -- the interpolation overshoots where the operator is not smooth in k;'
+        WRITE(oUnit,'(a)') &
+          '   the values ON the coarse mesh do respect it. Do not trust pointwise values.'
+      END IF
+    END IF
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '//TRIM(outfile)//'.dat (', np, ' k-points)'
+    CALL timestop('wgauge_interpolate_operator')
+  END SUBROUTINE wgauge_interpolate_operator
+
+END MODULE m_wgauge_interpolate_op

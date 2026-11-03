@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,25 @@ MODULE m_optional
 #ifdef CPP_MPI 
   use mpi 
 #endif
+  use m_stden
+  use m_cdnsp
+  use m_flipcdn
+  use m_cdn_io
+  use m_types_atoms
+  use m_types_cell
+  use m_types_field
+  use m_types_input
+  use m_types_mpi
+  use m_types_noco
+  use m_types_sliceplot
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_sym
+  use m_types_vacuum
+  use m_types_xcpot
+  implicit none
+  private
+  public :: optional
 CONTAINS
   SUBROUTINE OPTIONAL(fmpi, atoms,sphhar,vacuum,stars,input,sym,cell,field,sliceplot,xcpot,noco)
     !
@@ -47,11 +66,6 @@ CONTAINS
     !            +-- f2u -- wrtdop
     !            +-- u2f -- loddop
     !----------------------------------------
-    USE m_stden
-    USE m_cdnsp
-    USE m_flipcdn
-    USE m_cdn_io
-    USE m_types
 
 
     IMPLICIT NONE
@@ -113,11 +127,11 @@ CONTAINS
           END DO
        END IF
 
-       IF(fmpi%irank.EQ.0) THEN
-          IF (stateCheck.AND.(input%jspins.EQ.2)) THEN
-             CALL juDFT_warn("Spin-polarized calculation (jspins=2) without any actual polarization given. Is this wanted?", calledby='optional')
-          END IF
-       END IF
+       !IF(fmpi%irank.EQ.0) THEN
+       !   IF (stateCheck.AND.(input%jspins.EQ.2)) THEN
+       !      CALL juDFT_warn("Spin-polarized calculation (jspins=2) without any actual polarization given. Is this wanted?", calledby='optional')
+       !   END IF
+       !END IF
 
        CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco )
 

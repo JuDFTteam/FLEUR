@@ -1,19 +1,28 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_denMultipoleExp
+   USE m_constants
+   USE m_mpmom
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: denmultipoleexp
 
 
 CONTAINS
 
 SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
 
-   USE m_types
-   USE m_constants
-   USE m_mpmom
 
    TYPE(t_input),  INTENT(IN) :: input
    TYPE(t_mpi),    INTENT(IN) :: fmpi
@@ -35,7 +44,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
       END IF
       qlm = CMPLX(0.0,0.0)
       workDen = den
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -45,7 +54,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -58,7 +67,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
    qlm = CMPLX(0.0,0.0)
    workDen = den
    IF(input%jspins == 2) CALL workDen%SpinsToChargeAndMagnetisation()
-   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
+   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
    IF(fmpi%irank.EQ.0) THEN
       WRITE(oUnit,*) '======================================='
    END IF
@@ -69,7 +78,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF

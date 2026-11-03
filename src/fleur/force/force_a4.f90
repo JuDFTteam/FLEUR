@@ -1,4 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_force_a4
+   USE m_constants
+   USE m_intgr, ONLY: intgr0, intgr3
+   USE m_differentiate, ONLY: difcub
+   USE m_cdn_io
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_sphhar
+   USE m_types_sym
+   USE m_judft
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: force_a4
 CONTAINS
    SUBROUTINE force_a4(atoms,sym,sphhar,input,vr,force)
       !--------------------------------------------------------------------------
@@ -6,11 +23,6 @@ CONTAINS
       ! 
       ! Equation A4, Phys. Rev. B 43, 6411
       !--------------------------------------------------------------------------
-      USE m_types
-      USE m_constants
-      USE m_intgr, ONLY : intgr0,intgr3
-      USE m_differentiate, ONLY: difcub
-      USE m_cdn_io
 
       IMPLICIT NONE
 

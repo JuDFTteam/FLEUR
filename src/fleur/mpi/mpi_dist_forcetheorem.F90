@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,12 +8,19 @@ MODULE m_mpi_dist_forcetheorem
 #ifdef CPP_MPI
    use mpi 
 #endif
+#ifndef CPP_OLDINTEL
+   use m_types_mpi
+   use m_types_forcetheo, only: t_forcetheo
+   use m_types_forcetheo_extended
+#endif
+   implicit none
+   private
+#ifndef CPP_OLDINTEL
+   public :: mpi_dist_forcetheorem
+#endif
 CONTAINS
 #ifndef CPP_OLDINTEL
   SUBROUTINE mpi_dist_forcetheorem(fmpi,forcetheo)
-    USE m_types_mpi
-    USE m_types_forcetheo, ONLY: t_forcetheo
-    USE m_types_forcetheo_extended
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::fmpi
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(INOUT)::forcetheo

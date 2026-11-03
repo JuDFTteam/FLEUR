@@ -4,8 +4,8 @@
       Graphen Monolayer                                                                                   
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="all"/>
-      <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.8" spinf="2.0"/>
+      <cutoffs Kmax="2.0" Gmax="6.0" GmaxXC="6.0" numbands="all"/>
+      <scfLoop itmax="2" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.8" spinf="2.0"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="LibXC" relativisticCorrections="F">
          <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
@@ -73,7 +73,7 @@
          <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot"/>
       </plotting>
       <dfpt l_dfpt="T" l_phonon="T" l_rm_qhdf="T">    
-         <phonon gmaxzLocal="35.00">     
+         <phonon gmaxzLocal="20.00">     
          <qVectors>
             <q> -1.0/24 2.0/24 0.0/16 </q>
          </qVectors>

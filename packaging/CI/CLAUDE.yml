@@ -1,0 +1,90 @@
+stages: [review]
+
+# Required CI/CD variables (masked):
+#   GITLAB_REVIEW_TOKEN   project access token, scope "api", role Reporter or higher
+#   CLAUDE_CODE_OAUTH_TOKEN  long-lived token from your Team seat: run `claude setup-token`
+#                            locally while logged in with the Team account
+#   Do NOT define ANTHROPIC_API_KEY: it would take precedence and bill the API instead.
+#
+# Expects the posting script at .gitlab/claude-review/post_review.py
+
+claude-review:
+  stage: review
+  image: node:24-alpine
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TITLE =~ /^(Draft|WIP):/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  interruptible: true    # a new push cancels a running review
+  allow_failure: true    # never block an MR because the bot failed
+  timeout: 20m
+  variables:
+    GIT_DEPTH: 0
+  before_script:
+    - apk add --no-cache git curl bash jq python3
+    - curl -fsSL https://claude.ai/install.sh | bash
+    - export PATH="$HOME/.local/bin:$PATH"
+  script:
+    # 1) The SHAs GitLab uses for the MR diff view. Inline comments must be anchored to these.
+    - |
+      curl -sSf -H "PRIVATE-TOKEN: $GITLAB_REVIEW_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/versions" \
+      | jq -r '.[0] | "export BASE_SHA=\(.base_commit_sha) START_SHA=\(.start_commit_sha) HEAD_SHA=\(.head_commit_sha)"' \
+      > shas.sh
+    - . ./shas.sh
+    - echo "base=$BASE_SHA start=$START_SHA head=$HEAD_SHA"
+
+    # 2) Check out exactly that head (not a merged-results commit), so line numbers match the diff view.
+    - git fetch -q origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" "+refs/merge-requests/$CI_MERGE_REQUEST_IID/head:refs/mr-head"
+    - git checkout -q --detach "$HEAD_SHA"
+
+    # 3) Review prompt. Claude must return JSON with file/line anchors.
+    - |
+      cat > prompt.txt <<EOF
+      You are reviewing a GitLab merge request. Show the changes with:
+        git diff ${BASE_SHA}..${HEAD_SHA}
+      Read surrounding code where needed to judge the changes. Do not modify any files.
+
+      Report only real problems: bugs, numerical or physics errors, performance issues,
+      missing error handling, race conditions, security issues, seriously unclear code.
+      No praise, no restating what the change does.
+
+      Respond with ONLY a JSON object (no prose, no code fences) of this form:
+      {
+        "summary": "2-5 sentence overall assessment, Markdown allowed",
+        "findings": [
+          {
+            "file": "path of the file in the NEW version, relative to repo root",
+            "line": 123,
+            "severity": "blocker | major | minor | nit",
+            "comment": "what is wrong and why, Markdown allowed",
+            "suggestion": "OPTIONAL: full replacement text for exactly that one line"
+          }
+        ]
+      }
+
+      Rules for "line": it is the line number in the file at ${HEAD_SHA} (the new version).
+      Whenever possible pick a line that appears in the diff (an added line, or an unchanged
+      context line inside a hunk), because only those can receive inline comments.
+      Findings about code outside the diff are allowed but will go into the summary.
+      Only give "suggestion" if replacing that single line fully fixes the issue.
+      If there are no issues, return an empty findings list.
+      EOF
+
+    # 4) Run Claude on the Team seat with read-only tools.
+    #    ANTHROPIC_API_KEY is removed so an inherited group/instance variable can't
+    #    silently switch billing to the API; the GitLab token is hidden from Claude.
+    - test -n "$CLAUDE_CODE_OAUTH_TOKEN" || { echo "CLAUDE_CODE_OAUTH_TOKEN not set"; exit 1; }
+    - |
+      env -u GITLAB_REVIEW_TOKEN -u ANTHROPIC_API_KEY claude -p "$(cat prompt.txt)" \
+        --output-format json \
+        --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*)" \
+        --max-turns 40 \
+        > claude_out.json || true
+
+    # 5) Post inline discussions + summary note.
+    - python3 .gitlab/claude-review/post_review.py claude_out.json
+  artifacts:
+    when: always
+    paths: [claude_out.json]
+    expire_in: 1 week

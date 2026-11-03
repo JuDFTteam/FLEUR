@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      fcc platinum                                                                                        
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.9" Gmax="11.7" GmaxXC="11.7" numbands="42"/>
+      <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="1"/>
+      <soc l_soc="T" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="16.0" mode="hist" fermiSmearingEnergy="0.0005">
+         <kPointListSelection listName="w222"/>
+         <!-- k-points included here -->
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
+      </bzIntegration>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>    0.0000000000000000     3.7574857247875002     3.7574857247875002</row-1>
+            <row-2>    3.7574857247875002     0.0000000000000000     3.7574857247875002</row-2>
+            <row-3>    3.7574857247875002     3.7574857247875002     0.0000000000000000</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Platinum (Pt)" element="Pt" atomicNumber="78">
+         <mtSphere radius="2.59" gridPoints="857" logIncrement="0.016"/>
+         <atomicCutoffs lmax="10" lnonsphr="8"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2) (4f5/2) (4f7/2)</coreConfig>
+            <valenceConfig>(5p1/2) (5p3/2) (6s1/2) (5d3/2) (5d5/2)</valenceConfig>
+            <stateOccupation state="(6s1/2)" spinUp="0.5" spinDown="0.5"/>
+            <stateOccupation state="(5d3/2)" spinUp="1.8" spinDown="1.8"/>
+            <stateOccupation state="(5d5/2)" spinUp="2.7" spinDown="2.7"/>
+         </electronConfig>
+         <energyParameters s="6" p="6" d="5" f="5"/>
+         <lo type="SCLO" l="1" n="5" eDeriv="0"/>
+         <wannierproj l="2" m="2" spin=""/>
+         <wannierproj l="2" m="3" spin=""/>
+         <wannierproj l="2" m="5" spin=""/>
+         <wannierproj l="-5" m="0" spin=""/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Platinum (Pt)">
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <wannierlib wannierize="T">
+        <bands numBands="36" minBand="7" maxBand="42"/>
+        <disentanglement disWinMin="0.097264375" disWinMax="2.669716927" disFrozMin="0.097264375" disFrozMax="0.661487799" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+        <wannierization numIter="3000" convTol="0.00001"/>
+        <operators_r>
+          <operator name="hamiltonian"/>
+          <operator name="spin"/>
+          <operator name="orbital"/>
+          <operator name="spin_orbit"/>
+        </operators_r>
+      </wannierlib>
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Users/saez/fleur_versions/fleur-wann_lib/fleur-wannierlib/build.wannlib/inpgen -f Pt.inp
+
+Initial (original) inpgen input (only for documentation purposes):
+fcc platinum
+&input film=f /
+&lattice latsys='cF' a0=1.8897269 a=3.97675 /
+1
+78 0.0 0.0 0.0
+&soc 0.0 0.0 /
+&kpt div1=12 div2=12 div3=12 tkb=0.0005 /
+-->

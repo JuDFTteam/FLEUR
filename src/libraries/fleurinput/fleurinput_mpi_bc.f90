@@ -1,11 +1,38 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fleurinput_mpi_bc
-  USE m_types_fleurinput
+  USE m_types_xml
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_corespecinput
+  USE m_types_dfpt
+  USE m_types_enparaxml
+  USE m_types_field
+  USE m_types_forcetheo_data
+  USE m_types_gfinp
+  USE m_types_hub1inp
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpinp
+  USE m_types_noco
+  USE m_types_sliceplot
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_wannierlib
+  USE m_types_xas
+  USE m_types_xcpot
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: fleurinput_mpi_bc
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank)
-    USE m_types_xml
+       sliceplot,banddos,xas,mpinp,hybinp ,coreSpecInput,&
+       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank,wannierlib)
 
 
     TYPE(t_cell),INTENT(INOUT)::cell
@@ -17,11 +44,12 @@ CONTAINS
     TYPE(t_field),INTENT(INOUT)::field
     TYPE(t_sliceplot),INTENT(INOUT)::sliceplot
     TYPE(t_banddos),INTENT(INOUT)::banddos
+    TYPE(t_xas),INTENT(INOUT)::xas
     TYPE(t_mpinp), INTENT(INOUT):: mpinp
     TYPE(t_hybinp),INTENT(INOUT)::hybinp
      
     TYPE(t_coreSpecInput),INTENT(INOUT)::coreSpecInput
-    TYPE(t_wann),INTENT(INOUT)::wann
+    TYPE(t_wannierlib_wannierize),INTENT(INOUT),OPTIONAL::wannierlib
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_forcetheo_data),INTENT(INOUT)::forcetheo_data
     TYPE(t_enparaXML),INTENT(INOUT)::enparaXML
@@ -42,10 +70,11 @@ CONTAINS
     CALL field%mpi_bc(mpi_comm,rank)
     CALL sliceplot%mpi_bc(mpi_comm,rank)
     CALL banddos%mpi_bc(mpi_comm,rank)
+    CALL xas%mpi_bc(mpi_comm,rank)
     CALL hybinp%mpi_bc(mpi_comm,rank)
     CALL mpinp%mpi_bc(mpi_comm, rank)
     CALL coreSpecInput%mpi_bc(mpi_comm,rank)
-    CALL wann%mpi_bc(mpi_comm,rank)
+    IF (PRESENT(wannierlib)) CALL wannierlib%mpi_bc(mpi_comm,rank)
     CALL forcetheo_data%mpi_bc(mpi_comm,rank)
     CALL enparaXML%mpi_bc(mpi_comm,rank)
     CALL kpts%mpi_bc(mpi_comm,rank)

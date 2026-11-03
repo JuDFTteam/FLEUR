@@ -1,18 +1,30 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_magMultipoles
-  USE m_types
   USE m_juDFT
   USE m_constants
+  USE m_plot
+  USE m_divergence
+  USE m_mpmom
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_potden
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: magmultipoles
 CONTAINS
   SUBROUTINE magMultipoles(fmpi,sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
-    USE m_plot
-    USE m_divergence
-    USE m_mpmom
     TYPE(t_mpi),INTENT(IN)                      :: fmpi
     TYPE(t_input),INTENT(IN)                    :: input
     TYPE(t_atoms), INTENT(IN)                   :: atoms

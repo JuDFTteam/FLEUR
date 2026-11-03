@@ -10,6 +10,10 @@
       USE hdf5 
       USE m_hdf_tools
       use m_juDFT 
+      USE m_constants, ONLY: oUnit
+      USE m_gf_types
+      USE m_gf_fft_singleton
+      USE m_constants
       IMPLICIT NONE
 !***********************************************************************
 !     This subroutine contains subroutines for the IO of potentials for 
@@ -37,7 +41,6 @@
 
       subroutine gf_iodop_readvacuum(file_type,vxy,vz,evac,old)
       ! Read the vacuum potential from potential file
-      USE m_hdf_tools
       implicit none
       integer,intent(in)  :: file_type
       real,intent(out)::vz(:,:)
@@ -121,8 +124,6 @@
 
       subroutine gf_iodop_writevacuum(file_type,vxy,vz,mpi_subcom,evac)
       ! Write the vacuum potential to the potential file
-      USE m_hdf_tools
-      use hdf5
       implicit none
       integer,intent(in)::file_type
       real,intent(in)     ::vz(:,:)
@@ -161,8 +162,6 @@
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
 !-----------------------------------------------                        
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)              :: layer 
@@ -193,8 +192,6 @@
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
 !-----------------------------------------------                        
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)             :: layer 
@@ -233,9 +230,6 @@
 !                                                                       
 !                                  Daniel Wortmann, Juelich, 2001       
 !***********************************************************************
-      USE m_gf_types 
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: file_TYPE 
       INTEGER,       INTENT(IN) :: jspins,layer 
@@ -414,9 +408,6 @@
 !                                                                       
 !                                  Daniel Wortmann, Juelich, 2001       
 !***********************************************************************
-      USE hdf5 
-      USE m_gf_types 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: file_type 
       INTEGER,INTENT(IN)        :: layer 
@@ -550,9 +541,6 @@
 !                                                                       
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_gf_types 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER(HID_T),INTENT(IN) :: gid 
@@ -587,9 +575,6 @@
 !     write the star set into the hdf-file (modern t_stars fields;
 !     replaces gf_WRITE_stars from the old gf_stars module)
 !-----------------------------------------------
-      USE hdf5
-      USE m_gf_types
-      USE m_hdf_tools
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(IN)  :: fid
       TYPE(t_stars),INTENT(IN)   :: stars
@@ -627,9 +612,6 @@
 !                                                                       
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_gf_types 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER(HID_T),INTENT(IN) :: gid 
@@ -685,9 +667,6 @@
 !     calculate the planar average of the charge/potential in pw        
 !             (last modified: 09-11-19) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_fft_singleton 
-      USE m_gf_types 
-      USE m_constants 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_stars),INTENT(IN) :: stars 
@@ -738,8 +717,6 @@
 !  opens/creates the gf_pot.hdf and gf_cdn.hdf files                    
 !             (last modified: 2004-00-00) D. Wortmann                   
 !-----------------------------------------------                        
-      USE hdf5 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)              :: file 
@@ -843,8 +820,6 @@
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE hdf5 
-      USE m_gf_types 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)               :: file 
       INTEGER,INTENT(IN),OPTIONAL      :: mpi_subcom 
@@ -885,10 +860,6 @@
 !     writes the coulomb potential to the file                          
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_hdf_tools 
-      use m_juDFT 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
                                                                         
@@ -975,8 +946,6 @@
 !     reads the coulomb potential and the pseudo-charge from a file     
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)           :: file_TYPE 
@@ -1123,9 +1092,6 @@
 !
 !                                  Daniel Wortmann, Juelich, 2001
 !***********************************************************************
-      USE m_gf_types
-      USE hdf5
-      USE m_hdf_tools
       IMPLICIT NONE
       character(len=*),INTENT(IN)    :: file_name
       INTEGER,       INTENT(IN)      :: jspins,layer
@@ -1240,8 +1206,6 @@
 !     rename the current pot-group in a sc-cycle                        
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)     ::  file_TYPE 
@@ -1271,10 +1235,6 @@
 !     writes the coulomb potential to the file                          
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_hdf_tools 
-      use m_juDFT 
-      USE m_gf_types
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)          :: file_type 
@@ -1390,8 +1350,6 @@
 !     reads the coulomb potential and the pseudo-charge from a file     
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)           :: file_TYPE 

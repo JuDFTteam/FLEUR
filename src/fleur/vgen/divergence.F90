@@ -1,23 +1,35 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_divergence
-   USE m_types
    USE m_juDFT
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_lattHarmsSphHarmsConv
+   USE m_gradYlm
+   USE m_constants
+   USE m_grdchlh
+   USE m_fft2d
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_parallelloop
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
 
    PRIVATE
    PUBLIC :: divergence, vac_grad, divpotgrad
 
 CONTAINS
    SUBROUTINE divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,bxc,div)
-      USE m_lattHarmsSphHarmsConv
-      USE m_gradYlm
-      USE m_constants
 
       !--------------------------------------------------------------------------
       ! Use the interstitial/vacuum divergence subroutine and an external MT-gra-
@@ -116,10 +128,6 @@ CONTAINS
 
    SUBROUTINE vac_grad(vacuum,stars,cell,den,grad,ifftd2)
 
-      USE m_constants
-      USE m_grdchlh
-      USE m_fft2d
-      USE m_types
 
       IMPLICIT NONE
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -280,10 +288,6 @@ CONTAINS
 
    SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,pot,grad)
 
-      USE m_types
-      USE m_lattHarmsSphHarmsConv
-      USE m_gradYlm
-      USE m_constants
 
       !--------------------------------------------------------------------------
       ! Use the interstitial/vacuum gradient subroutine and an external MT-gra-

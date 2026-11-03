@@ -1,10 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_judft_xmlOutput  
+   use m_juDFT_args
+   use m_juDFT_usage
+!$ use omp_lib
+#ifdef CPP_MPI
+   use mpi
+#endif
    implicit none
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -59,12 +65,6 @@ MODULE m_judft_xmlOutput
    END FUNCTION getXMLOutputUnitNumber
 
    SUBROUTINE startXMLOutput(filename,tag)
-#ifdef CPP_MPI 
-      use mpi 
-#endif
-      USE m_juDFT_args
-      USE m_juDFT_usage
-!$    use omp_lib
       
       IMPLICIT NONE
 
@@ -486,7 +486,9 @@ MODULE m_judft_xmlOutput
          END IF
          ALLOCATE(contentLineList(contentLineListSize))
          CALL fillContentLineList(contentList,contentLineList,contentLineLength)
-         IF(SIZE(contentLineList).LE.1) THEN
+         IF(SIZE(contentLineList).EQ.0) THEN
+            outputString = TRIM(ADJUSTL(outputString))//'> </'//TRIM(ADJUSTL(elementName))//'>'
+         ELSE IF(SIZE(contentLineList).EQ.1) THEN
             outputString = TRIM(ADJUSTL(outputString))//'>'//TRIM(ADJUSTL(contentLineList(1)))//'</'//&
                  TRIM(ADJUSTL(elementName))//'>'
          ELSE

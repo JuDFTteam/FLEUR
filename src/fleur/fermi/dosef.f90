@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,10 +8,12 @@ MODULE m_dosef
    !---  >    obtain dos at ei (here: ef)
    !
    USE m_constants
-   USE m_types
    USE m_trisrt
+   USE m_types_kpts
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dosef
 
    CONTAINS
 

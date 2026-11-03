@@ -1,7 +1,17 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_spmm
+   use m_types_fleurinput
+   use m_types_mpdata
+   use m_judft
+   implicit none
+   private
+   public :: calc_ibasm
 contains
    function calc_ibasm(fi, mpdata) result(ibasm)
-      use m_types
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata

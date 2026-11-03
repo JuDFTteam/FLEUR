@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,9 @@ MODULE m_types_input
   USE m_judfT
   USE m_constants
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_types_noco
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_input
@@ -53,6 +56,7 @@ MODULE m_types_input
   REAL    :: alpha=0.05
   REAL    :: preconditioning_param=0.0
   REAL    :: spinf=2.0
+  LOGICAL :: sdNocoIR=.FALSE. !Is the starting density allowed to be non-collinear in the interstitial region?
   REAL    :: tkb=0.001
   INTEGER :: bz_integration=BZINT_METHOD_HIST
   LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=BZINT_METHOD_TETRA
@@ -65,7 +69,6 @@ MODULE m_types_input
   LOGICAL:: integ=.FALSE.
   LOGICAL:: pallst=.FALSE.
   LOGICAL:: l_coreSpec=.FALSE.
-  LOGICAL:: l_wann=.FALSE.
   LOGICAL:: l_sympsi=.FALSE.
   LOGICAL:: l_kpts_fullbz=.FALSE.
   LOGICAL:: secvar=.FALSE.
@@ -91,6 +94,10 @@ MODULE m_types_input
   INTEGER :: rdmftStatesAbove=0
   INTEGER :: rdmftFunctional=0
   INTEGER :: lResMax = -1
+  LOGICAL :: l_moessbauerEFG=.TRUE.
+  LOGICAL :: l_moessbauerIsomerShift=.TRUE.
+  LOGICAL :: l_moessbauerCoreHyperfine=.TRUE.
+  LOGICAL :: l_moessbauerValenceHyperfine=.TRUE.
 CONTAINS
   PROCEDURE :: read_xml=>read_xml_input
   PROCEDURE :: init => init_input
@@ -99,7 +106,6 @@ END TYPE t_input
 
 CONTAINS
 SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
-   USE m_mpi_bc_tool
    CLASS(t_input),INTENT(INOUT)::this
    INTEGER,INTENT(IN):: mpi_comm
    INTEGER,INTENT(IN),OPTIONAL::irank
@@ -144,6 +150,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%alpha,rank,mpi_comm)
    CALL mpi_bc(this%preconditioning_param,rank,mpi_comm)
    CALL mpi_bc(this%spinf,rank,mpi_comm)
+   CALL mpi_bc(this%sdNocoIR,rank,mpi_comm)
    CALL mpi_bc(this%tkb,rank,mpi_comm)
    CALL mpi_bc(this%bz_integration,rank,mpi_comm)
    CALL mpi_bc(this%l_bloechl,rank,mpi_comm)
@@ -155,7 +162,6 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%integ,rank,mpi_comm)
    CALL mpi_bc(this%pallst,rank,mpi_comm)
    CALL mpi_bc(this%l_coreSpec,rank,mpi_comm)
-   CALL mpi_bc(this%l_wann,rank,mpi_comm)
    CALL mpi_bc(this%secvar,rank,mpi_comm)
    CALL mpi_bc(this%evonly,rank,mpi_comm)
    CALL mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
@@ -179,21 +185,21 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%lResMax,rank,mpi_comm)
    CALL mpi_bc(this%charge_excited,rank,mpi_comm)
    CALL mpi_bc(this%charge_shift,rank,mpi_comm)
-   
+   CALL mpi_bc(this%l_moessbauerEFG,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerIsomerShift,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerCoreHyperfine,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerValenceHyperfine,rank,mpi_comm)
+
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
-   USE m_types_xml
-   USE m_constants
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
 
    CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
    INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
-   !TODO! these switches should be in the inp-file
-   !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
-   this%l_useapw=.FALSE.   !former CPP_APW
+   !l_useapw is derived from the atoms input in fleurinput_postprocess
    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
    DO i = 1, LEN(this%comment)
       IF(IACHAR(this%comment(i:i)).LT.32) this%comment(i:i) = ' '
@@ -250,6 +256,10 @@ SUBROUTINE read_xml_input(this,xml)
    this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
    this%spinf = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
+   !optional switch; if it is not present the starting density stays collinear in the interstitial region
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/scfLoop/@sdNocoIR')==1) THEN
+      this%sdNocoIR = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@sdNocoIR'))
+   END IF
    ! Get parameters for core electrons
    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
@@ -273,6 +283,8 @@ SUBROUTINE read_xml_input(this,xml)
    IF (xml%versionNumber < 39) THEN
       IF (this%fixed_moment.EQ.0.0) this%isFixedMomentCalc = .FALSE. 
    END IF
+   IF (this%isFixedMomentCalc.AND.this%jspins==1) CALL juDFT_error("Fixed moment only in calculations with two spins", &
+                                                                   hint="Set jspins=2 or remove the fixed_moment attribute", calledby='types_input%read_xml_input')
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
@@ -405,7 +417,7 @@ SUBROUTINE read_xml_input(this,xml)
       CASE ('Muller')
          this%rdmftFunctional = 1
       CASE DEFAULT
-         STOP 'Error: unknown RDMFT functional selected!'
+         CALL judft_error('unknown RDMFT functional selected!')
       END SELECT
    END IF
    ! !! Start of output section
@@ -414,7 +426,6 @@ SUBROUTINE read_xml_input(this,xml)
    IF (numberNodes.EQ.1) THEN
       ! Read in general output switches
       this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
-      this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
       IF (xml%versionNumber > 31)this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
       ! Read in optional switches for checks
       xPathA = '/fleurInput/output/checks'
@@ -437,6 +448,19 @@ SUBROUTINE read_xml_input(this,xml)
       IF (numberNodes.EQ.1) THEN
          this%eonly = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
       END IF
+      ! Read in optional moessbauerParams switches (all on by default)
+      this%l_moessbauerEFG = .TRUE.
+      this%l_moessbauerIsomerShift = .TRUE.
+      this%l_moessbauerCoreHyperfine = .TRUE.
+      this%l_moessbauerValenceHyperfine = .TRUE.
+      xPathA = '/fleurInput/output/moessbauerParams'
+      numberNodes = xml%GetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         this%l_moessbauerEFG = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@electricFieldGradient'))
+         this%l_moessbauerIsomerShift = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isomerShift'))
+         this%l_moessbauerCoreHyperfine = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreHyperfine'))
+         this%l_moessbauerValenceHyperfine = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@valenceHyperfine'))
+      END IF
       ! Read in optional vacuumDOS parameters
       xPathA = '/fleurInput/output/vacuumDOS'
       numberNodes = xml%GetNumberOfNodes(xPathA)
@@ -453,7 +477,6 @@ SUBROUTINE read_xml_input(this,xml)
 END SUBROUTINE read_xml_input
 
 SUBROUTINE init_input(input,noco,l_hybrid,invs,n_denmat,n_hia,nbasfcn)
-   USE m_types_noco
    CLASS(t_input),INTENT(inout):: input
    TYPE(t_noco),INTENT(in)     :: noco
    LOGICAL, INTENT(IN)         :: invs

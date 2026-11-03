@@ -48,6 +48,6 @@ add_executable(fleur_mini2 main.F90 constants.f90 ${diag_files}
 target_link_libraries(fleur_mini2 juDFT)
 target_compile_options(fleur_mini2 PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
 target_compile_options(fleur_mini2 PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_COMPILE_OPTIONS}>)
-target_compile_definitions(fleur_mini2 PUBLIC ${FLEUR_MPI_DEFINITIONS})
+target_compile_definitions(fleur_mini2 PUBLIC ${FLEUR_DEFINITIONS} ${FLEUR_PARALLEL_DEFINITIONS})
 target_link_libraries(fleur_mini2 ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(fleur_mini2 ${FLEUR_LIBRARIES})

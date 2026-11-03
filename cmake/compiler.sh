@@ -54,17 +54,17 @@ if (( $number >= ${#ccomp[@]} ));then echo "Invalid number" ; exit ;fi
 
 interactive_compiler_selection(){
 echo "Searching Compilers. Please wait...."
-find_compilers "mpif90 mpiifx mpiifort ifx ifort nvfortran gfortran"
+find_compilers "mpif90 mpiifx mpiifort ifx ifort nvfortran gfortran flang flang-new"
 select_compiler "Choose the Fortran-Compiler" 
 export FC=${ccomp[$number]}
 
 echo "Searching Compilers. Please wait...."
-find_compilers "mpicc mpiicc mpiicx icc icx nvc gcc"
+find_compilers "mpicc mpiicc mpiicx icc icx nvc gcc clang"
 select_compiler "Choose the C-Compiler" 
 export CC=${ccomp[$number]}
 
 echo "Searching Compilers. Please wait...."
-find_compilers "mpic++ mpicxx mpigxx mpiicpc mpiicpx icc icpc icpx g++ nvc++"
+find_compilers "mpic++ mpicxx mpigxx mpiicpc mpiicpx icc icpc icpx g++ nvc++ clang++"
 select_compiler "Choose the C++-Compiler" 
 export CXX=${ccomp[$number]}
 }
@@ -105,12 +105,24 @@ gfortran(){
    export CXX=${CXX:=g++}
 }
 
+llvm_flang(){
+   #LLVM 20 renamed flang-new to flang
+   if command -v flang >/dev/null 2>&1 ; then
+      export FC=${FC:=flang}
+   else
+      export FC=${FC:=flang-new}
+   fi
+   export CC=${CC:=clang}
+   export CXX=${CXX:=clang++}
+}
+
 configure_compiler(){
    if [[ $compiler == "nvidia" ]] ; then nvidia ; fi
    if [[ $compiler == "intel" ]] ; then intel ; fi
    if [[ $compiler == "intel_old" ]] ; then intel_old ; fi
    if [[ $compiler == "intel_mpi" ]] ; then intel_mpi ; fi
    if [[ $compiler == "gfortran" ]] ; then gfortran ; fi
+   if [[ $compiler == "flang" ]] ; then llvm_flang ; fi
    if [[ $compiler == "mpi" ]] ; then mpi_wrapper ; fi   
    if [[ $compiler == "interactive" ]] ; then interactive_compiler_selection ; fi   
 

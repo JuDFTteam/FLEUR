@@ -1,5 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_structureconstant
-   USE m_types
    USE m_juDFT
    USE m_constants
    use m_ylm
@@ -7,6 +11,15 @@ module m_structureconstant
 #ifdef CPP_MPI
    use mpi
 #endif
+   use ieee_arithmetic
+   use m_types_atoms
+   use m_types_cell
+   use m_types_hybinp
+   use m_types_kpts
+   use m_types_mpi
+   implicit none
+   private
+   public :: structureconstant, getshells, realspace_sum
 contains
    !     -----------------------------------------------------------------------------------------------
 
@@ -65,14 +78,14 @@ contains
 
       IF (fmpi%irank /= 0) first = .FALSE.
 
-      rdum = cell%vol**(1.0/3) ! define "average lattice parameter"
+      rdum = cell%omtil**(1.0/3) ! define "average lattice parameter"
 
       ! ewaldlambda = ewaldscale
       scale = hybinp%ewaldlambda/rdum
 
       !       lambda = ewaldlambda / rdum
 
-      pref = fpi_const/(scale**3*cell%vol)
+      pref = fpi_const/(scale**3*cell%omtil)
 
       DO l = 0, 2*hybinp%lexp
          convpar(l) = CONVPARAM/scale**(l + 1)
@@ -253,7 +266,7 @@ contains
          structconst(l**2 + 1:(l + 1)**2, :, :, :) = structconst(l**2 + 1:(l + 1)**2, :, :, :)*scale**(l + 1)
       END DO
 
-      rad = (cell%vol*3/4/pi_const)**(1.0/3) ! Wigner-Seitz radius (rad is recycled)
+      rad = (cell%omtil*3/4/pi_const)**(1.0/3) ! Wigner-Seitz radius (rad is recycled)
 
       !     Calculate accuracy of Gamma-decomposition
       IF (ALL(abs(kpts%bk) > 1e-12)) THEN
@@ -270,7 +283,7 @@ contains
          DO ic2 = 1, atoms%nat
             DO ic1 = 1, MAX(1, ic2 - 1)
                a = a + ABS(structconst(1, ic1, ic2, ikpt) - &
-                           (structconst(1, ic1, ic2, 1) + SQRT(fpi_const)/cell%vol/rdum**2* &
+                           (structconst(1, ic1, ic2, 1) + SQRT(fpi_const)/cell%omtil/rdum**2* &
                             EXP(-CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
                                 kpts%bk(:, ikpt), atoms%taual(:, ic2) - atoms%taual(:, ic1)))))**2
             END DO
@@ -294,8 +307,6 @@ contains
 
    SUBROUTINE getshells(ptsh, nptsh, radsh, nshell, rad, lat, lwrite)
 
-      USE m_juDFT
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -384,7 +395,6 @@ contains
    END SUBROUTINE getshells
 
    subroutine realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
-      use ieee_arithmetic
       implicit none 
       type(t_atoms), intent(in) :: atoms 
       type(t_cell), intent(in)  :: cell 
@@ -407,7 +417,7 @@ contains
       complex  ::  shlp((2*hybinp%lexp + 1)**2, kpts%nkpt)
       COMPLEX  ::  cdum, cexp, y((2*hybinp%lexp + 1)**2)
 
-      rdum = cell%vol**(1.0/3) 
+      rdum = cell%omtil**(1.0/3) 
 
       !
       !     Determine atomic shells

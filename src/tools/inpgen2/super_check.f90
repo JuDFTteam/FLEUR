@@ -1,12 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_supercheck
 !*********************************************************************
 !     checks whether this is a supercell and determines the
 !     translations that take the crystal in to itself
 !*********************************************************************
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: super_check
 CONTAINS
   SUBROUTINE super_check(nat,pos,ity,ntypm, ns,trs)
 
-    USE m_constants
 
     IMPLICIT NONE
     

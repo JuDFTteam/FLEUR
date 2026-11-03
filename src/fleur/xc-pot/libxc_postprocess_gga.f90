@@ -1,14 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_libxc_postprocess_gga
+   USE m_mt_tofrom_grid
+   USE m_pw_tofrom_grid
+   USE m_vac_tofrom_grid
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: libxc_postprocess_gga_mt, libxc_postprocess_gga_pw, libxc_postprocess_gga_vac, libxc_postprocess_gga
 CONTAINS
 
    SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num)
-      USE m_mt_tofrom_grid
-      USE m_types
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -43,8 +56,6 @@ CONTAINS
    END SUBROUTINE libxc_postprocess_gga_mt
 
    SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
-      USE m_pw_tofrom_grid
-      USE m_types
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -71,8 +82,6 @@ CONTAINS
    END SUBROUTINE libxc_postprocess_gga_pw
 
    SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
-      USE m_vac_tofrom_grid
-      USE m_types
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -85,20 +94,19 @@ CONTAINS
       TYPE(t_gradients),INTENT(IN):: grad
 
       COMPLEX,ALLOCATABLE:: vsigma_new(:,:,:,:)
-      REAL,ALLOCATABLE:: vsigma(:,:), rho_dummy(:,:),v_xc2(:,:)
+      REAL,ALLOCATABLE:: vsigma(:,:), rho_dummy(:,:)
       TYPE(t_gradients)::grad_vsigma
       INTEGER :: nsp,n_sigma,ifftd2
 
       ifftd2 = 9*stars%mx1*stars%mx2
-    
+
       nsp=SIZE(v_xc,1) !no of points
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
       ALLOCATE(rho_dummy(size(v_xc,1),n_sigma))
-      ALLOCATE(v_xc2,mold=v_xc)
-      ALLOCATE(vsigma_new(vacuum%nmz,stars%ng2,vacuum%nvac,n_sigma))
-      v_xc2=v_xc
+      ALLOCATE(vsigma_new(vacuum%nmzd,stars%ng2,vacuum%nvac,n_sigma))
+      vsigma_new=CMPLX(0.0,0.0)
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL vac_from_grid(stars,vacuum,v_xc2,ifftd2,vsigma_new)
+      CALL vac_from_grid(stars,vacuum,vsigma,ifftd2,vsigma_new)
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma),grad_vsigma%sigma(n_sigma,nsp))
       CALL vac_to_grid(xcpot%needs_grad(),ifftd2,n_sigma,vacuum,.FALSE.,cell,vsigma_new,stars,rho_dummy,grad_vsigma)
 
@@ -106,7 +114,6 @@ CONTAINS
    END SUBROUTINE libxc_postprocess_gga_vac
 
    SUBROUTINE libxc_postprocess_gga(vsigma,grad,grad_vsigma,v_xc)
-      USE m_types
       IMPLICIT NONE
       REAL,INTENT(IN)             :: vsigma(:,:)
       TYPE(t_gradients),INTENT(IN):: grad,grad_vsigma

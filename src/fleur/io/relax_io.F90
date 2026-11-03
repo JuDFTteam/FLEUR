@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,17 @@ MODULE m_relaxio
   !The reading uses the libxml interface to inp.xml. Hence the relax.xml has to be included here.
   USE m_judft
   USE m_constants
+  USE m_types_xml
+  USE m_calculator
+  USE m_chkmt
+  USE m_mapatom
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_gfinp
+  USE m_types_input
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: read_relax,write_relax,apply_displacements,read_displacements,rotate_to_all_sites
@@ -60,8 +71,6 @@ CONTAINS
   END SUBROUTINE write_relax
 
   SUBROUTINE read_relax(positions,forces,energies)
-    USE m_types_xml
-    USE m_calculator
     REAL,INTENT(INOUT),ALLOCATABLE:: positions(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: forces(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: energies(:)
@@ -115,9 +124,6 @@ CONTAINS
 
 
   SUBROUTINE read_displacements(atoms,disp)
-    USE m_types_xml
-    USE m_calculator
-    USE m_types
     TYPE(t_atoms),INTENT(in)::atoms
     REAL,INTENT(out)::disp(:,:)
     CHARACTER(len=50):: path,str
@@ -137,10 +143,6 @@ CONTAINS
   END SUBROUTINE read_displacements
 
   SUBROUTINE apply_displacements(cell,input,vacuum ,sym,noco,atoms,gfinp)
-    USE m_types
-    USE m_chkmt
-    USE m_constants
-    USE m_mapatom
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
     TYPE(t_cell),INTENT(IN)    :: cell
@@ -205,7 +207,6 @@ CONTAINS
   END SUBROUTINE apply_displacements
 
   SUBROUTINE rotate_to_all_sites(disp,atoms,cell,sym,disp_all)
-    USE m_types
     REAL,INTENT(in)          :: disp(:,:)
     TYPE(t_atoms),INTENT(in) :: atoms
     TYPE(t_cell),INTENT(IN)  :: cell

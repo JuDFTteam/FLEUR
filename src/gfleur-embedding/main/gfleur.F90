@@ -20,15 +20,38 @@ MODULE m_gfleur_driver
    USE mpi
 #endif
    USE m_juDFT
+   USE m_constants
+   USE m_gf_types
+   USE m_gf_init
+   USE m_gf_optional, ONLY: gf_OPTIONAL
+   USE m_gf_vgen, ONLY: gf_vgen
+   USE m_gf_makepseudocharge, ONLY: gf_makepseudocharge
+   USE m_gf_intcoul, ONLY: gf_makeintcoulpot
+   USE m_gf_boundaryembpot, ONLY: gf_boundaryembpot
+   USE m_gf_apws, ONLY: gf_apws
+   USE m_gf_PhaseMatrix, ONLY: initPhaseMatrix
+   USE m_gf_curvy2dprojector, ONLY: gf_curvy2dealloc
+   USE m_gf_tlmplminit, ONLY: gf_tlmplminit
+   USE m_gf_gfleur_basic, ONLY: gf_gfleur_basic
+   USE m_gf_gfleur_propagate, ONLY: gf_gfleur_propagate
+   USE m_gf_gfleur_compose, ONLY: gf_gfleur_compose
+   USE m_gf_gencdn, ONLY: gf_gencdn
+   USE m_gf_charge, ONLY: gf_charge, gf_charge_sum
+   USE m_gf_totalmix, ONLY: gf_totalmix
+   USE m_gf_mix, ONLY: gf_mix
+   USE m_gf_dos, ONLY: gf_dos_init, gf_writedos
+   USE m_gf_bandbending, ONLY: gf_bandbending
+   USE m_gf_embpot_postprocess, ONLY: gf_embpot_spectral
+   USE m_gf_CBS, ONLY: outCBS_openfile, outCBS_closefile
+   USE m_gf_energies, ONLY: gf_noen
+   USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize
+   USE m_gf_writetrans, ONLY: gf_writetrans_hdfclose
+   USE m_assign_enpara_potential, ONLY: assign_enpara_potential
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: gfleur_run
 CONTAINS
    SUBROUTINE gfleur_run(l_mpi_multithreaded)
-      USE m_types
-      USE m_constants
-      USE m_gf_types
-      USE m_gf_init
       LOGICAL, INTENT(IN) :: l_mpi_multithreaded
 
       TYPE(t_gfmpi)   :: gmpi
@@ -70,35 +93,6 @@ CONTAINS
       !ld(:) is the single source of truth; the few multi-layer routines
       !that still take plain arrays (Coulomb solver, mixing, DOS setup) get
       !temporary gathered arrays built from ld right before the call.
-      USE m_types
-      USE m_constants
-      USE m_gf_types
-      USE m_gf_optional, ONLY: gf_OPTIONAL
-      USE m_gf_vgen, ONLY: gf_vgen
-      USE m_gf_makepseudocharge, ONLY: gf_makepseudocharge
-      USE m_gf_intcoul, ONLY: gf_makeintcoulpot
-      USE m_gf_boundaryembpot, ONLY: gf_boundaryembpot
-      USE m_gf_apws, ONLY: gf_apws
-      USE m_gf_PhaseMatrix, ONLY: initPhaseMatrix
-      USE m_gf_curvy2dprojector, ONLY: gf_curvy2dealloc
-      USE m_gf_tlmplminit, ONLY: gf_tlmplminit
-      USE m_gf_gfleur_basic, ONLY: gf_gfleur_basic
-      USE m_gf_gfleur_propagate, ONLY: gf_gfleur_propagate
-      USE m_gf_gfleur_compose, ONLY: gf_gfleur_compose
-      USE m_gf_gencdn, ONLY: gf_gencdn
-      USE m_gf_charge, ONLY: gf_charge, gf_charge_sum
-      USE m_gf_totalmix, ONLY: gf_totalmix
-      USE m_gf_mix, ONLY: gf_mix
-      USE m_gf_dos, ONLY: gf_dos_init, gf_writedos
-      USE m_gf_bandbending, ONLY: gf_bandbending
-      USE m_gf_embpot_postprocess, ONLY: gf_embpot_spectral
-      USE m_gf_CBS, ONLY: outCBS_openfile, outCBS_closefile
-      USE m_gf_energies, ONLY: gf_noen
-      USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize
-      USE m_gf_writetrans, ONLY: gf_writetrans_hdfclose
-#ifdef CPP_MPI
-      USE mpi
-#endif
       IMPLICIT NONE
       TYPE(t_gfmpi), INTENT(INOUT)  :: gmpi
       TYPE(t_embinp), INTENT(INOUT) :: embinp
@@ -126,6 +120,8 @@ CONTAINS
       TYPE(t_cell), ALLOCATABLE    :: cell(:)
       TYPE(t_enpara), ALLOCATABLE  :: enpara(:)
       TYPE(t_potden), ALLOCATABLE  :: potential(:)
+      !xc input of assign_enpara_potential, only read for MetaGGA (not supported by gfleur)
+      TYPE(t_potden)               :: no_mgga
 
       nl = layers%num_layers
 
@@ -219,6 +215,12 @@ CONTAINS
             !energy parameters + radial functions + local Hamiltonian
             DO layer_loop = 1, gmpi%kl_LayerperPE
                layer = gmpi%kl_layers(layer_loop)
+               !enpara%update and the core states use enpara%vr/vr_core, set from vTot here
+               CALL assign_enpara_potential(ld(layer)%enpara, gmpi%fmpi, ld(layer)%fi%atoms, &
+                                            ld(layer)%fi%input, ld(layer)%vTot, ld(layer)%xcpot, &
+                                            no_mgga, ld(layer)%cdn_new, ld(layer)%sphhar, &
+                                            ld(layer)%fi%sym, ld(layer)%stars, ld(layer)%fi%vacuum, &
+                                            ld(layer)%fi%noco, no_mgga)
                CALL ld(layer)%enpara%update(gmpi%fmpi, ld(layer)%fi%atoms, &
                                             ld(layer)%fi%vacuum, ld(layer)%fi%input, &
                                             ld(layer)%vTot, ld(layer)%hub1data)
@@ -407,8 +409,6 @@ CONTAINS
       !Build plain-array copies of the requested per-layer components for
       !the multi-layer routines that still take arrays. Only the arrays
       !that are actually present are (re)allocated and filled.
-      USE m_types
-      USE m_gf_types
       IMPLICIT NONE
       TYPE(t_gflayer), INTENT(IN)  :: ld(:)
       TYPE(t_layers), INTENT(IN)   :: layers

@@ -1,7 +1,14 @@
       MODULE m_coredir
+      USE m_constants, ONLY: c_light
+      USE m_crtail
+      USE m_kernel1
+      USE m_kernel2
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: coredir
       CONTAINS
-      SUBROUTINE coredir(mrad,e,l,xmj,iway,vv,bb,rc,dx,nmatch,nzero,
-     +                   gc,fc,pow,qow,piw,qiw)
+      SUBROUTINE coredir(mrad,e,l,xmj,iway,vv,bb,rc,dx,zz,nmatch,
+     +                   nzero,gc,fc,pow,qow,piw,qiw)
 
 c.........................................................coredir
 c   solution of dirac equation for atomic problem
@@ -9,10 +16,6 @@ c   full relativistic spin-polarized case
 c   Ry units: in charge
 c_______________________________________________  a. shick KFA 1996
 
-      USE m_constants, ONLY : c_light
-      USE m_crtail
-      USE m_kernel1
-      USE m_kernel2
 
       IMPLICIT NONE
 c
@@ -20,7 +23,7 @@ C     .. Parameters ..
       INTEGER, INTENT (IN) :: mrad
 C     ..
 C     .. Scalar Arguments ..
-      REAL dx,e,xmj
+      REAL dx,e,xmj,zz
       INTEGER iway,l,nmatch,nzero
 C     ..
 C     .. Array Arguments ..
@@ -67,7 +70,7 @@ c     potential redefinition
          ra(ir) = rc(ir)
       END DO
 c initial condition
-      CALL inconz(e,l,xmj,kap1,kap2,vv(1),bb(1),rc(1),xx1,xx2)
+      CALL inconz(e,l,xmj,kap1,kap2,vv(1),bb(1),rc(1),zz,xx1,xx2)
 c dirac equation solution: two cases 1)nsol=2; 2)nsol=1.
       nstart = 1
       IF (nsol.EQ.2) THEN

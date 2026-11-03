@@ -14,6 +14,14 @@
 !-----------------------------------------------                        
       USE hdf5 
       USE m_hdf_tools
+      USE m_juDFT
+      USE m_constants, ONLY: oUnit
+      USE m_gf_types
+      USE m_gf_energies, ONLY: gf_NoEn, gf_Z, gf_allz
+      USE m_hdf_accessprp
+      USE m_constants
+      USE m_gf_math
+      USE m_gf_out
 
       IMPLICIT NONE
       PRIVATE 
@@ -93,8 +101,6 @@
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_energies,ONLY:gf_NoEn,gf_Z,gf_allz 
       IMPLICIT NONE 
       !<--Arguments                                                     
                                                                         
@@ -513,9 +519,6 @@
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_energies,ONLY: gf_NoEn,gf_Z,gf_allz 
-      USE m_hdf_accessprp
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_file),INTENT(INOUT) :: io_file 
@@ -819,8 +822,6 @@
 !     * energy,kpoint,spin                                              
 !     *                           Daniel Wortmann, Tokyo, 2002          
 !********************************************************************** 
-      USE m_hdf_tools,ONLY:io_WRITE 
-      USE m_gf_types 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)          :: mode,region,side 
       INTEGER,INTENT(IN)          :: jspin,nk,en 
@@ -870,7 +871,6 @@
 
       RECURSIVE SUBROUTINE priv_map_out(jspin,lapw_gf,fileid,mat,A)
       !This subroutine maps the 2D-matrix to te output buffer
-      USE m_gf_types
       IMPLICIT NONE
       INTEGER,INTENT(IN)          :: jspin,fileid
       TYPE(t_lapw_gf),INTENT(IN)     :: lapw_gf
@@ -948,8 +948,6 @@
                                                                         
       !>
       SUBROUTINE priv_read_files_to_mem(layers,jspins,nkpts,lapw_gf,l_noco)
-      USE m_gf_types
-      USE m_gf_energies
       IMPLICIT NONE
       Type(t_layers),intent(in) :: layers
       TYPE(t_lapw_gf),intent(in)   :: lapw_gf
@@ -993,9 +991,6 @@
 !     * Rotates the spin quantisation axis                              
 !     *                           Daniel Wortmann, Tokyo, 2002          
 !********************************************************************** 
-      USE m_hdf_tools,ONLY:io_WRITE 
-      USE m_gf_types 
-      USE m_constants 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)         :: mode,region,side 
       INTEGER,INTENT(IN)         :: jspin,nk,en 
@@ -1280,7 +1275,6 @@
 !     returns a -1 IF no filehandle is available                        
 !     D. Wortmann                                                       
 !******************************************                             
-      USE hdf5 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: mode,region,side,readwrite 
@@ -1329,12 +1323,6 @@
 ! Subroutine reads in the data and remaps it to a supercell             
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_energies 
-      USE m_hdf_tools 
-      USE m_gf_math 
-      USE hdf5 
-      USE m_gf_out 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)        :: jspins 
@@ -1605,8 +1593,6 @@
       !>                                                                
 #ifdef CPP_MPI
       LOGICAL FUNCTION priv_create_MPI_memory(mpi_d,layer,kpts,lapw_gf,jspins,l_noco) result(ok)
-      USE m_gf_types
-      USE m_gf_energies
       !use gmpi
       IMPLICIT NONE
       TYPE(t_gfmpi),INTENT(IN)     :: mpi_d
@@ -1725,7 +1711,6 @@
 #ifdef CPP_MPI
       RECURSIVE SUBROUTINE mpi_memory_read(mode,layer,side,en,nk,jspin,data,rec)
       !USE MPI
-      USE m_gf_energies
       IMPLICIT NONE
       INTEGER,INTENT(IN)      ::mode,layer,side,en,nk,jspin
       COMPLEX,INTENT(OUT)     ::data(:,:)
@@ -1803,7 +1788,6 @@
 
       RECURSIVE SUBROUTINE mpi_memory_write(mode,layer,side,en,nk,jspin,data,rec)
 !      USE MPI
-      USE m_gf_energies
       IMPLICIT NONE
       INTEGER,INTENT(IN)      ::mode,layer,side,en,nk,jspin
       COMPLEX,INTENT(IN)      ::data(:,:)

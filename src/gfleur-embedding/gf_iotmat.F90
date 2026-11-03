@@ -4,6 +4,10 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_iotmat 
+      USE m_juDFT
+      USE m_gf_types
+      USE m_gf_io2dmat
+      USE m_gf_tmatregularize
       IMPLICIT NONE
 !-----------------------------------------------                        
 ! DESC:Handle IO of t-matrix, option to keep it memory for all energies 
@@ -26,10 +30,6 @@
 !    composed system.                                                   
 !    Frank Freimuth, November 2007                                      
 !******************************************                             
-      USE m_gf_types 
-      USE m_gf_io2dmat 
-      USE m_gf_tmatregularize 
-      use m_juDFT 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)      :: layer 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf 
@@ -61,8 +61,6 @@
 !  write t-matrix to storage                                            
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_io2dmat 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)      :: layer 

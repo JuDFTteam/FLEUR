@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,11 +10,13 @@ MODULE m_tetraef
    ! and sets the weight factors needed for the charge density for bulk systems.
    ! Adapted for the FLEUR code                                          GB 2000
    ! -----------------------------------------------------------------------
-   USE m_types
    USE m_constants
    USE m_juDFT
+   USE m_types_kpts
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: tetra_ef
 
    CONTAINS
 

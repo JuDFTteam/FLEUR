@@ -1,5 +1,6 @@
 variables:
   GIT_CLONE_PATH: ${CI_BUILDS_DIR}/${CI_PROJECT_NAME}
+  FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier TRUE -includedir /opt/fleur-deps/include -libdir /opt/fleur-deps/lib"
 
 stages:
    - build
@@ -8,6 +9,7 @@ stages:
    - perf
    - html
    - deploy
+   - review
 
 include:
    - "packaging/CI/test-template.yml"
@@ -15,6 +17,8 @@ include:
    - "packaging/CI/gfortran-serial.yml"
    - "packaging/CI/oneAPI.yml"
    - "packaging/CI/NVHPC.yml"
+   - "packaging/CI/LLVM.yml"
    - "packaging/CI/html.yml"
    - "packaging/CI/AiiDA.yml"
    - "packaging/CI/CB.yml"
+   - "packaging/CI/CLAUDE.yml"

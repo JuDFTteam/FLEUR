@@ -1,5 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_socorssdw
       use m_juDFT
+      use m_sssym
+      use m_socsym
+      implicit none
+      private
+      public :: soc_or_ssdw
       CONTAINS
       SUBROUTINE soc_or_ssdw(
      >                       l_soc,l_ss,theta,phi,qss,amat,
@@ -7,8 +17,6 @@
      <                       mmrot,ttr,no3,no2,ntype,neq,natmap,
      <                       ntyrep,natype,natrep,zatom,pos)
 
-      USE m_sssym
-      USE m_socsym
       IMPLICIT NONE
 
       LOGICAL, INTENT (IN) :: l_soc,l_ss

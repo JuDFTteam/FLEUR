@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,7 +9,28 @@ MODULE m_vgen_finalize
    USE m_plot
    USE m_constants
    USE m_lattHarmsSphHarmsConv
+   USE m_rotate_int_den_tofrom_local
+   USE m_rotate_mt_den_tofrom_local
+   USE m_magnMomFromDen
+   USE m_bfield
+   USE m_types_potden
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_field
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
 
+   implicit none
+   PRIVATE
+   PUBLIC :: vgen_finalize
 CONTAINS
 
    SUBROUTINE vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
@@ -24,12 +45,6 @@ CONTAINS
       !
       ! Sourcefree: The xc-B-field is scaled up an source terms are purged out.
       !--------------------------------------------------------------------------
-      USE m_types
-      USE m_constants
-      USE m_rotate_int_den_tofrom_local
-      USE m_rotate_mt_den_tofrom_local
-      USE m_magnMomFromDen
-      USE m_bfield
 
       IMPLICIT NONE
 
@@ -140,8 +155,8 @@ CONTAINS
          CALL subPotDen(vxcForPlotting,vTot,vCoul)
          CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
                         noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
-         IF ((fmpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
-            CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+         IF ((sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
+            CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
       END IF
 
@@ -163,13 +178,7 @@ CONTAINS
       END DO
 
       ! Copy first vacuum into second vacuum if this was not calculated before:
-      IF (vacuum%nvac==1) THEN
-         IF (sym%invs) THEN
-            vTot%vac(:,:,2,:)  = CONJG(vTot%vac(:,:,1,:))
-         ELSE
-            vTot%vac(:,:,2,:)  = vTot%vac(:,:,1,:)
-         END IF
-      END IF
+      CALL stars%fill_2nd_vac(vacuum,vTot%vac)
 
    END SUBROUTINE vgen_finalize
 

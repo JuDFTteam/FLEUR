@@ -1,10 +1,13 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_fermifct
+   implicit none
+   private
+   public :: fermifct
 CONTAINS
   real elemental function fermifct(e,e_f,tkb)
     implicit NONE

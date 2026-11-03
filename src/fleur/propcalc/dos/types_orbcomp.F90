@@ -1,11 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_orbcomp
    use m_judft
    use m_types_eigdos
+   use m_types_atoms
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_banddos
+   use m_types_abc
+   use m_types_radfun
+   use m_types_kpts
+   use m_types_input
    implicit none
    PRIVATE
    integer, allocatable:: combine(:, :)
@@ -28,10 +36,6 @@ MODULE m_types_orbcomp
 CONTAINS
 
  subroutine postprocessing(this, noco,nococonv, banddos,alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
       class(t_orbcomp), intent(inout):: this
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -100,10 +104,6 @@ CONTAINS
     !!     Calculates an orbital composition of eigen states
     !! Based on code from    Yury  Koroteev  2003-12-24
 
-      USE m_types_atoms
-      USE m_types_banddos
-      USE m_types_abc
-      USE m_types_radfun
 
       IMPLICIT NONE
       CLASS(t_orbcomp), INTENT(INOUT)  :: orbcomp
@@ -132,8 +132,8 @@ CONTAINS
          END DO
          if (n_dos > size(banddos%dos_atomlist)) cycle ! no n_dos for this atom found
          IF (ANY((/banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt)/) .NE. 0.0)) THEN !check if atom should be rotated....
-            abc_rot=abc%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
-            abc1_rot=abc1%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
+            abc_rot=abc_in%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
+            abc1_rot=abc1_in%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
             abc => abc_rot
             abc1 => abc1_rot
           
@@ -225,8 +225,6 @@ CONTAINS
 
    SUBROUTINE orbcomp_init(thisOrbcomp, input, banddos, atoms, kpts, eig)
 
-      USE m_types_setup
-      USE m_types_kpts
 
       IMPLICIT NONE
 

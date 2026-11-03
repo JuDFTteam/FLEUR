@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_eig66_mpi
 use m_juDFT
    USE m_eig66_data
@@ -5,6 +10,11 @@ use m_juDFT
    USE m_judft
 #ifdef CPP_MPI
    USE mpi
+#endif
+   USE, INTRINSIC :: iso_c_binding
+   USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig , read_eig_DA => read_eig
+#ifdef CPP_MPI
+   USE m_types_mpi, ONLY: judft_win_create
 #endif
    IMPLICIT NONE
    PRIVATE
@@ -26,7 +36,6 @@ CONTAINS
    END SUBROUTINE priv_find_data
 
    SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, l_noco, l_olap, n_size_opt, filename)
-      USE, INTRINSIC::iso_c_binding
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: id, mpi_comm, nmat, neig, nkpts, jspins
       LOGICAL, INTENT(IN) :: l_noco, create, l_real, l_soc, l_olap
@@ -97,7 +106,6 @@ CONTAINS
 
    CONTAINS
       SUBROUTINE priv_create_memory(slot_size, local_slots, handle, int_data_ptr, real_data_ptr, cmplx_data_ptr)
-         use m_types_mpi, only: judft_win_create
          IMPLICIT NONE
          INTEGER, INTENT(IN)           :: slot_size, local_slots
          INTEGER, POINTER, OPTIONAL, ASYNCHRONOUS  :: int_data_ptr(:)
@@ -180,7 +188,6 @@ CONTAINS
       END SUBROUTINE priv_create_memory
 
       SUBROUTINE priv_readfromfileDA()
-         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, read_eig_DA => read_eig, close_eig_DA => close_eig
          IMPLICIT NONE
 
          INTEGER:: nk, jspin, neig, tmp_id
@@ -221,7 +228,6 @@ CONTAINS
       ENDIF
       CONTAINS
       SUBROUTINE priv_writetofileDA()
-         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
          IMPLICIT NONE
 
          INTEGER:: nk, jspin, neig, tmp_id

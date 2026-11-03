@@ -1,6 +1,10 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_writeCFOutput
 
-   USE m_types
    USE m_juDFT
    USE m_constants
    USE m_lattHarmsSphHarmsConv
@@ -8,8 +12,25 @@ MODULE m_writeCFOutput
    USE m_vgen
    USE m_intgr
    USE m_mpi_bc_tool
+   USE m_types_atoms
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_xcpot
+#ifdef CPP_HDF
+   USE hdf5
+#endif
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: writecfoutput
 
    CONTAINS
 

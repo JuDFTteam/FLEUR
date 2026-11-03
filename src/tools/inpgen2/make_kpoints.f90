@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,16 +7,22 @@ MODULE m_make_kpoints
   USE m_juDFT
   use m_types_kpts
   USE m_constants
+  USE m_types_cell
+  USE m_types_sym
+  USE m_types_hybinp
+  USE m_kpts_kplib
+  USE m_types_brZone
+  USE m_divi
+  USE m_kvecon
+  USE m_bravais
+  USE m_brzone2
+  USE m_kptmop
+  USE m_kptgen_hybrid
   IMPLICIT NONE
   private
   public :: make_kpoints, add_special_points_default
 CONTAINS
   SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,l_gamma,str,kptsName,kptsPath)
-    USE m_types_kpts
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_hybinp
-    USE m_kpts_kplib
     TYPE(t_kpts),INTENT(out)   :: kpts
     TYPE(t_cell),INTENT(in)    :: cell
     TYPE(t_sym),INTENT(in)     :: sym
@@ -118,6 +124,9 @@ CONTAINS
        READ(str,*) grid
        PRINT *,"Generating a k-point grid:",grid
        CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
+    ELSEIF(INDEX(str,'plane=')==1) THEN
+       str=str(7:)
+       CALL init_by_plane(kpts,str)
     ELSEIF(INDEX(str,'file')==1) THEN
        CALL init_by_kptsfile(kpts,film)
        PRINT *,"Reading old kpts file"
@@ -203,7 +212,6 @@ CONTAINS
 
 
   SUBROUTINE init_special(kpts,cell,film)
-    USE m_types_cell
     CLASS(t_kpts),INTENT(inout):: kpts
     LOGICAL,INTENT(IN)         :: film
     TYPE(t_cell),INTENT(IN)    :: cell
@@ -272,8 +280,6 @@ CONTAINS
 
 
   SUBROUTINE init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
-    USE m_types_cell
-    USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     LOGICAL,INTENT(in)       :: film,l_soc_or_ss,l_gamma
     LOGICAL,INTENT(IN)       :: l_OnlyIdentitySym
@@ -300,8 +306,6 @@ CONTAINS
   END SUBROUTINE init_defaults
 
   SUBROUTINE init_by_density(kpts,density,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
-    USE m_types_cell
-    USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     REAL,INTENT(in)          :: density
     TYPE(t_cell),INTENT(IN)  :: cell
@@ -321,12 +325,6 @@ CONTAINS
   END SUBROUTINE init_by_density
 
   SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
-    USE m_constants
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_brZone
-    USE m_divi
-    USE m_kvecon
 
     IMPLICIT NONE
 
@@ -386,15 +384,6 @@ CONTAINS
     ! and kvecon routines of the MD-programm.                              |
     !                                                          G.B. 07/01  |
     !----------------------------------------------------------------------+
-    USE m_constants
-    USE m_bravais
-    USE m_brzone2
-    USE m_kptmop
-    USE m_kvecon
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_brZone
-    USE m_kptgen_hybrid
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -522,9 +511,6 @@ CONTAINS
   END SUBROUTINE init_by_grid
 
   SUBROUTINE add_special_points_default(kpts,film,cell,l_check)
-    USE m_judft
-    USE m_bravais
-    USE m_types_cell
     TYPE(t_kpts),INTENT(inout)     :: kpts
     LOGICAL,INTENT(in)             :: film
     LOGICAL,OPTIONAL,INTENT(INOUT) :: l_check
@@ -758,4 +744,45 @@ CONTAINS
     END IF
     CALL timestop('add_special_kpoints_default')
   END SUBROUTINE add_special_points_default
+  SUBROUTINE init_by_plane(kpts,str)
+    !----------------------------------------------------------------------+
+    ! Generate an explicit 2D k-point set (plane) in fractional reciprocal |
+    ! coordinates, stored as a named kPointList (no symmetry reduction):   |
+    !   k(i,j) = origin + i/(n1-1) v1 + j/(n2-1) v2                         |
+    ! Argument string (slashes group the vectors/counts):                  |
+    !   ox,oy,oz/v1x,v1y,v1z/v2x,v2y,v2z/n1/n2                              |
+    !----------------------------------------------------------------------+
+    IMPLICIT NONE
+    CLASS(t_kpts),INTENT(out)      :: kpts
+    CHARACTER(len=*),INTENT(in)    :: str
+
+    REAL    :: origin(3), v1(3), v2(3), t1, t2
+    INTEGER :: n1, n2, i, j, ik, p
+    CHARACTER(len=500) :: s
+
+    ! list-directed READ treats '/' as a terminator -> replace by blanks first
+    s = str
+    DO p = 1, LEN_TRIM(s)
+       IF (s(p:p)=='/') s(p:p)=' '
+    END DO
+    READ(s,*) origin, v1, v2, n1, n2
+    IF (n1<2 .OR. n2<2) CALL juDFT_error("init_by_plane: n1,n2 must be >=2", &
+                                         calledby="init_by_plane")
+
+    kpts%nkpt = n1*n2
+    ALLOCATE(kpts%bk(3,kpts%nkpt), kpts%wtkpt(kpts%nkpt))
+    ik = 0
+    DO i = 0, n1-1
+       t1 = REAL(i)/REAL(n1-1)
+       DO j = 0, n2-1
+          t2 = REAL(j)/REAL(n2-1)
+          ik = ik+1
+          kpts%bk(:,ik) = origin + t1*v1 + t2*v2
+       END DO
+    END DO
+    kpts%wtkpt    = 1.0/REAL(kpts%nkpt)
+    kpts%kptsKind = KPTS_KIND_PLANE
+    PRINT *,"Generating a k-point plane: n1,n2 =",n1,n2," -> ",kpts%nkpt," k-points"
+  END SUBROUTINE init_by_plane
+
 END MODULE m_make_kpoints

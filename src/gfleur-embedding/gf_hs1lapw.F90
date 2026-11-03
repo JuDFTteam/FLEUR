@@ -5,6 +5,12 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_hs1lapw
       use m_juDFT
+      use m_gf_types
+      use m_gf_hsdata
+      use m_gf_hs_int
+      use m_hsmt
+      use m_gf_spectrum, only: gf_spectrum_clean
+      use m_gf_stepsanaly, only: gf_initstepsanaly, gf_stepf_nohelpregion
       IMPLICIT NONE
       PRIVATE
 
@@ -22,18 +28,12 @@
 !     - the interstitial part comes from gf_hs_int (GF step function
 !       on the full G-difference box, GF potential vpw)
 !     - the MT part comes from the standard hsmt working on the
-!       tlmplm/usdus data prepared by gf_tlmplminit (local_ham)
+!       tlmplm data prepared by gf_tlmplminit (local_ham)
 !     - the matrices are dense t_mat objects; the assembled H,S are
 !       stored Hermitian-completed in gf_hsdata
 !     Daniel Wortmann, Sat Mar  2 13:46:30 2002
 !*****************************************************************
 
-      USE m_gf_types
-      USE m_gf_hsdata
-      USE m_gf_hs_int
-      USE m_hsmt
-      USE m_gf_spectrum,ONLY: gf_spectrum_clean
-      use m_gf_stepsanaly, only: gf_initstepsanaly, gf_stepf_nohelpregion
       IMPLICIT NONE
       !<--Arguments
       INTEGER,INTENT(IN)            :: jspin
@@ -103,7 +103,7 @@
       CALL timestart("hssphn")
       CALL hsmt(ld%fi%atoms,ld%fi%sym,ld%enpara,jspin,ld%fi%input,       &
      &          gmpi%fmpi,ld%fi%noco,ld%nococonv,ld%fi%cell,lapw,        &
-     &          ld%usdus,ld%tlmplm,smat,hmat)
+     &          ld%tlmplm,smat,hmat)
       CALL timestop("hssphn")
       !>
 

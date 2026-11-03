@@ -1,4 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_pwintsl
+   USE m_spgrot
+   USE m_constants, ONLY: tpi_const
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_stars
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: pwint_sl
 CONTAINS
   SUBROUTINE pwint_sl(stars,atoms,sym,zsl1,zsl2, volsl,volintsl, cell,nmtsl1, kv, x)
     !     ******************************************************************
@@ -6,9 +20,6 @@ CONTAINS
     !     interstial region of a film                Yury Koroteev  
     !                                   from  pwint.F  by  c.l.fu              
     !     ******************************************************************
-    USE m_spgrot
-    USE m_constants,ONLY: tpi_const
-    USE m_types
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)     :: sym
     TYPE(t_stars),INTENT(IN)   :: stars

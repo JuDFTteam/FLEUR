@@ -1,0 +1,757 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      MnGe                                                                                                
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.6" Gmax="10.8" GmaxXC="10.8" numbands="0"/>
+      <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0" sdNocoIR="T"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="vwn" relativisticCorrections="F"/>
+      <magnetism jspins="1"/>
+      <soc l_soc="T" theta="0.1" phi="0.2" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="1856.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="default-1"/>
+         <kPointLists>
+            <kPointList name="default-1" count="1" nx="1" ny="1" nz="1" type="mesh">
+               <kPoint weight="     1.0000000000000">   0.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+            </kPointList>
+         </kPointLists>
+      </bzIntegration>
+      <symmetryOperations>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+      </symmetryOperations>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>   36.0000000000000000     0.0000000000000000     0.0000000000000000</row-1>
+            <row-2>    0.0000000000000000    36.0000000000000000     0.0000000000000000</row-2>
+            <row-3>    0.0000000000000000     0.0000000000000000     9.0000000000000000</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Manganese (Mn)" element="Mn" atomicNumber="25">
+         <mtSphere radius="2.2" gridPoints="727" logIncrement="0.017"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.25" spinDown="0.75"/>
+            <stateOccupation state="(3d5/2)" spinUp="3.0" spinDown="0.0"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+      <species name="Germanium (Ge)" element="Ge" atomicNumber="32">
+         <mtSphere radius="2.2" gridPoints="727" logIncrement="0.017"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2)</coreConfig>
+            <valenceConfig>(4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2)</valenceConfig>
+            <stateOccupation state="(4p1/2)" spinUp="0.3333333333333" spinDown="0.3333333333333"/>
+            <stateOccupation state="(4p3/2)" spinUp="0.6666666666667" spinDown="0.6666666666667"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                   1">.0965000000 .0965000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                   2">.0285000000 -.0965000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                   3">-.0965000000 .2215000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                   4">.2215000000 .0285000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                   5">.0240000000 .0240000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                   6">.1010000000 -.0240000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                   7">-.0240000000 .1490000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                   8">.1490000000 .1010000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                   9">.3465000000 .0965000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  10">.2785000000 -.0965000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  11">.1535000000 .2215000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  12">.4715000000 .0285000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  13">.2740000000 .0240000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  14">.3510000000 -.0240000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  15">.2260000000 .1490000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  16">.3990000000 .1010000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  17">.0965000000 .3465000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  18">.0285000000 .1535000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  19">-.0965000000 .4715000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  20">.2215000000 .2785000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  21">.0240000000 .2740000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  22">.1010000000 .2260000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  23">-.0240000000 .3990000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  24">.1490000000 .3510000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  25">.3465000000 .3465000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  26">.2785000000 .1535000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  27">.1535000000 .4715000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  28">.4715000000 .2785000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  29">.2740000000 .2740000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  30">.3510000000 .2260000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  31">.2260000000 .3990000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  32">.3990000000 .3510000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  33">-.4035000000 .0965000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  34">-.4715000000 -.0965000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  35">.4035000000 .2215000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  36">-.2785000000 .0285000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  37">-.4760000000 .0240000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  38">-.3990000000 -.0240000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  39">.4760000000 .1490000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  40">-.3510000000 .1010000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  41">-.1535000000 .0965000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  42">-.2215000000 -.0965000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  43">-.3465000000 .2215000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  44">-.0285000000 .0285000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  45">-.2260000000 .0240000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  46">-.1490000000 -.0240000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  47">-.2740000000 .1490000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  48">-.1010000000 .1010000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  49">-.4035000000 .3465000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  50">-.4715000000 .1535000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  51">.4035000000 .4715000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  52">-.2785000000 .2785000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  53">-.4760000000 .2740000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  54">-.3990000000 .2260000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  55">.4760000000 .3990000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  56">-.3510000000 .3510000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  57">-.1535000000 .3465000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  58">-.2215000000 .1535000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  59">-.3465000000 .4715000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  60">-.0285000000 .2785000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  61">-.2260000000 .2740000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  62">-.1490000000 .2260000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  63">-.2740000000 .3990000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  64">-.1010000000 .3510000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  65">.0965000000 -.4035000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  66">.0285000000 .4035000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  67">-.0965000000 -.2785000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  68">.2215000000 -.4715000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  69">.0240000000 -.4760000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  70">.1010000000 .4760000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  71">-.0240000000 -.3510000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  72">.1490000000 -.3990000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  73">.3465000000 -.4035000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  74">.2785000000 .4035000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  75">.1535000000 -.2785000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  76">.4715000000 -.4715000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  77">.2740000000 -.4760000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  78">.3510000000 .4760000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  79">.2260000000 -.3510000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  80">.3990000000 -.3990000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  81">.0965000000 -.1535000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  82">.0285000000 -.3465000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  83">-.0965000000 -.0285000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  84">.2215000000 -.2215000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  85">.0240000000 -.2260000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  86">.1010000000 -.2740000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  87">-.0240000000 -.1010000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  88">.1490000000 -.1490000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  89">.3465000000 -.1535000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  90">.2785000000 -.3465000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  91">.1535000000 -.0285000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  92">.4715000000 -.2215000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  93">.2740000000 -.2260000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  94">.3510000000 -.2740000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  95">.2260000000 -.1010000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                  96">.3990000000 -.1490000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  97">-.4035000000 -.4035000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  98">-.4715000000 .4035000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                  99">.4035000000 -.2785000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 100">-.2785000000 -.4715000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 101">-.4760000000 -.4760000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 102">-.3990000000 .4760000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 103">.4760000000 -.3510000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 104">-.3510000000 -.3990000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 105">-.1535000000 -.4035000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 106">-.2215000000 .4035000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 107">-.3465000000 -.2785000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 108">-.0285000000 -.4715000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 109">-.2260000000 -.4760000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 110">-.1490000000 .4760000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 111">-.2740000000 -.3510000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 112">-.1010000000 -.3990000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 113">-.4035000000 -.1535000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 114">-.4715000000 -.3465000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 115">.4035000000 -.0285000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 116">-.2785000000 -.2215000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 117">-.4760000000 -.2260000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 118">-.3990000000 -.2740000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 119">.4760000000 -.1010000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 120">-.3510000000 -.1490000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 121">-.1535000000 -.1535000000 .3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 122">-.2215000000 -.3465000000 -.1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 123">-.3465000000 -.0285000000 .1140000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Manganese (Mn)">
+         <relPos label="                 124">-.0285000000 -.2215000000 -.3860000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 125">-.2260000000 -.2260000000 .0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 126">-.1490000000 -.2740000000 -.4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 127">-.2740000000 -.1010000000 .4040000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Germanium (Ge)">
+         <relPos label="                 128">-.1010000000 -.1490000000 -.0960000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Users/wortmann/fleur/fleur/build.debug/inpgen -f inp.txt -inc +all -warn_only
+
+Initial (original) inpgen input (only for documentation purposes):
+MnGe
+
+36.0   0.0   0.0
+ 0.0  36.0   0.0
+ 0.0   0.0   9.0
+1.0
+
+128
+25  0.386*0.25  0.386*0.25  0.386
+25  0.114*0.25 -0.386*0.25  0.886
+25 -0.386*0.25  0.886*0.25  0.114
+25  0.886*0.25  0.114*0.25 -0.386
+32  0.096*0.25  0.096*0.25  0.096
+32  0.404*0.25 -0.096*0.25  0.596
+32 -0.096*0.25  0.596*0.25  0.404
+32  0.596*0.25  0.404*0.25 -0.096
+
+25  0.386*0.25+0.25  0.386*0.25  0.386
+25  0.114*0.25+0.25 -0.386*0.25  0.886
+25 -0.386*0.25+0.25  0.886*0.25  0.114
+25  0.886*0.25+0.25  0.114*0.25 -0.386
+32  0.096*0.25+0.25  0.096*0.25  0.096
+32  0.404*0.25+0.25 -0.096*0.25  0.596
+32 -0.096*0.25+0.25  0.596*0.25  0.404
+32  0.596*0.25+0.25  0.404*0.25 -0.096
+
+25  0.386*0.25  0.386*0.25+0.25  0.386
+25  0.114*0.25 -0.386*0.25+0.25  0.886
+25 -0.386*0.25  0.886*0.25+0.25  0.114
+25  0.886*0.25  0.114*0.25+0.25 -0.386
+32  0.096*0.25  0.096*0.25+0.25  0.096
+32  0.404*0.25 -0.096*0.25+0.25  0.596
+32 -0.096*0.25  0.596*0.25+0.25  0.404
+32  0.596*0.25  0.404*0.25+0.25 -0.096
+
+25  0.386*0.25+0.25  0.386*0.25+0.25  0.386
+25  0.114*0.25+0.25 -0.386*0.25+0.25  0.886
+25 -0.386*0.25+0.25  0.886*0.25+0.25  0.114
+25  0.886*0.25+0.25  0.114*0.25+0.25 -0.386
+32  0.096*0.25+0.25  0.096*0.25+0.25  0.096
+32  0.404*0.25+0.25 -0.096*0.25+0.25  0.596
+32 -0.096*0.25+0.25  0.596*0.25+0.25  0.404
+32  0.596*0.25+0.25  0.404*0.25+0.25 -0.096
+
+25  0.386*0.25+0.50  0.386*0.25  0.386
+25  0.114*0.25+0.50 -0.386*0.25  0.886
+25 -0.386*0.25+0.50  0.886*0.25  0.114
+25  0.886*0.25+0.50  0.114*0.25 -0.386
+32  0.096*0.25+0.50  0.096*0.25  0.096
+32  0.404*0.25+0.50 -0.096*0.25  0.596
+32 -0.096*0.25+0.50  0.596*0.25  0.404
+32  0.596*0.25+0.50  0.404*0.25 -0.096
+
+25  0.386*0.25+0.75  0.386*0.25  0.386
+25  0.114*0.25+0.75 -0.386*0.25  0.886
+25 -0.386*0.25+0.75  0.886*0.25  0.114
+25  0.886*0.25+0.75  0.114*0.25 -0.386
+32  0.096*0.25+0.75  0.096*0.25  0.096
+32  0.404*0.25+0.75 -0.096*0.25  0.596
+32 -0.096*0.25+0.75  0.596*0.25  0.404
+32  0.596*0.25+0.75  0.404*0.25 -0.096
+
+25  0.386*0.25+0.50  0.386*0.25+0.25  0.386
+25  0.114*0.25+0.50 -0.386*0.25+0.25  0.886
+25 -0.386*0.25+0.50  0.886*0.25+0.25  0.114
+25  0.886*0.25+0.50  0.114*0.25+0.25 -0.386
+32  0.096*0.25+0.50  0.096*0.25+0.25  0.096
+32  0.404*0.25+0.50 -0.096*0.25+0.25  0.596
+32 -0.096*0.25+0.50  0.596*0.25+0.25  0.404
+32  0.596*0.25+0.50  0.404*0.25+0.25 -0.096
+
+25  0.386*0.25+0.75  0.386*0.25+0.25  0.386
+25  0.114*0.25+0.75 -0.386*0.25+0.25  0.886
+25 -0.386*0.25+0.75  0.886*0.25+0.25  0.114
+25  0.886*0.25+0.75  0.114*0.25+0.25 -0.386
+32  0.096*0.25+0.75  0.096*0.25+0.25  0.096
+32  0.404*0.25+0.75 -0.096*0.25+0.25  0.596
+32 -0.096*0.25+0.75  0.596*0.25+0.25  0.404
+32  0.596*0.25+0.75  0.404*0.25+0.25 -0.096
+
+25  0.386*0.25  0.386*0.25+0.5  0.386
+25  0.114*0.25 -0.386*0.25+0.5  0.886
+25 -0.386*0.25  0.886*0.25+0.5  0.114
+25  0.886*0.25  0.114*0.25+0.5 -0.386
+32  0.096*0.25  0.096*0.25+0.5  0.096
+32  0.404*0.25 -0.096*0.25+0.5  0.596
+32 -0.096*0.25  0.596*0.25+0.5  0.404
+32  0.596*0.25  0.404*0.25+0.5 -0.096
+
+25  0.386*0.25+0.25  0.386*0.25+0.5  0.386
+25  0.114*0.25+0.25 -0.386*0.25+0.5  0.886
+25 -0.386*0.25+0.25  0.886*0.25+0.5  0.114
+25  0.886*0.25+0.25  0.114*0.25+0.5 -0.386
+32  0.096*0.25+0.25  0.096*0.25+0.5  0.096
+32  0.404*0.25+0.25 -0.096*0.25+0.5  0.596
+32 -0.096*0.25+0.25  0.596*0.25+0.5  0.404
+32  0.596*0.25+0.25  0.404*0.25+0.5 -0.096
+
+25  0.386*0.25  0.386*0.25+0.75  0.386
+25  0.114*0.25 -0.386*0.25+0.75  0.886
+25 -0.386*0.25  0.886*0.25+0.75  0.114
+25  0.886*0.25  0.114*0.25+0.75 -0.386
+32  0.096*0.25  0.096*0.25+0.75  0.096
+32  0.404*0.25 -0.096*0.25+0.75  0.596
+32 -0.096*0.25  0.596*0.25+0.75  0.404
+32  0.596*0.25  0.404*0.25+0.75 -0.096
+
+25  0.386*0.25+0.25  0.386*0.25+0.75  0.386
+25  0.114*0.25+0.25 -0.386*0.25+0.75  0.886
+25 -0.386*0.25+0.25  0.886*0.25+0.75  0.114
+25  0.886*0.25+0.25  0.114*0.25+0.75 -0.386
+32  0.096*0.25+0.25  0.096*0.25+0.75  0.096
+32  0.404*0.25+0.25 -0.096*0.25+0.75  0.596
+32 -0.096*0.25+0.25  0.596*0.25+0.75  0.404
+32  0.596*0.25+0.25  0.404*0.25+0.75 -0.096
+
+25  0.386*0.25+0.50  0.386*0.25+0.5  0.386
+25  0.114*0.25+0.50 -0.386*0.25+0.5  0.886
+25 -0.386*0.25+0.50  0.886*0.25+0.5  0.114
+25  0.886*0.25+0.50  0.114*0.25+0.5 -0.386
+32  0.096*0.25+0.50  0.096*0.25+0.5  0.096
+32  0.404*0.25+0.50 -0.096*0.25+0.5  0.596
+32 -0.096*0.25+0.50  0.596*0.25+0.5  0.404
+32  0.596*0.25+0.50  0.404*0.25+0.5 -0.096
+
+25  0.386*0.25+0.75  0.386*0.25+0.5  0.386
+25  0.114*0.25+0.75 -0.386*0.25+0.5  0.886
+25 -0.386*0.25+0.75  0.886*0.25+0.5  0.114
+25  0.886*0.25+0.75  0.114*0.25+0.5 -0.386
+32  0.096*0.25+0.75  0.096*0.25+0.5  0.096
+32  0.404*0.25+0.75 -0.096*0.25+0.5  0.596
+32 -0.096*0.25+0.75  0.596*0.25+0.5  0.404
+32  0.596*0.25+0.75  0.404*0.25+0.5 -0.096
+
+25  0.386*0.25+0.50  0.386*0.25+0.75  0.386
+25  0.114*0.25+0.50 -0.386*0.25+0.75  0.886
+25 -0.386*0.25+0.50  0.886*0.25+0.75  0.114
+25  0.886*0.25+0.50  0.114*0.25+0.75 -0.386
+32  0.096*0.25+0.50  0.096*0.25+0.75  0.096
+32  0.404*0.25+0.50 -0.096*0.25+0.75  0.596
+32 -0.096*0.25+0.50  0.596*0.25+0.75  0.404
+32  0.596*0.25+0.50  0.404*0.25+0.75 -0.096
+
+25  0.386*0.25+0.75  0.386*0.25+0.75  0.386
+25  0.114*0.25+0.75 -0.386*0.25+0.75  0.886
+25 -0.386*0.25+0.75  0.886*0.25+0.75  0.114
+25  0.886*0.25+0.75  0.114*0.25+0.75 -0.386
+32  0.096*0.25+0.75  0.096*0.25+0.75  0.096
+32  0.404*0.25+0.75 -0.096*0.25+0.75  0.596
+32 -0.096*0.25+0.75  0.596*0.25+0.75  0.404
+32  0.596*0.25+0.75  0.404*0.25+0.75 -0.096
+
+&soc 0.1 0.2 /
+&kpt div1=1 div2=1 div3=1 /
+-->

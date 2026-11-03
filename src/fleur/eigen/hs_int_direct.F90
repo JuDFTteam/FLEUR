@@ -1,13 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_hs_int_direct
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hs_int_direct
 CONTAINS
    SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
-                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt)
+                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw)
       ! Calculates matrix elements of the form
       ! <\phi_{k'G'}|M|\phi_{kG}>
       ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -30,7 +36,6 @@ CONTAINS
       ! [l_smat = F for offdiags, l_fullj = T]
       ! [iTkin = 0 for offdiags, 1 else]
 
-      USE m_types
 
       IMPLICIT NONE
 
@@ -46,19 +51,26 @@ CONTAINS
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
 
       COMPLEX, OPTIONAL, INTENT(IN) :: theta_alt(:)
+      ! Optional V_tau star coefficients for MetaGGA interstitial contribution
+      COMPLEX, OPTIONAL, INTENT(IN) :: vtau_pw(:)
 
-      INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd
+      INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd, gShift(3), gBound(3)
       COMPLEX :: th, ts, phase
       REAL    :: bvecPr(3), bvec(3), r2
 
+      gShift = nint(kvecPr - kvec - stars%center)
+      gBound = [stars%mx1, stars%mx2, stars%mx3]
+
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-      !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec) &
-      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt) &
+      !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, gShift, gBound) &
+      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, gPrG, gInd, th, ts, phase, bvecPr, bvec, r2)
       DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
          DO  ikGPr = 1, MERGE(nvPr, MIN(ikG, nvPr), l_fullj)
-            gPrG = fact * (gvecPr(:, ikGPr) - gvec(:, ikG))
+            gPrG = fact * (gvecPr(:, ikGPr) - gvec(:, ikG) + gShift)
+
+            if (any(abs(gPrG) > gBound)) cycle
 
             gInd = stars%ig(gPrG(1), gPrG(2), gPrG(3))
 
@@ -88,6 +100,14 @@ CONTAINS
                ELSE
                   th = th + phase * r2 * stars%ustep(gInd)
                END IF
+
+               ! MetaGGA V_tau interstitial contribution:
+               ! H_tau(G',G) = (1/2) V_tau(G'-G) * (k+G') . bbmat . (k+G)
+               IF (PRESENT(vtau_pw)) THEN
+                  th = th + phase * 0.5 * DOT_PRODUCT(MATMUL(bvecPr, bbmat), bvec) * vtau_pw(gInd)
+               END IF
+               ! No V_tau in the spin off-diagonal case: hs_int only passes vtau_pw for
+               ! iSpinPr == iSpin, which always implies iTkin > 0.
             END IF
 
             IF (l_smat) THEN

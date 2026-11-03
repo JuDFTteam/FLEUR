@@ -1,4 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_convol
+   USE m_types_fftGrid
+   USE m_juDFT
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: convol, dfpt_convol, dfpt_convol_direct, dfpt_convol_big
 CONTAINS
    SUBROUTINE convol(stars, fg3, ag3)
 
@@ -16,9 +27,6 @@ CONTAINS
    !* (3*stars%mx1 x 3*stars%mx2 x 3*stars%mx3)                *
    !*                                                          *
    !************************************************************
-      USE m_types_fftGrid
-      USE m_juDFT
-      USE m_types_stars
 
       IMPLICIT NONE
 
@@ -49,9 +57,6 @@ CONTAINS
    END SUBROUTINE convol
 
    SUBROUTINE dfpt_convol(stars, starsq, pw, pwq, pww)
-      USE m_types_fftGrid
-      USE m_juDFT
-      USE m_types_stars
 
       IMPLICIT NONE
 
@@ -85,9 +90,6 @@ CONTAINS
    SUBROUTINE dfpt_convol_direct(stars, starsq, pw, pwq, pwwq)
       ! TODO: Should probably be replaced by a "finer" function with full
       !       G-grid for ustep(1)
-      USE m_types_fftGrid
-      USE m_juDFT
-      USE m_types_stars
 
       IMPLICIT NONE
 
@@ -117,9 +119,6 @@ CONTAINS
    END SUBROUTINE dfpt_convol_direct
 
    SUBROUTINE dfpt_convol_big(resultstar, stars, starsfull, pw, pwfull, pww)
-      USE m_types_fftGrid
-      USE m_juDFT
-      USE m_types_stars
 
       IMPLICIT NONE
 

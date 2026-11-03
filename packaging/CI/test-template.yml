@@ -4,6 +4,9 @@
     juDFT_MPI: ""
     juDFT_PYTHON: ""
     OMP_NUM_THREADS: 2
+    # idle MPI ranks/OpenMP threads yield the CPU instead of spinning on shared runners
+    OMPI_MCA_mpi_yield_when_idle: 1
+    OMP_WAIT_POLICY: PASSIVE
     BUILD_FOLDER: build
     SUMMARY_FILE: "Testing/pytest_summary.out"
     PYTEST_ADDOPTS: ""

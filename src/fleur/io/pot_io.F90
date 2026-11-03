@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,7 +14,6 @@
 
 MODULE m_pot_io
 
-   USE m_types
    USE m_juDFT
    USE m_loddop
    USE m_wrtdop
@@ -23,6 +22,15 @@ MODULE m_pot_io
 #ifdef CPP_HDF
    USE hdf5
 #endif
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    IMPLICIT NONE
 
    PRIVATE
@@ -155,6 +163,8 @@ MODULE m_pot_io
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
                      iUnit,iter,fr,fpw,fvac)
 
+         CALL stars%fill_2nd_vac(vacuum,fvac)
+
          CLOSE(iUnit)
       END IF
 
@@ -217,16 +227,7 @@ MODULE m_pot_io
 
          potentialType = POTENTIAL_TYPE_IN_const
 
-         IF(vacuum%nvac.EQ.1) THEN
-            !pot%vacz(:,2,:) = pot%vacz(:,1,:)
-            IF (sym%invs) THEN
-               !pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
-               pot%vac(:,:,2,:) = CONJG(pot%vac(:,:,1,:))
-            ELSE
-               !pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
-               pot%vac(:,:,2,:) = pot%vac(:,:,1,:)
-            END IF
-         END IF
+         CALL stars%fill_2nd_vac(vacuum,pot%vac)
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
                                 currentStepfunctionIndex,iter,pot,fpw,noco%l_noco,any(noco%l_unrestrictMT))
@@ -240,7 +241,7 @@ MODULE m_pot_io
 #endif
       ELSE IF(mode.EQ.POT_STREAM_MODE) THEN
          ! Write potential to pot.str file
-         STOP 'POT_STREAM_MODE not yet implemented!'
+         CALL judft_error('POT_STREAM_MODE not yet implemented!')
       ELSE
          ! Direct mode
          filename = 'illegalPotentialArchive'

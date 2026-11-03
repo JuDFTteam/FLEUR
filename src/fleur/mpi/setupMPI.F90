@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,21 +9,28 @@ MODULE m_setupMPI
   use mpi
 #endif
   use m_juDFT
+!$ use omp_lib
+  use m_omp_checker
+  use m_available_solvers, only: parallel_solver_available, print_solver
+  use m_types_mpi
+#ifdef _OPENACC
+  use openacc
+#endif
   IMPLICIT NONE
+  private
+  public :: setupmpi, priv_distribute_k, priv_create_comm, priv_dist_info, priv_redist_for_diag, priv_distribute_gpu, &
+     nvidia_mps
 
 CONTAINS
   SUBROUTINE setupMPI(nkpt,neigd,nbasfcn,fmpi,l_real,l_noco)
-!$  use omp_lib
 
-    use m_omp_checker
-    USE m_types
-    USE m_available_solvers,ONLY:parallel_solver_available,print_solver
     INTEGER,INTENT(in)           :: nkpt,neigd,nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
     REAL    :: matricesSize
     logical :: finished, l_real, l_noco
+    CHARACTER(len=30) :: solver_name
 
     TYPE(t_log_message) :: log
     
@@ -102,7 +109,14 @@ CONTAINS
          endif
        endif
 #endif
-       if (fmpi%irank==0) write(*,'(a,a12)') " Eigenvalue solver        : ", TRIM(print_solver(fmpi%n_size>1))
+       !print_solver() must not be evaluated inside the output list of the write
+       !below: it can fail with juDFT_error, which writes to the same unit, and
+       !such recursive I/O deadlocks on the unit lock instead of reporting the
+       !error. Determine the name first, print it afterwards.
+       if (fmpi%irank==0) THEN
+          solver_name = print_solver(fmpi%n_size>1)
+          write(*,'(a,a12)') " Eigenvalue solver        : ", TRIM(solver_name)
+       END IF
 
        ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
        ! this corresponds to the compact = .true. switch in priv_create_comm
@@ -150,7 +164,6 @@ CONTAINS
 
 
   SUBROUTINE priv_distribute_k(nkpt,nbasfcn,fmpi)
-    use m_types
     implicit none
     INTEGER,INTENT(in)      :: nkpt, nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
@@ -236,7 +249,6 @@ CONTAINS
   END SUBROUTINE priv_distribute_k
 
   SUBROUTINE priv_create_comm(nkpt,neigd,fmpi)
-    use m_types
     implicit none
     INTEGER,INTENT(in)      :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: fmpi
@@ -313,7 +325,6 @@ CONTAINS
   END SUBROUTINE priv_create_comm
 
   SUBROUTINE priv_dist_info(nkpt)
-    USE m_available_solvers,ONLY:parallel_solver_available
     IMPLICIT NONE
     INTEGER,INTENT(in)           :: nkpt
 
@@ -336,7 +347,6 @@ CONTAINS
   END SUBROUTINE priv_dist_info
 
   subroutine priv_redist_for_diag(fmpi)
-    use m_types_mpi
     type(t_mpi),intent(inout):: fmpi
 #ifdef CPP_MPI
     IF (fmpi%n_rank==0) THEN
@@ -350,10 +360,6 @@ CONTAINS
     end
 
    subroutine priv_distribute_gpu(fmpi,log)
-#ifdef _OPENACC
-   use openacc
-#endif    
-    use m_types_mpi
     type(t_mpi),intent(in):: fmpi
     type(t_log_message),INTENT(INOUT):: log
     INTEGER :: i, isize, gpus,localrank

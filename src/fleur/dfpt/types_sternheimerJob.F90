@@ -9,6 +9,7 @@
 module m_types_sternheimerJob
 
     use m_juDFT 
+    use m_types_fleurinput
     
     implicit none 
 
@@ -40,6 +41,7 @@ module m_types_sternheimerJob
         contains 
 
         procedure :: init => init_sternheimerJob
+        procedure :: kind_name
 
     end type t_sternheimerJob
 
@@ -51,7 +53,6 @@ module m_types_sternheimerJob
 
     subroutine init_sternheimerJob(this,fi,l_phonon,l_BEC,l_efield,l_bfield)
 
-        use m_types_fleurinput
         
         class(t_sternheimerJob),intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
@@ -96,7 +97,7 @@ module m_types_sternheimerJob
             ! Introduce the option to calculate a fraction of the input 
             ! Useful for restarting a calculation
             q_start = fi%dfpt%startq
-            q_stop = merge(fi%dfpt%stopq,size(fi%dfpt%qvec,2),fi%dfpt%stopq/=0)
+            q_stop = merge(fi%dfpt%stopq,fi%dfpt%qvec%nkpt,fi%dfpt%stopq/=0)
 
             jobSize = 3 * fi%atoms%nat * (q_stop - q_start + 1 ) 
 
@@ -108,7 +109,7 @@ module m_types_sternheimerJob
             allocate(this%needs_eigen(jobSize))
 
             q_start = fi%dfpt%startq
-            q_stop = merge(fi%dfpt%stopq,size(fi%dfpt%qvec,2),fi%dfpt%stopq/=0)
+            q_stop = merge(fi%dfpt%stopq,fi%dfpt%qvec%nkpt,fi%dfpt%stopq/=0)
 
 
             iJob = 1 
@@ -235,5 +236,17 @@ module m_types_sternheimerJob
         end do 
 
     end subroutine init_sternheimerJob 
+
+    function kind_name(this) result(name)
+        !! Name of the perturbation kind, used to group the density perturbations in dfpt_cdn.hdf.
+
+        class(t_sternheimerJob), intent(in) :: this
+        character(len=6)                    :: name
+
+        name = 'phonon'
+        if (this%l_efield) name = 'efield'
+        if (this%l_bfield) name = 'bfield'
+        if (this%l_BEC) name = 'bec'
+    end function kind_name
 
 end module m_types_sternheimerJob

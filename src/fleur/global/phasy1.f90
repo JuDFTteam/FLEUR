@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,7 +11,10 @@ MODULE m_phasy1
    USE m_constants
    USE m_ylm
    USE m_spgrot
-   USE m_types
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_stars
+   USE m_types_sym
    implicit none
 
    private
@@ -100,7 +103,6 @@ CONTAINS
 !     .. Local Arrays ..
       COMPLEX ciall(0:atoms%lmaxd)
       COMPLEX phas(sym%nop)
-      REAL phasr(sym%nop)
       REAL rg(3)
       INTEGER kr(3,sym%nop)
       COMPLEX, ALLOCATABLE :: ylm(:)
@@ -113,7 +115,6 @@ CONTAINS
       pylm2= CMPLX(0.0,0.0)
 
       CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr,phas)
-      phasr=REAL(phas)
 
       ALLOCATE (ylm( (atoms%lmaxd+1)**2))
       DO iOp = 1,sym%nop
@@ -123,7 +124,7 @@ CONTAINS
          ylm = conjg(ylm)
          x = tpi_const* dot_product(real(kr(:,iOp)),atoms%taual(:,iAtom))
          DO dir = 1,3
-            sf = cmplx(cos(x),sin(x))*phasr(iOp)*ImagUnit*rg(dir)
+            sf = cmplx(cos(x),sin(x))*phas(iOp)*ImagUnit*rg(dir)
             DO l = 0,atoms%lmax(iType)
                ll1 = l*(l+1) + 1
                csf = ciall(l)*sf
@@ -140,9 +141,6 @@ CONTAINS
 
    subroutine phasy1nSym(atoms, cell, Gvec, qptn, pylm)
       !Routine by C. Gerhorst to calculate phasefactors for dfpt
-      use m_ylm
-      use m_types_atoms
-      use m_types_cell
     
       implicit none
     

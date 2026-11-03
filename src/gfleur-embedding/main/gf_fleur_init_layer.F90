@@ -17,23 +17,25 @@ MODULE m_gf_fleur_init_layer
    USE mpi
 #endif
    USE m_juDFT
+   USE m_types_lapw, ONLY: lapw_dim_nvd, lapw_dim_nv2d, lapw_dim_nbasfcn
+   USE m_constants
+   USE m_gf_types
+   USE m_fleurinput_read_xml
+   USE m_fleurinput_postprocess
+   USE m_fleurinput_mpi_bc
+   USE m_make_xcpot
+   USE m_make_sphhar
+   USE m_make_stars
+   USE m_make_forcetheo
+   USE m_lapwdim
+   USE m_convn
+   USE m_cdn_io, ONLY: storeStructureIfNew
+   USE m_gf_enpara, ONLY: gf_apply_enpara_atoms
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: gf_fleur_init_layer
 CONTAINS
    SUBROUTINE gf_fleur_init_layer(fmpi, filename_add, outxmlFileID, ld)
-      USE m_types
-      USE m_constants
-      USE m_gf_types
-      USE m_fleurinput_read_xml
-      USE m_fleurinput_postprocess
-      USE m_fleurinput_mpi_bc
-      USE m_make_xcpot
-      USE m_make_sphhar
-      USE m_make_stars
-      USE m_make_forcetheo
-      USE m_lapwdim
-      USE m_convn
-      USE m_cdn_io, ONLY: storeStructureIfNew
-      USE m_gf_enpara, ONLY: gf_apply_enpara_atoms
       IMPLICIT NONE
       TYPE(t_mpi), INTENT(INOUT)     :: fmpi
       CHARACTER(len=*), INTENT(IN)   :: filename_add
@@ -42,7 +44,6 @@ CONTAINS
 
       TYPE(t_enparaXML)      :: enparaXML
       TYPE(t_forcetheo_data) :: forcetheo_data
-      TYPE(t_wann)           :: wann
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
       TYPE(t_kpts), ALLOCATABLE       :: kptsArray(:)
       CHARACTER(LEN=40)      :: kptsSelection(3)
@@ -57,22 +58,22 @@ CONTAINS
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=ld%fi%cell, sym=ld%fi%sym, &
                                   atoms=ld%fi%atoms, input=ld%fi%input, noco=ld%fi%noco, &
                                   vacuum=ld%fi%vacuum, field=ld%fi%field, sliceplot=ld%fi%sliceplot, &
-                                  banddos=ld%fi%banddos, mpinp=ld%fi%mpinp, hybinp=ld%fi%hybinp, &
-                                  coreSpecInput=ld%fi%coreSpecInput, wann=wann, xcpot=ld%xcpot, &
+                                  banddos=ld%fi%banddos, xas=ld%fi%xas, mpinp=ld%fi%mpinp, hybinp=ld%fi%hybinp, &
+                                  coreSpecInput=ld%fi%coreSpecInput, wannierlib=ld%fi%wannierlib, xcpot=ld%xcpot, &
                                   forcetheo_data=forcetheo_data, kpts=ld%fi%kpts, &
                                   kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=ld%fi%gfinp, hub1inp=ld%fi%hub1inp, &
                                   dfpt=ld%fi%dfpt)
          CALL fleurinput_postprocess(ld%fi%cell, ld%fi%sym, ld%fi%atoms, ld%fi%input, ld%fi%noco, &
                                      ld%fi%vacuum, ld%fi%banddos, ld%fi%hybinp, ld%xcpot, &
-                                     ld%fi%kpts, ld%fi%gfinp)
+                                     ld%fi%kpts, ld%fi%gfinp, ld%fi%wannierlib)
       END IF
       !Distribute the input to all PE
       CALL fleurinput_mpi_bc(ld%fi%cell, ld%fi%sym, ld%fi%atoms, ld%fi%input, ld%fi%noco, &
                              ld%fi%vacuum, ld%fi%field, ld%fi%sliceplot, ld%fi%banddos, &
-                             ld%fi%mpinp, ld%fi%hybinp, ld%fi%coreSpecInput, wann, ld%xcpot, &
+                             ld%fi%xas, ld%fi%mpinp, ld%fi%hybinp, ld%fi%coreSpecInput, ld%xcpot, &
                              forcetheo_data, ld%fi%kpts, enparaXML, ld%fi%gfinp, ld%fi%hub1inp, &
-                             fmpi%mpi_comm, ld%fi%dfpt)
+                             fmpi%mpi_comm, ld%fi%dfpt, wannierlib=ld%fi%wannierlib)
       !Remaining init is done using all PE
       CALL make_xcpot(fmpi, ld%xcpot, ld%fi%atoms, ld%fi%input)
       CALL ld%nococonv%init(ld%fi%noco)
@@ -87,7 +88,7 @@ CONTAINS
       CALL make_stars(ld%stars, ld%fi%sym, ld%fi%atoms, ld%fi%vacuum, ld%sphhar, ld%fi%input, &
                       ld%fi%cell, ld%fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, ld%fi%cell, ld%fi%sym, ld%fi%atoms, forcetheo)
-      CALL ld%fi%dfpt%init(ld%fi%cell, ld%fi%input)
+      CALL ld%fi%dfpt%init(ld%fi%cell, ld%fi%input, ld%fi%sym, ld%fi%noco)
       CALL lapw_dim(ld%fi%kpts, ld%fi%cell, ld%fi%input, ld%fi%noco, ld%nococonv, forcetheo, &
                     ld%fi%atoms, nbasfcn, ld%fi%dfpt)
       !snapshot the global LAPW dimensions for this layer - they must be

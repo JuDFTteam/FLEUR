@@ -1,7 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_corg91
 !.....-----------------------------------------------------------------
 !     gga91 correlation
 !.....-----------------------------------------------------------------
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: corg91
 CONTAINS
    SUBROUTINE corg91(fk,sk,gz,ec,ecrs,eczta,rs,zta,t,uu,vv,ww,h, &
                      dvcup,dvcdn)

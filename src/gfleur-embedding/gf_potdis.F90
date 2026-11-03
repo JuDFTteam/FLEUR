@@ -4,6 +4,15 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_potdis 
+          USE m_constants, ONLY: oUnit
+          USE m_gf_types
+          USE m_constants
+          USE m_gf_fft
+          USE m_gf_iodop
+          USE m_gf_stepsanaly
+          USE m_intgr, ONLY: intgr3
+          USE m_gf_plot
+          USE m_radfun
           IMPLICIT NONE
           private
           public gf_potdis
@@ -17,13 +26,6 @@
 !                                                                       
 !     Daniel Wortmann, Fri Aug 23 15:18:32 2002                         
 !*****************************************************************      
-      USE m_gf_types 
-      USE m_constants 
-      USE m_gf_fft 
-      USE m_gf_iodop 
-      USE m_gf_stepsanaly 
-      USE m_intgr, ONLY : intgr3 
-      USE m_gf_plot 
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_atoms),INTENT(IN)  :: atoms 
@@ -218,9 +220,6 @@
       END SUBROUTINE 
 
       subroutine gf_project_differences(layer,atoms,enpara,vr,drho)
-      use m_gf_types
-      use m_intgr, only: intgr3
-        use m_radfun
       implicit none
       integer,intent(in)        :: layer
       type(t_atoms),intent(in)  :: atoms

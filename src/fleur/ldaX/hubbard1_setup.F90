@@ -1,7 +1,11 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hubbard1_setup
 
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_uj2f
    USE m_doubleCounting
@@ -20,7 +24,27 @@ MODULE m_hubbard1_setup
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_types_atoms
+   use m_types_cell
+   use m_types_gfinp
+   use m_types_greensf
+   use m_types_hub1data
+   use m_types_hub1inp
+   use m_types_input
+   use m_types_kpts
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_sym
+#ifdef CPP_HDF
+   use hdf5
+#endif
    IMPLICIT NONE
+   private
+   public :: hubbard1_setup, hubbard1_path, hubbard1calcfolder, hubbard1outfile, cfg_file_ccf, cfg_file_bath
 
    CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
    CHARACTER(len=30), PARAMETER :: hubbard1Outfile    = "out"

@@ -1,15 +1,18 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_doubleCounting
 
    USE m_constants
-   USE m_types
    USE m_coulombPotential
+   USE m_types_nococonv
+   USE m_types_atoms
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: doublecountingpot, doublecountingenergy, doublecountingmixfactor
 
    CONTAINS
 

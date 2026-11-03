@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,13 +8,21 @@ MODULE m_symmetrizeh
 
 ! symmetrize the Hamiltonian according to the symmetry operations of the little group of k
 
+   use m_map_to_unit
+   use m_juDFT
+   use m_constants
+   use m_types_fleurinput_base
+   use m_types_atoms
+   use m_types_cell
+   use m_types_lapw
+   use m_types_mat
+   use m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: symmetrizeh
 CONTAINS
 
    SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, cell, nsymop, psym, hmat)
-      use m_map_to_unit
-      USE m_juDFT
-      USE m_types
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -542,8 +550,6 @@ CONTAINS
 
       ! Returns the spherical harmonics Y_lm(^rvec) for l = 0,...,ll in Y(1,...,(ll+1)**2).
       SUBROUTINE harmonicsr(Y, rvec, ll)
-         use m_judft
-         use m_constants, only: CMPLX_NOT_INITALIZED
          IMPLICIT NONE
          INTEGER, INTENT(IN)    :: ll
          REAL, INTENT(IN)       :: rvec(:)

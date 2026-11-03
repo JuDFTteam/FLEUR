@@ -1,7 +1,13 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_rotMMPmat
 
    USE m_constants
    USE m_types_sym
+   USE m_types_nococonv
 
    IMPLICIT NONE
 
@@ -104,7 +110,6 @@ MODULE m_rotMMPmat
    END FUNCTION rotMMPmat_dwgn
 
    PURE FUNCTION rotMMPmat_angle(mmpmat,alpha,beta,gamma,l,lp,spin_rotation,real_space_rotation,inverse) Result(mmpmatOut)
-      use m_types_nococonv
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       REAL,              INTENT(IN)  :: alpha,beta,gamma !Euler angles
       INTEGER,           INTENT(IN)  :: l

@@ -1,4 +1,7 @@
       MODULE m_maketetra
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: make_tetra
       CONTAINS
       SUBROUTINE make_tetra(
      >     nkpt,bk,ntria,itria,atr,

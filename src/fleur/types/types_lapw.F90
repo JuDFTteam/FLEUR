@@ -8,6 +8,18 @@ MODULE m_types_lapw
    USE m_judft
    use m_types_fleurinput
    use m_types_nococonv
+   use m_boxdim
+   use m_types_mpi
+   use m_sort
+   use m_types_kpts
+   use m_constants
+   use m_orthoglo
+   use m_ylm
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_noco
+   use m_types_sym
    IMPLICIT NONE
    PRIVATE
    !These dimensions should be set once per call of FLEUR
@@ -53,16 +65,17 @@ MODULE m_types_lapw
    PUBLIC :: t_lapw, lapw_dim_nbasfcn, lapw_dim_nvd, lapw_dim_nv2d
 
 CONTAINS
-   function hyb_num_bas_fun(lapw, fi) result(nbasfcn)
+   function hyb_num_bas_fun(lapw, fi, jsp) result(nbasfcn)
       implicit NONE
       class(t_lapw), intent(in)         :: lapw
       type(t_fleurinput), intent(in)    :: fi
+      integer, intent(in)               :: jsp
 
       integer :: nbasfcn
       if (fi%noco%l_noco) then
          nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot
       else
-         nbasfcn = lapw%nv(1) + fi%atoms%nlotot
+         nbasfcn = lapw%nv(jsp) + fi%atoms%nlotot
       endif
    end function hyb_num_bas_fun
 
@@ -90,9 +103,6 @@ CONTAINS
       !     determines dimensions of the lapw basis set with |k+G|<rkmax.
       !     bkpt is the k-point given in internal units
       !*********************************************************************
-      USE m_boxdim
-      USE m_types_fleurinput
-      USE m_types_nococonv
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_input), INTENT(IN)     :: input
@@ -170,8 +180,6 @@ CONTAINS
    END SUBROUTINE lapw_alloc
 
    subroutine t_lapw_init_fi(lapw, fi, nococonv, nk, mpi, dfpt_q) 
-      USE m_types_mpi
-      use m_types_fleurinput
       implicit none 
       CLASS(t_lapw), INTENT(INOUT)    :: lapw
       type(t_fleurinput), intent(in)  :: fi
@@ -197,12 +205,6 @@ CONTAINS
 
    SUBROUTINE t_lapw_init(lapw, input, noco, nococonv, kpts, atoms, sym, &
                         nk, cell,  mpi, dfpt_q)
-      USE m_types_mpi
-      USE m_sort
-      USE m_boxdim
-      USE m_types_fleurinput
-      USE m_types_kpts
-      USE m_types_nococonv
       IMPLICIT NONE
 
 
@@ -359,7 +361,6 @@ CONTAINS
       !bookkeeping (kvec/nkvec/index_lo). Public so that codes filling a
       !t_lapw with a non-standard G-vector set (e.g. the cylinder basis
       !of the Green-function embedding) can reuse the LO setup.
-      USE m_types_fleurinput
 
       IMPLICIT NONE
       CLASS(t_lapw), INTENT(INOUT):: lapw
@@ -370,19 +371,36 @@ CONTAINS
       TYPE(t_noco), INTENT(IN)   :: noco
       TYPE(t_nococonv), INTENT(IN)   :: nococonv
 
-      INTEGER:: n, na, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
+      INTEGER:: n, na, na1, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
       IF (.NOT. ALLOCATED(lapw%kvec)) THEN
          ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
-         ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat));lapw%nkvec=0
+         ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat))
          ALLOCATE (lapw%index_lo(atoms%nlod, atoms%nat))
       ENDIF
+      lapw%kvec = 0
+      lapw%nkvec = 0
+      lapw%index_lo = 0
       iindex = 0
       na = 0
       nkvec_sv = 0
       DO n = 1, atoms%ntype
          DO nn = 1, atoms%neq(n)
             na = na + 1
-            if (sym%invsat(na) > 1) cycle
+            if (sym%invsat(na) > 1) then
+               ! Copy LO setup from inversion partner (atom1).
+               ! When the invsat shortcut is active, atom2 is skipped in
+               ! calc_abc so this data is unused. When the shortcut is
+               ! disabled (e.g. SOC), atom2 is computed directly and needs
+               ! valid nkvec/index_lo/kvec pointing to the same z-vector
+               ! positions as atom1 (the invsat LO block covers both atoms).
+               na1 = sym%invsatnr(na)
+               DO lo = 1, atoms%nlo(n)
+                  lapw%nkvec(lo, na)   = lapw%nkvec(lo, na1)
+                  lapw%index_lo(lo, na) = lapw%index_lo(lo, na1)
+                  lapw%kvec(:, lo, na)  = lapw%kvec(:, lo, na1)
+               END DO
+               cycle
+            end if
             np = sym%invtab(sym%ngopr(na))
             CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
             DO lo = 1, atoms%nlo(n)
@@ -394,8 +412,6 @@ CONTAINS
    END SUBROUTINE lapw_init_lo
 
    SUBROUTINE lapw_phase_factors(lapw, iintsp, tau, qss, cph)
-      USE m_constants
-      USE m_types_fleurinput
       IMPLICIT NONE
       CLASS(t_lapw), INTENT(in):: lapw
       INTEGER, INTENT(IN)     :: iintsp
@@ -417,10 +433,6 @@ CONTAINS
 
    SUBROUTINE priv_vec_for_lo_old(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
 
-      USE m_constants
-      USE m_orthoglo
-      USE m_ylm
-      USE m_types_fleurinput
 
       IMPLICIT NONE
 
@@ -615,10 +627,6 @@ CONTAINS
 
    SUBROUTINE priv_vec_for_lo(atoms, input, sym, na, ntype, np, noco, nococonv, lapw, cell)
 
-      USE m_constants
-      USE m_orthoglo
-      USE m_ylm
-      USE m_types_fleurinput
 
       IMPLICIT NONE
 

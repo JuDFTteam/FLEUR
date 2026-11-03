@@ -1,8 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_lorentzian_smooth
 
    USE m_constants
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: lorentzian_smooth_r, lorentzian_smooth_c, lorentzian_smooth, cut
 
    !PARAMETER FOR LORENTZIAN SMOOTHING
    REAL,    PARAMETER :: cut              = 1e-8

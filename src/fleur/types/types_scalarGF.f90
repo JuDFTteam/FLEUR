@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_scalarGF
 
    !This module contains a generic scalarproduct type, which is used to construct
@@ -7,6 +12,7 @@ MODULE m_types_scalarGF
    USE m_juDFT
    USE m_types_atoms
    USE m_types_input
+   USE m_intgr
 
    IMPLICIT NONE
 
@@ -72,7 +78,6 @@ MODULE m_types_scalarGF
 
    SUBROUTINE addOffdScalarProduct(this,l,lp,atomType,atomTypep,l_intersite,l_mperp,atoms,input,f,g,flo)
 
-      USE m_intgr
 
       CLASS(t_scalarGF),   INTENT(INOUT) :: this
       INTEGER,             INTENT(IN)    :: l,lp

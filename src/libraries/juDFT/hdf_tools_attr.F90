@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,6 +12,14 @@ MODULE m_hdf_tools1
 !
 !-----------------------------------------------
    USE m_hdf_tools4
+   USE hdf5
+   USE m_hdf_tools3
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: io_write_attchar0, io_read_attchar0, io_write_attlog0, io_read_attlog0, io_write_attreal0, &
+      io_write_attreal1, io_write_attreal2, io_write_attreal3, io_read_attreal0, io_read_attreal1, io_read_attreal2, &
+      io_read_attreal3, io_write_attint0, io_write_attint1, io_write_attint2, io_write_attint3, io_read_attint0, &
+      io_read_attint1, io_read_attint2, io_read_attint3
    !PRIVATE
    !<-- definitions of interfaces
    INTERFACE io_write_att
@@ -43,7 +51,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attchar0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -64,7 +71,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attchar0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -90,8 +96,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attlog0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
-      USE m_hdf_tools3 !This is for the subroutine io_attexists
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -126,7 +130,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attlog0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -153,7 +156,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attreal0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -165,8 +167,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attreal1(did, name, DATA)
 !*****************************************************************
-      USE hdf5
-      USE m_hdf_tools3 !This is for the subroutine io_attexists
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -196,7 +196,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attreal2(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -217,7 +216,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attreal3(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -238,7 +236,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attreal0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -261,7 +258,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attreal1(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -283,7 +279,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attreal2(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -306,7 +301,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attreal3(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -333,8 +327,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attint0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
-      USE m_hdf_tools3 !This is for the subroutine io_attexists
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -363,7 +355,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attint1(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -384,7 +375,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attint2(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -405,7 +395,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_write_attint3(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -426,7 +415,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attint0(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -447,7 +435,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attint1(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -469,7 +456,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attint2(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -492,7 +478,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_attint3(did, name, DATA)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did

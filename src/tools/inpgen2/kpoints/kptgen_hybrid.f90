@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,13 @@
 MODULE m_kptgen_hybrid
 
    USE m_juDFT
+   USE m_types_cell
+   USE m_types_sym
+   USE m_types_kpts
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: kptgen_hybrid
 
 CONTAINS
 
@@ -15,17 +22,13 @@ CONTAINS
 
 ! odified for types D.W.
 
-   SUBROUTINE kptgen_hybrid(film, grid, cell, sym, kpts, l_soc, l_onlyIdentitySym)
+   SUBROUTINE kptgen_hybrid(film, grid_in, cell, sym, kpts, l_soc, l_onlyIdentitySym)
 
-      USE m_types_cell
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_constants
 
       IMPLICIT NONE
 
       LOGICAL, INTENT(IN)           :: film
-      INTEGER, INTENT(IN)           :: grid(3)
+      INTEGER, INTENT(IN)           :: grid_in(3)
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_kpts), INTENT(INOUT)   :: kpts
@@ -45,6 +48,18 @@ CONTAINS
       REAL, ALLOCATABLE      ::  bk(:, :), bkhlp(:, :)
       REAL, ALLOCATABLE      ::  rarr(:)
       LOGICAL               ::  ldum
+      INTEGER               ::  grid(3)
+
+      grid = grid_in
+      IF (film) THEN
+         IF (grid_in(3) > 1) CALL juDFT_warn( &
+            "Film: third k-point grid dimension ignored, using a 2D mesh", &
+            calledby="kptgen_hybrid")
+         grid(3) = 1
+      END IF
+      IF (ANY(grid < 1)) CALL juDFT_error( &
+         "Invalid k-point grid for the hybrid-functional mesh generator", &
+         calledby="kptgen_hybrid", hint="all grid dimensions must be >= 1")
 
       nkpt = grid(1)*grid(2)*grid(3)
       ALLOCATE(bk(3, nkpt), bkhlp(3, nkpt))

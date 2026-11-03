@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_umtx
    !*********************************************************************
    !* The calculation of the "U"-contribution to Hartree-Fock matrix.   *
@@ -7,9 +12,11 @@ MODULE m_umtx
    USE m_juDFT
    USE m_constants
    USE m_sgaunt
-   USE m_types
+   USE m_types_atoms
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: umtx_single, umtx_all, umtx
 
    INTERFACE umtx
       PROCEDURE :: umtx_all, umtx_single

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,11 +8,16 @@ MODULE m_mpi_bc_xcpot
 #ifdef CPP_MPI
   use mpi 
 #endif
+  use m_types_xcpot_libxc
+  use m_types_mpi
+  use m_types_xcpot
+  use m_types_xcpot_inbuild
+  implicit none
+  private
+  public :: mpi_bc_xcpot
 CONTAINS
   SUBROUTINE mpi_bc_xcpot(xcpot,fmpi)
 
-    USE m_types
-    USE m_types_xcpot_libxc
     IMPLICIT NONE
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT):: xcpot
     TYPE(t_mpi),INTENT(IN)                  :: fmpi

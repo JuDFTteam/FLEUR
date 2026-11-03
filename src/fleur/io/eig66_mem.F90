@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_eig66_mem
 use m_juDFT
    ! Do the IO of the eig-file into memory
@@ -9,7 +14,11 @@ use m_juDFT
    USE m_eig66_data
    USE m_types_mat
    USE m_juDFT
+   USE m_eig66_da, ONLY: open_eig_IO => open_eig, read_eig_IO => read_eig, close_eig_IO => close_eig, &
+      open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: priv_find_data, open_eig, close_eig, read_eig, write_eig
 CONTAINS
 
    SUBROUTINE priv_find_data(id, d)
@@ -81,7 +90,6 @@ CONTAINS
       IF (PRESENT(filename)) CALL priv_readfromfile()
    CONTAINS
       SUBROUTINE priv_readfromfile()
-         USE m_eig66_da, ONLY: open_eig_IO => open_eig, read_eig_IO => read_eig, close_eig_IO => close_eig
          INTEGER:: jspin, nk, i, ii, iii, nv, tmp_id
          REAL   :: wk, bk3(3), evac(2)
          REAL    :: eig(neig)
@@ -126,7 +134,6 @@ CONTAINS
       ENDIF
    CONTAINS
       SUBROUTINE priv_writetofile()
-         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
          IMPLICIT NONE
 
          INTEGER:: nk, jspin, nv, i, ii, tmp_id
@@ -142,7 +149,7 @@ CONTAINS
          DO jspin = 1, d%jspins
             DO nk = 1, d%nkpts
                !TODO this code is no longer working
-               STOP "BUG"
+               CALL judft_bug("conversion of eig66 data to DA mode is not implemented", calledby="eig66_mem")
                !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,el,ello,evac,zmat=zmat)
                !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,el,ello,evac,nlotot,zmat=zmat)
             ENDDO
@@ -263,7 +270,7 @@ CONTAINS
             IF (neig .NE. neig_total) STOP "BUG in eig_mem"
             d%eig_int(nrec) = neig_total
          ELSE
-            STOP "BUG2 in eig_mem"
+            CALL judft_bug("BUG2 in eig_mem")
          ENDIF
       ENDIF
 

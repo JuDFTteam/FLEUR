@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_VYukawaFilm
 
   ! Computation of the film-case Yukawa potential for the preconditioning of the
@@ -31,6 +36,31 @@ module m_VYukawaFilm
   ! The constant is chosen such that the integral over the final potential is
   ! zero.
 
+   use m_constants
+   use m_psqpw
+   use m_vmts
+   use m_ExpSave
+   use m_intgr, only: intgz1Reverse
+   use m_qsf
+   use m_juDFT
+   use m_cfft
+   use m_lagrange3
+   use m_cdntot
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   implicit none
+   private
+   public :: vyukawafilm, vyukawafilmvacuumvariant1, vyukawafilminterstitialvariant1, vyukawafilmvacuumvariant2, &
+      vyukawafilminterstitialvariant2, vyukawamodify
   contains 
 
 
@@ -38,10 +68,6 @@ module m_VYukawaFilm
   subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
                           VYukawa )
 
-    use m_constants
-    use m_types
-    use m_psqpw
-    use m_vmts
     implicit none
 
     type(t_stars),      intent(in)    :: stars
@@ -106,9 +132,8 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, .FALSE., &
-               VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
-               VYukawa%mt(:,0:,:,1), 1 )
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, .FALSE., &
+               VYukawa, den, 1 )
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
@@ -128,11 +153,6 @@ module m_VYukawaFilm
     ! 1. part: Compute the contribution from the interstitial charge density to the vacuum potential as a function of q_xy and z (analytic expression for integral)
     ! 2. part: Compute the contribution from the vacuum charge density to the vacuum potential as a function of q_xy and z by numerical integration
 
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_intgr, only: intgz1Reverse
-    use m_qsf
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -298,10 +318,6 @@ module m_VYukawaFilm
     ! in a slightly larger region. -> 3. part
     ! 3. part: Interpolate the vacuum potential in a small region surrounding the slab
 
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_cfft
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -316,7 +332,9 @@ module m_VYukawaFilm
     complex,        intent(out) :: VIq(stars%ng3)
 
     real                        :: partitioning, rz, qz, q
+    real                        :: sigmaEdge, wgtEdge, wgt ! erf blend across the +-D~/2 edge
     integer                     :: irec2, irec2r,irec3, iz, jz, ivac, iqz, nfft, nzmax, nzmin, nzdh, nLower, nUpper, jvac
+    integer                     :: jm, ivacm
     complex, allocatable        :: VIz(:,:), eta(:,:)
     complex                     :: VIqz(-stars%mx3:stars%mx3,stars%ng2), c_ph(-stars%mx3:stars%mx3,stars%ng2)
     complex                     :: vcons1(stars%ng3),phas
@@ -333,6 +351,14 @@ module m_VYukawaFilm
     nzmax = nfft / 2                                      ! index of maximal z below D~/2 
     nzmin = nzmax - nfft + 1                              ! index of minimal z above -D~/2
     nzdh = ceiling( cell%z1 / cell%amat(3,3) * nfft ) - 1 ! index of maximal z below D/2
+    ! width of the erf blend across the cell edge; same choice as in vgen_coulomb
+    sigmaEdge = ( cell%amat(3,3) - 2 * cell%z1 ) / 8.0
+    ! the blend interpolates the vacuum potential up to a distance D~-2*z1 from the
+    ! interface, twice as far as the plain z-loop needs, and lagrange3 reads jz:jz+2
+    ! unguarded for the G_||=0 star
+    if ( ( cell%amat(3,3) - 2 * cell%z1 ) / vacuum%delz + 3 > vacuum%nmz ) &
+      call juDFT_error( "Vacuum mesh too short for the film potential edge blend", &
+                        hint="Increase nmz or reduce dTilda-dVac", calledby="VYukawaFilm" )
     allocate( z(nzmin:nzmax) )
     ! definition of z_i:        ! indexing: z_0 = 0; positive indices for z > 0; negative indices for z < 0
     do iz = nzmin, nzmax
@@ -400,27 +426,47 @@ module m_VYukawaFilm
       do ivac = 1, 2
         select case( ivac )
           case( 1 )
-            nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
+            nUpper = nzmax; nLower =  nzdh + 1
           case( 2 )
-            nLower = nzmin; nUpper = -nzdh - 1; jvac = vacuum%nvac
+            nLower = nzmin; nUpper = -nzdh - 1
         end select
         do iz = nLower, nUpper
-          rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
-          jz = rz      ! index of maximal vacuum grid point below z_i
-          q = rz - jz  ! factor in Lagrange basis polynomials
-          if ( irec2 == 1 ) then
-            VIz(iz,irec2) = 0.5     * ( q - 1. ) * ( q - 2. ) * REAL(VVnew(jz,   1, jvac)) &
-                          -       q *              ( q - 2. ) * REAL(VVnew(jz+1, 1, jvac)) &
-                          + 0.5 * q * ( q - 1. )              * REAL(VVnew(jz+2, 1, jvac))
-          else if ( jz + 2 <= vacuum%nmzxy ) then
-            VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVnew(jz,  irec2,jvac) &
-                          -       q              * ( q - 2. ) * VVnew(jz+1,irec2,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVnew(jz+2,irec2,jvac)
-          if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
-            call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-            VIz(iz,irec2r) = phas*VIz(iz,irec2) 
-          endif  
-          end if
+          ! The periodic continuation of the interstitial potential jumps at the cell edge
+          ! z = +-amat(3,3)/2, because the two vacua carry different potentials. Blend the
+          ! two sides of that edge with an error-function weight, exactly as in
+          ! vgen_coulomb: jm=1 is the near side (vacuum ivac at distance |z|-z1), jm=2 the
+          ! periodic image (the other vacuum at distance amat(3,3)-|z|-z1). The weight is
+          ! 1 for |z| <= z1, so the film region is untouched, and 1/2 on the edge itself.
+          wgtEdge = 0.5 * ( 1.0 + erf( ( cell%amat(3,3) / 2.0 - abs( z(iz) ) ) &
+                                     / ( sqrt( 2.0 ) * sigmaEdge ) ) )
+          VIz(iz,irec2) = cmplx( 0.0, 0.0 )
+          do jm = 1, 2
+            if ( jm == 1 ) then
+              ivacm = ivac    ; wgt =       wgtEdge
+              rz = (                    abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
+            else
+              ivacm = 3 - ivac; wgt = 1.0 - wgtEdge
+              rz = ( cell%amat(3,3) - abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
+            end if
+            if ( wgt == 0.0 ) cycle
+            jvac = min( ivacm, vacuum%nvac )
+            jz = rz      ! index of maximal vacuum grid point below z_i
+            q = rz - jz  ! factor in Lagrange basis polynomials
+            if ( irec2 == 1 ) then
+              VIz(iz,irec2) = VIz(iz,irec2) + wgt &
+                            * lagrange3( q, REAL(VVnew(jz,1,jvac)), REAL(VVnew(jz+1,1,jvac)), &
+                                            REAL(VVnew(jz+2,1,jvac)) )
+            else if ( jz + 2 <= vacuum%nmzxy ) then
+              irec2r = irec2
+              phas   = cmplx(1.0,0.0)
+              ! gather the lower-vacuum value of star irec2 from the upper vacuum
+              if ( vacuum%nvac==1 .and. ivacm == 2 ) call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+              VIz(iz,irec2) = VIz(iz,irec2) + wgt * phas &
+                            * lagrange3( q, VVnew(jz,  irec2r,jvac), &
+                                            VVnew(jz+1,irec2r,jvac), &
+                                            VVnew(jz+2,irec2r,jvac) )
+            end if
+          end do
         end do
       end do
     end do ! irec2
@@ -464,11 +510,6 @@ module m_VYukawaFilm
     ! 1. part: Compute the contribution from the interstitial charge density to the vacuum potential as a function of q_xy and z (analytic expression for integral)
     ! 2. part: Compute the contribution from the vacuum charge density to the vacuum potential as a function of q_xy and z by numerical integration
 
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_intgr, only: intgz1Reverse
-    use m_qsf
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -656,10 +697,6 @@ module m_VYukawaFilm
     ! in a slightly larger region. -> 3. part
     ! 3. part: Interpolate the vacuum potential in a small region surrounding the slab
 
-    use m_ExpSave
-    use m_constants
-    use m_types
-    use m_cfft
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -677,8 +714,10 @@ module m_VYukawaFilm
     complex,        intent(out) :: VIq(stars%ng3)
 
     real                                               :: partitioning, rz, qz, q, qxy_numerics
+    real                                               :: sigmaEdge, wgtEdge, wgt ! erf blend across the +-D~/2 edge
     integer                                            :: irec2, irec3, iz, jz, ivac, iqz, jvac,irec2r
     integer                                            :: nfft, nzmax, nzmin, nzdh, nLower, nUpper
+    integer                                            :: jm, ivacm
     complex, allocatable                               :: VIz(:,:), eta(:,:)
     complex, allocatable                               :: expzqz(:,:)
     complex, dimension(-stars%mx3:stars%mx3,stars%ng2) :: VIqz, c_ph
@@ -699,6 +738,14 @@ module m_VYukawaFilm
     nzmax = nfft / 2                                      ! index of maximal z below D~/2 
     nzmin = nzmax - nfft + 1                              ! index of minimal z above -D~/2
     nzdh = ceiling( cell%z1 / cell%amat(3,3) * nfft ) - 1 ! index of maximal z below D/2
+    ! width of the erf blend across the cell edge; same choice as in vgen_coulomb
+    sigmaEdge = ( cell%amat(3,3) - 2 * cell%z1 ) / 8.0
+    ! the blend interpolates the vacuum potential up to a distance D~-2*z1 from the
+    ! interface, twice as far as the plain z-loop needs, and lagrange3 reads jz:jz+2
+    ! unguarded for the G_||=0 star
+    if ( ( cell%amat(3,3) - 2 * cell%z1 ) / vacuum%delz + 3 > vacuum%nmz ) &
+      call juDFT_error( "Vacuum mesh too short for the film potential edge blend", &
+                        hint="Increase nmz or reduce dTilda-dVac", calledby="VYukawaFilm" )
     allocate( z(nzmin:nzmax) )
     ! definition of z_i:        ! indexing: z_0 = 0; positive indices for z > 0; negative indices for z < 0
     do iz = nzmin, nzmax
@@ -780,27 +827,46 @@ module m_VYukawaFilm
       do ivac = 1, 2
         select case( ivac )
           case( 1 )
-            nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
+            nUpper = nzmax; nLower =  nzdh + 1
           case( 2 )
-            nLower = nzmin; nUpper = -nzdh - 1; jvac = vacuum%nvac
+            nLower = nzmin; nUpper = -nzdh - 1
         end select
         do iz = nLower, nUpper
-          rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
-          jz = rz      ! index of maximal vacuum grid point below z_i
-          q = rz - jz  ! factor in Lagrange basis polynomials
-          if ( irec2 == 1 ) then
-            VIz(iz,irec2) = 0.5     * ( q - 1. ) * ( q - 2. ) * VVz(jz,  jvac) &
-                          -       q *              ( q - 2. ) * VVz(jz+1,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVz(jz+2,jvac)
-          else if ( jz + 2 <= vacuum%nmzxy ) then
-            VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
-                          -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
-            if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
-              call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-              VIz(iz,irec2r) = phas*VIz(iz,irec2) 
-            endif  
-          end if
+          ! The periodic continuation of the interstitial potential jumps at the cell edge
+          ! z = +-amat(3,3)/2, because the two vacua carry different potentials. Blend the
+          ! two sides of that edge with an error-function weight, exactly as in
+          ! vgen_coulomb: jm=1 is the near side (vacuum ivac at distance |z|-z1), jm=2 the
+          ! periodic image (the other vacuum at distance amat(3,3)-|z|-z1). The weight is
+          ! 1 for |z| <= z1, so the film region is untouched, and 1/2 on the edge itself.
+          wgtEdge = 0.5 * ( 1.0 + erf( ( cell%amat(3,3) / 2.0 - abs( z(iz) ) ) &
+                                     / ( sqrt( 2.0 ) * sigmaEdge ) ) )
+          VIz(iz,irec2) = cmplx( 0.0, 0.0 )
+          do jm = 1, 2
+            if ( jm == 1 ) then
+              ivacm = ivac    ; wgt =       wgtEdge
+              rz = (                    abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
+            else
+              ivacm = 3 - ivac; wgt = 1.0 - wgtEdge
+              rz = ( cell%amat(3,3) - abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
+            end if
+            if ( wgt == 0.0 ) cycle
+            jvac = min( ivacm, vacuum%nvac )
+            jz = rz      ! index of maximal vacuum grid point below z_i
+            q = rz - jz  ! factor in Lagrange basis polynomials
+            if ( irec2 == 1 ) then
+              VIz(iz,irec2) = VIz(iz,irec2) + wgt &
+                            * lagrange3( q, VVz(jz,jvac), VVz(jz+1,jvac), VVz(jz+2,jvac) )
+            else if ( jz + 2 <= vacuum%nmzxy ) then
+              irec2r = irec2
+              phas   = cmplx(1.0,0.0)
+              ! gather the lower-vacuum value of star irec2 from the upper vacuum
+              if ( vacuum%nvac==1 .and. ivacm == 2 ) call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+              VIz(iz,irec2) = VIz(iz,irec2) + wgt * phas &
+                            * lagrange3( q, VVxy(jz,  irec2r,jvac), &
+                                            VVxy(jz+1,irec2r,jvac), &
+                                            VVxy(jz+2,irec2r,jvac) )
+            end if
+          end do
         end do
       end do
     end do ! irec2
@@ -848,12 +914,6 @@ module m_VYukawaFilm
     ! solve the differential equation subject to a boundary condition on the 
     ! film surface, in contrast to the basic Yukawa potential above. 
 
-    use m_constants
-    use m_types
-    use m_vmts
-    use m_constants
-    USE m_cdntot
-    use m_cfft
     implicit none
 
     type(t_stars),      intent(in)    :: stars
@@ -960,8 +1020,7 @@ module m_VYukawaFilm
     ! MUFFIN-TIN POTENTIAL
 
     call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, .FALSE., &
-               VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
-               VYukawaModification%mt(:,0:,:,1), 1 )
+               VYukawaModification, den, 1 )
 
     ! APPLYING THE MODIFICATION TO THE YUKAWA POTENTIAL
 

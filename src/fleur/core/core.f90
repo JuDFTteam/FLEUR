@@ -1,22 +1,30 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_core
 
+   USE m_constants
+   USE m_felim
+   USE m_findlim
+   USE m_cnodes
+   USE m_coredir
+   USE m_ccsdnt
+   USE m_rsimp
+   USE m_cfnorm
+   USE m_coreerr
+   USE m_corehff
+   USE m_nwrfst
+   USE m_rinvgj
+   USE m_intgr
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: core
    CONTAINS
    
-   SUBROUTINE core(mrad,vt,bt,zz,stval,dx,nlshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn)
+   SUBROUTINE core(mrad,vt,bt,zz,stval,dx,nlshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn,bhff_out,isomerShift_out)
 
-      USE m_constants
-      USE m_felim
-      USE m_findlim
-      USE m_cnodes
-      USE m_coredir
-      USE m_ccsdnt
-      USE m_rsimp
-      USE m_cfnorm
-      USE m_coreerr
-      USE m_corehff
-      USE m_nwrfst
-      USE m_rinvgj
-      USE m_intgr
 
       IMPLICIT NONE
 
@@ -26,8 +34,9 @@ MODULE m_core
       REAL,    INTENT (IN) :: bt(mrad),vt(mrad)
       REAL,    INTENT (OUT) :: rhochr(mrad),rhospn(mrad)
       REAL,    INTENT (INOUT) :: ectab(100)
+      REAL,    INTENT (OUT) :: bhff_out(15),isomerShift_out(15)
 
-      REAL    :: bhf,bsum,btot,dvstep,ec,elim,qcor,spcor,tolvar,vz,xmj,ec_sv
+      REAL    :: bhf,bsum,dvstep,ec,elim,qcor,spcor,tolvar,vz,xmj,ec_sv
       REAL    :: isoShift, alpha, smallRadDenVal, largeRadDenVal, averageDen, nucRad
       INTEGER :: i,ic,ic1,ic2,ie,iflag,ii,ilshell,imin,ir,ish,istart,iter
       INTEGER :: itermax,iv,j,jv,kap1,kap2,l,lll,muem05,n,ncor,nmatch,node
@@ -98,7 +107,6 @@ MODULE m_core
       ! INITIALIZE QUANTUM NUMBERS  NQN  AND  L
       ! ---------------------------------------
       
-      btot = 0.0
       ic = 0
       
       DO ilshell = 1,nlshell ! nl  - loop
@@ -174,7 +182,7 @@ MODULE m_core
 
                ! nodes for large component : if IFLAG=0 number of nodes is OK
                iflag = 0
-               CALL cnodes(mrad,iflag,s,ec,l,xmj,nqn,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw,node)
+               CALL cnodes(mrad,iflag,s,ec,l,xmj,nqn,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw,node)
                IF (iflag.NE.0) GO TO 20
 
                ! setup of Newton-Raphson algorithm
@@ -246,8 +254,8 @@ MODULE m_core
                varnew(1) = var(1) + dv(1)*dvstep
                IF (abs(dv(1)/var(1)).LT.tolvar) varnew(1) = var(1) * (1.00+sign(dvstep*tolvar,dv(1)))
 
-               CALL coredir(mrad,varnew(1),l,xmj,1,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
-               CALL coredir(mrad,varnew(1),l,xmj,2,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,varnew(1),l,xmj,1,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,varnew(1),l,xmj,2,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
 
                CALL coreerr(errnew,varnew,s,nsol,pow,qow,piw,qiw)
 
@@ -270,8 +278,8 @@ MODULE m_core
                   var(1) = -0.20
                END IF
 
-               CALL coredir(mrad,var(1),l,xmj,1,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
-               CALL coredir(mrad,var(1),l,xmj,2,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,var(1),l,xmj,1,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,var(1),l,xmj,2,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
 
                CALL coreerr(err,var,s,nsol,pow,qow,piw,qiw)
 
@@ -322,8 +330,6 @@ MODULE m_core
                indefInteg = 0.0
                CALL intgr2(rchr(:),rc(:),dx,jtop,indefInteg)
 
-!               smallRadDenVal = indefInteg(iRad-1)*sfp_const / ((4.0/3.0)*pi_const*(rc(iRad-1)**3.0))
-!               largeRadDenVal = indefInteg(iRad)*sfp_const / ((4.0/3.0)*pi_const*(rc(iRad)**3.0))
                smallRadDenVal = indefInteg(iRad-1) / ((4.0/3.0)*pi_const*(rc(iRad-1)**3.0))
                largeRadDenVal = indefInteg(iRad) / ((4.0/3.0)*pi_const*(rc(iRad)**3.0))
                averageDen = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
@@ -381,12 +387,10 @@ MODULE m_core
             
          END DO ! \mu  - loop end
          
-         WRITE (oUnit,FMT='(I4,A1,26X,2F16.3)') nqn,txtl(l),bhff(ilshell),isomerShift(ilshell)
-         btot = bhff(ilshell) + btot
-
       END DO ! nl  - loop end
-      
-      WRITE (oUnit,FMT='(''HFTOT:'',25X,F16.3)') btot
+
+      bhff_out(1:nlshell) = bhff(1:nlshell)
+      isomerShift_out(1:nlshell) = isomerShift(1:nlshell)
 
       qcor = rsimp(mrad,rhochr,rc,jtop,dx)
       WRITE (oUnit,FMT=8020) 'charge',qcor

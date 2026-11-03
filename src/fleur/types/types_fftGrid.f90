@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,21 @@
 MODULE m_types_fftGrid
    use m_constants
    USE m_juDFT
+   USE m_types_fft
+   USE m_boxdim
+   USE m_spgrot
+   USE m_ifft
+   USE m_types_cell
+   USE m_types_sym
+   USE m_types_stars
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_fleurinput_base
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: perform_fft, map_g_to_fft_grid, t_fftgrid_init, t_fftgrid_init_dims, putfieldongrid, takefieldfromgrid, &
+      putstateongrid, put_state_on_external_grid, putrealstateongrid, putcomplexstateongrid, fillstateindexarray, &
+      fillfieldsphereindexarray, getelement, getrealpartofgrid, free, calc_extent, calc_fft_dim
    TYPE t_fftGrid
 
       INTEGER :: extent(3) = [-1, -1, -1]
@@ -37,7 +52,6 @@ MODULE m_types_fftGrid
 
 CONTAINS
 subroutine perform_fft(grid,forward)
-   use m_types_fft
    implicit none 
    CLASS(t_fftGrid), INTENT(INOUT) :: grid
    LOGICAL,INTENT(IN)              :: forward
@@ -71,12 +85,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
  end function map_g_to_fft_grid
 
    SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff, gzCutoff)
-      USE m_constants
-      USE m_boxdim
-      USE m_spgrot
-      USE m_ifft
-      USE m_types_cell
-      USE m_types_sym
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_cell), INTENT(IN)    :: cell
@@ -125,8 +133,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
 
    SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, gzCutoff, firstderiv,secondderiv,l_2D)
-      USE m_types_stars
-      USE m_types_cell
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_stars), INTENT(IN)       :: stars
@@ -172,8 +178,10 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                   IF (.NOT.l_insph) CYCLE
                   endif   
                if (present(firstderiv)) THEN
-                  fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
-                  if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
+                  !stars%center is zero except for the q-shifted stars used in DFPT
+                  gvec = matmul(real([x,y,z])+stars%center,cell%bmat)
+                  fct=fct*cmplx(0.0,-1*dot_product(firstderiv,gvec))
+                  if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,gvec))
                endif
                xGrid = MODULO(x, this%dimensions(1))
                this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*fct
@@ -184,7 +192,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE putFieldOnGrid
 
    SUBROUTINE takeFieldFromGrid(this, stars, field, gCutoff, gzCutoff, l_2d)
-      USE m_types_stars
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(IN) :: this
       TYPE(t_stars), INTENT(IN)    :: stars
@@ -244,8 +251,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE takeFieldFromGrid
 
    SUBROUTINE putStateOnGrid(this, lapw, iSpin, zMat, iState)
-      USE m_types_lapw
-      USE m_types_mat
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -261,8 +266,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE putStateOnGrid
 
    SUBROUTINE put_state_on_external_grid(this, lapw, iSpin, zMat, iState, ext_grid, l_gpu)
-      USE m_types_lapw
-      USE m_types_mat
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -280,7 +283,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    end subroutine put_state_on_external_grid
 
    SUBROUTINE putRealStateOnGrid(this, lapw, iSpin, state)
-      USE m_types_lapw
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -291,7 +293,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE putRealStateOnGrid
 
    subroutine put_real_on_external_grid(this, lapw, ispin, state, ext_grid, l_gpu)   
-     USE m_types_lapw
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -339,7 +340,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    end subroutine put_real_on_external_grid
 
    SUBROUTINE putComplexStateOnGrid(this, lapw, iSpin, state)
-      USE m_types_lapw
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -350,8 +350,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE putComplexStateOnGrid
 
    SUBROUTINE put_cmplx_on_external_grid(this, lapw, iSpin, state, ext_grid, l_gpu)
-      USE m_types_lapw
-      use m_judft
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -396,7 +394,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    end SUBROUTINE put_cmplx_on_external_grid
 
    SUBROUTINE fillStateIndexArray(this, lapw, ispin, indexArray)
-      USE m_types_lapw
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_lapw), INTENT(IN)        :: lapw
@@ -416,7 +413,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE fillStateIndexArray
 
    SUBROUTINE fillFieldSphereIndexArray(this, stars, gCutoff, indexArray)
-      USE m_types_stars
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(IN)        :: this
       TYPE(t_stars), INTENT(IN)           :: stars
@@ -490,12 +486,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    end subroutine free
 
    function calc_extent(cell, sym, gCutoff, gzCutoff) result(mxx)
-      USE m_constants
-      USE m_boxdim
-      USE m_spgrot
-      USE m_ifft
-      USE m_types_cell
-      USE m_types_sym
       IMPLICIT NONE
       
       TYPE(t_cell), INTENT(IN)  :: cell
@@ -558,9 +548,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END function calc_extent
 
    function calc_fft_dim(cell, sym, gCutoff, gzCutoff) result(dims)
-      USE m_ifft
-      USE m_types_cell
-      USE m_types_sym
       implicit none
       TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_sym), INTENT(IN)   :: sym

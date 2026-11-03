@@ -1,28 +1,30 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_check_mt_radii
   USE m_juDFT
+  USE m_types_input
+  USE m_types_atoms
+  USE m_types_vacuum
+  USE m_types_cell
+  USE m_types_profile
+  USE m_constants
+  USE m_sort
+  USE m_inv3
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: check_mt_radii
   !---------------------------------------------------------------------
   !  Check muffin tin radii and determine a reasonable choice for MTRs.
   !---------------------------------------------------------------------
 CONTAINS
   SUBROUTINE check_mt_radii(atoms,input,vacuum,cell ,profile,l_test,rmt1,overlap)
 
-    USE m_types_input
-    USE m_types_atoms
-    USE m_types_vacuum
-    USE m_types_cell
      
-    USE m_types_profile
-    USE m_constants
 
-    USE m_sort
-    USE m_inv3
-    USE m_juDFT
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
@@ -271,7 +273,7 @@ CONTAINS
                            numAtomsInCubes(cubeIndex(1),cubeIndex(2),cubeIndex(3)) + 1
                       numAtoms = numAtomsInCubes(cubeIndex(1),cubeIndex(2),cubeIndex(3))
                       IF(numAtoms.GT.maxCubeAtoms) THEN
-                         STOP 'ERROR: maxCubeAtoms is not large enough in chkmt.'
+                         CALL judft_error('maxCubeAtoms is not large enough', calledby='check_mt_radii')
                       END IF
                       atomRefsInCubes(numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = n
                       posInCubes(:,numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = pos(:)

@@ -1,6 +1,12 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_spmm_noinv
    use iso_c_binding
    use m_spmm
+   use m_spmm_vac, only: spmm_vac_c, apply_mtir_vac_c
 #ifdef _OPENACC
    USE cublas
 #define CPP_zgemm cublaszgemm
@@ -17,13 +23,18 @@ module m_spmm_noinv
 #define CPP_mtir_c hybdat%coul(ikpt)%mtir%data_c
 #define CPP_mtir_r hybdat%coul(ikpt)%mtir%data_r
 #endif
+   USE m_juDFT
+   USE m_reorder
+   USE m_constants
+   USE m_calc_l_m_from_lm
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_mpdata
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: spmm_noinvs
 contains
    subroutine spmm_noinvs(fi, mpdata, hybdat, ikpt, conjg_mtir, mat_in, mat_out)
-      use m_juDFT
-      use m_types
-      use m_reorder
-      use m_constants
-      use m_calc_l_m_from_lm
 
       implicit none
       type(t_fleurinput), intent(in)    :: fi
@@ -62,7 +73,7 @@ contains
          call timestop("copyin gpu")
 
          !$acc kernels present(mat_in_line, mat_in)
-         mat_in_line = mat_in(hybdat%nbasp + 1, :)
+         mat_in_line = mat_in(hybdat%n_mt + 1, :)
          !$acc end kernels
          
          call timestart("reorder forw")
@@ -194,7 +205,7 @@ contains
                      END DO
                      indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
                   END DO
-                  IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
+                  IF (indx3 /= hybdat%n_mt) call judft_error('spmvec: error counting index indx3')
 
                   n_size = mpdata%num_radbasfn(l, itype) - 1
                   !$acc kernels present(mat_out, mt2_tmp, mat_in_line) default(none)
@@ -253,6 +264,10 @@ contains
          !$acc wait
          call timestop("ibasm+1->nbasm: zgemm")
 
+         ! films: vacuum part, outside the MT+IR corner of mtir
+         call spmm_vac_c(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, conjg_mtir, mat_in, mat_out)
+         call apply_mtir_vac_c(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, ibasm, indx1, conjg_mtir, mat_in, mat_out)
+
          call timestart("dot prod")
          !$acc kernels present(mt2_tmp)
          mt2_tmp = conjg(mt2_tmp)
@@ -299,7 +314,7 @@ contains
 
                   !$acc host_data use_device(mat_in, mt2_tmp, mat_out)
                   call CPP_zgemv("T", n_size, n_vec, cmplx_1, mat_in(indx1,1), sz_in, &
-                     mt2_tmp(1,0,max_l_cut + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), sz_out)
+                     mt2_tmp(1,0,max_l_cut + 1, iatom), 1, cmplx_1, mat_out(hybdat%n_mt + 1, 1), sz_out)
                   !$acc end host_data
                   indx0 = indx0 + ishift
                END DO

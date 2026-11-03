@@ -4,8 +4,19 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_embedding 
+      USE m_constants, ONLY: oUnit, pimach, pi_const
       use m_juDFT 
+      use m_gf_math
+      use m_gf_io2Dmat
+      use m_gf_types
+      use m_gf_vacuum
+      use m_gf_vacuum_hs
+      use m_gf_embdesc
+      use m_gf_phasematrix
+      use m_gf_energies
       IMPLICIT NONE
+      private
+      public :: gf_setemb, gf_getemb, gf_getemb2, gf_checkemb, gf_addemb_g1g2, gf_addemb, gf_generateembpot
 !-----------------------------------------------                        
 ! This module contains many subroutines needed for                      
 ! calculations with an embedding potential!!                            
@@ -32,9 +43,6 @@
 !     *                                                                 
 !     *                           Daniel Wortmann, Tokyo, 2001          
 !********************************************************************** 
-      USE m_gf_math,ONLY:mat_inverse 
-      USE m_gf_io2Dmat 
-      USE m_gf_types
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: region,en,jspin,nk 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
@@ -74,9 +82,6 @@
 !     *                                                                 
 !     *                           Daniel Wortmann, Tokyo, 2001          
 !********************************************************************** 
-      USE m_gf_types 
-      USE m_gf_io2Dmat 
-      USE m_gf_vacuum 
       IMPLICIT NONE 
       TYPE(t_lapw),INTENT(IN)       :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
@@ -116,9 +121,6 @@
 !     *                                                                 
 !     *                           Daniel Wortmann, Tokyo, 2001          
 !********************************************************************** 
-      USE m_gf_types 
-      USE m_gf_io2Dmat 
-      USE m_gf_vacuum_hs
       IMPLICIT NONE 
       TYPE(t_lapw),INTENT(IN)       :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
@@ -162,9 +164,6 @@
 !     Removed code from Jussi after change in io2dmat                   
 !        (last modified: 05-11-17) D.Wortmann                           
 !*********************************************************************  
-      USE m_gf_io2Dmat 
-      USE m_gf_types 
-      USE m_gf_embdesc 
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN) :: layers 
       REAL   ,INTENT(IN)        :: amat(:,:) 
@@ -223,8 +222,6 @@
 !        -we must therefore have the same Sigma on both sides for a     
 !            system with z-reflection symmetry                          
 !                                                                       
-      USE m_constants, ONLY: pi_const, oUnit 
-      USE m_gf_types 
                                                                         
       IMPLICIT NONE 
       INTEGER,INTENT(IN)          :: jspin 
@@ -312,8 +309,6 @@
 !        -we must therefore have the same Sigma on both sides for a     
 !            system with z-reflection symmetry                          
 !                                                                       
-      USE m_constants, ONLY: pi_const, oUnit 
-      USE m_gf_types 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)      :: en,nk,jspin,region 
       REAL,INTENT(IN)         :: bz,z1,z2 
@@ -363,11 +358,6 @@
 !                          D. Wortmann                                  
 !******************************************                             
 !      USE m_gf_CBS_embtest                                             
-      USE m_gf_math 
-      USE m_gf_phasematrix 
-      USE m_gf_types 
-      USE m_gf_embdesc 
-      USE m_gf_io2dmat 
       IMPLICIT NONE 
       !<--Arguments                                                     
                                                                         
@@ -487,8 +477,6 @@
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_io2dmat 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       REAL   ,INTENT(IN)       :: curr(:) 
@@ -588,8 +576,6 @@
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_energies 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_lapw),INTENT(IN) :: lapw 
@@ -633,8 +619,6 @@
 !                                                                       
 !             (last modified: 2004-00-00) D. Wortmann                   
 !-----------------------------------------------                        
-      USE m_gf_math 
-      USE m_gf_types 
 !      USE m_gf_cbs_embtest                                             
       IMPLICIT NONE 
       !<--Arguments                                                     

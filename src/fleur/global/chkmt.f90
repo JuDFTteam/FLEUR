@@ -1,11 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_chkmt
    USE m_juDFT
+   USE m_constants
+   USE m_sort
+   USE m_inv3
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: chkmt
 !---------------------------------------------------------------------
 !  Check muffin tin radii and determine a reasonable choice for MTRs.
 !  Derive also other parameters for the input file, to provide some
@@ -22,11 +32,6 @@ MODULE m_chkmt
              l_gga,noel, kmax,dtild,dvac1,lmax1,jri1,rmt1,dx1,&!optional, if l_gga and ... are present suggestions are calculated
              overlap)!this is optional, if present and l_test the routine returns the overlaps and does not stop
 
-      USE m_types_fleurinput
-      USE m_constants
-      USE m_sort
-      USE m_inv3
-      USE m_juDFT
 
       IMPLICIT NONE
 
@@ -245,7 +250,7 @@ MODULE m_chkmt
                            numAtomsInCubes(cubeIndex(1),cubeIndex(2),cubeIndex(3)) + 1
                         numAtoms = numAtomsInCubes(cubeIndex(1),cubeIndex(2),cubeIndex(3))
                         IF(numAtoms.GT.maxCubeAtoms) THEN
-                           STOP 'ERROR: maxCubeAtoms is not large enough in chkmt.'
+                           CALL judft_error('maxCubeAtoms is not large enough', calledby='chkmt')
                         END IF
                         atomRefsInCubes(numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = n
                         atomsInCubes(numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = iAtom

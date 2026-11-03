@@ -1,11 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_regionCharges
 
+   USE m_types_input
+   USE m_types_atoms
+   USE m_types_vacuum
+   USE m_types_dos
+   USE m_types_vacdos
 IMPLICIT NONE
 
 PRIVATE
@@ -30,8 +35,6 @@ CONTAINS
 
 SUBROUTINE regionCharges_init(thisRegCharges,input,atoms)
 
-   USE m_types_input
-   USE m_types_atoms
 
    IMPLICIT NONE
 
@@ -58,9 +61,6 @@ END SUBROUTINE regionCharges_init
 
 SUBROUTINE sumBandsVac(thisRegCharges,vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
-  USE m_types_vacuum
-  USE m_types_dos
-  USE m_types_vacdos
 
    IMPLICIT NONE
 

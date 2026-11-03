@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -16,6 +16,7 @@ module m_available_solvers
    use m_cuda_diag
    use m_elpa
    use m_nvlamath
+   use m_juDFT
    implicit none
    private
    integer :: first_real_solver = 4, num_solvers = 11
@@ -28,27 +29,27 @@ contains
       CLASS(t_solver), allocatable, INTENT(OUT) :: all_solvers
       select case (i)
       case (1)
-         all_solvers = get_solver_stop()
+         allocate (all_solvers, source=get_solver_stop())
       case (2)
-         all_solvers = get_solver_dummy()
+         allocate (all_solvers, source=get_solver_dummy())
       case (3)
-         all_solvers = get_solver_debugout()
+         allocate (all_solvers, source=get_solver_debugout())
       case (4)
-         all_solvers = get_solver_lapack()
+         allocate (all_solvers, source=get_solver_lapack())
       case (5)
-         all_solvers = get_solver_scalapack()
+         allocate (all_solvers, source=get_solver_scalapack())
       case (6)
-         all_solvers = get_solver_chase()
+         allocate (all_solvers, source=get_solver_chase())
       case (7)
-         all_solvers = get_solver_elsi()
+         allocate (all_solvers, source=get_solver_elsi())
       case (8)
-         all_solvers = get_solver_magma()
+         allocate (all_solvers, source=get_solver_magma())
       case (9)
-         all_solvers = get_solver_cuda()
+         allocate (all_solvers, source=get_solver_cuda())
       case (10)
-         all_solvers = get_solver_elpa()
+         allocate (all_solvers, source=get_solver_elpa())
       case (11)
-         all_solvers = get_solver_nvlamath()
+         allocate (all_solvers, source=get_solver_nvlamath())
       case default
          call judft_bug("Illegal request for solver")
       end select
@@ -72,14 +73,17 @@ contains
 
       parallel_solver_available = .false.
       !make an explit loop here
-      do i = 1, num_solvers
+      !Only the real solvers are considered. The pseudo-solvers below
+      !first_real_solver ('stop','dummy','debugout') can be requested by name with
+      !-diag, but select_solver never picks them as a default, so counting them
+      !here would claim a parallel solver that the default selection cannot use.
+      do i = first_real_solver, num_solvers
          call assign_solver(i, s)
          parallel_solver_available = parallel_solver_available .or. (s%available .and. s%parallel)
       end do
    end function parallel_solver_available
 
    subroutine select_solver(parallel, gpu, single_precision, diag_solver, diag_transform)
-      use m_juDFT
       logical, intent(IN)           :: parallel
       logical, intent(in), optional  :: single_precision, gpu
       class(t_solver), INTENT(OUT), allocatable  :: diag_solver, diag_transform
@@ -103,7 +107,7 @@ contains
             ! trensformation + standard solver
             trans_name = diag_name(:index(diag_name, "+") - 1)
             diag_name = diag_name(index(diag_name, "+") + 1:)
-            diag_transform = select_by_name(trans_name)
+            allocate (diag_transform, source=select_by_name(trans_name))
          end if
          !check if "-sp" was given
          if (index(diag_name, "-") .gt. 0) then
@@ -111,7 +115,7 @@ contains
             diag_name = diag_name(:index(diag_name, "-") - 1)
          end if
          !select solver from name
-         diag_solver = select_by_name(diag_name)
+         allocate (diag_solver, source=select_by_name(diag_name))
       else
          !defaults
          do i = first_real_solver, num_solvers

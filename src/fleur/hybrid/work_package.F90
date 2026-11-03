@@ -1,5 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_work_package
-   use m_types
    use m_distribute_mpi
    use m_divide_most_evenly
    use m_mtir_size
@@ -7,6 +11,15 @@ module m_work_package
    use openacc
    use iso_c_binding
 #endif
+   use m_types_hybmpi
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_fftgrid
+   use m_judft
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_mpdata
    implicit none
    private
    type,public:: t_band_package  
@@ -157,7 +170,7 @@ contains
       q_pack%ptr    = ptr
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
-      n_parts = calc_n_parts(fi, hybdat, mpdata%n_g, q_pack, ikqpt, jsp)
+      n_parts = calc_n_parts(fi, hybdat, mpdata, q_pack, ikqpt, jsp)
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
@@ -200,9 +213,6 @@ contains
    end subroutine t_k_package_print
 
    subroutine split_into_work_packages(work_pack, fi, hybdat, mpdata, jsp)
-#ifdef CPP_MPI
-      use mpi 
-#endif
       implicit none 
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
@@ -241,7 +251,6 @@ contains
 
 
    function t_work_package_owner_nk(work_pack, nk) result(owner) 
-      use m_types_hybmpi
       implicit none 
       class(t_work_package), intent(in) :: work_pack
       integer, intent(in)               :: nk
@@ -266,11 +275,12 @@ contains
       enddo
    end function t_work_package_has_nk
 
-   function calc_n_parts(fi, hybdat, n_g, q_pack, ikqpt, jsp) result(n_parts)
+   function calc_n_parts(fi, hybdat, mpdata, q_pack, ikqpt, jsp) result(n_parts)
       implicit none 
       type(t_fleurinput), intent(in) :: fi
       type(t_hybdat), intent(in)     :: hybdat
-      integer, intent(in)            :: n_g(:), ikqpt, jsp
+      type(t_mpdata), intent(in)     :: mpdata
+      integer, intent(in)            :: ikqpt, jsp
       class(t_q_package), intent(in) :: q_pack 
       
       integer :: n_parts, me, ierr, ikpt
@@ -287,7 +297,12 @@ contains
       target_size = target_memsize(fi, hybdat)
       coulomb_size = 0.0
       do ikpt = 1,fi%kpts%nkpt
-         coulomb_size = max(int(mtir_size(fi, n_g, ikpt),kind=8)**2, coulomb_size)
+         if (fi%input%film) then
+            ! films: mtir includes the vacuum carriers
+            coulomb_size = max(int(mtir_size(fi, mpdata%n_g, ikpt, mpdata%n_g_vac),kind=8)**2, coulomb_size)
+         else
+            coulomb_size = max(int(mtir_size(fi, mpdata%n_g, ikpt),kind=8)**2, coulomb_size)
+         endif
       enddo
       ! size in byte
       coulomb_size = rc_factor * coulomb_size

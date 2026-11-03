@@ -1,14 +1,22 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_rwnoco
       USE m_juDFT
+      USE m_types_atoms
+      USE m_types_noco
+      USE m_types_input
+      USE m_constants
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: rw_noco_read, rw_noco_write
 !---------------------------------------------------------------------
 !     read or write the nocoinp-file
 !---------------------------------------------------------------------
       CONTAINS
         SUBROUTINE rw_noco_read(atoms,noco,input)
-          USE m_types_atoms
-          USE m_types_noco
-          USE m_types_input
-          USE m_constants
           IMPLICIT NONE
           ! ..
           ! ..  Arguments ..
@@ -113,10 +121,6 @@
         END SUBROUTINE rw_noco_read
 
       SUBROUTINE rw_noco_write(atoms,noco,input)
-      USE m_types_atoms
-      USE m_types_noco
-      USE m_types_input
-      USE m_constants
       IMPLICIT NONE
 ! ..
 ! ..  Arguments ..

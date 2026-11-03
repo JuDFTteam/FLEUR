@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_vvacis
   !     **********************************************************
   !     g.ne.0 coefficients of vacuum coulomb potential          *
@@ -6,10 +11,17 @@ module m_vvacis
   !     **********************************************************
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
+   use m_constants
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_stars
+   use m_types_vacuum
+   implicit none
+   private
+   public :: vvacis, exp_safe
 contains
    subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy, l_dfptvgen )
-      use m_constants
-      use m_types
 
       implicit none
 

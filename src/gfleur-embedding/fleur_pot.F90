@@ -5,7 +5,15 @@
 !--------------------------------------------------------------------------------
       MODULE m_fleur_pot
       use m_juDFT
+      use m_gf_types
+      use m_gf_iodop
+      use m_vis_xc
+      use m_vmt_xc
+      use m_constants, only: POTDEN_TYPE_POTTOT, POTDEN_TYPE_DEN, POTDEN_TYPE_POTCOUL
+      use m_vmts
       IMPLICIT NONE
+      private
+      public :: fleur_xcpot, fleur_vmts
 !-------------------------------------------------------------
 !Module provides an interface to the potential subroutines of FLEUR
 !as used in the GF-code.
@@ -26,12 +34,6 @@
 !GF density file) to the given Coulomb potential arrays.
 !           (last modified: 05-03-23) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      USE m_gf_iodop
-      USE m_vis_xc
-      USE m_vmt_xc
-      USE m_metagga
-      USE m_constants, ONLY: POTDEN_TYPE_POTTOT, POTDEN_TYPE_DEN
       IMPLICIT NONE
       !<--Arguments
       TYPE(t_gflayer),INTENT(IN)   :: ld
@@ -43,7 +45,6 @@
       !>
       !<-- Locals
       TYPE(t_potden) :: den,vTot,vx,vxc,exc,EnergyDen
-      TYPE(t_kinED)  :: kinED
       !>
 
       IF (ld%fi%noco%l_noco) CALL juDFT_error(                           &
@@ -87,11 +88,11 @@
       !interstitial region (adds to vTot%pw; the warped pw_w is ignored,
       !the GF step functions are applied later)
       CALL vis_xc(ld%stars,ld%fi%sym,ld%fi%cell,den,ld%xcpot,            &
-     &            ld%fi%input,ld%fi%noco,EnergyDen,kinED,vTot,vx,exc,vxc)
+     &            ld%fi%input,ld%fi%noco,EnergyDen,vTot,vx,exc,vxc)
 
       !muffin tin spheres region (adds to vTot%mt)
       CALL vmt_xc(fmpi,ld%sphhar,ld%fi%atoms,den,ld%xcpot,ld%fi%input,   &
-     &            ld%fi%sym,EnergyDen,kinED,ld%fi%noco,vTot,vx,exc,vxc)
+     &            ld%fi%sym,EnergyDen,ld%fi%noco,vTot,vx,exc,vxc)
 
       vr = vTot%mt
       vpw = vTot%pw
@@ -106,9 +107,6 @@
 !   summed) density given the interstitial potential on the boundary
 !           (last modified: 05-03-23) D. Wortmann
 !-----------------------------------------------
-      USE m_vmts
-      USE m_gf_types
-      USE m_constants, ONLY: POTDEN_TYPE_POTCOUL
       IMPLICIT NONE
       !<-- Arguments
       TYPE(t_mpi),INTENT(IN)       :: fmpi
@@ -117,10 +115,20 @@
       REAL,    INTENT (IN)         :: rho(:,0:,:,:)
       REAL,    INTENT (OUT)        :: vr(:,0:,:,:)
       !>
-      vr = 0.0
+      !<-- Locals
+      TYPE(t_potden) :: vCoul,den
+      !>
+      !vmts works on t_potden objects: %pw of vCoul and %mt of den are read
+      CALL vCoul%init(ld%stars,ld%fi%atoms,ld%sphhar,ld%fi%vacuum,       &
+     &             ld%fi%noco,1,POTDEN_TYPE_POTCOUL)
+      CALL den%init(ld%stars,ld%fi%atoms,ld%sphhar,ld%fi%vacuum,         &
+     &             ld%fi%noco,1,POTDEN_TYPE_DEN)
+      vCoul%pw(:,1) = vpw(:,1)
+      den%mt(:,0:,:,1) = rho(:,0:,:,1)
       CALL vmts(ld%fi%input,fmpi,ld%stars,ld%sphhar,ld%fi%atoms,         &
-     &          ld%fi%sym,ld%fi%cell,.FALSE.,vpw(:,1),rho(:,0:,:,1),     &
-     &          POTDEN_TYPE_POTCOUL,vr(:,0:,:,1),1)
+     &          ld%fi%sym,ld%fi%cell,.FALSE.,vCoul,den,1)
+      vr = 0.0
+      vr(:,0:,:,1) = vCoul%mt(:,0:,:,1)
       END SUBROUTINE
       !>
       END

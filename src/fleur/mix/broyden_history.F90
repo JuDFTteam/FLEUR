@@ -1,5 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_broyden
   USE m_juDFT
+  USE m_types_mixvector
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: broyden
   !################################################################
   !     IMIX = 3 : BROYDEN'S FIRST METHOD
   !     IMIX = 5 : BROYDEN'S SECOND METHOD
@@ -12,8 +21,6 @@ MODULE m_broyden
   !################################################################
 CONTAINS
   SUBROUTINE broyden(alpha,fm,sm,l_dfpt)
-    USE m_types
-    USE m_types_mixvector
     IMPLICIT NONE
 
     real,INTENT(IN)                 :: alpha

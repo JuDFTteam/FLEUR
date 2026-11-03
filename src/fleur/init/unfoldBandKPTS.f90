@@ -1,17 +1,30 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_unfold_band_kpts
 
+   USE m_inv3
+   USE m_constants
+   USE m_juDFT
+   USE m_types_mpimat
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_misc
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: build_primitive_cell, unfold_band_kpts, find_supercell_kpts, calculate_plot_w_n, write_band_sc
 CONTAINS
 
   SUBROUTINE build_primitive_cell(banddos,p_cell,cell)
-    USE m_types
-    USE m_inv3
-    USE m_constants, ONLY : tpi_const
     implicit none
     TYPE(t_banddos),INTENT(IN)  :: banddos
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -35,9 +48,6 @@ CONTAINS
   END SUBROUTINE  build_primitive_cell
 !---------- the following routines are not used anymore (but instructive)-----
   SUBROUTINE unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
-    USE m_types
-    USE m_inv3
-    USE m_constants, ONLY : tpi_const
 
     implicit none
 
@@ -58,9 +68,6 @@ CONTAINS
   END SUBROUTINE unfold_band_kpts
 
   SUBROUTINE find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
-    USE m_types
-    USE m_juDFT
-    USE m_inv3
     implicit none
 
     TYPE(t_banddos),INTENT(IN)  :: banddos
@@ -137,11 +144,6 @@ CONTAINS
   END SUBROUTINE find_supercell_kpts
 !----------------------------------------------------------------
  SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi,l_soc,smat_unfold,zso)
-	USE m_types
-	USE m_juDFT
-	USE m_inv3
-	USE m_types_mpimat
-    USE m_constants
 	implicit none
 
     TYPE(t_input),INTENT(IN)     :: input
@@ -417,10 +419,6 @@ CONTAINS
  END SUBROUTINE
 
 SUBROUTINE write_band_sc(banddos,cell,kpts,results,eFermiPrev)
-     USE m_types
-     USE m_juDFT
-	 USE m_constants
-	 USE m_inv3
      IMPLICIT NONE
 	TYPE(t_results),INTENT(IN)  :: results
 	TYPE(t_banddos),INTENT(IN)  :: banddos

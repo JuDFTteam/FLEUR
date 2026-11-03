@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,9 @@
 MODULE m_types_cell
   USE m_judft
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_constants, ONLY: tpi_const
+  USE m_types_xml
   IMPLICIT NONE
   PRIVATE
   !> This type contains the basic information on the lattice-cell of the calculation
@@ -43,7 +46,6 @@ MODULE m_types_cell
   PUBLIC t_cell
 CONTAINS
   subroutine mpi_bc_cell(this,mpi_comm,irank)
-    use m_mpi_bc_tool
     class(t_cell),INTENT(INOUT)::this
     integer,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -68,7 +70,6 @@ CONTAINS
 
   SUBROUTINE init(cell,volmts)
     !initialize cell, only input is cell%amat and cell%z1 in case of a film
-    USE m_constants,ONLY:tpi_const
     CLASS (t_cell),INTENT(INOUT):: cell
     real,intent(in):: volmts !Volume of all MT-spheres
 
@@ -121,7 +122,6 @@ CONTAINS
    END SUBROUTINE init
 
    SUBROUTINE  read_xml_cell(this,xml)
-     use m_types_xml
      class(t_cell),intent(INout)::this
      type(t_xml),intent(inout)   ::xml
 

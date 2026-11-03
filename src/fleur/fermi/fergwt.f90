@@ -1,22 +1,34 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE  m_fergwt
   USE m_juDFT
+  USE m_constants
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpi
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: fergwt
   !****************************************************************
   !     determines the fermi energy and weights for the k-space
   !     integration using gaussing-smearing method.
   !                                               c.l.fu
   !*****************************************************************
 CONTAINS
-  SUBROUTINE fergwt(kpts,input,fmpi, ne,eig, ef,w_iks,seigv,l_output)
+  SUBROUTINE fergwt(kpts,input,input_zelec,fmpi, ne,eig, ef,w_iks,seigv,l_output)
 
-    USE m_constants
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: fmpi
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_kpts),INTENT(IN)      :: kpts
+    REAL,intent(in)              :: input_zelec
     REAL,        INTENT(INOUT)   :: ef,seigv
     REAL,INTENT(INOUT)           :: w_iks(:,:,:)
+   
     !     ..
     !     ..
     !     .. Array Arguments ..
@@ -64,7 +76,7 @@ CONTAINS
              ENDDO
           ENDDO
           s = s/REAL(input%jspins)
-          zcdiff = input%zelec - s
+          zcdiff = input_zelec - s
           IF (ABS(zcdiff).LT.eps) EXIT conv_loop
           IF (ifl.EQ.0) THEN
              ifl = 1
@@ -72,7 +84,7 @@ CONTAINS
              ef = ef + 0.003
              s0 = s
           ELSE
-             fac = (s0-s)/ (input%zelec-s)
+             fac = (s0-s)/ (input_zelec-s)
              IF (ABS(fac).LT.1.0e-1) THEN
                 ef0 = ef
                 s0 = s

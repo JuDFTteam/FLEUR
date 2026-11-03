@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.38">
+   <comment>Full-MT noco zero-U invariant</comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.0" Gmax="15.5" GmaxXC="12.5" numbands="0"/>
+      <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="vwn" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="T" swsp="F" lflip="F">
+         <mtNocoParams l_mperp="T" l_mtNocoPot="T"/>
+      </magnetism>
+      <soc theta="0.0" phi="0.0" l_soc="T" spav="F"/>
+      <expertModes gw="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="16.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="default"/>
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"/>
+      </bzIntegration>
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"/>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>-2.6772800342  2.6772800342  2.6772800342</row-1>
+            <row-2> 2.6772800342 -2.6772800342  2.6772800342</row-2>
+            <row-3> 2.6772800342  2.6772800342 -2.6772800342</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Fe-1" element="Fe" atomicNumber="26">
+         <mtSphere radius="2.1" gridPoints="747" logIncrement="0.016"/>
+         <atomicCutoffs lmax="10" lnonsphr="6"/>
+         <electronConfig>
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.2" spinDown="1.2"/>
+            <stateOccupation state="(3d5/2)" spinUp="2.9" spinDown="0.7"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <special nonSpinPolBasis="T"/>
+         <ldaU l="2" U="0.0" J="0.0" l_amf="F"/>
+         <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Fe-1">
+         <relPos label="1">0.0 0.0 0.0</relPos>
+         <force calculate="F" relaxXYZ="TTT"/>
+         <nocoParams alpha="0.0" beta="0.0"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0"/>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F" bmt="F"/>
+   </output>
+</fleurInput>

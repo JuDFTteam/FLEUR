@@ -4,6 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_rt_coefs 
+      USE m_judft
+      USE m_gf_writetrans, ONLY: writetrans
+      USE m_gf_types
+      USE m_gf_embedding
+      USE m_gf_io2dmat
+      USE m_gf_energies
+      USE m_gf_math
       IMPLICIT NONE
 !                                                                       
 !     This module collects all different methods to calculate the       
@@ -26,11 +33,6 @@
 !     *                                                                 
 !     *                           Daniel Wortmann, Tokyo, 2001,2002     
 !********************************************************************** 
-      USE m_gf_writetrans,ONLY:writetrans 
-      USE m_gf_types 
-      USE m_gf_embedding 
-      USE m_gf_io2dmat 
-      USE m_gf_energies 
       IMPLICIT NONE 
 !     Arguments                                                         
       INTEGER,      INTENT(IN) :: Nv2, jspin 
@@ -156,7 +158,6 @@
 !     r,t      : transmission+reflection coefs                          
 !                                  D. Wortmann, Tokyo 2002              
 !     ***************************************************************** 
-      USE m_gf_math 
       IMPLICIT NONE 
 !     Arguments                                                         
       INTEGER,INTENT(IN) :: nv2 

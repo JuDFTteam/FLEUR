@@ -1,11 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_create_coul_comms
-   use m_types
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_mpi
+   use m_types_fleurinput
+   use m_types_hybdat
    implicit none
+   private
+   public :: create_coul_comms
 contains
    subroutine create_coul_comms(hybdat, fi, fmpi)
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none 
       type(t_hybdat), intent(inout)   :: hybdat 
       type(t_fleurinput), intent(in)  :: fi

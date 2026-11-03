@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,6 +9,12 @@ MODULE m_hdf_tools4
 #ifdef CPP_HDFMPI
    use mpi
 #endif
+   use m_juDFT_stop
+   implicit none
+   private
+   public :: io_hdfopen, io_hdfclose, io_gopen, io_gcreate, io_gdelete, io_gclose, io_dopen, io_dclose, io_layername, &
+      hdf_init, hdf_close, io_createvar, gettransprop, cleartransprop, io_check, checklib, hdf_err, io_datadim, rkind, &
+      ckind
 !-----------------------------------------------
 !     major rewrite of hdf_tools
 !     this module contains various subroutines
@@ -432,7 +438,6 @@ CONTAINS
 !     Version for LINUX compiled with IFC
 !             (last modified: 05-02-25) D. Wortmann
 !-----------------------------------------------
-      use m_juDFT_stop
       IMPLICIT NONE
       !<-- Arguments
       CHARACTER*(*)        ::message

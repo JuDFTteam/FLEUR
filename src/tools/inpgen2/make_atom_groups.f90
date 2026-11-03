@@ -1,5 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_make_atom_groups
   USE m_juDFT
+  USE m_types_sym
+  USE m_types_cell
+  USE m_types_atoms
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: make_atom_groups
   !********************************************************************
   !     calculates the space group operations given the lattice vectors
   !     and the atomic positions.                              mw 12-99
@@ -8,9 +19,6 @@ MODULE m_make_atom_groups
 CONTAINS
   SUBROUTINE make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms,inpgen_atom_for_type)
     !Use the symmetry to generate correct mapping of atoms into types
-    USE m_types_sym
-    USE m_types_cell
-    USE m_types_atoms
 
     IMPLICIT NONE
     TYPE(t_sym),INTENT(in)     :: sym

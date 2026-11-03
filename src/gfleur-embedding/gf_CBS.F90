@@ -4,8 +4,18 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_CBS 
+      USE m_constants, ONLY: oUnit
       use m_juDFT
       USE hdf5
+      USE m_gf_types
+      USE m_gf_math
+      USE m_gf_io2dmat
+      USE m_gf_embedding
+      USE m_gf_energies
+      USE m_gf_curvy2dprojector
+      USE m_hdf_tools
+      USE m_hdf_accessprp
+      USE m_grp_k
       IMPLICIT NONE
       INTEGER(hid_t)::fid,re_k_var,im_k_var,spinp_var,curr_var
       PRIVATE 
@@ -23,10 +33,6 @@
 !     *                           Daniel Wortmann, Tokyo, 2001          
 ! *                                                                     
 !********************************************************************** 
-      USE m_gf_types 
-      USE m_gf_math, ONLY  : eigenvalues,tpi_const 
-      USE m_gf_io2dmat 
-      USE m_gf_embedding 
       IMPLICIT NONE 
                                                                         
       !<--Arguments                                                     
@@ -214,9 +220,6 @@
 !                                                                       
 !           (last modified:09-10-19) D. Wortmann                        
 !-----------------------------------------------                        
-      USE m_gf_energies,ONLY   : gf_Z 
-      USE m_gf_curvy2dprojector 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)       :: en,nk 
@@ -340,8 +343,6 @@
 
       SUBROUTINE outCBS_HDF(nk,en,jspin,ew,syms,curr,spinp)
       !<-- S: outCBS(fmpi,nk,en,lapw_gf%nv2_tot,ew,bz,bk,syms)              
-      USE m_hdf_tools,ONLY:io_WRITE
-      USE m_hdf_accessprp
       IMPLICIT NONE
       !<--Arguments
       INTEGER,INTENT(IN)    :: nk,en,jspin
@@ -360,11 +361,6 @@
       END SUBROUTINE
 
       SUBROUTINE outCBS_openfile(jspin,jspins,kpts,c,nv2d,l_hdfio)
-      USE m_gf_types
-      USE m_hdf_tools
-      USE m_gf_energies
-      USE m_gf_math, ONLY  : tpi_const
-      USE m_hdf_accessprp
       IMPLICIT NONE
       INTEGER,INTENT(IN) :: jspin,jspins,nv2d
       REAL,INTENT(IN)    :: c
@@ -393,7 +389,6 @@
       END subroutine
 
       SUBROUTINE outCBS_closefile(close)
-      use m_hdf_tools
       implicit none
       LOGICAL,INTENT(IN) :: close
 #ifdef CPP_MPI
@@ -418,8 +413,6 @@
 !                                                                       
 !                       D. Wortmann, Tokyo, 2001                        
 !****************************************************************       
-      USE m_gf_energies,ONLY  :gf_Z 
-      USE m_gf_types
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)    :: nv2,nk,en 
@@ -575,8 +568,6 @@
 !                                                                       
 ! Jussi Enkovaara Jlich 2004                                            
 !****************************************************************       
-      USE m_gf_types
-      USE m_gf_math,  ONLY:mat_inverse 
                                                                         
       IMPLICIT NONE 
       !<--Argument                                                      
@@ -846,9 +837,6 @@
 !     of the Im part of the Embedding potential                         
 !     D. Wortmann                                                       
 !******************************************                             
-      USE m_gf_io2dmat 
-      USE m_gf_math 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: jspin,en,nk,nv2 
@@ -897,8 +885,6 @@
      &     grpname,irrname,su)
       !shim onto the modern grp_k (which takes t_sym/t_cell but only
       !uses sym%mrot/nop and cell%amat)
-      USE m_grp_k
-      USE m_gf_types
       IMPLICIT NONE
       INTEGER, INTENT(IN)                :: mrot(:,:,:)
       REAL, INTENT(IN)                   :: bk(3),amat(3,3)

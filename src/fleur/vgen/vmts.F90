@@ -1,10 +1,35 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_vmts
 #ifdef CPP_MPI
   use mpi
 #endif
+  use m_constants
+  use m_mpi_reduce_tool
+  use m_intgr, only: intgr2, sfint
+  use m_phasy1
+  use m_sphbes
+  use m_SphBessel
+!$ use omp_lib
+  use m_types_parallelloop
+  use m_types_atoms
+  use m_types_cell
+  use m_types_input
+  use m_types_mpi
+  use m_types_potden
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_sternheimerjob
+  use m_types_sym
+  implicit none
+  private
+  public :: vmts
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vpw, rho, potdenType, vr, ispin, sternheimerJob, rhoIm, vrIm, iDtype, iDir, iDir2)
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul, den, ispin, sternheimerJob, iDtype, iDir, iDir2)
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -32,16 +57,8 @@ contains
   ! F. Tran, P. Blaha: Phys. Rev. B 83, 235118(2011)
   !-------------------------------------------------------------------------
 
-    use m_constants
-    use m_types
-    use m_mpi_reduce_tool
-    use m_intgr, only : intgr2, sfint
-    use m_phasy1
-    use m_sphbes
     
      
-    use m_SphBessel
-    !$ use omp_lib
     implicit none
 
     type(t_input),  intent(in)        :: input
@@ -53,14 +70,10 @@ contains
     type(t_cell),   intent(in)        :: cell
      
     LOGICAL,        INTENT(IN)        :: dosf
-    complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
-    real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    integer,        intent(in)        :: potdenType
-    real,           intent(out)       :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    type(t_potden), intent(inout)     :: vCoul ! %pw read; %mt (+ %mtIm for DFPT) written
+    type(t_potden), intent(in)        :: den   ! %mt and, for DFPT, %mtIm
     integer,        intent(in)        :: ispin
     type(t_sternheimerJob),optional,intent(in) :: sternheimerJob
-    type(t_potden), optional, intent(in) :: rhoIm
-    type(t_potden), optional, intent(inout) :: vrIm  
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
     INTEGER, OPTIONAL, INTENT(IN)     :: iDir2
 
@@ -80,7 +93,7 @@ contains
     COMPLEX, ALLOCATABLE              :: vtlStars(:,:,:), vtlLocal(:,:)
     TYPE(t_parallelLoop)              :: mpiLoop, ompLoop
 
-    l_dfptvgen = PRESENT(rhoIm)
+    l_dfptvgen = ALLOCATED(den%mtIm)
     l_IBScorrection = .false. 
     if (present(sternheimerJob)) l_IBScorrection = sternheimerJob%l_IBScorrection
 
@@ -104,11 +117,11 @@ contains
     DO iBunch = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
        CALL ompLoop%init(iBunch,numBunches,firstStar,stars%ng3)
        !$OMP parallel do default( NONE ) &
-       !$OMP SHARED(ompLoop,atoms,stars,sym,cell,sphhar,vpw,vtlStars,potdenType) &
+       !$OMP SHARED(ompLoop,atoms,stars,sym,cell,sphhar,vCoul,ispin,vtlStars) &
        !$OMP private(iTempArray,cp,pylm,n,sbf,nd,lh,l,sm,jm,m,lm)
        do k = ompLoop%bunchMinIndex, ompLoop%bunchMaxIndex
           iTempArray = k - ompLoop%bunchMinIndex + 1
-          cp = vpw(k) * stars%nstr(k)
+          cp = vCoul%pw(k,ispin) * stars%nstr(k)
           call phasy1( atoms, stars, sym, cell, k, pylm )
           do n = 1, atoms%ntype
              call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
@@ -146,7 +159,7 @@ contains
     ! q=0 component
     if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8 ) then
        DO n = 1, atoms%ntype
-          vtlLocal(0,n) = vtlLocal(0,n) + sfp_const * vpw(1)
+          vtlLocal(0,n) = vtlLocal(0,n) + sfp_const * vCoul%pw(1,ispin)
        END DO
     end if
 
@@ -156,7 +169,7 @@ contains
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
 
     if( fmpi%irank == 0 ) then
-    if ( potdenType == POTDEN_TYPE_POTYUK ) then
+    if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
 
@@ -164,7 +177,7 @@ contains
       nd = sym%ntypsy(atoms%firstAtom(n))
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
-      if ( potdenType == POTDEN_TYPE_POTYUK ) then
+      if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
         !do concurrent (i = 1:imax)
         do i = 1,imax
           call ModSphBessel( il(0:,i), kl(0:,i), input%preconditioning_param * atoms%rmsh(i,n), lmax )
@@ -172,7 +185,7 @@ contains
       end if
       do lh = 0, sphhar%nlh(nd)
         l = sphhar%llh(lh,nd)
-        if ( potdenType == POTDEN_TYPE_POTYUK ) then
+        if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
           green_1(1:imax) = il(l,1:imax)
           green_2(1:imax) = kl(l,1:imax)
           green_factor    = fpi_const * input%preconditioning_param
@@ -182,8 +195,8 @@ contains
           green_factor    = fpi_const / ( 2 * l + 1 )
         end if
 
-        integrand_1(1:imax) = green_1(1:imax) * rho(1:imax,lh,n)
-        integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
+        integrand_1(1:imax) = green_1(1:imax) * den%mt(1:imax,lh,n,ispin)
+        integrand_2(1:imax) = green_2(1:imax) * den%mt(1:imax,lh,n,ispin)
         if (.not.dosf) THEN
          call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
          call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
@@ -192,28 +205,28 @@ contains
            call sfint(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
         end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
-        vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
+        vCoul%mt(1:imax,lh,n,ispin) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )
         IF (l_dfptvgen) THEN
            ! Integrate the imaginary part of the density perturbation as well.
-           integrand_1(1:imax) = green_1(1:imax) * rhoIm%mt(1:imax,lh,n,ispin)
-           integrand_2(1:imax) = green_2(1:imax) * rhoIm%mt(1:imax,lh,n,ispin)
+           integrand_1(1:imax) = green_1(1:imax) * den%mtIm(1:imax,lh,n,ispin)
+           integrand_2(1:imax) = green_2(1:imax) * den%mtIm(1:imax,lh,n,ispin)
            call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
            call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
            termsR = integral_2(imax) + ( AIMAG(vtl(lh,n)) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
-           vrIm%mt(1:imax,lh,n,ispin) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
+           vCoul%mtIm(1:imax,lh,n,ispin) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                                 + green_2(1:imax) *            integral_1(1:imax)   )
         END IF
       end do
     end do
-    if ( potdenType == POTDEN_TYPE_POTYUK ) then
+    if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
       deallocate( il, kl )
     end if
 
-    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD) then
+    if ( vCoul%potdenType /= POTDEN_TYPE_POTYUK .AND. vCoul%potdenType /= POTDEN_TYPE_CRYSTALFIELD) then
       IF (.NOT.l_dfptvgen) THEN
          do n = 1, atoms%ntype
-         vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
+         vCoul%mt(1:atoms%jri(n),0,n,ispin) = vCoul%mt(1:atoms%jri(n),0,n,ispin) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
          end do
       ELSE IF (l_IBScorrection) THEN
          IF (.NOT.PRESENT(iDir2)) THEN
@@ -227,7 +240,7 @@ contains
                   DO iMem = 1, sphhar%nmem(lh, ptsym)
                      m = sphhar%mlh(iMem, lh, ptsym)
                      lm = l*(l+1) + m + 1
-                     vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
+                     vCoul%mt(1:atoms%jri(n),lh,n,ispin) = vCoul%mt(1:atoms%jri(n),lh,n,ispin) + &
                                                 conjg(sphhar%clnu(iMem, lh, ptsym)) * c_im(iDir, lm - 1) * pref * &
                                                 ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**3) / atoms%rmsh(1:atoms%jri(n),n)**2
                   END DO
@@ -244,7 +257,7 @@ contains
                   DO iMem = 1, sphhar%nmem(lh, ptsym)
                      m = sphhar%mlh(iMem, lh, ptsym)
                      lm = l*(l+1) + m + 1
-                     IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
+                     IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vCoul%mt(1:atoms%jri(n),lh,n,ispin) = vCoul%mt(1:atoms%jri(n),lh,n,ispin) + &
                                                          conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(iDir2,iDir,lm-4) * pref * &
                                                          ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**5) / atoms%rmsh(1:atoms%jri(n),n)**3
                   END DO

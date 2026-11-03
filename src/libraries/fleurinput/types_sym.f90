@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,12 @@
 MODULE m_types_sym
    USE m_juDFT
    USE m_types_fleurinput_base
+   USE m_mpi_bc_tool
+   USE m_types_xml
+   USE m_calculator
+   USE m_types_cell
+   USE m_types_input
+   USE m_constants
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: t_sym
@@ -29,7 +35,7 @@ MODULE m_types_sym
       !multiplication table
       INTEGER, ALLOCATABLE :: multab(:, :) !(nop,nop)
       !No of 2D-sym ops
-      INTEGER ::nop2
+      INTEGER ::nop2 = -1
       !Wigner matrix for lda+u
       COMPLEX, ALLOCATABLE :: d_wgn(:, :, :, :)
       !Phase factors for offidagonal lda+u
@@ -65,7 +71,6 @@ MODULE m_types_sym
 CONTAINS
 
    SUBROUTINE mpi_bc_sym(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_sym), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -99,8 +104,6 @@ CONTAINS
    END SUBROUTINE mpi_bc_sym
 
    SUBROUTINE read_xml_sym(this, xml)
-      USE m_types_xml
-      USE m_calculator
       CLASS(t_sym), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT)::xml
 
@@ -137,7 +140,6 @@ CONTAINS
       ENDDO
    END SUBROUTINE read_xml_sym
    SUBROUTINE read_sym_out(mrot, tau, nop)
-      USE m_types_xml
       INTEGER, ALLOCATABLE, INTENT(out) :: mrot(:, :, :)
       REAL, ALLOCATABLE, INTENT(out)    :: tau(:, :)
       INTEGER, INTENT(out)            :: nop
@@ -203,14 +205,11 @@ CONTAINS
    SUBROUTINE init(sym, cell, film)
       !Generates missing symmetry info.
       !tau,mrot and nop have to be specified alread
-      USE m_types_cell
-      USE m_types_input
-      USE m_constants
       CLASS(t_sym), INTENT(INOUT):: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       LOGICAL, INTENT(IN)        :: film
 
-      INTEGER :: invsop, zrfsop, invs2op, magicinv, n, i, j, nn
+      INTEGER :: invsop, zrfsop, invs2op, magicinv, n, i, j, nn, nremoved
       INTEGER :: optype(sym%nop), indtwo(sym%nop), usedop(sym%nop)
       INTEGER :: mrotaux(3, 3, sym%nop)
       REAL    :: tauaux(3, sym%nop)
@@ -273,8 +272,39 @@ CONTAINS
          CALL juDFT_error("film = t and z-axis not orthogonal", calledby="types_sym")
 
       IF (film) THEN
-         !---> now we have to sort the ops to find the two-dimensional ops
-         !---> and their 3-dim inverted or z-reflected counterparts
+         !---> check for nonsymmorphic translations in z-direction in the film case.
+         !---> This has to happen *before* nop2 and the operation ordering are
+         !---> derived below, because removing an operation shifts the whole list
+         !---> and both are indices into it.
+         nremoved = 0
+         n = 1
+         DO WHILE (n <= sym%nop)
+            IF (ABS(sym%tau(3, n)) > 0.000001) THEN
+               WRITE (oUnit, '(/," Full space group has",i3," operations.",/)') sym%nop
+               WRITE (oUnit, '(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
+               DO nn = n + 1, sym%nop
+                  sym%mrot(:, :, nn - 1) = sym%mrot(:, :, nn)
+                  sym%tau(:, nn - 1) = sym%tau(:, nn)
+               ENDDO
+               sym%nop = sym%nop - 1
+               nremoved = nremoved + 1
+            ELSE
+               n = n + 1
+            ENDIF
+         ENDDO
+
+         IF (nremoved > 0) THEN
+            !---> multab/invtab and the invsop/zrfsop indices found above refer
+            !---> to the old operation list, so they have to be redone.
+            CALL sym%check_close(optype)
+            invsop = 0
+            zrfsop = 0
+            DO n = 1, sym%nop
+               IF (ANY(ABS(sym%tau(:, n)) > eps12)) CYCLE
+               IF (ALL(sym%mrot(:, :, n) == invs_matrix)) invsop = n
+               IF (ALL(sym%mrot(:, :, n) == zrfs_matrix)) zrfsop = n
+            ENDDO
+         END IF
 
          mrotaux(:, :, 1:sym%nop) = sym%mrot(:, :, 1:sym%nop)
          tauaux(:, 1:sym%nop) = sym%tau(:, 1:sym%nop)
@@ -297,58 +327,44 @@ CONTAINS
          IF (sym%invs) magicinv = invsop
          usedop = 1
 
+         !---> The in-plane operations have to come first: everything downstream
+         !---> that slices operations 1..nop2 out of the global list depends on it.
+         DO i = 1, sym%nop2
+            j = indtwo(i)
+            sym%mrot(:, :, i) = mrotaux(:, :, j)
+            sym%tau(:, i) = tauaux(:, j)
+            usedop(j) = usedop(j) - 1
+         ENDDO
+         n = sym%nop2
+
          IF (magicinv > 0) THEN
             DO i = 1, sym%nop2
-               j = indtwo(i)
-               sym%mrot(:, :, i) = mrotaux(:, :, j)
-               sym%tau(:, i) = tauaux(:, j)
-               usedop(j) = usedop(j) - 1
                j = sym%multab(magicinv, indtwo(i))
-               sym%mrot(:, :, i + sym%nop2) = mrotaux(:, :, j)
-               sym%tau(:, i + sym%nop2) = tauaux(:, j)
+               sym%mrot(:, :, n + i) = mrotaux(:, :, j)
+               sym%tau(:, n + i) = tauaux(:, j)
                usedop(j) = usedop(j) - 1
             ENDDO
-            IF (ANY(usedop(1:sym%nop) < 0)) CALL juDFT_error("Fatal Error! #01", calledby="types_sym")
-
-            IF (2*sym%nop2 .NE. sym%nop) THEN
-               n = 0
-               DO i = 1, sym%nop
-                  IF (usedop(i) == 1) THEN
-                     n = n + 1
-                     sym%mrot(:, :, 2*sym%nop2 + n) = mrotaux(:, :, i)
-                     sym%tau(:, 2*sym%nop2 + n) = tauaux(:, i)
-                  ENDIF
-               ENDDO
-               IF (n + 2*sym%nop2 /= sym%nop) CALL juDFT_error("Fatal Error! #02", calledby="types_sym")
-            ENDIF
-
+            n = n + sym%nop2
          ENDIF
+         IF (ANY(usedop(1:sym%nop) < 0)) CALL juDFT_error("Fatal Error! #01", calledby="types_sym")
 
-         !---> check for nonsymmorphic translations in z-direction in
-         !---> the film (oldfleur=t) case
-         n = 1
-         DO WHILE (n <= sym%nop)
-            IF (ABS(sym%tau(3, n)) > 0.000001) THEN
-               WRITE (oUnit, '(/," Full space group has",i3," operations.",/)') sym%nop
-               WRITE (oUnit, '(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
-               DO nn = n + 1, sym%nop
-                  sym%mrot(:, :, nn - 1) = sym%mrot(:, :, nn)
-                  sym%tau(:, nn - 1) = sym%tau(:, nn)
-               ENDDO
-               sym%nop = sym%nop - 1
-            ELSE
+         !---> Whatever is left keeps its relative order.
+         DO i = 1, sym%nop
+            IF (usedop(i) == 1) THEN
                n = n + 1
+               sym%mrot(:, :, n) = mrotaux(:, :, i)
+               sym%tau(:, n) = tauaux(:, i)
+               usedop(i) = usedop(i) - 1
             ENDIF
          ENDDO
+         IF (n /= sym%nop) CALL juDFT_error("Fatal Error! #02", calledby="types_sym")
       ENDIF
 
-      !---> redo to ensure proper mult. table and mapping functions
       CALL sym%check_close(optype)
 
    END SUBROUTINE init
 
    FUNCTION closure(sym) RESULT(lclose)
-      USE m_constants
       CLASS(t_sym), INTENT(IN):: sym
       LOGICAL                :: lclose
 
@@ -401,7 +417,6 @@ CONTAINS
    END FUNCTION closure
 
    SUBROUTINE check_close(sym, optype)
-      USE m_constants
       CLASS(t_sym), INTENT(inout)::sym
       INTEGER, INTENT(OUT) :: optype(sym%nop)
 

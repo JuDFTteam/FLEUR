@@ -1,18 +1,31 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_corespec_eval
 
-  USE m_types_setup
   USE m_types_usdus
   USE m_types_cdnval, ONLY: t_eigVecCoeffs
   USE m_constants
   USE m_corespec
+  USE m_clebsch
+  USE m_differ
+  USE m_intgr, ONLY: intgr3
+  USE m_dr2fdr
+  USE m_sphbes
+  USE m_ylm
+  USE m_types_atoms
+  USE m_types_input
+  USE m_juDFT
 
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs, corespec_eloss_qv, e2q, lebedev, gen_oh, &
+     ld0006, ld0014, ld0026, ld0038, ld0050, ld0074, ld0086, ld0110, ld0146, ld0170, ld0194, ld0230, ld0266, ld0302, &
+     ld0350, ld0434, ld0590, ld0770, ld0974, ld1202, ld1454, ld1730, ld2030, ld2354, ld2702, ld3074, ld3470, ld3890, &
+     ld4334, ld4802, ld5294, ld5810
 
   CONTAINS
 
@@ -26,7 +39,6 @@ MODULE m_corespec_eval
 
 !    use factorials
 
-    use m_clebsch
 
     implicit none
 
@@ -109,13 +121,7 @@ MODULE m_corespec_eval
                           jspins,jspin,efermi,&
                           msh,vr,f,g)
 
-    USE m_constants, ONLY : c_light
     !USE m_setcor
-    USE m_differ
-    USE m_intgr, ONLY : intgr3
-    USE m_dr2fdr
-    USE m_sphbes
-    USE m_intgr, ONLY : intgr3
 
     implicit none
 
@@ -467,7 +473,6 @@ MODULE m_corespec_eval
 !
   subroutine corespec_ddscs(jspin,jspins)
 
-    use m_ylm
 
 
     implicit none
@@ -917,7 +922,6 @@ MODULE m_corespec_eval
 !
   real function e2q(e)
 
-    use m_corespec, only : mec2,alpha
     implicit none
     real, intent(in) :: e
 
@@ -1056,8 +1060,7 @@ MODULE m_corespec_eval
 !      code=6:   (a,b,c) etc, c=sqrt(1-a^2-b^2), a/b input  ( 48 points)
 !
        goto (1,2,3,4,5,6) code
-       write (oUnit,*) 'Gen_Oh: Invalid Code'
-       stop 
+       CALL judft_error('Gen_Oh: Invalid Code')
     1  continue
        a=1.0
        x(1) =  a

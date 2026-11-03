@@ -9,12 +9,15 @@
 ! tests the compatibility of the symmetry elements with the axis (q)    !
 ! defining a spin-sprial                                          gb`02 !
 !-----------------------------------------------------------------------!
+      USE m_constants
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: ss_sym
       CONTAINS
       SUBROUTINE ss_sym(
      >                  nop,mrot,qss,
      <                  error)
       
-      USE m_constants
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: nop, mrot(3,3,nop)

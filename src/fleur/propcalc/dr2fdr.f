@@ -1,4 +1,8 @@
       MODULE m_dr2fdr
+      USE m_differentiate, ONLY: difcub
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: dr2fdr
       CONTAINS
 
       SUBROUTINE dr2fdr(function,rmsh,jri,
@@ -8,7 +12,6 @@ c     Construct r**2 * df(r)/dr ; input 'function' is on a mesh (rmsh)
 c     with 'jri' points and is assumed to be multiplied by r**2.
 c     difcub performs analytic derivative of Lagrangian of 3rd order.
 c
-      USE m_differentiate,ONLY:difcub
       IMPLICIT NONE
 
 ! Arguments ...

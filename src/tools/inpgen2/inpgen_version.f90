@@ -1,14 +1,19 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_inpgen_version
+    use m_compile_descr
+    use m_constants
+    use m_juDFT
+    use m_check_arguments
+    use m_types_xml
     implicit none
     private
     public inpgen_version
   contains
     subroutine inpgen_version()
-      use m_compile_descr
-      use m_constants
-      use m_juDFT
-      use m_check_arguments
-      use m_types_xml
   
       character(:), allocatable:: infostring, additional_info
       character(len=10) :: outputVersionString

@@ -1,5 +1,10 @@
       MODULE m_firstglance
       use m_juDFT
+      use m_symdata, only: nammap, ord2, l_c2
+      use m_constants
+      implicit none
+      private
+      public :: first_glance
 c
 c reads the part of the input file that is necessary to call rw_inp
 c
@@ -9,8 +14,6 @@ c
      <                        l_kpts,l_qpts,l_gamma,nkpt,nmop,
      <                        nmopq)
 
-      USE m_symdata , ONLY : nammap,ord2,l_c2
-      USE m_constants
 
       IMPLICIT NONE
 

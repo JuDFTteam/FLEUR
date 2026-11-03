@@ -39,7 +39,9 @@ Hint: (vim)[http://vim.wikia.com/wiki/Converting_tabs_to_spaces] (emacs)[https:/
 With regard to Fortran modules please follow these ideas:
 - modules are named with a prefix 'm_'
 - in general each file should contain exactly one module. The names of the files and the modules should correspond.
-- the module should start with a 'implicit none' and a 'private' statement. The private statement is particularly important if other modules are used to make sure we do not 'use' from multiple sources. Exceptions are modules collecting use statements with no further code.
+- the module should start with a 'implicit none' and a 'private' statement. The private statement is particularly important if other modules are used to make sure we do not 'use' from multiple sources. Everything the module exports is listed in a 'public' statement; a module that re-exports other modules (like m_juDFT) lists the re-exported names there as well.
+- all 'use' statements go into the head of the module (or program), not into its subroutines and functions. Only interface bodies may contain 'use' statements.
+- 'use' the module that defines what you need, e.g. 'use m_types_atoms' for t_atoms. The old collection modules m_types and m_types_setup no longer exist.
 
 
 ### Passing arrays to functions

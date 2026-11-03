@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -17,14 +17,21 @@ MODULE m_sympsi
 
   ! Jussi Enkovaara, Juelich 2004
 
+   USE m_constants
+   USE m_grp_k
+   USE m_inv3
+   USE m_juDFT
+   USE m_types_cell
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_noco
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: sympsi
 CONTAINS
   SUBROUTINE sympsi(lapw,jspin,sym,ne,cell,eig,noco, jsym,zMat)
 
-    USE m_constants
-    USE m_grp_k
-    USE m_inv3
-    USE m_types
-    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)        :: lapw

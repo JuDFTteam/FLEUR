@@ -1,16 +1,17 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_juDFT_args
 !This subroutine allows to query for command line arguments
+  USE m_check_arguments
+  IMPLICIT NONE
   PRIVATE
   CHARACTER(len=5):: ENV_NAME="juDFT" !name of environment variable
   PUBLIC judft_was_argument,juDFT_string_for_argument
 CONTAINS
   FUNCTION juDFT_was_argument(arg) RESULT(OK)
-    USE m_check_arguments
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)::arg
     LOGICAL ok

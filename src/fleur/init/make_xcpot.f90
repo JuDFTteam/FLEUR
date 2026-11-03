@@ -1,24 +1,24 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_xcpot
    use m_juDFT
+   use m_types_xcpot
+   use m_types_atoms
+   use m_types_input
+   use m_types_xcpot_libxc
+   use m_types_xcpot_inbuild
+   use m_types_xcpot_inbuild_nofunction
+   use m_types_mpi
    implicit none
    private
    public make_xcpot
 
 contains
    subroutine make_xcpot(fmpi,xcpot, atoms, input)
-      use m_types_xcpot
-      use m_types_atoms
-      use m_types_input
-      USE m_types_xcpot_libxc
-      USE m_types_xcpot_inbuild
-      USE m_types_xcpot_inbuild_nofunction
-      USE m_types_mpi
 
       TYPE(t_mpi),INTENT(IN)        :: fmpi
       TYPE(t_input), INTENT(IN)     :: input
@@ -26,11 +26,13 @@ contains
       CLASS(t_xcpot), ALLOCATABLE, INTENT(INOUT) :: xcpot
 
       INTEGER              :: func_vxc_id_c, func_vxc_id_x, func_exc_id_c, func_exc_id_x
+      INTEGER              :: func_aux_id_x, func_aux_id_c
       REAL                 :: gmaxxc
       LOGICAL              :: l_libxc
       LOGICAL              :: l_inbuild
       CHARACTER(len=10)    :: inbuild_name
       LOGICAL              :: l_relativistic
+      LOGICAL              :: l_bj
 
       !Finish setup of xcpot
       xcpot%l_libxc = (xcpot%inbuild_name == "LibXC")
@@ -41,17 +43,22 @@ contains
          func_vxc_id_x  = xcpot%func_vxc_id_x
          func_exc_id_c  = xcpot%func_exc_id_c
          func_exc_id_x  = xcpot%func_exc_id_x
+         func_aux_id_x  = xcpot%func_aux_id_x
+         func_aux_id_c  = xcpot%func_aux_id_c
          gmaxxc         = xcpot%gmaxxc
          l_libxc        = .TRUE.
          l_inbuild      = .FALSE.
          inbuild_name   = xcpot%inbuild_name
          l_relativistic = xcpot%l_relativistic
+         l_bj           = xcpot%l_bj
 
          DEALLOCATE (xcpot)
          ALLOCATE (t_xcpot_libxc::xcpot)
+         xcpot%func_aux_id_x  = func_aux_id_x
+         xcpot%func_aux_id_c  = func_aux_id_c
          SELECT TYPE (xcpot)
          CLASS is (t_xcpot_libxc)!just allocated like this
-            CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins)
+            CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins, l_bj)
          END SELECT
          xcpot%gmaxxc         = gmaxxc
          xcpot%l_libxc        = l_libxc

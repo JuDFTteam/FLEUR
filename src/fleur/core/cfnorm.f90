@@ -1,5 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_cfnorm
 
+   USE m_rsimp
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: cfnorm
    CONTAINS
 
    SUBROUTINE cfnorm(mrad,is,it,nsol,nmatch,jtop,var,gc,fc,rc,rc2,dx,gck,fck)
@@ -7,7 +16,6 @@ MODULE m_cfnorm
 ! wavefunctions normalization
 !
 
-      USE m_rsimp
 
       IMPLICIT NONE
 

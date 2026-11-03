@@ -1,8 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 ! Calculate the exponential integral using the algorithm of
 ! [1] Tseng, Lee, Journal of Hydrology, 205 (1998) 38-51
 module m_exponential_integral
 
    implicit none
+   private
+   public :: calculateexponentialintegral, seriesexpansion, gauss_laguerre, series_laguerre
 
    real, parameter :: series_laguerre = 4.0
 

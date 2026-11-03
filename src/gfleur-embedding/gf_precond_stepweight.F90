@@ -4,15 +4,18 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_gf_precond_stepweight
-    implicit none
-
-    contains
-    subroutine gf_diagonalize_step(layer,stars)
+    use m_constants, only: oUnit
     use m_gf_stepsanaly
     use m_gf_types
     use m_gf_math
     use m_hdf_tools
     use hdf5
+    implicit none
+    private
+    public :: gf_diagonalize_step, priv_get_dia_step, gf_remove_variation
+
+    contains
+    subroutine gf_diagonalize_step(layer,stars)
     implicit none
     integer,intent(in)       :: layer
     type(t_stars),intent(in) :: stars
@@ -64,9 +67,6 @@ module m_gf_precond_stepweight
     end subroutine
 
 	subroutine priv_get_dia_step(layer,stars,cutoff,eigenvectors)
-    use m_gf_types
-    use hdf5
-    use m_hdf_tools
     implicit none
     integer,intent(in)       :: layer
     type(t_stars),intent(in) :: stars
@@ -108,7 +108,6 @@ module m_gf_precond_stepweight
     end subroutine
 
     subroutine gf_remove_variation(layer,stars,cutoff,vpw)
-    use m_gf_types
     implicit none
     integer,intent(in)       :: layer
     type(t_stars),intent(in) :: stars

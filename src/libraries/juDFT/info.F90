@@ -1,10 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum J�lich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_judft_info
+  USE m_juDFT_internalParams
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  IMPLICIT NONE
   private
   integer:: info_index
   character(len=50),allocatable:: messages(:)
@@ -12,9 +17,6 @@ module m_judft_info
   public judft_info,judft_write_infos
 contains
   subroutine judft_info(message,group)
-#ifdef CPP_MPI
-    USE mpi
-#endif
     implicit none
 
     character(len=*),intent(in)::message,group
@@ -68,7 +70,6 @@ contains
 
   subroutine judft_write_infos()
 
-    USE m_juDFT_internalParams
 
     integer::n
     

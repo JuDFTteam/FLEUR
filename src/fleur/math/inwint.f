@@ -1,4 +1,8 @@
       MODULE m_inwint
+      use m_juDFT
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: inwint
       CONTAINS
       SUBROUTINE inwint(
      >                  e,fl,ki,fkap,cs,cis,s,z,h,dd,rn,rnot,msh,vr,
@@ -12,7 +16,6 @@ c-----x  has been removed among other things.    dale koelling    x----
 c
 c     adams' procedure. more stable for GGA. Feb.20,1998. T.A.
 c-----x----x----x----x----x----x----x----x----x----x----x----x----x----
-      use m_juDFT
       IMPLICIT NONE
 
 c     .. Arguments ..

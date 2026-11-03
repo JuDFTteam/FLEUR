@@ -1,20 +1,31 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fertetra
 
-   USE m_types
    USE m_constants
    USE m_juDFT
    USE m_tetrahedronInit
    USE m_xmlOutput
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: fertetra
 
    CONTAINS
 
-   SUBROUTINE fertetra(input,noco,kpts,mpi,ne,eig,ef,w,seigv,l_output)
+   SUBROUTINE fertetra(input,input_zelec,noco,kpts,mpi,ne,eig,ef,w,seigv,l_output)
 
       TYPE(t_kpts),        INTENT(IN)     :: kpts
       TYPE(t_noco),        INTENT(IN)     :: noco
       TYPE(t_input),       INTENT(IN)     :: input
+      REAL,                INTENT(IN)     :: input_zelec
       TYPE(t_mpi),         INTENT(IN)     :: mpi
       INTEGER,             INTENT(IN)     :: ne(:,:)
       REAL,                INTENT(IN)     :: eig(:,:,:)
@@ -45,8 +56,8 @@ MODULE m_fertetra
          dlow = dlow + weightSum * 2.0/input%jspins
       ENDDO
 
-      IF (dlow.GT.input%zelec) THEN
-         WRITE(oUnit,9000) lowBound,dlow,input%zelec
+      IF (dlow.GT.input_zelec) THEN
+         WRITE(oUnit,9000) lowBound,dlow,input_zelec
          CALL juDFT_error("valence band too high ",calledby="fertetra")
       ENDIF
 9000  FORMAT (' valence band too high ',/,&
@@ -62,14 +73,14 @@ MODULE m_fertetra
             dup = dup + weightSum * 2.0/input%jspins
          ENDDO
 
-         IF (dup.GT.input%zelec) THEN
+         IF (dup.GT.input_zelec) THEN
             EXIT
          ELSE
             !Raise the upper bound
             upperBound = upperBound + 0.2
             it = it + 1
             IF(it.GT.10) THEN
-               WRITE (oUnit,9100) upperBound,dup,input%zelec
+               WRITE (oUnit,9100) upperBound,dup,input_zelec
 9100           FORMAT (' valence band too low ',/,&
                        '  eup  ',f10.5,' dup  ',f10.5,' nelec ',f10.5)
                CALL juDFT_error("valence band too low ",calledby ="fertetra")
@@ -93,9 +104,9 @@ MODULE m_fertetra
                                  ef,weightSum=weightSum)
             dfermi = dfermi + weightSum * 2.0/input%jspins
          ENDDO
-         IF(ABS(dfermi-input%zelec).LT.1e-12) THEN
+         IF(ABS(dfermi-input_zelec).LT.1e-12) THEN
             EXIT
-         ELSE IF(dfermi-input%zelec.GT.0.0) THEN
+         ELSE IF(dfermi-input_zelec.GT.0.0) THEN
             !Occupation to large -> search in the left interval
             upperBound = ef
          ELSE
@@ -119,7 +130,7 @@ MODULE m_fertetra
       ENDDO
       
       IF (l_output) THEN
-      WRITE (oUnit,9200) ef,dfermi,input%zelec
+      WRITE (oUnit,9200) ef,dfermi,input_zelec
 9200  FORMAT (//,'Tetrahedron method: ',//,'   fermi energy =',f10.5,&
                  ' dtot ',f10.5,' nelec ',f10.5)
       ENDIF

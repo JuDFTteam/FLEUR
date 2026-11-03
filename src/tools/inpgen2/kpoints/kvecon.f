@@ -1,6 +1,9 @@
       MODULE m_kvecon
       use m_juDFT
       use m_constants
+      implicit none
+      private
+      public :: kvecon
 !
 ! This subroutine determines the k-points with which we
 ! will calculate the band-structure. The first ncorn

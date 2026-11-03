@@ -1,5 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_gradYlm
+   use m_constants, only: fpi_const, ImagUnit
+   use m_gaunt, only: gaunt1
+   use m_types_atoms
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: derivative, gradylm, divylm, rotylm
 
 CONTAINS
 
@@ -7,7 +17,6 @@ CONTAINS
   ! Calculates derivative of a function with scalar argument lying on a muffin-tin mesh
   subroutine Derivative(f, itype, atoms, df)
 
-    use m_types
 
      type(t_atoms), intent(in)  :: atoms
 
@@ -83,9 +92,6 @@ CONTAINS
   !> @param[out] r2GrFshMt : Spherical harmonic coefficients of muffin-tin quantity's gradient multiplied by a factor of r**2
   !---------------------------------------------------------------------------------------------------------------------------------
 
-    use m_constants, only : fpi_const, ImagUnit
-    use m_gaunt, only : gaunt1
-    use m_types
 
 
     ! Type parameter

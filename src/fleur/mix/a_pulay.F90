@@ -1,14 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_a_pulay
   USE m_juDFT
+  USE m_pulay
+  USE m_types_mat
+  USE m_types_mixvector
+  USE m_mixing_history
+  IMPLICIT NONE
   PRIVATE
   REAL :: distance(3)
   PUBLIC a_pulay
 CONTAINS
   SUBROUTINE a_pulay(alpha,fm,sm,l_dfpt)
-    USE m_pulay
-    USE m_types_mat
-    USE m_types_mixvector
-    USE m_mixing_history
     IMPLICIT NONE
     REAL,INTENT(IN)                 :: alpha
     TYPE(t_mixvector),INTENT(IN)    :: fm(:)
@@ -60,7 +66,6 @@ CONTAINS
   END SUBROUTINE a_pulay
 
   FUNCTION simple_pulay(alpha,fm,sm,l_dfpt)RESULT(sm_out)
-    USE m_types_mixvector
     IMPLICIT NONE
     REAL,INTENT(IN)                 :: alpha
     TYPE(t_mixvector),INTENT(IN)    :: fm(:)

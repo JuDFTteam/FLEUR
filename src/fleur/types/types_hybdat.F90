@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_hybdat
    use m_types_usdus
    use m_types_mat
@@ -13,13 +18,24 @@ MODULE m_types_hybdat
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_types_atoms
+   use m_types_cell
    IMPLICIT NONE
-   private 
+   private
+   !> Index layout of the mixed product basis (MPB)
+   !>
+   !> The MPB functions of one k-point are numbered in consecutive blocks:
+   !>
+   !>    [ 1        .. n_mt        ]  MT  : radial products u_pl*u_p'l' times Y_LM
+   !>    [ n_mt+1   .. n_mt+n_g    ]  IR  : interstitial plane waves
+   !>    [ n_mt+n_g+1 .. nbasm(ik) ]  VAC : films only, ordered (vacuum, G||, z-function)
+   !>
+   !> `n_mt` is k-independent, the IR block size is `mpdata%n_g(ik)`.
    TYPE,public:: t_hybdat
       COMPLEX, ALLOCATABLE   :: stepfunc(:, :, :)
       INTEGER, ALLOCATABLE   :: lmaxc(:)
       INTEGER, ALLOCATABLE   :: nbands(:,:) ! nkptf, jsp
-      INTEGER, ALLOCATABLE   :: nbasm(:)
+      INTEGER, ALLOCATABLE   :: nbasm(:)    ! total MPB size per k-point
       INTEGER, ALLOCATABLE   :: nindxc(:, :)
       INTEGER, ALLOCATABLE   :: nindxp1(:, :)
       INTEGER, ALLOCATABLE   :: nobd(:, :)
@@ -29,7 +45,7 @@ MODULE m_types_hybdat
       INTEGER                :: lmaxcd, maxindxc
       INTEGER                :: maxfac
       INTEGER                :: maxlmindx = -1
-      INTEGER                :: nbasp = -1
+      INTEGER                :: n_mt = -1   ! size of the MT block, see layout above
       integer                :: max_q = -1
       LOGICAL                :: l_addhf = .false.
       LOGICAL                :: l_calhf = .false.
@@ -44,6 +60,9 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: gridf(:, :)
       REAL, ALLOCATABLE      :: prodm(:, :, :, :)
       REAL, ALLOCATABLE      :: sfac(:), fac(:)
+      ! films: planar vacuum potential and energy parameters of the eigenvectors, (nmz,ivac,jspin)
+      REAL, ALLOCATABLE      :: vz_vac(:, :, :)
+      REAL, ALLOCATABLE      :: evac_vac(:, :)
       ! coulomb matrix stuff
       type(t_coul), allocatable   :: coul(:)
 

@@ -1,8 +1,43 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_selecFFT
 
    USE m_juDFT
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: selecfft, defaultfft_const, mklfft_const, spfft_const, fftw_const, cufft_const
+#ifdef CPP_FFT_MKL
+   PUBLIC :: mklfft_available
+#endif
+#ifdef CPP_FFT_MKL
+#else
+   PUBLIC :: mklfft_available
+#endif
+#ifdef CPP_FFTW
+   PUBLIC :: fftw_available
+#endif
+#ifdef CPP_FFTW
+#else
+   PUBLIC :: fftw_available
+#endif
+#ifdef CPP_SPFFT
+   PUBLIC :: spfft_available
+#endif
+#ifdef CPP_SPFFT
+#else
+   PUBLIC :: spfft_available
+#endif
+#ifdef _OPENACC
+   PUBLIC :: cufft_available
+#endif
+#ifdef _OPENACC
+#else
+   PUBLIC :: cufft_available
+#endif
 
    INTEGER, PARAMETER :: defaultFFT_const = 0
    INTEGER, PARAMETER :: mklFFT_const     = 1

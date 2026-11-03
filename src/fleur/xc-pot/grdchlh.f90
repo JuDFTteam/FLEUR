@@ -1,5 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_grdchlh
    use m_juDFT
+   use m_constants
+   implicit none
+   private
+   public :: grdchlh, f131, f132, f133, f141, f142, f143, f144, f151, f152, f153, f154, f155, f161, f162, f163, f164, &
+      f165, f166, f231, f232, f233, f241, f242, f243, f244, f251, f252, f253, f254, f255, f261, f262, f263, f264, f265, &
+      f266
 !     -----------------------------------------------------------------
 !     input: rv present: exponential mesh. otherwise dx interval mesh.
 !            ro: charge or quantity to be derivated.
@@ -11,7 +22,6 @@ CONTAINS
 
    SUBROUTINE grdchlh(dx,ro, drr,ddrr,rv,order)
 
-      USE m_constants
 
       IMPLICIT NONE
 

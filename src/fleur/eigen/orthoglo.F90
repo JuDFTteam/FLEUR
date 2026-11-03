@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_orthoglo
   USE m_juDFT
+  USE m_types_atoms
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: orthoglo
   !*********************************************************************
   ! Each G-vector corresponds to a vector of C-coeff. These vectors must
   ! be linearly independent. This is checked by this soubroutine for an
@@ -23,7 +27,6 @@ CONTAINS
     ! CF Replaced (unstable) Gram-Schmidt by diagonalization.
     !*********************************************************************
 
-    USE m_types_fleurinput
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..

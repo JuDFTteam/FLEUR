@@ -1,27 +1,49 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_writeBasis
 
+   USE m_juDFT
+   USE m_genmtbasis
+   USE m_pot_io
+   USE m_abcof
+   USE m_abcrot
+   USE m_eig66_io, ONLY: read_eig
+#ifdef CPP_HDF
+   USE hdf5
+   USE m_hdf_tools
+#endif
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_cdnval
+   USE m_types_enpara
+   USE m_types_force
+   USE m_types_hub1data
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_usdus
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: writebasis
 CONTAINS
 
 SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vTot,vCoul,vx,&
                       fmpi,results,eig_id ,sphhar,stars,vacuum)
 
-   USE m_types
-   USE m_juDFT
-#ifdef CPP_HDF
-   USE hdf5
-   USE m_hdf_tools
-#endif
-   USE m_genmtbasis
-   USE m_pot_io
-   USE m_abcof
-   USE m_abcrot
-   USE m_eig66_io, ONLY : read_eig
 
    IMPLICIT NONE
 !     TYPE(t_results),INTENT(IN)    :: results

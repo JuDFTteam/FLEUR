@@ -1,4 +1,7 @@
       MODULE m_divi
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: divi
       CONTAINS
       SUBROUTINE divi(
      >                nkpt,rltv,film,nop,nop2,

@@ -1,16 +1,22 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_forcetheo
+  use m_types_forcetheo_extended
+  use m_types_atoms
+  use m_types_cell
+  use m_types_forcetheo
+  use m_types_forcetheo_data
+  use m_types_sym
   implicit none
+  PRIVATE
+  PUBLIC :: make_forcetheo
 
 contains
   subroutine make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
-    use m_types
-    USE m_types_forcetheo_extended
     TYPE(t_sym),      INTENT(IN)     :: sym
     TYPE(t_atoms),    INTENT(IN)     :: atoms
     TYPE(t_cell),     INTENT(IN)     :: cell

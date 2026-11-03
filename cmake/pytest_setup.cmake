@@ -19,14 +19,8 @@ endif()
 if (NOT FLEUR_USE_SPFFT)
     set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} spfft")
 endif()
-if (NOT FLEUR_USE_WANN)
-    set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} wannier")
-endif()
-if (NOT FLEUR_USE_WANN4)
-    set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} wannier4")
-endif()
-if (NOT FLEUR_USE_WANN5)
-    set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} wannier5")
+if (NOT FLEUR_USE_WANNLIB_API)
+    set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} wannierlib")
 endif()
 if (NOT FLEUR_USE_MAGMA)
     set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} magma")
@@ -91,13 +85,13 @@ if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
 fi
 mkdir -p Testing
 
-if [ -r Testing/env ]
+if [ -x Testing/env/bin/python ]
 then 
    source Testing/env/bin/activate
 else
-   $PYTHON_EXECUTABLE -m venv create Testing/env
+   \"$PYTHON_EXECUTABLE\" -m venv Testing/env
    source Testing/env/bin/activate
-   pip install pytest_html pytest py
+   python -m pip install pytest_html pytest py
 fi   
 
 if [ \"$1\" = \"-perf\" ]
@@ -118,5 +112,3 @@ add_custom_target(test
                   COMMAND sh run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making 'make test' run the python script executable")
-
-

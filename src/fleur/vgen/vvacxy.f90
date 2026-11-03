@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_vvacxy
   !     **********************************************************
   !     g/=0 coefficient of vacuum coulomb potential           *
@@ -8,13 +13,21 @@ module m_vvacxy
   !---------------------------------------------------------------
 
    use m_judft
+   use m_constants
+   use m_intgr, only: intgz1
+   use m_qsf
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   implicit none
+   private
+   public :: vvacxy, exp_safe
 
 contains
    subroutine vvacxy( stars, vacuum, cell, sym, input, field, rhtxy, vxy, alphm, l_dfptvgen )
-      use m_types
-      use m_constants
-      use m_intgr, only: intgz1
-      use m_qsf
 
       implicit none
 
@@ -105,7 +118,7 @@ contains
             alphm(irec2,1) = cmplx( alpha(vacuum%nmzxy,1,1,irec2), alpha(vacuum%nmzxy,1,2,irec2) )
             if ( vacuum%nvac == 1 ) then
                call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-               alphm(irec2r,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2),alpha(vacuum%nmzxy,1,2,irec2))
+               alphm(irec2,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2r),alpha(vacuum%nmzxy,1,2,irec2r))
             else
                alphm(irec2,2) = cmplx( alpha(vacuum%nmzxy,2,1,irec2), alpha(vacuum%nmzxy,2,2,irec2) )
             end if
@@ -174,7 +187,7 @@ contains
             alphm(irec2,1) = cmplx( alpha(vacuum%nmzxy,1,1,irec2), alpha(vacuum%nmzxy,1,2,irec2) )
             if ( vacuum%nvac == 1 ) then
                call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-               alphm(irec2r,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2),alpha(vacuum%nmzxy,1,2,irec2))
+               alphm(irec2,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2r),alpha(vacuum%nmzxy,1,2,irec2r))
             else
                alphm(irec2,2) = cmplx( alpha(vacuum%nmzxy,2,1,irec2), alpha(vacuum%nmzxy,2,2,irec2) )
             end if

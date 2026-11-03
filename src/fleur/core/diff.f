@@ -7,6 +7,9 @@ C   *    <DX> IS THE INCREMENT IN THE LOGARITHMIC NET.               *  WAB07660
 C   *    THE RESULT IS STORED IN <VM>.                               *  WAB07670
 C   *                                                                *  WAB07680
 C   ******************************************************************  WAB07690
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: diff
       CONTAINS
       SUBROUTINE diff(
      >                mrad,v,dx,n,

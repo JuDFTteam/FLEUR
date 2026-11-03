@@ -1,11 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_xcpot_data
    !This module contains the xcpot-type used for the in-build xc-implementations
+   use m_mpi_bc_tool
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: t_xcpot_data_mpi_bc, t_xcpot_data
 
    TYPE t_xcpot_data
       !in the pbe case (exchpbe.F) lots of test are made
@@ -28,7 +31,6 @@ MODULE m_types_xcpot_data
 contains 
 
    subroutine t_xcpot_data_mpi_bc(data, rank, mpi_comm) 
-      use m_mpi_bc_tool
       implicit NONE
       class(t_xcpot_data), intent(inout) :: data 
       integer, intent(in) :: rank, mpi_comm

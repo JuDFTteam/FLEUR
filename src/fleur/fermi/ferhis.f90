@@ -1,12 +1,23 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_ferhis
+   USE m_constants
+   USE m_efnewton
+   USE m_xmlOutput
+   USE m_types_cell
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_misc
+   implicit none
+   PRIVATE
+   PUBLIC :: ferhis
 CONTAINS
-  SUBROUTINE ferhis(input,kpts,fmpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
+  SUBROUTINE ferhis(input_tkb,kpts,fmpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
                     nstef,ws,spindg,weight,energies,ne,we, noco,cell,ef,seigv,w_iks,results,spinDepTS,l_output)
     !***********************************************************************
     !
@@ -50,16 +61,12 @@ CONTAINS
     !                                      r.pentcheva, kfa, may  1996
     !
     !***********************************************************************
-    USE m_types
-    USE m_constants
-    USE m_efnewton
-    USE m_xmlOutput
 
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)          :: fmpi
-    TYPE(t_input),INTENT(IN)        :: input
+    REAL,INTENT(IN)                 :: input_tkb
     TYPE(t_kpts),INTENT(IN)         :: kpts
     TYPE(t_noco),INTENT(IN),OPTIONAL         :: noco
     TYPE(t_cell),INTENT(IN),OPTIONAL         :: cell
@@ -122,7 +129,7 @@ CONTAINS
     !**********************************************************************
     !     ..
 
-    tkb=input%tkb !might be modified if we have an insulator
+    tkb=input_tkb !might be modified if we have an insulator
     IF ( fmpi%irank == 0 .and. l_output) THEN
        WRITE (oUnit,FMT='(/)')
        WRITE (oUnit,FMT='(''FERHIS:  Fermi-Energy by histogram:'')')

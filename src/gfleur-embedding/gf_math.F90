@@ -6,6 +6,10 @@
       MODULE m_gf_math 
       use m_juDFT
       USE m_constants, ONLY: pi_const, tpi_const, oUnit
+#if (1==2)
+      USE m_types_lapw, ONLY: t_lapw
+      USE m_types_stars, ONLY: t_stars
+#endif
       IMPLICIT NONE
 !-------------------------------------------------------------------    
 !     This module creates easy to use interfaces to useful math and     
@@ -975,7 +979,6 @@
       !-----------------------------------------------
       !   Take a 2d matrix in lapw-basis and return the charge in stars
       !-----------------------------------------------
-      use m_types
       implicit none
       type(t_lapw),intent(in) :: lapw
       type(t_stars),intent(in):: stars

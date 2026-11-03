@@ -1,8 +1,29 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vvac_xc
   use m_juDFT
+  use m_types_xcpot_libxc
+  use m_constants
+  use m_grdrsvac
+  use m_grdchlh
+  use m_mkgz
+  use m_mkgxyz3
+  use m_fft2d
+  use m_vac_tofrom_grid
+  use m_libxc_postprocess_gga
+  use m_types_cell
+  use m_types_xcpot
+  use m_types_input
+  use m_types_noco
+  use m_types_potden
+  use m_types_stars
+  use m_types_vacuum
+  implicit none
   private
   !These used to be inputs for testing...
-  INTEGER,PARAMETER:: fixed_ndvgrd=6
   REAL,PARAMETER   :: fixed_chng=-0.1e-11
 
   public vvac_xc
@@ -13,7 +34,7 @@ MODULE m_vvac_xc
   !     for the gradient contribution.   t.a. 1996
   !-----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vvac_xc(ifftd2,stars,vacuum,noco ,cell,xcpot,input,den, vxc,exc)
+  SUBROUTINE vvac_xc(ifftd2,stars,vacuum,noco ,cell,xcpot,input,den, vxc,exc,vx)
 
     !-----------------------------------------------------------------------
     !     instead of vvacxcor.f: the different exchange-correlation
@@ -24,18 +45,8 @@ CONTAINS
     !     ** r.pentcheva 08.05.96
     !-----------------------------------------------------------------------
 
-    USE m_types
-    USE m_types_xcpot_libxc
-    use m_constants
-    USE m_grdrsvac
-    USE m_grdchlh
-    USE m_mkgz
-    USE m_mkgxyz3
     ! 
     ! 
-    USE m_fft2d
-    use m_vac_tofrom_grid
-    USE m_libxc_postprocess_gga
     IMPLICIT NONE
 
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
@@ -48,6 +59,7 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)    :: den
     TYPE(t_potden),INTENT(INOUT) :: vxc
     TYPE(t_potden),INTENT(INOUT) :: exc
+    TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vx
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
@@ -56,7 +68,6 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip,ngrid
     REAL    :: rhti,zro,fgz,rhmnv,d_15,bmat1(3,3),rd
-    LOGICAL :: l_libxc
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: rho(:,:),v_xc(:,:),v_x(:,:),e_xc(:,:)
@@ -64,15 +75,6 @@ CONTAINS
     TYPE(t_gradients)::grad
 
     !     .. unused input (needed for other noco GGA-implementations) ..
-    
-    l_libxc=.FALSE.
-
-    !SELECT TYPE(xcpot)
-    !TYPE IS (t_xcpot_libxc)
-    !   IF (xcpot%needs_grad()) THEN
-    !      CALL judft_error("libxc GGA functionals not implemented in film setups")
-    !   END IF
-    !END SELECT
 
     ngrid=vacuum%nvac*(vacuum%nmzxy*ifftd2+vacuum%nmz)
 
@@ -87,8 +89,12 @@ CONTAINS
 
     SELECT TYPE(xcpot)
     TYPE IS (t_xcpot_libxc)
-       l_libxc=.TRUE.
        IF (xcpot%needs_grad()) THEN
+          ! the inbuild handles the cutoff in its routine
+          ! for the libxc we need to explicitly call the cutoff function
+          ! Note: to mimic inbuild behavior, put cutoff before xcpot%get_vxc
+          ! the cutoff here is done for a better containing of the libxc block
+          CALL xcpot%apply_vac_cutoffs(rho,grad)
           CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
           CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_x,grad)
        END IF
@@ -96,15 +102,14 @@ CONTAINS
 
     call vac_from_grid(stars,vacuum,v_xc,ifftd2,vxc%vac)
 
-    !IF (l_libxc.AND.xcpot%needs_grad()) THEN
-    !   CALL save_npy('vxc_gga_vac_libxc.npy',v_xc)
-    !ELSE IF (l_libxc.AND.(.NOT.xcpot%needs_grad())) THEN
-    !  CALL save_npy('vxc_lda_vac_libxc.npy',v_xc)
-    !ELSE IF ((.NOT.l_libxc).AND.xcpot%needs_grad()) THEN
-    !   CALL save_npy('vxc_gga_vac_inbuild.npy',v_xc)
-    !ELSE
-    !  CALL save_npy('vxc_lda_vac_inbuild.npy',v_xc)
-    !END IF
+    ! exchange-only part, mirrored to the second vacuum; needed for hybrid functionals
+    IF (PRESENT(vx)) THEN
+       IF (ALLOCATED(vx%vac)) THEN
+          vx%vac = CMPLX(0.0,0.0)
+          call vac_from_grid(stars,vacuum,v_x,ifftd2,vx%vac)
+          CALL stars%fill_2nd_vac(vacuum,vx%vac)
+       END IF
+    END IF
 
     IF (ALLOCATED(exc%vac)) THEN
       ALLOCATE ( e_xc(ngrid,1) ); e_xc=0.0

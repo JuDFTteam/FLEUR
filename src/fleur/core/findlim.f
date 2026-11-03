@@ -2,12 +2,15 @@
 c......................................................findlim
 c finds turning point and practical "infinity"
 c
+      USE m_constants
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: findlim
       CONTAINS
       SUBROUTINE findlim(
      >                   mrad,lll,ec,vv,rc,
      <                   nmatch,nzero)
 
-      USE m_constants
 
       IMPLICIT NONE
 C     ..

@@ -7,15 +7,46 @@ MODULE m_gf_types
    !*************************************************************
    !  Types of the Green's-function embedding code.
    !
-   !  All standard FLEUR types (t_atoms, t_cell, t_sym, t_stars,
-   !  t_sphhar, t_enpara, t_lapw, t_mpi, t_potden, t_mat, ...) are
-   !  re-exported from m_types; only genuinely GF-specific types are
-   !  defined here. The historic local copies of FLEUR types were
+   !  The standard FLEUR types used by the gfleur sources (t_atoms,
+   !  t_cell, t_sym, t_stars, t_sphhar, t_enpara, t_lapw, t_mpi,
+   !  t_potden, t_mat, ...) are re-exported from here; only genuinely
+   !  GF-specific types are defined here. The historic local copies of FLEUR types were
    !  removed in the port to the modern FLEUR datatypes.
    !*************************************************************
-   USE m_types
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_enparaXML
+   USE m_types_fftGrid
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_forcetheo_data
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_misc
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_tlmplm
+   USE m_types_usdus
+   USE m_types_vacuum
+   USE m_types_xcpot
+   USE m_types_xcpot_inbuild
    IMPLICIT NONE
-   PUBLIC
+   PRIVATE
+   PUBLIC :: t_embinp, t_layers, t_gfmix, t_gfmpi, t_lapw_gf, t_stars_gf, t_gflayer, gf_l, gf_r
+   !FLEUR types re-exported for the gfleur sources
+   PUBLIC :: t_atoms, t_cell, t_enpara, t_enparaXML, t_fftGrid, t_fleurinput, t_forcetheo, t_forcetheo_data, t_hub1data, &
+             t_hybdat, t_input, t_kpts, t_lapw, t_mat, t_results, t_mpi, t_noco, t_nococonv, &
+             t_potden, t_sphhar, t_stars, t_sym, t_tlmplm, t_usdus, t_vacuum, t_xcpot, t_xcpot_inbuild
 
    !Two constants for the left and right side of a layer
    INTEGER, PARAMETER :: GF_L = 1
@@ -188,8 +219,7 @@ MODULE m_gf_types
       TYPE(t_potden) :: vTot
       TYPE(t_potden) :: cdn_new
       REAL, ALLOCATABLE :: qmtl_new(:, :)
-      !radial function values and local Hamiltonian of the layer
-      TYPE(t_usdus)  :: usdus
+      !radial functions and local Hamiltonian of the layer
       TYPE(t_tlmplm) :: tlmplm
    END TYPE t_gflayer
 

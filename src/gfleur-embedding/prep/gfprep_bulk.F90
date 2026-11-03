@@ -9,7 +9,7 @@ MODULE m_gfprep_bulk
    USE m_juDFT
    USE m_constants
    USE m_types_fleurinput
-   USE m_types_wannier
+   USE m_types_kpts
    USE m_types_xcpot
    USE m_types_xcpot_inbuild
    USE m_types_sphhar
@@ -38,7 +38,6 @@ MODULE m_gfprep_bulk
    !a FLEUR setup as needed by gfprep
    TYPE t_gfprep_struct
       TYPE(t_fleurinput)  :: fi
-      TYPE(t_wann)        :: wann
       CLASS(t_xcpot), ALLOCATABLE :: xcpot
       TYPE(t_sphhar)      :: sphhar
       TYPE(t_stars)       :: stars
@@ -64,15 +63,15 @@ CONTAINS
       CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=s%fi%cell, sym=s%fi%sym, &
                                atoms=s%fi%atoms, input=s%fi%input, noco=s%fi%noco, &
                                vacuum=s%fi%vacuum, field=s%fi%field, sliceplot=s%fi%sliceplot, &
-                               banddos=s%fi%banddos, mpinp=s%fi%mpinp, hybinp=s%fi%hybinp, &
-                               coreSpecInput=s%fi%coreSpecInput, wann=s%wann, xcpot=s%xcpot, &
+                               banddos=s%fi%banddos, xas=s%fi%xas, mpinp=s%fi%mpinp, hybinp=s%fi%hybinp, &
+                               coreSpecInput=s%fi%coreSpecInput, wannierlib=s%fi%wannierlib, xcpot=s%xcpot, &
                                forcetheo_data=s%fi%forcetheo_data, kpts=s%fi%kpts, &
                                kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                enparaXML=s%fi%enparaXML, gfinp=s%fi%gfinp, hub1inp=s%fi%hub1inp, &
                                dfpt=s%fi%dfpt)
       CALL fleurinput_postprocess(s%fi%cell, s%fi%sym, s%fi%atoms, s%fi%input, s%fi%noco, &
                                   s%fi%vacuum, s%fi%banddos, s%fi%hybinp, s%xcpot, &
-                                  s%fi%kpts, s%fi%gfinp)
+                                  s%fi%kpts, s%fi%gfinp, s%fi%wannierlib)
       CALL make_sphhar(.FALSE., s%fi%atoms, s%sphhar, s%fi%sym, s%fi%cell)
       IF (PRESENT(l_stars)) THEN
          IF (.NOT. l_stars) RETURN
@@ -119,7 +118,7 @@ CONTAINS
       CALL make_stars(b%stars, b%fi%sym, b%fi%atoms, b%fi%vacuum, b%sphhar, b%fi%input, &
                       b%fi%cell, b%fi%noco, fmpi)
       CALL make_forcetheo(b%fi%forcetheo_data, b%fi%cell, b%fi%sym, b%fi%atoms, forcetheo)
-      CALL b%fi%dfpt%init(b%fi%cell, b%fi%input)
+      CALL b%fi%dfpt%init(b%fi%cell, b%fi%input, b%fi%sym, b%fi%noco)
       CALL lapw_dim(b%fi%kpts, b%fi%cell, b%fi%input, b%fi%noco, nococonv, forcetheo, &
                     b%fi%atoms, nbasfcn, b%fi%dfpt)
       CALL b%fi%input%init(b%fi%noco, b%fi%hybinp%l_hybrid, b%fi%sym%invs, &

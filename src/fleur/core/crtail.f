@@ -3,6 +3,9 @@ c
 c initial point for income regular solution of dirac eq.
 c order kap1=-L-1, kap2=L
 c
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: crtail
       CONTAINS
       SUBROUTINE crtail(
      >                  mrad,e,rc,nsol,nzero,csq,

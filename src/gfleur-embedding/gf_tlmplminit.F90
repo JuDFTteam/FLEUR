@@ -5,20 +5,22 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_tlmplminit
       use m_juDFT
+      use m_gf_types
+      use m_local_Hamiltonian
+      use m_constants, only: POTDEN_TYPE_POTTOT
       IMPLICIT NONE
+      private
+      public :: gf_tlmplminit
       CONTAINS
       SUBROUTINE gf_tlmplminit(ld, fmpi)
 !-----------------------------------------------
-!   Build the radial functions (usdus) and the local Hamiltonian
-!   (tlmplm incl. LDA+U terms and Cholesky decomposition) of one layer
+!   Build the radial functions and the local Hamiltonian (both in
+!   tlmplm, incl. LDA+U terms and Cholesky decomposition) of one layer
 !   from its current potential by calling the standard FLEUR local_ham.
 !   Replaces the old fleur_tlmplm/fleur_usetup wrappers and the manual
 !   allocation of the v25-era tuu/tdd/ind arrays.
 !           (last modified: 05-04-08) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      USE m_local_Hamiltonian
-      USE m_constants, ONLY: POTDEN_TYPE_POTTOT
       IMPLICIT NONE
       !<--Arguments
       TYPE(t_gflayer),INTENT(INOUT) :: ld
@@ -29,8 +31,6 @@
       LOGICAL        :: l_error
       !>
 
-      IF (.NOT.ALLOCATED(ld%usdus%us))                                  &
-     &     CALL ld%usdus%init(ld%fi%atoms, ld%fi%input%jspins)
       IF (.NOT.ALLOCATED(ld%hub1data%mag_mom))                          &
      &     CALL ld%hub1data%init(ld%fi%atoms, ld%fi%input, ld%fi%hub1inp,&
      &          fmpi, 0.0, 0.0, l_error)
@@ -42,7 +42,7 @@
       CALL local_ham(ld%sphhar, ld%fi%atoms, ld%fi%sym, ld%fi%noco,      &
      &               ld%nococonv, ld%enpara, fmpi, ld%vTot, vx,          &
      &               ld%cdn_new, ld%fi%input, ld%fi%hub1inp,             &
-     &               ld%hub1data, ld%tlmplm, ld%usdus, 0.0)
+     &               ld%hub1data, ld%tlmplm, 0.0)
 
       END SUBROUTINE gf_tlmplminit
       END

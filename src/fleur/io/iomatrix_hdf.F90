@@ -1,9 +1,17 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_iomatrix_hdf
   USE m_judft
   USE hdf5
   USE m_hdf_tools
   USE m_types_mat
   USE m_types_mpimat
+#ifdef CPP_HDFMPI
+  USE mpi
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC iomatrix_hdf_close,iomatrix_hdf_open,iomatrix_hdf_write,iomatrix_hdf_read
@@ -104,9 +112,6 @@ CONTAINS
   END SUBROUTINE iomatrix_hdf_close
 
   SUBROUTINE iomatrix_hdf_open(l_real,matsize,no_rec,filename,fid,did)
-#ifdef CPP_HDFMPI
-    USE mpi
-#endif
     LOGICAL,INTENT(IN)          :: l_real
     INTEGER,INTENT(in)          :: matsize,no_rec
     CHARACTER(len=*),INTENT(in) :: filename

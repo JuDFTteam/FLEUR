@@ -1,0 +1,29 @@
+build-llvm:
+  image: iffregistry.fz-juelich.de/fleur/fleur:LLVM_23102026
+  stage: build
+  artifacts:
+     paths:
+       - build.llvm
+     expire_in: 12h
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -l llvm -c flang $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build.llvm
+    - cd build.llvm
+    - make -j 2
+  allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /llvm/
+      - if: $CI_TASKS =~ /all/
+
+test-llvm:
+  image: iffregistry.fz-juelich.de/fleur/fleur:LLVM_23102026
+  extends: .test-fleur
+  variables:
+    BUILD_FOLDER: "build.llvm"
+  needs:
+    - build-llvm
+  allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /llvm/
+      - if: $CI_TASKS =~ /all/

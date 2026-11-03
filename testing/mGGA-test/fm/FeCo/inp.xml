@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      FM FeCo - B2 (CsCl-type), Pm-3m (#221)                                                             
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.5" Gmax="10.5" GmaxXC="10.5" numbands="0"/>
+      <scfLoop itmax="200" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0" sdNocoIR="T"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+          <LibXCName exchange="mgga_x_scan" correlation="mgga_c_scan"/>
+          <AuxGGA exchange="117" correlation="130"/>
+       </xcFunctional>
+      <magnetism jspins="2"/>
+      <soc l_soc="F" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="31.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="mgga20"/>
+         <!-- k-points included here -->
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
+      </bzIntegration>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>    5.3989471494302004     0.0000000000000000     0.0000000000000000</row-1>
+            <row-2>    0.0000000000000000     5.3989471494302004     0.0000000000000000</row-2>
+            <row-3>    0.0000000000000000     0.0000000000000000     5.3989471494302004</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Iron (Fe)" element="Fe" atomicNumber="26">
+         <mtSphere radius="2.28" gridPoints="753" logIncrement="0.016"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.2" spinDown="1.2"/>
+            <stateOccupation state="(3d5/2)" spinUp="2.9" spinDown="0.7"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+      <species name="Cobalt (Co)" element="Co" atomicNumber="27">
+         <mtSphere radius="2.28" gridPoints="753" logIncrement="0.016"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2)</coreConfig>
+            <valenceConfig>(3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.4" spinDown="1.4"/>
+            <stateOccupation state="(3d5/2)" spinUp="2.9" spinDown="1.3"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Iron (Fe)">
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Cobalt (Co)">
+         <relPos label="                   2">1.000/2.000 1.000/2.000 1.000/2.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Users/wortmann/fleur/fleur-scan/build/inpgen -f structure.inpgen -kpt mgga#grid=6,6,6 -overwrite
+
+Initial (original) inpgen input (only for documentation purposes):
+FM FeCo - B2 (CsCl-type), Pm-3m (#221)
+! lattice constants in Angstrom, converted to bohr via a0
+&lattice latsys='cP', a0=1.8897259886, a=2.857, b=2.857, c=2.857 /
+2
+26  0.0  0.0  0.0
+27  0.5  0.5  0.5
+-->

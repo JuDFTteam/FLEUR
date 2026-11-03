@@ -1,14 +1,24 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_ccdnup
   !     *******************************************************
   !     *****   set up the core densities for compounds.  *****
   !     *****   in accordanse to d.d.koelling's cored     *****
   !     *******************************************************
+   USE m_constants
+   USE m_intgr, ONLY: intgr3
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_sphhar
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: ccdnup
 CONTAINS
   SUBROUTINE ccdnup(atoms,sphhar,input,jatom,rho,sume,vrs,rhochr,rhospn,tecs,qints)
 
-    USE m_constants
-    USE m_intgr, ONLY : intgr3
-    USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sphhar),INTENT(IN)  :: sphhar

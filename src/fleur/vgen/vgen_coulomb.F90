@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,10 +10,37 @@ module m_vgen_coulomb
 #ifdef CPP_MPI
   use mpi
 #endif
+  use m_constants
+  use m_vmts
+  use m_intnv
+  use m_vvac
+  use m_vvacis
+  use m_vvacxy
+  use m_vintcz
+  use m_checkdopall
+  use m_convol
+  use m_psqpw
+  use m_cfft
+  use m_types_atoms
+  use m_types_cell
+  use m_types_dfpt
+  use m_types_field
+  use m_types_input
+  use m_types_mpi
+  use m_types_potden
+  use m_types_misc
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_sternheimerjob
+  use m_types_sym
+  use m_types_vacuum
+  implicit none
+  private
+  public :: vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
+             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -24,18 +51,6 @@ contains
     ! resides.
     !----------------------------------------------------------------------------
 
-    use m_constants
-    use m_types
-    use m_vmts
-    use m_intnv
-    use m_vvac
-    use m_vvacis
-    use m_vvacxy
-    use m_vintcz
-    use m_checkdopall
-    use m_convol
-    use m_psqpw
-    use m_cfft
     
     implicit none
 
@@ -60,8 +75,7 @@ contains
     type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
     type(t_dfpt),     optional,     intent(in) :: dfpt
 
-    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
-    TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptden0
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
@@ -77,7 +91,9 @@ contains
     !complex                                      :: sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
-    real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film 
+    real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film
+    real                                         :: wgtEdge, zMir ! blend across the +-dTilda/2 cell edge
+    complex                                      :: vintczMir
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
     LOGICAL :: l_2ndord, l_corr , l_gradientEfield
 
@@ -110,11 +126,11 @@ contains
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
     ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
-    !     ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
+    !     ! in den%mtIm and results in the same component for the Coulomb potential later on.
     !     ! Also, the ionic qlm behave differently.
     call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
           &  den, ispin, .false., vCoul%potdenType, psq, sternheimerJob,&
-          & dfptdenimag, stars2, iDtype, iDir, dfptden0, iDir2 )
+          & stars2, iDtype, iDir, dfptden0, iDir2, qexcess=field%efield%qexcess )
     call timestop( "psqpw" )
 
     ! VACUUM POTENTIAL
@@ -145,6 +161,14 @@ contains
         ! create v(z) for each 2-d reciprocal vector
         ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
+        ! The edge blend below evaluates vintcz up to a distance dTilda-2*z1 into a
+        ! vacuum, twice as far as the plain z-loop needs. Guard the vz interpolation,
+        ! which reads vnew(im:im+2,...) without a bound check for the G_||=0 star.
+        if ( .not. l_dfptvgen ) then
+          if ( ( cell%amat(3,3) - 2 * cell%z1 ) / vacuum%delz + 3 > vacuum%nmz ) &
+            call juDFT_error( "Vacuum mesh too short for the film potential edge blend", &
+                              hint="Increase nmz or reduce dTilda-dVac", calledby="vgen_coulomb" )
+        end if
         do irec2 = 1, stars%ng2
           ! If we do DFPT, we want to fix the second vacuum at infinity to 0. This is WIP,
           ! as to how we want to do it eventually. Here, we calculate the necessary offset.
@@ -160,7 +184,29 @@ contains
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
                                 rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
-            if (l_dfptvgen) THEN 
+            ! vintcz returns the vacuum-1 solution for z >= z1 and the vacuum-2 solution
+            ! for z <= -z1. The two differ, so the periodic continuation that this FFT
+            ! represents jumps at the cell edge z = +-amat(3,3)/2. Blend the two sides of
+            ! that edge with an error-function weight to remove the jump. Without it the
+            ! expansion carries a Gibbs error that reaches back into the physical
+            ! interstitial (~1e-3 htr), and for even ivfft one sample lands exactly on the
+            ! edge and picks up the vacuum-1 value alone, which additionally makes the
+            ! coefficients spuriously z-asymmetric.
+            ! The weight is exactly 1 for |z| <= z1, so the potential inside the physical
+            ! interstitial is never blended, and exactly 1/2 on the edge itself. sigma
+            ! scales with the filler width, so the erf argument at |z| = z1 is 4/sqrt(2)
+            ! for every cell; widening the blend beyond this turns the |z| = z1 clamp into
+            ! a new discontinuity and makes things worse again.
+            if ( .not. l_dfptvgen .and. abs( z ) > cell%z1 ) then
+              wgtEdge = 0.5 * ( 1.0 + erf( ( cell%amat(3,3) / 2.0 - abs( z ) ) &
+                                         / ( sqrt( 2.0 ) * sigma ) ) )
+              zMir = z - sign( cell%amat(3,3), z )   ! same distance into the other vacuum
+              vintczMir = vintcz( stars, vacuum, cell,  input, field, zMir, irec2, psq, &
+                                  vCoul%vac(:,:,:,ispin), &
+                                    rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
+              vintcza = wgtEdge * vintcza + ( 1.0 - wgtEdge ) * vintczMir
+            end if
+            if (l_dfptvgen) THEN
               if (dfpt%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
               vintcza = vintcza * gaussian
             end if 
@@ -191,7 +237,7 @@ contains
               !                 ENDIF
               !       ----> only stars within g_max sphere (shz oct.97)
               if ( irec3 /= 0 ) then
-                xint = cmplx( af1(i), bf1(i) ) * ani
+                xint = cmplx( af1(i), bf1(i) ) * ani * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),k3) )
                 nzst1 = stars%nstr(irec3) / stars%nstr2(irec2)
                 vCoul%pw(irec3,1) = vCoul%pw(irec3,1) + xint / nzst1
               end if
@@ -253,10 +299,8 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-
-    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul%pw(:,ispin), &
-               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), ispin, sternheimerJob, &
-               dfptdenimag, dfptvCoulimag, iDtype, iDir, iDir2 )
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul, den, &
+               ispin, sternheimerJob, iDtype=iDtype, iDir=iDir, iDir2=iDir2 )
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return

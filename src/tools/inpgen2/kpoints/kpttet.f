@@ -1,5 +1,12 @@
       MODULE m_kpttet
       use m_juDFT
+      use m_constants
+      use m_tetcon
+      use m_kvecon
+      use m_fulstar
+      implicit none
+      private
+      public :: kpttet
       CONTAINS
       SUBROUTINE kpttet(
      >                  nkpt,ndiv3,
@@ -58,10 +65,6 @@ c    vkxyz    : vector of kpoint generated; in cartesian representation
 c    wghtkp   : weight associated with k-points for BZ integration
 c
 c-----------------------------------------------------------------------
-      USE m_constants
-      USE m_tetcon
-      USE m_kvecon
-      USE m_fulstar
       IMPLICIT NONE
 C
 C-----> PARAMETER STATEMENTS

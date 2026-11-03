@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_starf
     ! Construct the 2D and 3D star functions for a real space point r
     ! given in internal coordinates.
@@ -9,6 +14,8 @@ MODULE m_starf
     USE m_spgrot
 
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: starf2, starf3
 
 CONTAINS
     SUBROUTINE starf2(nop2, ng2, kv2, mrot, symor, tau, r, invtab, sf, center)

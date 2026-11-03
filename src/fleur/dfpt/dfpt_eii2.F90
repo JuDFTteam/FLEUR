@@ -1,13 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_dfpt_eii2
 
-  use m_types
+  use m_sphbes
+  use m_gaunt, only: gaunt1
+  use m_phasy1, only: Phasy1nSym
+  use m_ylm
+  use m_juDFT_stop, only: juDFT_error
+  use m_intgr
+  use m_constants
+  use m_types_atoms
+  use m_types_cell
+  use m_types_input
+  use m_types_kpts
+  use m_types_stars
 
   implicit none
+  private
+  public :: genpsdens2ndord, calciienerg2matelem, getconstterm, calciienerg2, genvext2, genvext2mt, phasy1lp2nsym, &
+     outerproduct, outerproductme, genpertpotdensgvecs, dfpt_e2_madelung
 
   contains
 
@@ -15,7 +29,6 @@ module m_dfpt_eii2
   ! should be correct, has been reviewed
   subroutine GenPsDens2ndOrd(atoms, cell, ngpqdp, G0index, gpqdp, qpt, psDens2ndOrd, testMode)
 
-    use m_sphbes
 
     implicit none
 
@@ -145,7 +158,6 @@ module m_dfpt_eii2
 
   subroutine CalcIIEnerg2MatElem( atoms, cell, qpt, ngpqdp, gpqdp, E2ndOrdII )
 
-    use m_sphbes
 
     implicit none
 
@@ -297,7 +309,6 @@ module m_dfpt_eii2
 
   subroutine CalcIIEnerg2(atoms, cell, qpts, stars, input, iqpt, ngdp, gdp, E2ndOrdII)
 
-    use m_sphbes
 
     implicit none
 
@@ -491,9 +502,6 @@ module m_dfpt_eii2
   ! Generates second-order V_ext coefficients for the muffin-tin region.
   subroutine GenVext2MT(atoms, cell, ngdp, gdp, testMode, vExt2IR, vExt2MT)
 
-    use m_gaunt, only : gaunt1
-    use m_sphbes
-    use m_phasy1, only : Phasy1nSym
 
     implicit none
 
@@ -807,8 +815,6 @@ module m_dfpt_eii2
   ! Deprecated
   subroutine phasy1lp2nSym(atomsT, cellT, Gvec, qptn, pylm)
 
-    use m_ylm
-    use m_types
 
     implicit none
 
@@ -905,7 +911,6 @@ module m_dfpt_eii2
 
   function outerProductME(a, b, i, j)
 
-    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
@@ -927,7 +932,6 @@ module m_dfpt_eii2
 
   subroutine genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpoint, gpqdp )
 
-    use m_types
 
     implicit none
 
@@ -995,7 +999,6 @@ module m_dfpt_eii2
   end subroutine genPertPotDensGvecs
 
   SUBROUTINE dfpt_e2_madelung(atoms,jspins,grgrRho,grgrVC,e2_vm)
-      USE m_intgr
       TYPE(t_atoms), INTENT(IN)     :: atoms
       INTEGER,       INTENT(IN)     :: jspins
       REAL,          INTENT(IN)     :: grgrRho(:,:,:), grgrVC(:,:)

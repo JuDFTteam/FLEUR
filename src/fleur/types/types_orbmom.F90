@@ -1,10 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_orbmom
+   USE m_types_radfun
+   USE m_types_atoms
+   USE m_types_abc
+   USE m_intgr, ONLY: intgr3
    IMPLICIT NONE
 
    PRIVATE
@@ -27,6 +31,8 @@ MODULE m_types_orbmom
       PROCEDURE, PASS :: init
       !> Calculate the orbital momentum contributions.
       PROCEDURE, PASS :: calc_orbmom
+      !> Compute orbital hyperfine contribution from current k-point accumulation.
+      PROCEDURE, PASS :: calc_hff_orbital
    END TYPE t_orbmom
 
 CONTAINS
@@ -35,7 +41,6 @@ SUBROUTINE init(thisOrb, radfun, lmax)
    !! Initialize the orbital momentum coefficients.
    !! Allocates and initializes the arrays for \(L_z\), \(L_+\), and \(L_-\)
    !! based on the maximum radial function size and angular momentum quantum number.
-      USE m_types_radfun
       IMPLICIT NONE
 
       !> The orbital momentum object to initialize.
@@ -65,9 +70,6 @@ SUBROUTINE init(thisOrb, radfun, lmax)
       !! Computes the orbital momentum coefficients \(L_z\), \(L_+\), and \(L_-\)
       !! for a given atom type and spin channel. The results are accumulated into
       !! the provided `clmom` array.
-      USE m_types_atoms
-      USE m_types_abc
-      USE m_types_radfun
       IMPLICIT NONE
 
       !> The orbital momentum object to calculate.
@@ -150,4 +152,46 @@ SUBROUTINE init(thisOrb, radfun, lmax)
       clmom(2) = clmom(2)+ sum(qmtly)
       clmom(3) = clmom(3)+ sum(qmtlz)
    end subroutine
+
+   SUBROUTINE calc_hff_orbital(orb, atoms, radfun, itype, jsp, hypFineOrbContribs)
+      !! Compute the orbital hyperfine field contribution from the current k-point
+      !! accumulation in orb%lz.  Must be called immediately after calc_orbmom
+      !! (before the next call to calc_orbmom zeroes lz via orb%init).
+      !! Both large and small radial components enter the 1/r³ matrix element.
+      !! Results are accumulated (INOUT) so they sum over k-points.
+      IMPLICIT NONE
+
+      CLASS(t_orbmom), INTENT(IN)    :: orb
+      TYPE(t_atoms),   INTENT(IN)    :: atoms
+      TYPE(t_radfun),  INTENT(IN)    :: radfun
+      INTEGER,         INTENT(IN)    :: itype, jsp
+      REAL,            INTENT(INOUT) :: hypFineOrbContribs(-1:3)
+
+      INTEGER :: l, m, j, jj, lmax
+      REAL    :: invR3Int, orbHff
+      REAL    :: integrand(atoms%jmtd)
+
+      lmax = min(3, atoms%lmax(itype))
+
+      do l = 0, lmax
+         orbHff = 0.0
+         do m = -l, l
+            do j = 1, radfun%n_r(l)
+               do jj = 1, radfun%n_r(l)
+                  integrand(1:atoms%jri(itype)) = &
+                     (radfun%R(1:atoms%jri(itype), 1, j, l, jsp) * radfun%R(1:atoms%jri(itype), 1, jj, l, jsp) &
+                    + radfun%R(1:atoms%jri(itype), 2, j, l, jsp) * radfun%R(1:atoms%jri(itype), 2, jj, l, jsp)) &
+                    / atoms%rmsh(1:atoms%jri(itype), itype)**3
+                  call intgr3(integrand(1:atoms%jri(itype)), atoms%rmsh(1:atoms%jri(itype), itype), &
+                              atoms%dx(itype), atoms%jri(itype), invR3Int)
+                  orbHff = orbHff + m * orb%lz(j, jj, l, m) * invR3Int
+               end do
+            end do
+         end do
+         orbHff = orbHff / atoms%neq(itype)
+         hypFineOrbContribs(l) = hypFineOrbContribs(l) + orbHff
+         hypFineOrbContribs(-1) = hypFineOrbContribs(-1) + orbHff
+      end do
+   END SUBROUTINE calc_hff_orbital
+
 end module

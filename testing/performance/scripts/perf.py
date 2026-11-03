@@ -62,21 +62,19 @@ def run_fleur(testdir,env):
     import calendar
     import time
     #check for executable
-    if os.path.isfile("fleur"): 
+    if os.path.isfile("fleur"):
         fleur="fleur"
-    elif os.path.isfile("fleur_MPI"): 
+    elif os.path.isfile("fleur_MPI"):
         fleur="fleur_MPI"
     else:
-        print("No FLEUR executable found")
-        sys.exit    
+        sys.exit("No FLEUR executable found")
     #create a directory
     current_GMT = time.gmtime()
-    dir="Testing/performance/"+str(calendar.timegm(current_GMT))
+    dir="Testing/performance/"+os.path.basename(os.path.normpath(testdir))+"/"+str(calendar.timegm(current_GMT))
     if not os.path.isdir(dir):
         os.makedirs(dir)
     else:
-        print("Test already exists?")
-        sys.exit
+        sys.exit("Test already exists?")
     #copy inp.xml
     shutil.copy(testdir+"/inp.xml",dir)
 
@@ -98,21 +96,35 @@ def run_fleur(testdir,env):
     #postprocess
     return process_judft_times(dir)
 
+def available_tests():
+    """All directories in inputfiles containing an inp.xml"""
+    inputdir=os.path.dirname(os.path.abspath(__file__))+"/../inputfiles"
+    return sorted(d for d in os.listdir(inputdir) if os.path.isfile(f"{inputdir}/{d}/inp.xml"))
+
 def run_test(name=None,env=None):
     #Get the directory of the script:
     scriptdir=os.path.dirname(__file__)+"/../inputfiles/"
     if (name):
         scriptdir=scriptdir+"/"+name
-    else:    
+    else:
         #default test
         scriptdir=scriptdir+"/Noco"
+    if not os.path.isfile(scriptdir+"/inp.xml"):
+        sys.exit(f"Unknown performance test: {name}. Available: {' '.join(available_tests())}")
     return run_fleur(scriptdir,env)
 
-if __name__=='__main__': 
-    
+if __name__=='__main__':
+
     if len(sys.argv)>1:
         if sys.argv[1]=="bencher":
             process_judft_times(os.getcwd())
-            exit()        
-    print(run_test())
+            exit()
+        if sys.argv[1]=="list":
+            print("\n".join(available_tests()))
+            exit()
+        names=available_tests() if sys.argv[1]=="all" else sys.argv[1:]
+        for name in names:
+            print(run_test(name))
+    else:
+        print(run_test())
 

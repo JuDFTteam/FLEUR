@@ -1,0 +1,13 @@
+ <!-- Attention, absolute coordinates used here -->
+ <relaxation>
+   <displacements>
+    <displace>   0.0000000000   -0.1465373535    0.0000000000 </displace>
+    <displace>   0.0027064979    0.0733790985    0.0000000000 </displace>
+  </displacements>
+   <relaxation-history>
+    <step energy="      -75.8248489780">
+      <posforce>   0.0000000000    0.8000000000    0.0000000000    0.0000000000   -0.1465373535    0.0000000000 </posforce>
+      <posforce>  -1.2000000000   -0.8000000000    0.0000000000    0.0027064979    0.0733790985    0.0000000000 </posforce>
+    </step>
+   </relaxation-history>
+ </relaxation>

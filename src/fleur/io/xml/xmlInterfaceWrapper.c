@@ -186,7 +186,8 @@ extern const xmlNodePtr getXMLNextNode(xmlNodePtr node){
 extern const unsigned char* getXMLAttributeValueNode(xmlNodePtr node)
 {
   if (node==NULL) {
-    fprintf(stderr, "Error: node is null??");
+    fprintf(stderr, "Error: node is null??\n");
+    return NULL;
   }
   if (xmldata) xmlFree(xmldata);
 
@@ -213,6 +214,11 @@ extern const xmlNodePtr getXMLNode(const unsigned char* xPathExpression)
       fprintf(stderr, "Error: nodes is null in getAttributeValue(...)");
       return NULL;
    }
+   if (nodes->nodeNr == 0)
+   {
+      fprintf(stderr, "Error: no node matches the XPath %s\n", (const char*)xPathExpression);
+      return NULL;
+   }
 
 /*   return NULL;*/
    return nodes->nodeTab[0];
@@ -235,6 +241,11 @@ int setXMLAttributeValue(const unsigned char* xPathExpression,const unsigned cha
    if (nodes == NULL)
    {
       fprintf(stderr, "Error: nodes is null in getAttributeValue(...)");
+      return 1;
+   }
+   if (nodes->nodeNr == 0)
+   {
+      fprintf(stderr, "Error: no node matches the XPath %s\n", (const char*)xPathExpression);
       return 1;
    }
 

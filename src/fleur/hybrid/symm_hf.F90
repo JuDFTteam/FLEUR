@@ -1,8 +1,8 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   This module generates the little group of k and the extended irr. !
-!   BZ. Furthermore it calculates the irr. representation             !
-!                                                                     !
-!   P(R,T)\phi_n,k = \sum_{n'} rep_v(n',n) *\phi_n',k        !
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 !   where                                                             !
 !         P  is an element of the little group of k                   !
 !         n' runs over group of degenerat states belonging to n.      !
@@ -12,7 +12,6 @@
 MODULE m_symm_hf
 
    use m_judft
-   USE m_types
    USE m_types_hybdat
    USE m_constants
    USE m_util
@@ -21,10 +20,19 @@ MODULE m_symm_hf
 #ifdef CPP_MPI 
    use mpi 
 #endif
+   use m_olap
+   use m_trafo
+   use m_calc_cmt
+   use m_types_fleurinput
+   use m_types_hybmpi
+   use m_types_mpdata
+   use m_types_misc
+   implicit none
+   private
+   public :: symm_hf_init, symm_hf
 CONTAINS
 
    SUBROUTINE symm_hf_init(fi, nk, nsymop, rrot, psym)
-      use m_juDFT
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -72,10 +80,6 @@ CONTAINS
    SUBROUTINE symm_hf(fi, nk, hybdat, results, submpi, eig_irr, mpdata, cmt, &
                       rrot, nsymop, psym, n_q, parent, nsest, indx_sest, jsp)
 
-      USE m_olap
-      USE m_trafo
-      use m_calc_cmt
-      use m_juDFT
 
       IMPLICIT NONE
 

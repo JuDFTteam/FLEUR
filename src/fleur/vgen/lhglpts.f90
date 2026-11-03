@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,6 +9,13 @@ MODULE m_lhglpts
   !     calculates lattice harmonics on the gauss-legendre angular
   !     mesh - r.pentcheva Feb'96
   !     **********************************************************
+   USE m_ylm
+   USE m_types_sym
+   USE m_types_sphhar
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: lhglpts
 CONTAINS
   SUBROUTINE lhglpts(&
        &                   sphhar,atoms,&
@@ -16,10 +23,6 @@ CONTAINS
        &                   sym,&
        &                   ylh)
     !
-    USE m_ylm
-    USE m_types_sym
-    USE m_types_sphhar
-    USE m_types_atoms
 
     IMPLICIT NONE
 

@@ -1,11 +1,14 @@
       MODULE m_points
+      USE m_qranf
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: points
       CONTAINS
       SUBROUTINE points(x,n)
 c     *********************************************************
 c     generate random points, in internal coordinates,
 c     within the unit cell omega-tilda
 c     *********************************************************
-      USE m_qranf
       IMPLICIT NONE
 C     .. Scalar Arguments ..
       INTEGER n

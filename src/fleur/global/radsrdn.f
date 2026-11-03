@@ -6,6 +6,10 @@
 
       MODULE m_radsrdn
       use m_juDFT
+      use m_intgr, only: intgr0
+      implicit none
+      private
+      public :: radsrdn, radsrdn1, getfni
       CONTAINS
       SUBROUTINE radsrdn(
      >                  e,l,vr,r0,h,jri,c,
@@ -30,7 +34,6 @@ C     The nth derivative of the Dirac equation is solved in radsrdn1.
 C
 C                  C. Friedrich   Apr. 2005
 C*********************************************************************
-      USE m_intgr, ONLY : intgr0
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..
@@ -125,7 +128,6 @@ C
 C     Modified from radsrd.    C. Friedrich   Apr. 2005
 C*********************************************************************
 C
-      USE m_intgr, ONLY : intgr0
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

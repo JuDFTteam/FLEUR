@@ -1,6 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_glob_tofrom_loc
     use m_types_mpi
     use m_juDFT
+    implicit none
+    private
+    public :: glob_to_loc, glob_from_loc, range_to_glob_to_loc, range_from_glob_to_loc
 contains
     subroutine glob_to_loc(fmpi, glob_idx, pe, loc_idx)
         implicit none 

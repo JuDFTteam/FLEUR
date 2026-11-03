@@ -1,5 +1,13 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_profile
 
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: initprofile, loadprofile
    TYPE :: t_profile
       REAL :: kmax ! This is K_max
       REAL :: kGmaxFactor ! G_max = G_maxXC = K_max * kGmaxFactor
@@ -53,7 +61,7 @@ MODULE m_types_profile
       REAL    :: kmax, kGmaxFactor, rmtFactor, lmaxFactor, fermiSmearing, kPDen
       LOGICAL :: l_exist, l_found
 
-      CHARACTER(LEN=20) :: name
+      CHARACTER(LEN=30) :: name
       CHARACTER(LEN=50) :: addLOSetup
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str

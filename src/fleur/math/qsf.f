@@ -4,6 +4,9 @@
 !        module procedure qsfReal, qsfComplex
 !      end interface
 
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: qsf, qsfcomplex
       CONTAINS
       
       SUBROUTINE qsf(h,y,z,ndim,isave)

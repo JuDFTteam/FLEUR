@@ -4,6 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_gf_vacuum_pot
+    use m_juDFT
+    use m_constants, only: oUnit, pi_const
+    use m_qsf
+    use m_intgr, only: intgz1
+    use m_gf_types
+    use m_gf_iodop
     implicit none
     private
     real,allocatable,save    :: vz(:),q_z(:,:)
@@ -16,8 +22,6 @@ module m_gf_vacuum_pot
     contains
 
 	subroutine gf_vacuum_makepot_g0(efield,delz,rht,vz)
-	use m_qsf
-	USE m_constants, ONLY: pi_const, oUnit
 	implicit none
 	real,intent(in):: efield
     real,intent(in):: delz
@@ -52,9 +56,6 @@ module m_gf_vacuum_pot
     end subroutine
 
     subroutine gf_vacuum_makepot_g(delz,g,n2,rhtxy,vxy)
-	use m_qsf
-	USE m_intgr, ONLY : intgz1
-    USE m_constants, ONLY: pi_const, oUnit
 
 	implicit none
 	real,intent(in)    :: delz,g
@@ -132,9 +133,6 @@ module m_gf_vacuum_pot
 	end subroutine
 
 	real function gf_vacuum_totalcharge(jspins,cell,stars)
-	use m_gf_types
-	use m_gf_iodop
-	use m_qsf
 	integer,intent(in) :: jspins
 	type(t_cell),intent(in) :: cell
 	type(t_stars),intent(in) ::stars
@@ -152,8 +150,6 @@ module m_gf_vacuum_pot
 
 
 	subroutine gf_vacuum_coulpot(jspins,efield,stars,vb,l_fixed)
-    use m_gf_iodop
-    use m_gf_types
     implicit none
 	integer,intent(in)       :: jspins
 	real,intent(in)          :: efield
@@ -215,8 +211,6 @@ module m_gf_vacuum_pot
 	end subroutine
 
 	subroutine gf_vacuum_totalpot(vb,stars,xcpot,cell,jspins,l_noco,mpi_com)
-	use m_gf_types
-	use m_gf_iodop
     implicit none
 	real,intent(inout)      :: vb
 	type(t_stars),intent(in):: stars

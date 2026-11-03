@@ -1,20 +1,39 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_checks
   USE m_juDFT
-  USE m_types
+  USE m_nocoInputCheck
+  USE m_socsym
+  USE m_constants
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_dfpt
+  USE m_types_field
+  USE m_types_gfinp
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpi
+  USE m_types_mpinp
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_wannierlib
   IMPLICIT NONE
   private
-  public :: check_command_line,check_input_switches
+  public :: check_command_line,check_input_switches,check_input_switches_all_pe,check_apw,check_bfield
   CONTAINS
     SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
 #ifdef CPP_MPI
-      USE mpi
       INTEGER:: isize,ierr,irank
 #endif
       TYPE(t_mpi), INTENT(INOUT):: fmpi
@@ -48,10 +67,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
-      USE m_nocoInputCheck
-      USE m_types_fleurinput
-      USE m_constants
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
@@ -60,9 +76,11 @@ MODULE m_checks
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
       type(t_hybinp),intent(in) :: hybinp
+      type(t_cell),INTENT(IN)   :: cell
 
       integer :: i,n,na
       real :: maxpos,minpos
+      logical :: socError(sym%nop)
 
      ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
@@ -98,12 +116,25 @@ MODULE m_checks
 
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
 
+     IF (noco%l_soc.AND.(sym%nop>1)) THEN
+        CALL soc_sym(sym%nop,sym%mrot,noco%theta_inp,noco%phi_inp,cell%amat,socError)
+        IF (ANY(socError)) THEN
+           CALL juDFT_warn("Symmetry operations incompatible with spin quantization axis are present.",&
+                           hint="Recreate the input with inpgen while l_soc=T is set, so that the symmetry is &
+                                &reduced accordingly, or use the '-nosym' command line option of inpgen.",&
+                           calledby="check_input_switches")
+        END IF
+     END IF
+
      !In film case check centering of film
      if ( input%film ) then
         IF ((input%f_level.GT.0.).AND.input%l_f) THEN
            call judft_warn("Enhanced forces are not implemented for film calculations.",hint="Set the f_level tag to 0.")
         END IF
-        if (.not.sym%symor) call judft_warn("Non-symorphic films probably do not work correctly. Either proceed with caution or use a symorphic setup (symor=T in inpgen)")
+        if (input%film.and.noco%l_noco.and..not.sym%symor) &
+           call judft_warn("Nonsymmorphic films are only tested for collinear calculations; the noncollinear case is not verified.",&
+                           hint="Proceed with caution, or use a symorphic setup (symor=T in inpgen).",&
+                           calledby="check_input_switches")
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
          na=atoms%firstAtom(n) - 1
@@ -123,16 +154,130 @@ MODULE m_checks
         CALL juDFT_error("LDA+V is incompatible to the usage of symmetries beyond the identity, but you have such symmetries.", hint="Please recreate your FLEUR input by using inpgen with the '-nosym' command line option.", calledby ="check_input_switches")
      END IF
 
-     ! Disable functionalities that are known to have bugs:
-     
-     IF (ANY(atoms%lapw_l(:).GE.0)) THEN
-        CALL juDFT_warn("APW+lo calculations are disabled at the moment.")
-     END IF
-
 #ifndef CPP_HDF
      if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
-#endif     
+     if (noco%l_noco.and.noco%l_mperp) call juDFT_error("l_mperp=T requires HDF5 for the charge density IO", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization. Recompile with HDF5.", &
+                  calledby="check_input_switches")
+#else
+     if (noco%l_noco.and.noco%l_mperp.and.juDFT_was_argument("-no_cdn_hdf")) &
+        call juDFT_error("l_mperp=T cannot be used with -no_cdn_hdf", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization.", &
+                  calledby="check_input_switches")
+#endif
 
    END SUBROUTINE check_input_switches
+
+    SUBROUTINE check_apw(atoms,input,noco,banddos,hybinp,gfinp,dfpt,wannierlib)
+      !! stop for features that are not implemented for APW+lo
+      TYPE(t_atoms),INTENT(IN)    :: atoms
+      TYPE(t_input),INTENT(IN)    :: input
+      TYPE(t_noco),INTENT(IN)     :: noco
+      TYPE(t_banddos),INTENT(IN)  :: banddos
+      TYPE(t_hybinp),INTENT(IN)   :: hybinp
+      TYPE(t_gfinp),INTENT(IN)    :: gfinp
+      TYPE(t_dfpt),INTENT(IN)     :: dfpt
+      TYPE(t_wannierlib_wannierize),INTENT(IN) :: wannierlib
+
+      IF (.NOT.input%l_useapw) RETURN
+      IF (noco%l_ss.AND.ANY(noco%l_unrestrictMT)) CALL apw_error("spin spirals with l_mtNocoPot")
+      IF (input%l_f.AND.input%f_level>=2) CALL apw_error("forces with f_level>=2")
+      IF (input%gw>0)            CALL apw_error("SPEX/GW output")
+      IF (dfpt%l_dfpt)           CALL apw_error("DFPT")
+      IF (hybinp%l_hybrid)       CALL apw_error("hybrid functionals")
+      IF (wannierlib%l_wannierize) CALL apw_error("Wannier functions")
+      IF (gfinp%n>0)             CALL apw_error("Green's functions")
+      IF (atoms%n_v>0)           CALL apw_error("LDA+V")
+      IF (input%l_coreSpec)      CALL apw_error("core-level spectroscopy")
+      IF (banddos%l_mcd)         CALL apw_error("MCD")
+    CONTAINS
+      SUBROUTINE apw_error(feature)
+         CHARACTER(len=*),INTENT(IN) :: feature
+         CALL juDFT_error("APW+lo is not implemented for "//feature, &
+                          hint="Remove the APW local orbitals and lmaxAPW or switch the feature off.",calledby="check_apw")
+      END SUBROUTINE
+    END SUBROUTINE check_apw
+
+    !> Input checks that must be executed by *every* MPI rank.
+    !>
+    !> juDFT_warn/juDFT_error do MPI communication: juDFT_error calls
+    !> collect_messages(), which posts an MPI_isend on MPI_COMM_WORLD to every
+    !> rank.  Emitting a warning that actually fires from a rank-0-only code path
+    !> therefore leaves sends nobody receives (and leaks request handles, since
+    !> collect_messages reuses ihandle(0) for all of them).  check_input_switches
+    !> above is run by PE 0 alone, so any check there that can both fire and
+    !> continue -- i.e. a warning rather than an error -- belongs here instead.
+    !> Call this after fleurinput_mpi_bc, when all ranks have the input.
+    SUBROUTINE check_input_switches_all_pe(input,hybinp,mpinp)
+      type(t_input),INTENT(IN)  :: input
+      type(t_hybinp),INTENT(IN) :: hybinp
+      type(t_mpinp),INTENT(IN)  :: mpinp
+
+      IF (hybinp%l_hybrid) THEN
+         ! The interstitial part of a wave-function product is built on an FFT
+         ! grid as psi*_k * ustep * psi_(k+q), and its coefficients are read off
+         ! for the mixed-basis G vectors, |q+G| <= gcutm.  Those coefficients are
+         ! a convolution, sum_G' ustep(G-G') * [psi*psi](G'), with |G'| <= 2*rkmax
+         ! because each wave function is limited by rkmax.  So the step function
+         ! is needed out to 2*rkmax+gcutm -- but ustep is only tabulated on the
+         ! stars, which reach gmax, and t_fftGrid%putFieldOnGrid() silently leaves
+         ! everything beyond that at zero.  gmax therefore bounds how far ustep is
+         ! known, which is what this compares.
+         IF (2*input%rkmax + mpinp%g_cutoff > input%gmax) THEN
+            CALL juDFT_warn("Hybrid functionals: gmax < 2*kmax+gcutm, the step function &
+                            &is truncated inside the wave-function products", &
+                            calledby="check_input_switches_all_pe", &
+                            hint="Increase gmax to at least 2*kmax+gcutm, or reduce gcutm")
+         END IF
+      END IF
+
+    END SUBROUTINE check_input_switches_all_pe
+
+    !> Checks for the direction of the external B-field; executed by every MPI rank.
+    SUBROUTINE check_bfield(field,noco,atoms,sym,cell)
+      TYPE(t_field),INTENT(IN) :: field
+      TYPE(t_noco),INTENT(IN)  :: noco
+      TYPE(t_atoms),INTENT(IN) :: atoms
+      TYPE(t_sym),INTENT(IN)   :: sym
+      TYPE(t_cell),INTENT(IN)  :: cell
+
+      REAL    :: n(3), m(3)
+      INTEGER :: iType
+      LOGICAL :: symError(sym%nop)
+
+      IF (.NOT.field%l_b_field.OR.ABS(field%b_field)<1E-15) RETURN
+      n = field%b_dir()
+
+      IF (.NOT.noco%l_noco) THEN
+         IF (.NOT.noco%l_soc) RETURN
+         m = [SIN(noco%theta_inp)*COS(noco%phi_inp),SIN(noco%theta_inp)*SIN(noco%phi_inp),COS(noco%theta_inp)]
+         IF (ABS(DOT_PRODUCT(n,m))<1.0-1E-8) CALL juDFT_error("B-field not parallel to the spin quantization axis",&
+            hint="In collinear SOC calculations b_theta/b_phi must agree with soc/@theta,@phi. Use l_noco=T for other directions.",&
+            calledby="check_bfield")
+         RETURN
+      END IF
+
+      IF (noco%l_ss.AND.ABS(n(3))<1.0-1E-8) CALL juDFT_error("Transverse B-field not possible for spin spirals",&
+         hint="Only b_theta=0 or b_theta=Pi can be used with l_ss=T.",calledby="check_bfield")
+
+      IF (noco%l_soc.AND.sym%nop>1) THEN
+         CALL soc_sym(sym%nop,sym%mrot,field%b_theta,field%b_phi,cell%amat,symError)
+         IF (ANY(symError)) CALL juDFT_warn("Symmetry operations incompatible with the B-field direction are present.",&
+            hint="Recreate the input with inpgen with reduced symmetry, or use the '-nosym' command line option of inpgen.",&
+            calledby="check_bfield")
+      END IF
+
+      DO iType = 1, atoms%ntype
+         IF (noco%l_unrestrictMT(iType).OR.noco%l_constrained(iType)) CYCLE
+         m = [SIN(noco%beta_inp(iType))*COS(noco%alph_inp(iType)),SIN(noco%beta_inp(iType))*SIN(noco%alph_inp(iType)),&
+              COS(noco%beta_inp(iType))]
+         IF (ABS(DOT_PRODUCT(n,m))<1.0-1E-8) THEN
+            CALL juDFT_warn("B-field not parallel to the moment of atom type "//int2str(iType)//&
+               ": the transverse part is neglected in its MT sphere.",&
+               hint="Set l_mtNocoPot=T for this atom type to include the full field.",calledby="check_bfield")
+            EXIT
+         END IF
+      END DO
+    END SUBROUTINE check_bfield
 
   END MODULE m_checks

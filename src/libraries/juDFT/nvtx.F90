@@ -1,7 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module nvtx
 #ifdef CPP_NVTX
 use iso_c_binding
 implicit none
+   private
+   public :: nvtxstartrange, nvtxendrange, nvtxeventattributes, nvtxrangepush, nvtxrangepop, nvtxrangepusha, &
+      nvtxrangepushex
 
 integer,private :: col(7) = [ Z'0000ff00', Z'000000ff', Z'00ffff00', Z'00ff00ff', Z'0000ffff', Z'00ff0000', Z'00ffffff']
 character,private,target :: tempName(256)

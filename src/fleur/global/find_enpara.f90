@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_find_enpara
   USE m_judft
+  USE m_radsra
+  USE m_differ
+  USE m_constants
+  USE m_types_atoms
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: find_enpara
@@ -15,11 +19,7 @@ CONTAINS
   !> Function to determine the energy parameter given the quantum number and the potential
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
-  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_scalar_relativi)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
+  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_scalar_relativi,l_relLO)RESULT(e)
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
@@ -27,7 +27,19 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)::atoms
     REAL,INTENT(IN):: vr(:)
     LOGICAL, OPTIONAL, INTENT(IN) :: l_scalar_relativi
-    
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_relLO
+
+    IF(PRESENT(l_relLO)) THEN
+       IF (l_relLO) THEN
+          ! relLO energy = the Dirac j=l-1/2 bound state that priv_method1 already
+          ! computes internally; l_relLO makes it return that branch alone.
+          IF (l<1 .OR. l>3) CALL judft_error("relLO local orbitals are only defined for l=1 (p), &
+               &l=2 (d) or l=3 (f)",calledby="find_enpara")
+          e = priv_method1(.TRUE.,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_relLO=.TRUE.)
+          RETURN
+       END IF
+    END IF
+
     IF(PRESENT(l_scalar_relativi)) THEN
        e = priv_scalar_relativi(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)
        RETURN
@@ -38,17 +50,14 @@ CONTAINS
   END FUNCTION find_enpara
 
 
-  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
+  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_relLO)RESULT(e)
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     REAL,INTENT(IN):: vr(:)
+    LOGICAL,OPTIONAL,INTENT(IN):: l_relLO   ! return the j=l-1/2 branch alone (relLO)
 
 
     INTEGER j,ilo,i
@@ -91,7 +100,7 @@ CONTAINS
     
     DO WHILE ( nodeu <= node )
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF ( nodeu.LE.node ) THEN
           e = e + 10.0
           IF (e>1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
@@ -102,7 +111,7 @@ CONTAINS
     
     DO WHILE (nodeu.GT.node)
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF ( nodeu.GT.node ) THEN
           e = e - 10.0
           IF (e<-1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
@@ -113,7 +122,7 @@ CONTAINS
 
     DO WHILE ( (e_up_local-e_lo_local).GT.1.0e-5)
        e  = (e_up_local+e_lo_local) / 2.0
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,us,dus,nodeu,f(:,1),f(:,2))
+       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,atoms%zatom(n),us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.GT.node) THEN
           e_up_local = e
        ELSE
@@ -130,7 +139,7 @@ CONTAINS
 
        DO WHILE (nodeu.GE.node)
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+               atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
           e = e - 10.0       
        END DO
        
@@ -138,7 +147,7 @@ CONTAINS
 
        DO WHILE ( (e_up_local-e_lo_local).GT.1.0e-5)
           e  = (e_up_local+e_lo_local) / 2.0
-          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,us,dus,nodeu,f(:,1),f(:,2))
+          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,atoms%zatom(n),us,dus,nodeu,f(:,1),f(:,2))
           IF (nodeu.GE.node) THEN
              e_up_local = e
           ELSE
@@ -161,15 +170,17 @@ CONTAINS
        fn = REAL(nqn) ; fl = REAL(l) ; fj = fl-0.5
        CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
             rn,d,msh,vrd, e1, f(:,1),f(:,2),ierr)
+       IF (PRESENT(l_relLO)) THEN
+          IF (l_relLO) THEN
+             e = e1   ! relLO: keep only the j=l-1/2 branch, no 2:1 j-average
+             RETURN
+          END IF
+       END IF
        e = (2.0*e + e1 ) / 3.0
     ENDIF
   END FUNCTION priv_method1
 
   REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
@@ -220,16 +231,16 @@ CONTAINS
     ! determine upper band edge
     ! Step 1: Coarse search for the band edge
     CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-         atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+         atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
     DO WHILE ( nodeu > node )
        e = e - large_e_step
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
     END DO
     DO WHILE ( nodeu <= node )
        e = e + large_e_step
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
     END DO
     e_up_temp = e
     e_lo_temp = e - large_e_step
@@ -237,7 +248,7 @@ CONTAINS
     DO WHILE ((e_up_temp - e_lo_temp) > 1e-2)
        e = (e_up_temp + e_lo_temp) / 2.0
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu > node) THEN
           e_up_temp = e
        ELSE
@@ -256,7 +267,7 @@ CONTAINS
        DO WHILE ( nodeu >= node )
           e = e - large_e_step
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+               atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        ENDDO
        e_up_temp = e + large_e_step
        e_lo_temp = e
@@ -264,7 +275,7 @@ CONTAINS
        DO WHILE ((e_up_temp - e_lo_temp) > 1e-2)
           e = (e_up_temp + e_lo_temp) / 2.0
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+               atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
           IF (nodeu < node) THEN
              e_lo_temp = e
           ELSE
@@ -281,7 +292,7 @@ CONTAINS
     DO WHILE ( ABS(ldmt-lnd) .GE. 1E-07)
        e = (e_up+e_lo)/2
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        ldmt = dus/us
        IF( ldmt .GT. lnd) THEN
           e_lo = e
@@ -294,10 +305,6 @@ CONTAINS
      END FUNCTION priv_method2
 
   REAL FUNCTION priv_scalar_relativi(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
@@ -346,7 +353,7 @@ CONTAINS
     nodeu = -1
     DO WHILE ( nodeu.LE.node )
        CALL radsra(e_up,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.LE.node) THEN
           e_up = e_up + 5.0
        END IF
@@ -356,7 +363,7 @@ CONTAINS
 
     DO WHILE ( nodeu.GT.node )
        CALL radsra(e_lo,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.GT.node) THEN
           e_lo = e_lo - 50.0
        END IF
@@ -365,7 +372,7 @@ CONTAINS
     e_lo = e_lo - 0.1
     DO WHILE ( (e_up-e_lo).GT.1.0e-10)
        e  = (e_up+e_lo) / 2.0
-       CALL radsra(e,l,vrd,atoms%rmsh(1,n),atoms%dx(n),msh,c,us,dus,nodeu,f(:,1),f(:,2))
+       CALL radsra(e,l,vrd,atoms%rmsh(1,n),atoms%dx(n),msh,c,atoms%zatom(n),us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.GT.node) THEN
           e_up = e
        ELSE

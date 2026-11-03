@@ -1,5 +1,7 @@
       MODULE m_dsphbs
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: dsphbs
 !********************************************************************
 !     calculates the derivative of the spherical bessel functions
 !     dfj(l) = d jl(x)/dx

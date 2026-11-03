@@ -1,9 +1,20 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_opc_setup
 
     use m_slater
-    use m_types
+    use m_constants
+    use m_types_atoms
+    use m_types_input
+    use m_types_mpi
+    use m_types_potden
 
     implicit none
+    private
+    public :: opc_setup
 
     contains
 

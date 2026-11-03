@@ -1,18 +1,31 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_cored
+   USE m_juDFT
+   USE m_intgr, ONLY: intgr3, intgr0, intgr1, intgr2
+   USE m_constants
+   USE m_differ
+   USE m_types_moessbauerParams
+   USE m_cdn_io
+   USE m_xmlOutput
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_sphhar
+   USE m_gradYlm, ONLY: Derivative
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: cored
 CONTAINS
-   SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen)
+   SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen, &
+                     kinEnergyDen, moessbauerParams)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
       !     *******************************************************
-      USE m_juDFT
-      USE m_intgr, ONLY : intgr3,intgr0,intgr1
-      USE m_constants
       !USE m_setcor
-      USE m_differ
-      USE m_types
-      USE m_cdn_io
-      USE m_xmlOutput
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(IN)       :: input
@@ -32,23 +45,36 @@ CONTAINS
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
       LOGICAL, INTENT (INOUT), OPTIONAL :: l_useOtherCoreSolver
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+      REAL, INTENT(INOUT), OPTIONAL :: kinEnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+      TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
 
       !     ..
       !     .. Local Scalars ..
       REAL eig,fj,fl,fn,qOutside,rad,rhos,rhs,sea,sume,t2
       REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight, aux_weight
       INTEGER i,j,korb,ncmsh,nm,nm1,nst ,l,ierr
+      REAL fl_small  ! angular momentum of small component
+      INTEGER ilshell, nShQ, lShQ, n_prev, l_prev
+      INTEGER iRad
+      LOGICAL isSmaller, l_isoShiftOK
+      REAL nucRad, alpha, smallIsoVal, largeIsoVal, stateIsoShift
+      CHARACTER(LEN=150) :: warnMsg
       !     ..
       !     .. Local Arrays ..
 
       REAL rhcs(atoms%msh),rhoc(atoms%msh),rhoss(atoms%msh),vrd(atoms%msh),f(0:3)
       REAL rhcs_aux(atoms%msh), rhoss_aux(atoms%msh) !> quantities for energy density calculations
+      REAL tauss(atoms%jmtd)  !> direct kinetic energy density accumulator
+      REAL da_dr(atoms%jmtd), db_dr(atoms%jmtd) !> radial derivatives of core wavefunctions
       REAL occ(maxval(atoms%econf%num_states)),a(atoms%msh),b(atoms%msh),ain(atoms%msh),ahelp(atoms%msh)
       REAL occ_h(maxval(atoms%econf%num_states),2)
       INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
       LOGICAL l_useThisCoreSolver
+      INTEGER shellN(15), shellL(15)
+      REAL shellIsomerShift(15)
+      REAL indefInteg(atoms%msh)
       !     ..
 
       l_useThisCoreSolver = .TRUE.
@@ -59,8 +85,11 @@ CONTAINS
       c = c_light(1.0)
       seig = 0.0
       !
-      IF(.NOT.l_useThisCoreSolver) RETURN
-      
+      IF(.NOT.l_useThisCoreSolver) THEN
+         IF (PRESENT(moessbauerParams)) moessbauerParams%nCoreShells(iType) = 0
+         RETURN
+      END IF
+
       IF (input%frcor.and.l_CoreDenPresent) THEN
          rnot = atoms%rmsh(1,iType) ; dxx = atoms%dx(iType)
          ncmsh = NINT( LOG( (atoms%rmt(iType)+10.0)/rnot ) / dxx + 1 )
@@ -83,7 +112,10 @@ CONTAINS
          seig = seig + atoms%neq(iType)*sea
       END IF
       
-      IF (input%frcor.and.l_CoreDenPresent) RETURN
+      IF (input%frcor.and.l_CoreDenPresent) THEN
+         IF (PRESENT(moessbauerParams)) moessbauerParams%nCoreShells(iType) = 0
+         RETURN
+      END IF
 
       !     ---> set up densities
 
@@ -91,6 +123,27 @@ CONTAINS
       z = atoms%zatom(iType)
       !         rn = rmt(iType)
       dxx = atoms%dx(iType)
+
+      ! Locate the mesh bracket around the nuclear radius, for the
+      ! shell-wise isomer shift below (same 2-point linear interpolation as
+      ! the kcrel=1 core solver in core.f90).
+      nucRad = r0_const*(atomicMasses_const(atoms%nz(iType))**(1.0/3.0))
+      l_isoShiftOK = (atoms%rmsh(1,iType) < nucRad)
+      IF (.NOT.l_isoShiftOK) THEN
+         IF (jspin==1) THEN
+            WRITE(warnMsg,'(a,i0,a)') 'Nuclear radius smaller than smallest radial mesh point for atom type ', &
+                                       iType, ' -- skipping its core isomer shift'
+            WRITE(*,'(a)') TRIM(warnMsg)
+         END IF
+      ELSE
+         iRad = 0
+         isSmaller = .TRUE.
+         DO WHILE (isSmaller)
+            iRad = iRad + 1
+            IF (atoms%rmsh(iRad,iType).GE.nucRad) isSmaller = .FALSE.
+         END DO
+         alpha = (nucRad - atoms%rmsh(iRad-1,iType)) / (atoms%rmsh(iRad,iType) - atoms%rmsh(iRad-1,iType))
+      END IF
       bmu = 0.0
       !CALL setcor(iType,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
       CALL atoms%econf(iType)%get_core(nst,nprnc,kappa,occ_h)
@@ -107,6 +160,7 @@ CONTAINS
       DO j = 1,atoms%jri(iType)
          rhoss(j)     = 0.0
          if(present(EnergyDen)) rhoss_aux(j) = 0.0
+         if(present(kinEnergyDen)) tauss(j) = 0.0
          vrd(j) = vr(j,iType)
       ENDDO
       !
@@ -140,6 +194,12 @@ CONTAINS
       IF (input%gw==1 .OR. input%gw==3) WRITE(15) nst,atoms%rmsh(1:atoms%jri(iType),iType)
 
       stateEnergies = 0.0
+      ilshell = 0
+      n_prev = -999
+      l_prev = -999
+      shellN = 0
+      shellL = 0
+      shellIsomerShift = 0.0
       DO korb = 1,nst
          IF (occ(korb) /= 0.0) THEN
             fn = nprnc(korb)
@@ -167,6 +227,32 @@ CONTAINS
                rhoss(j) = rhoss(j) + rhcs(j)
             ENDDO
 
+            nShQ = nprnc(korb)
+            lShQ = NINT(fl)
+            IF (nShQ /= n_prev .OR. lShQ /= l_prev) THEN
+               ilshell = ilshell + 1
+               shellN(ilshell) = nShQ
+               shellL(ilshell) = lShQ
+               n_prev = nShQ
+               l_prev = lShQ
+            END IF
+
+            ! Shell-wise isomer shift: average density enclosed within the
+            ! nuclear sphere, from this state's own density rhcs, using the
+            ! same 2-point linear bracket interpolation at r=nucRad as the
+            ! kcrel=1 core solver (core.f90). Same /jspins normalization as
+            ! used above for rhoc=rhoss/input%jspins. Skipped entirely if the
+            ! nuclear radius is smaller than the innermost mesh point (see
+            ! l_isoShiftOK above).
+            IF (l_isoShiftOK) THEN
+               CALL intgr2(rhcs(1:atoms%jri(iType)), atoms%rmsh(1:atoms%jri(iType),iType), atoms%dx(iType), &
+                           atoms%jri(iType), indefInteg(1:atoms%jri(iType)))
+               smallIsoVal = indefInteg(iRad-1) / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad-1,iType)**3.0))
+               largeIsoVal = indefInteg(iRad) / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad,iType)**3.0))
+               stateIsoShift = (1.0-alpha)*smallIsoVal + alpha*largeIsoVal
+               shellIsomerShift(ilshell) = shellIsomerShift(ilshell) + stateIsoShift/input%jspins
+            END IF
+
             IF(present(EnergyDen)) THEN
                !rhoss_aux = rhoss
                DO j = 1,ncmsh
@@ -175,8 +261,44 @@ CONTAINS
                   rhoss_aux(j) = rhoss_aux(j) + (rhcs(j) * eig)
                ENDDO
             ENDIF
+
+            ! ---------------------------------------------------------------
+            ! Direct kinetic energy density: τ = (1/2)|∇ψ|²
+            !
+            ! For a core state with angular momentum l and radial functions
+            ! a(r) [large] and b(r) [small] where a(r) = r·R(r):
+            !
+            !   4πr² τ(r) = (1/2) weight × [
+            !     (da/dr - a/r)² + l(l+1) a²/r²        (large component)
+            !   + (db/dr - b/r)² + l̃(l̃+1) b²/r²      (small component)
+            !   ]
+            !
+            ! where l̃ = l-1 for j=l-1/2 (κ>0) and l̃ = l+1 for j=l+1/2 (κ<0)
+            ! ---------------------------------------------------------------
+            IF(present(kinEnergyDen)) THEN
+               ! Compute small-component angular momentum l̃
+               fl_small = fl - SIGN(1.0, REAL(kappa(korb)))
+
+               ! Compute radial derivatives da/dr and db/dr inside MT sphere
+               CALL Derivative(a(1:atoms%jri(iType)), iType, atoms, da_dr(1:atoms%jri(iType)))
+               CALL Derivative(b(1:atoms%jri(iType)), iType, atoms, db_dr(1:atoms%jri(iType)))
+
+               nm = atoms%jri(iType)
+               DO j = 1, nm
+                  r = atoms%rmsh(j, iType)
+                  tauss(j) = tauss(j) + 0.5 * weight * ( &
+                     ! Large component: radial derivative + angular gradient
+                     (da_dr(j) - a(j)/r)**2 + fl*(fl+1.0) * a(j)**2 / r**2 &
+                     ! Small component: radial derivative + angular gradient
+                   + (db_dr(j) - b(j)/r)**2 + fl_small*(fl_small+1.0) * b(j)**2 / r**2 )
+               ENDDO
+            ENDIF
          ENDIF
       ENDDO
+
+      IF (PRESENT(moessbauerParams)) THEN
+         CALL moessbauerParams%accumCoreIS(iType, ilshell, shellN, shellL, shellIsomerShift, l_isoShiftOK)
+      END IF
 
       !     ---->update spherical charge density rho with the core density.
       !     ---->for spin-polarized (jspins=2), take only half the density
@@ -190,6 +312,15 @@ CONTAINS
          DO j = 1,nm
             EnergyDen(j,0,iType,jspin) = EnergyDen(j,0,iType,jspin) &
                                         + rhoss_aux(j) /(input%jspins * sfp_const)
+         ENDDO
+      ENDIF
+
+      ! Add direct core KED to kinEnergyDen (L=0 component only, divided by sqrt(4π))
+      IF(present(kinEnergyDen)) THEN
+         nm = atoms%jri(iType)
+         DO j = 1, nm
+            kinEnergyDen(j, 0, iType, jspin) = kinEnergyDen(j, 0, iType, jspin) &
+                                              + tauss(j) / (input%jspins * sfp_const)
          ENDDO
       ENDIF
 

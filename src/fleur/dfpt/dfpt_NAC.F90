@@ -8,9 +8,13 @@ module m_dfpt_NAC
     
     USE m_juDFT
     USE m_constants
-    USE m_types
+    USE m_types_fleurinput
+    USE m_types_kpts
+    USE m_types_stars
 
     implicit none
+    PRIVATE
+    PUBLIC :: dfpt_nac, read_bec, read_dielten, get_nac, get_nac_ewald, get_nac_ewald_r, get_gaussian
 
 contains
 

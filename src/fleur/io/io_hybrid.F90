@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,18 +7,28 @@
 module m_io_hybrid
    use m_io_matrix
    use m_judft
-   use m_types
    use m_unify_zmat
+   use m_eig66_io
+   use m_trafo
+   use m_types_atoms
+   use m_types_cell
+   use m_types_hybdat
+   use m_types_input
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_sym
    implicit none
+   private
+   public :: read_z, check_p_list, id_olap, id_z, id_v_x
    !private
    integer, save :: id_olap, id_z, id_v_x
    !public:: open_hybinp_io,read_cmt,write_cmt
 contains
    subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
                      jsp, z_out, parent_z, c_phase, list)
-      USE m_eig66_io
-      use m_types
-      use m_trafo
       implicit none
       type(t_atoms), intent(in)    :: atoms
       type(t_cell), intent(in)     :: cell

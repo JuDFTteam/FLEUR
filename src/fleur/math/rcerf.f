@@ -1,5 +1,7 @@
       MODULE m_rcerf
       use m_juDFT
+      use m_constants
+      implicit none
 c*********************************************************************
 c     calculates  real( erf(x+iy) ) for z=x+iy in the first quadrant.
 c             m. weinert   may 1987
@@ -66,7 +68,6 @@ c                       m. weinert    may 1987
 c     new declaration part
 c                       s. bl"ugel, IFF, Nov.97
 c*********************************************************************
-      USE m_constants
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

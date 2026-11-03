@@ -1,9 +1,19 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_gaunt
 !*********************************************************************
 !     Modified module to include old gaunt_init subroutine
 !     the private arrays are allocated and computed in the first call to gaunt1
 !                                            Daniel Wortmann
 !*********************************************************************
+   USE m_judft
+   USE m_constants, ONLY: pimach
+   USE m_grule
+   USE m_juDFT_stop
+   IMPLICIT NONE
    PRIVATE
    INTEGER,SAVE         :: lmaxdp,lmaxdp2
    REAL,SAVE,ALLOCATABLE::w(:),yr(:,:)
@@ -26,7 +36,6 @@ CONTAINS
 !     modified to use calculated points and weights
 !     to make it dynamic.   (m.w.  jan. 1982)
 !*********************************************************************
-      USE m_judft
       IMPLICIT NONE
       INTEGER,INTENT(IN) :: l,lp,ls,m,mp,ms,lmaxd
       REAL               :: gaunt1
@@ -54,7 +63,6 @@ CONTAINS
    END FUNCTION
 
    FUNCTION gaunt2(lp,l,ls,mp,m,ms,lmaxd)
-      USE m_judft
       IMPLICIT NONE
       INTEGER,INTENT(IN) :: l,lp,ls,m,mp,ms,lmaxd
       REAL               :: gaunt2
@@ -87,9 +95,6 @@ CONTAINS
 !     sets up values needed for gaunt1
 !        m. weinert  january 1982
 !**********************************************************************
-      USE m_constants, ONLY : pimach
-      USE m_grule
-      USE m_juDFT_stop
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: lmaxd
@@ -145,9 +150,6 @@ CONTAINS
    END SUBROUTINE
 
    SUBROUTINE gaunt_init2(lmaxd)
-      USE m_constants, ONLY : pimach
-      USE m_grule
-      USE m_juDFT_stop
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: lmaxd

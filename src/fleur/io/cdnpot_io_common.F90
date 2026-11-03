@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -21,13 +21,24 @@ MODULE m_cdnpot_io_common
 #ifdef CPP_HDF
    USE hdf5
 #endif
+   USE m_types_stars
+   USE m_types_input
+   USE m_types_atoms
+   USE m_types_vacuum
+   USE m_types_cell
+   USE m_types_sym
+   USE m_types_sphhar
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: comparestars, comparestepfunctions, comparestructure, comparelatharms
+#ifdef CPP_HDF
+   PUBLIC :: checkandwritemetadatahdf
+#endif
 
    CONTAINS
 
    SUBROUTINE compareStars(stars, refStars,   l_same)
-      use m_types_stars
        
 
       TYPE(t_stars),INTENT(IN)  :: stars
@@ -49,7 +60,6 @@ MODULE m_cdnpot_io_common
    END SUBROUTINE compareStars
 
    SUBROUTINE compareStepfunctions(stars, refStars, l_same)
-      use m_types_stars
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_stars),INTENT(IN)  :: refStars
 
@@ -66,11 +76,6 @@ MODULE m_cdnpot_io_common
 
    SUBROUTINE compareStructure(input, atoms, vacuum, cell, sym, refInput, refAtoms, refVacuum,&
                                refCell, refSym, l_same,l_shift_only)
-      use m_types_input
-      use m_types_atoms
-      use m_types_vacuum
-      use m_types_cell
-      use m_types_sym
 
 
       TYPE(t_input),INTENT(IN)  :: input, refInput
@@ -136,7 +141,6 @@ MODULE m_cdnpot_io_common
    END SUBROUTINE compareStructure
 
    SUBROUTINE compareLatharms(latharms, refLatharms, l_same)
-      use m_types_sphhar
       TYPE(t_sphhar)       :: latharms, refLatharms
 
       LOGICAL,      INTENT(OUT) :: l_same
@@ -153,14 +157,7 @@ MODULE m_cdnpot_io_common
    SUBROUTINE checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, latharms, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                        currentStepfunctionIndex,l_storeIndices,l_CheckBroyd,l_storeAddMetadata)
-      use m_types_atoms
-      use m_types_input
-      use m_types_cell
-      use m_types_vacuum
        
-      use m_types_stars
-      use m_types_sphhar
-      use m_types_sym
 
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_atoms),INTENT(IN)  :: atoms

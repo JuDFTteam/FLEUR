@@ -12,31 +12,31 @@ MODULE m_gf_init
    USE mpi
 #endif
    USE m_juDFT
+   USE m_constants
+   USE m_gf_types
+   USE m_gf_out
+   USE m_gf_version
+   USE m_gf_iogfinp, ONLY: gf_rgfinp
+   USE m_gf_fleur_init_layer
+   USE m_gf_energies, gf_energies_init => init
+   USE m_gf_energies, ONLY: init
+   USE m_gf_mpi_groups
+   USE m_gf_writetrans
+   USE m_gf_apws, ONLY: gf_apws_dim
+   USE m_gf_stepsanaly, ONLY: gf_initstepsanaly, gf_calcstepsanaly
+   USE m_gf_io2dmat, ONLY: io2dmat_init => init
+   USE m_gf_iotmat, ONLY: init_tmat_storage
+   USE m_gf_embedding, ONLY: gf_checkemb
+   USE m_gaunt, ONLY: gaunt_init
+   USE m_xmlOutput
+#ifdef CPP_HDF
+   USE m_hdf_tools, ONLY: hdf_init
+#endif
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: gf_init
 CONTAINS
    SUBROUTINE gf_init(gmpi, embinp, gfmix, layers, ld, gkpts)
-      USE m_types
-      USE m_constants
-      USE m_gf_types
-      USE m_gf_out
-      USE m_gf_version
-      USE m_gf_iogfinp, ONLY: gf_rgfinp
-      USE m_gf_fleur_init_layer
-      USE m_gf_energies, gf_energies_init => init
-      USE m_gf_mpi_groups
-      USE m_gf_writetrans
-      USE m_gf_apws, ONLY: gf_apws_dim
-      USE m_gf_stepsanaly, ONLY: gf_initstepsanaly, gf_calcstepsanaly
-      USE m_gf_io2dmat, ONLY: io2dmat_init => init
-      USE m_gf_iotmat, ONLY: init_tmat_storage
-      USE m_gf_embedding, ONLY: gf_checkemb
-      USE m_gaunt, ONLY: gaunt_init
-      USE m_xmlOutput
-#ifdef CPP_HDF
-      USE m_hdf_tools, ONLY: hdf_init
-#endif
       IMPLICIT NONE
       TYPE(t_gfmpi), INTENT(INOUT)  :: gmpi !fmpi%mpi_comm must be set
       TYPE(t_embinp), INTENT(OUT)   :: embinp
@@ -173,7 +173,6 @@ CONTAINS
    SUBROUTINE priv_check_layers(ld, layers)
       !cross-layer consistency: all layers must share the in-plane cell,
       !the k-point set and the number of spins
-      USE m_gf_types
       IMPLICIT NONE
       TYPE(t_gflayer), INTENT(IN) :: ld(:)
       TYPE(t_layers), INTENT(IN)  :: layers
@@ -211,8 +210,6 @@ CONTAINS
       !   More tests should be added here!!!
       !           (last modified: 2004-00-00) D. Wortmann
       !-----------------------------------------------
-      USE m_constants, ONLY: oUnit
-      USE m_gf_types
       IMPLICIT NONE
       TYPE(t_embinp), INTENT(IN)   :: embinp
       TYPE(t_gfmix), INTENT(INOUT) :: gfmix

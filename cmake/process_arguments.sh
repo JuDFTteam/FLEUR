@@ -29,6 +29,7 @@ do
     -libxc) shift; CLI_USE_LIBXC=$1;;
 	  -link) shift; CLI_LIBRARIES=$1;;
     -libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
+    -rpath) shift; CLI_USE_RPATH=$1;;
     -flags) shift; CLI_FLAGS=$1;;
     -includedir) shift; CLI_INCLUDEDIR="$CLI_INCLUDEDIR $1";;
     -elpa) shift;CLI_ELPA=$1;;
@@ -99,7 +100,7 @@ Diagonalization libraries:
 Additional features:
   -libxc    [TRUE|FALSE] : use libxc library
   -libxml2   true        : try to download libxml2 and compile it (experimental). No 'false' option exists here as the libxml2 is required.
-  -wannier  [TRUE|FALSE] : use Wannier90 library
+  -wannier  [TRUE|FALSE] : use Wannier90 module API (wannierlib)
   
 
 Command line options to switch on/off features. These options overwrite the results of
@@ -114,10 +115,15 @@ given below.
   -libdir #     : Directory to find libraries in (can be specified multiple times)
   -flags #      : String to add while compiling (e.g. '-g')
   -includedir # : Directory to find include files (can be specified multiple times)
+  -rpath true   : add the library directories to the RPATH of the executables, i.e.
+                  the -L directories and the directories of all linked shared libraries
+                  (given by full path or as -lfoo, searched in the -L directories and
+                  LIBRARY_PATH). Default is false, which keeps the cmake defaults
 
 Special options:
   -gpu # : Compile for GPU. Currently you should specify something like acc:cc80 to use OpenACC
-           and NVIDIA compute capability 80. Currently this works only using the NVHPC compilers.
+           and NVIDIA compute capability 80. Currently this works only using the NVHPC compilers;
+           GPU builds with LLVM flang are rejected.
 
 
 To help the script finding a proper configuration you should provide some information on your compiler toolchain.
@@ -135,6 +141,7 @@ Alternatively, you can try to specify the compiler toolchain using the -c option
   intel-mpi  -- use mpi compiler wrappers with intel compilers (mpiifx,mpiicx,mpiicpx)
   nvidia     -- use the NVHPC compilers
   gfortran   -- use the compilers from the GNU collection
+  flang      -- use the LLVM compilers (flang or flang-new, clang, clang++)
 
   auto       -- let cmake determine the compilers (will usually use the 'first' compiler found if multiple are available)
   interactive-- search for compilers on you machine and offer a choice. This will also be offered if you specify no

@@ -10,6 +10,16 @@
       use m_juDFT 
       USE hdf5 
       USE m_hdf_tools 
+      USE m_constants, ONLY: oUnit, pi_const
+      USE m_gf_types
+      USE m_gf_fft_singleton
+      USE m_gf_ab_coef
+      USE m_gf_energies
+      USE m_intgr
+      USE m_radfun
+      USE m_dwigner
+      USE m_gf_math
+      USE m_gf_stepsanaly
       IMPLICIT NONE
 
       PRIVATE 
@@ -35,8 +45,6 @@
 !*****************************************************************      
 !  Calculate the DOS on some plane in the vacuum                        
 !*****************************************************************      
-      USE m_gf_types 
-      USE m_gf_fft_singleton 
       IMPLICIT NONE 
 !     Arguments                                                         
                                            ! Green function             
@@ -118,8 +126,6 @@
 !     This subroutine constructs the density matrix for l<4 for all     
 !     atom types.                                                       
 !*****************************************************************      
-      USE m_gf_types 
-      use m_gf_ab_coef
       IMPLICIT NONE 
 !     Arguments                                                         
       INTEGER,INTENT(IN)         :: layer 
@@ -271,11 +277,6 @@
 !     initial PRIVATE arrays of the MODULE                              
 !                          D. Wortmann                                  
 !******************************************                             
-      USE m_gf_types 
-      USE m_gf_energies 
-      USE m_intgr
-      USE m_radfun
-      USE m_dwigner 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_layers),INTENT(IN) :: layers 
@@ -436,11 +437,6 @@
 !                                                                       
 !                          D. Wortmann                                  
 !******************************************                             
-      USE hdf5
-      use m_hdf_tools
-      USE m_gf_energies 
-      USE m_gf_types 
-      USE m_gf_math,ONLY:interpolate_analytic 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_gfmpi),INTENT(IN)  :: fmpi
@@ -737,10 +733,6 @@
 !                                                                       
 !           (last modified:10-03-04) D. Wortmann                        
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_constants, ONLY: pi_const, oUnit 
-      USE m_gf_stepsanaly 
-      USE m_hdf_tools 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       TYPE(t_embinp),INTENT(IN) :: gfinp 
@@ -836,8 +828,6 @@
 !     collects the DOS from all kpts stored in hdf-file                 
 !     D. Wortmann                                                       
 !******************************************                             
-      USE m_gf_energies 
-      USE m_constants, ONLY: pi_const, oUnit
       IMPLICIT NONE 
       INTEGER,INTENT(IN)     :: layer 
       COMPLEX,INTENT(OUT)    :: dos(:,:,:,:,:,:) 
@@ -924,7 +914,6 @@
 !     and writes formatted files                                        
 !     D. Wortmann                                                       
 !******************************************                             
-      USE m_gf_energies 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)     :: n_energies,jspins,nkpts 
       LOGICAL,INTENT(IN)     :: l_band 
@@ -1014,7 +1003,6 @@
 !     Diagonalizes LDOS for give atom n and l                           
 !                          D. Wortmann                                  
 !******************************************                             
-      USE m_gf_math 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: n,l 
