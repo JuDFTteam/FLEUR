@@ -71,13 +71,14 @@ CONTAINS
       !>   <u_{k+b1}|H_k|u_{k+b2}> = E.M - b1.P - (b1^2/2).M replaces H by the eigenvalue of
       !>   the bra and so holds only over the whole cell. An M reaching the vacuum next to a
       !>   P that did not would have been off by exactly b1.P_vac, with nothing to say so.
-      IF (input%film) THEN
-         !> The spin operator does reach the vacuum: t_matelements_spin adds the third
-         !> region to each of its four blocks, one t_melem_vacabc per spin channel, in the
-         !> same pairing the interstitial uses. The orbital moment and the spin-orbit
-         !> operator never needed it, being muffin-tin quantities by construction.
-      END IF
-
+      !>
+      !>   The spin operator does reach the vacuum: t_matelements_spin adds the third
+      !>   region to each of its four blocks, one t_melem_vacabc per spin channel, in the
+      !>   same pairing the interstitial uses. The orbital moment, the spin-orbit operator
+      !>   and the exchange torque never needed one, being muffin-tin quantities by
+      !>   construction: on the Fe3GeTe2 monolayer the vacuum carries three parts per
+      !>   million of the moment the spheres carry, because B_xc follows the spin density
+      !>   and the two decay together.
 
       !> Two channels are two eigenproblems, wannierised one after the other, so there is
       !> no single spin matrix over them to interpolate: within a channel sigma_z is +/-1 by
