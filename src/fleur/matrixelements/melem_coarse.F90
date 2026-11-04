@@ -277,7 +277,7 @@ CONTAINS
             calledby="melem_coarse_calc")
          !> Nothing in it depends on k: the weight is a property of the potential and
          !> the radial functions, and the states arrive through the factory.
-         CALL torqop%init(atoms, sym, sphhar, nococonv, input, vtot)
+         CALL torqop%init(atoms, sym, sphhar, nococonv, vtot)
       END IF
 
       !> The relativistic radial SOC integrals and the L.S angular matrix depend on the

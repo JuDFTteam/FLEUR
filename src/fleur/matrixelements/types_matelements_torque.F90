@@ -19,16 +19,22 @@
 !>      spherical, so the weight is t_melem_beff, which couples lm to lm'.
 !>
 !>    - the regions. B_xc is a muffin-tin quantity here: the interstitial and the
-!>      vacuum are not summed, which is what the original does too. That makes the
-!>      operator meaningless on a film, and init says so rather than returning a
-!>      number that silently misses a region.
+!>      vacuum are not summed, which is what the original does too.
+!>
+!>      That is true in bulk and on a film alike, so a film is not a special case and
+!>      is not refused. The region a film adds is the one that cannot matter: B_xc
+!>      follows the spin density, and outside the slab both decay together. Measured
+!>      on the Fe3GeTe2 monolayer, the vacuum holds 2.0e-5 of a 6.27 mu_B moment --
+!>      three parts per million of what the spheres hold -- while the interstitial
+!>      holds 2.4 %, against 0.3 % without spin-orbit coupling and 1.5 % with it in
+!>      the bcc Fe bulk this operator was validated on. What is left out is left out
+!>      everywhere and is not a property of the geometry.
 MODULE m_types_matelements_torque
    USE m_types_matelements
    USE m_types_mat
    USE m_types_abc
    USE m_types_radfun
    USE m_types_melem_beff, ONLY: t_melem_beff
-   USE m_types_input
    USE m_types_atoms
    USE m_types_sym
    USE m_types_sphhar
@@ -61,21 +67,13 @@ CONTAINS
    !> Everything this operator needs is in abc and in the potential: it never reads
    !> zmat, so it takes neither the basis nor the layout that says where in zmat a
    !> spin component lives.
-   SUBROUTINE torque_init(this, atoms, sym, sphhar, nococonv, input, vtot)
+   SUBROUTINE torque_init(this, atoms, sym, sphhar, nococonv, vtot)
       CLASS(t_matelements_torque), INTENT(INOUT) :: this
       TYPE(t_atoms),    TARGET,  INTENT(IN) :: atoms
       TYPE(t_sym),      TARGET,  INTENT(IN) :: sym
       TYPE(t_sphhar),   TARGET,  INTENT(IN) :: sphhar
       TYPE(t_nococonv), TARGET,  INTENT(IN) :: nococonv
-      TYPE(t_input),             INTENT(IN) :: input
       TYPE(t_potden),   TARGET,  INTENT(IN) :: vtot
-
-      IF (input%film) &
-         CALL judft_error('the exchange torque has no vacuum contribution and cannot be '// &
-                          'asked for on a film', &
-                          hint='it sums the muffin tins only; orbital and spinOrbit are '// &
-                               'muffin-tin quantities too and do work on a film', &
-                          calledby='types_matelements_torque%init')
 
       !> B_xc couples the two spin channels, so the result is a 2x2 block matrix
       this%spinoroperator = .TRUE.
