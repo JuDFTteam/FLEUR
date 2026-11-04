@@ -17,7 +17,7 @@ MODULE m_dfpt_dynmat_fourier
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: ft_dyn, ft_ws_forward, build_ws_ft, ft_fcm_weight_packed, rotate_dynmat, ift_dyn, &
-      interpolate_dynmat
+      interpolate_dynmat, remap_fullsym_atoms
 CONTAINS
    SUBROUTINE ft_dyn(atoms, qpts, sym, nNZ, Rvecs, amat, dyn_mat_q, dyn_mat_r, dyn_mat_q_full)
       !! Transforms the dynamical matrices for a set of q vectors in the
@@ -335,5 +335,46 @@ CONTAINS
       end do
 
    END SUBROUTINE interpolate_dynmat
+
+   subroutine remap_fullsym_atoms(atoms, atoms_full, sym_full)
+      !! Rewrites sym_full%mapped_atom, built on the atom order of atoms_full, into the
+      !! atom order of atoms. Atoms are matched by their position modulo lattice vectors.
+      type(t_atoms), intent(in)    :: atoms
+      type(t_atoms), intent(in)    :: atoms_full
+      type(t_sym),   intent(inout) :: sym_full
+
+      real, parameter :: tol = 1e-7
+
+      integer :: iAtom, jAtom
+      real    :: diff(3)
+      integer, allocatable :: perm(:), permInv(:), mappedFull(:,:)
+
+      if (atoms_full%nat /= atoms%nat) then
+         call juDFT_error("fullsym_ cell and DFPT cell have a different number of atoms.", calledby="remap_fullsym_atoms")
+      end if
+
+      ! perm(iAtom): index in atoms_full of atom iAtom of atoms
+      allocate(perm(atoms%nat), permInv(atoms%nat))
+      perm = 0
+      permInv = 0
+      do iAtom = 1, atoms%nat
+         do jAtom = 1, atoms%nat
+            diff = atoms_full%taual(:,jAtom) - atoms%taual(:,iAtom)
+            if (all(abs(diff - nint(diff)) < tol) .and. atoms_full%nz(atoms_full%itype(jAtom)) == atoms%nz(atoms%itype(iAtom))) then
+               perm(iAtom) = jAtom
+               exit
+            end if
+         end do
+         if (perm(iAtom) == 0 .or. permInv(max(perm(iAtom),1)) /= 0) then
+            call juDFT_error("fullsym_ cell and DFPT cell contain different atoms.", calledby="remap_fullsym_atoms")
+         end if
+         permInv(perm(iAtom)) = iAtom
+      end do
+
+      mappedFull = sym_full%mapped_atom
+      do iAtom = 1, atoms%nat
+         sym_full%mapped_atom(:,iAtom) = permInv(mappedFull(:,perm(iAtom)))
+      end do
+   end subroutine remap_fullsym_atoms
 
 END MODULE m_dfpt_dynmat_fourier

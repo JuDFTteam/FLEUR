@@ -28,6 +28,7 @@ module m_dfpt_lambda
    use m_hs_int_direct
    use m_inv3
    use m_dwigner
+   use m_dfpt_dynmat_fourier, only: remap_fullsym_atoms
    use m_map_to_unit
    use m_vacfun
    use m_types_abc
@@ -83,8 +84,9 @@ contains
       class(t_forcetheo), allocatable :: forcetheo_fullsym
 
       character(len=100) :: inp_pref
-      integer            :: iQ, ik, isym, iatom
+      integer            :: iQ, ik, isym
       integer            :: mrot(3, 3), invmrot(3, 3)
+      integer            :: nvd_save, nv2d_save, nbasfcn_save
       logical            :: l_trs
       real               :: trans(3), rkpt(3)
 
@@ -94,8 +96,15 @@ contains
       fmpi_fullsym%mpi_comm            = fmpi%mpi_comm
 
       ! Skip setupMPI: the parallel-solver setup can fail if the fullsym q-mesh
+      ! fleur_init reruns lapw_dim on the fullsym k-set; keep the basis dimensions of the main run
+      nvd_save = lapw_dim_nvd
+      nv2d_save = lapw_dim_nv2d
+      nbasfcn_save = lapw_dim_nbasfcn
       call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
                       enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, inp_pref, l_skip_setupmpi=.true.)
+      lapw_dim_nvd = nvd_save
+      lapw_dim_nv2d = nv2d_save
+      lapw_dim_nbasfcn = nbasfcn_save
 
       sym_full  = fi_fullsym%sym
       qvec_full = fi_fullsym%kpts
@@ -116,13 +125,8 @@ contains
          end if
       end do
 
-      ! sym_full%mapped_atom is indexed with fi%atoms, so both cells must list the
-      ! atoms in the same order even though the type grouping differs.
-      do iatom = 1, fi%atoms%nat
-         if (any(abs(fi_fullsym%atoms%taual(:, iatom) - fi%atoms%taual(:, iatom)) > 1e-7)) then
-            call juDFT_error("fullsym_ atom ordering differs from the DFPT cell; the atom map would be wrong.", calledby="dfpt_read_fullsym")
-         end if
-      end do
+      ! the unfolding indexes sym_full%mapped_atom with fi%atoms
+      call remap_fullsym_atoms(fi%atoms, fi_fullsym%atoms, sym_full)
 
       if (fi_fullsym%input%film .neqv. fi%input%film) then
          call juDFT_error("fullsym_ input and DFPT input disagree on film geometry.", calledby="dfpt_read_fullsym")

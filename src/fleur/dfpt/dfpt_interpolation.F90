@@ -25,6 +25,7 @@ module m_dfpt_interpolation
     use m_types_forcetheo
     use m_types_hybdat
     use m_types_kpts
+    use m_types_lapw
     use m_types_mpdata
     use m_types_mpi
     use m_types_nococonv
@@ -65,6 +66,7 @@ contains
         integer, allocatable :: q_list(:)
         
         integer :: iQ, iSpecial
+        integer :: nvd_save, nv2d_save, nbasfcn_save
 
         character(len=100) :: inp_pref
         character(len=50)  :: label
@@ -110,10 +112,19 @@ contains
         ! Skip setupMPI: this fleur_init only re-reads the fullsym_ input set; the
         ! parallel-solver setup it would otherwise do is never used here and fails
         ! when the fullsym q-mesh does not factor evenly onto the MPI ranks.
+        ! fleur_init reruns lapw_dim on the fullsym k-set; keep the basis dimensions of the main run
+        nvd_save = lapw_dim_nvd
+        nv2d_save = lapw_dim_nv2d
+        nbasfcn_save = lapw_dim_nbasfcn
         call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
                         enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, &
                         inp_pref, l_skip_setupmpi=.true.)
+        lapw_dim_nvd = nvd_save
+        lapw_dim_nv2d = nv2d_save
+        lapw_dim_nbasfcn = nbasfcn_save
         qpts = fi_fullsym%kpts
+        ! dyn_mat is in the atom order of fi%atoms
+        call remap_fullsym_atoms(fi%atoms, fi_fullsym%atoms, fi_fullsym%sym)
 
 
         IF (fi%dfpt%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%dfpt%qpts_interpol%nkpt,fi%input%jspins))
@@ -142,7 +153,7 @@ contains
             !end if
 
             ! Fourier-interpolate the coarse dynamical matrices onto the fine q-mesh
-            call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
+            call interpolate_dynmat(fi%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
                                     fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp, &
                                     l_bornhuang=fi%dfpt%l_bornhuang)
 
@@ -150,7 +161,7 @@ contains
             l_sumrule = fi%dfpt%l_sumrule_intp .and. .not. fi%dfpt%l_bornhuang
             if (l_sumrule) then
                 ! The Gamma matrix is needed before the first fine q-point
-                call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
+                call interpolate_dynmat(fi%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
                                         fi%dfpt%l_WSinterpol, reshape([0.0, 0.0, 0.0], [3, 1]), dyn_mat_gamma, &
                                         l_bornhuang=fi%dfpt%l_bornhuang)
                 call hermitize_scale_dynmat(fi%atoms, dyn_mat_gamma(:,:,1))
