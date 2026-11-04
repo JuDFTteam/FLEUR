@@ -5,14 +5,16 @@
 !--------------------------------------------------------------------------------
 !******************************************************************     
       MODULE m_gf_addembnhr 
+          USE m_gf_embedding
+          USE m_gf_types
+          USE m_gf_curvy2dprojector
           IMPLICIT NONE
+          PRIVATE
+          PUBLIC gf_addembnhr
       CONTAINS 
       SUBROUTINE gf_addembnhr(                                          &
      &     cell,en,nk,jspin,layer,lapw,lapw_gf,                                 &
      &     g)                                                           
-      USE m_gf_embedding 
-      USE m_gf_types 
-      USE m_gf_curvy2dprojector 
                                                                         
       IMPLICIT NONE 
       INTEGER,INTENT(IN) :: en,nk,jspin,layer 
@@ -28,7 +30,7 @@
       COMPLEX,ALLOCATABLE::gnoughtp(:,:) 
       INTEGER matsize 
                                                                         
-      matsize=lapw_gf%nmat_sphere
+      matsize=SIZE(g,1)
       ALLOCATE( g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
       ALLOCATE( g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
       ALLOCATE( bigg(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) ) 

@@ -15,12 +15,14 @@
 !                 Daniel Wortmann, (05-08-24)
 !-----------------------------------------------
       use m_juDFT
+      USE m_gf_types, ONLY: t_lapw, t_lapw_gf
+      USE m_gf_energies, ONLY: gf_z
       IMPLICIT NONE
       PRIVATE
       COMPLEX,ALLOCATABLE,TARGET,SAVE :: H(:,:),S(:,:)
       INTEGER,SAVE                    :: spin,k,stored_layer
       PUBLIC gf_storeHS,gf_getlargeH_eS,gf_writeHS,gf_readHS            &
-     &     ,gf_getHSaddr
+     &     ,gf_getHSaddr,gf_hs_map
       CONTAINS
       !<-- S: gf_getHSaddr(H,S)
       SUBROUTINE gf_getHSaddr(layer,HP,SP)
@@ -81,20 +83,25 @@
       END SUBROUTINE
 
       !>
-      !<-- S: gf_getlargeH_eS(jspin,nk,H,S)
-      SUBROUTINE gf_getlargeH_eS(layer,jspin,nk,en,Hinv)
+      !<-- S: gf_getlargeH_eS(layer,jspin,nk,en,lapw,lapw_gf,l_sph,Hinv)
+      SUBROUTINE gf_getlargeH_eS(layer,jspin,nk,en,lapw,lapw_gf,l_sph,  &
+     &     Hinv)
 !-----------------------------------------------
-!     Constructs the large 2D G^-1 = (e*S-H) matrix
+!     Constructs the large 2D G^-1 = (e*S-H) matrix, in the full basis
+!     or (l_sph) restricted to the rkmax sphere plus the LOs
 !           (last modified: 05-08-24) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_energies,ONLY:gf_z
       IMPLICIT NONE
       !<-- Arguments
       INTEGER,INTENT(IN)     :: layer,jspin,nk,en
+      TYPE(t_lapw),INTENT(IN)    :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      LOGICAL,INTENT(IN)     :: l_sph
       COMPLEX,INTENT(OUT)    :: Hinv(:,:)
       !>
       !<-- Locals
-      INTEGER             :: n
+      INTEGER             :: i,j
+      INTEGER             :: map(lapw%nmat)
       COMPLEX             :: z
       !>
 
@@ -107,14 +114,88 @@
       ENDIF
       !>
       !<--Check if enough data is present
-      IF (SIZE(hinv,1)>SIZE(h,1)) CALL                                  &
+      IF (lapw%nmat>SIZE(h,1)) CALL                                     &
      &     juDFT_error("Not enough data in FLAPW-Hamiltonian")
       !>
                        !The energy
       z=gf_z(en,layer)
-      n = SIZE(Hinv,1)
-      Hinv(:,:) = z*S(:n,:n) - H(:n,:n)
+      map = gf_hs_map(jspin,lapw,lapw_gf,l_sph)
+      IF (SIZE(Hinv,1) /= MAXVAL(map)) CALL                             &
+     &     juDFT_error("Wrong size of G in gf_getlargeH_eS")
+      DO i = 1,lapw%nmat
+         IF (map(i)==0) CYCLE
+         DO j = 1,lapw%nmat
+            IF (map(j)==0) CYCLE
+            Hinv(map(j),map(i)) = z*S(j,i) - H(j,i)
+         ENDDO
+      ENDDO
       END SUBROUTINE
+      !>
+      !<-- F: gf_hs_map(jspin,lapw,lapw_gf,l_sph)
+      FUNCTION gf_hs_map(jspin,lapw,lapw_gf,l_sph) RESULT(map)
+!-----------------------------------------------
+!     index map from the stored H/S onto the working matrix: identity,
+!     or (l_sph) the cylinder basis functions outside the rkmax sphere
+!     are compressed out (map=0) and the LOs follow the sphere
+!-----------------------------------------------
+      IMPLICIT NONE
+      INTEGER,INTENT(IN)         :: jspin
+      TYPE(t_lapw),INTENT(IN)    :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      LOGICAL,INTENT(IN)         :: l_sph
+      INTEGER                    :: map(lapw%nmat)
+
+      INTEGER :: i,nv_lo,nv_skip,n,nn
+
+      IF (.NOT.l_sph) THEN
+         map = (/(i,i=1,lapw%nmat)/)
+         RETURN
+      ENDIF
+      nv_skip=lapw%nmat-lapw_gf%nmat_sphere  !no of lapw to be skipped
+      if (lapw%nmat>lapw%nv_tot) THEN
+         !There are some LO
+         nv_lo=lapw%nmat-lapw%nv_tot
+      else
+         nv_lo=0
+      endif
+      if (lapw%nv_tot>lapw%nv(jspin)) then  !noco calculation
+         nv_lo=nv_lo/2
+         nv_skip=nv_skip/2
+      endif
+      n=0
+      nn=0
+
+      map(n+1:n+lapw_gf%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw_gf%nv_sphere(jspin))/)
+      n=n+lapw_gf%nv_sphere(jspin)
+      nn=nn+lapw_gf%nv_sphere(jspin)
+      !skip some lapw
+      if (nv_skip>0) THEN
+         map(n+1:n+nv_skip)=0
+         n=n+nv_skip
+      endif
+      if (lapw%nv_tot>lapw%nv(1)) THEN
+         !noco
+         map(n+1:n+lapw_gf%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw_gf%nv_sphere(jspin))/)
+         n=n+lapw_gf%nv_sphere(jspin)
+         nn=nn+lapw_gf%nv_sphere(jspin)
+         !skip some lapw
+         if (nv_skip>0) THEN
+            map(n+1:n+nv_skip)=0
+            n=n+nv_skip
+         endif
+      endif
+      !add the LO
+      if (nv_lo>0) THEN
+         map(n+1:n+nv_lo)=(/(i,i=nn+1,nn+nv_lo)/)
+         n=n+nv_lo
+         nn=nn+nv_lo
+         if (lapw%nv_tot>lapw%nv(1)) THEN
+            map(n+1:n+nv_lo)=(/(i,i=nn+1,nn+nv_lo)/)
+            n=n+nv_lo
+            nn=nn+nv_lo
+         endif
+      endif
+      END FUNCTION
       !>
 
       !<-- S: gf_writeHS(savemem)

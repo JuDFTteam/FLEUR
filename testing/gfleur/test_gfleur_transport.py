@@ -149,6 +149,33 @@ def test_cbs_channels_at_gamma(lead):
     assert _open_channels(lead[4]) == {0.1: 3, 0.2: 4}
 
 
+def _bloch_states(cbs):
+    """{(E, ik): sorted kz} of the Bloch states in CBS_bloch.1"""
+    states = {}
+    for line in (cbs / "CBS_bloch.1").read_text().splitlines():
+        p = line.split()
+        states.setdefault((round(float(p[0]), 4), int(p[1])), []).append(float(p[2]))
+    return {key: sorted(kz) for key, kz in states.items()}
+
+
+def test_cbs_spectral_vs_linear_solve(lead):
+    """spectral=f (linear solve) and the default spectral=t give the same CBS."""
+    gfprep, gfleur, bulk, base, cbs = lead
+    run = base / "cbs_nospectral"
+    run.mkdir()
+    _layer_files(base / "lead_prep", run)
+    (run / "gf_inp").write_text(_gf_inp(base / "lead_prep", "&MODE tmat=t, gmat=t, spectral=f /",
+                                        "&CBSMODE cbs=t /\n"))
+    (run / "gf_en").write_text(GF_EN)
+    (run / "gf_io").write_text("default\n")
+    proc, log = _run(gfleur, run)
+    assert proc.returncode == 0, f"gfleur CBS run with spectral=f failed\n{log[-3000:]}"
+    ref, res = _bloch_states(cbs), _bloch_states(run)
+    assert res.keys() == ref.keys()
+    for key in ref:
+        assert res[key] == pytest.approx(ref[key], abs=1e-5), key
+
+
 def test_transmission_single_layer(lead):
     """One two-plane layer between its own leads transmits every open channel."""
     t = _transport(lead, "stack1", "planes_per_layer=2 first_plane=1 last_plane=2", "curr=-1", 1)

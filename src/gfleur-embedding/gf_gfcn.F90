@@ -5,7 +5,26 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_gfcn 
       use m_juDFT
+      use m_gf_energies, only: gf_z
+      use m_gf_types
+      use m_gf_proj, only: gf_gproj, gf_dgproj, gf_gprojnohelpregion
+      use m_gf_embedding, only: gf_getemb, gf_addemb, gf_setemb
+      use m_gf_invertmatrix
+      use m_gf_io2dmat
+      use m_gf_hsdata
+      use m_gf_projembed
+      use m_gf_fnaeproj
+      use m_gf_surfprojo
+      use m_gf_addembnhr
+      use m_gf_curvy2dprojector
+      use m_gf_math, only: mat_inverse
+#ifdef CPP_WANNIER
+      use m_gf_selfenergy
+      use m_gf_projcorrelate
+#endif
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC gf_GFCN,gf_gfcn_analy
       CONTAINS 
       !<-- S: gf_GFCN(Nv2,en,nk,jspin,Nv, K,gfinp,l_noco, g,gij,dgij,alt
                                                                         
@@ -44,22 +63,6 @@
 !     Frank Freimuth, November 2007                                     
 !                                                                       
 !********************************************************************** 
-      USE m_gf_energies,ONLY: gf_z 
-      USE m_gf_types 
-      USE m_gf_proj ,ONLY: gf_gproj, gf_dgproj, gf_gprojnohelpregion 
-      USE m_gf_embedding,ONLY: gf_getemb,gf_addemb,gf_setemb 
-      USE m_gf_invertmatrix 
-      USE m_gf_io2dmat 
-      USE m_gf_hsdata 
-      USE m_gf_projembed 
-      USE m_gf_fnaeproj 
-      USE m_gf_surfprojo 
-      USE m_gf_addembnhr 
-      USE m_gf_curvy2dprojector 
-#ifdef CPP_WANNIER                                                      
-      USE m_gf_selfenergy 
-      USE m_gf_projcorrelate 
-#endif                                                                  
       IMPLICIT NONE 
       !<-- Arguments                                                    
                                                                         
@@ -79,7 +82,7 @@
       !>                                                                
       !<-- locals                                                       
                                                                         
-      INTEGER                      :: r1,r2 
+      INTEGER                      :: r1,r2,matsize
       LOGICAL,PARAMETER            :: l_numdelG = .FALSE. 
       ! if l_numdelG = .true. calculate the derivate nummerically. If no
       COMPLEX, ALLOCATABLE         :: g1(:,:),g2(:,:) 
@@ -156,14 +159,18 @@
                                                                         
          !<-- read h,S, make H-z*S                                      
                                                                         
-         IF (.NOT.ALLOCATED(g)) THEN 
-            ALLOCATE(G(lapw_gf%nmat_sphere,lapw_gf%nmat_sphere))
-         ELSEIF (SIZE(G,1) /= lapw_gf%nmat_sphere) THEN
-            DEALLOCATE(g) 
-            ALLOCATE(G(lapw_gf%nmat_sphere,lapw_gf%nmat_sphere))
-         ENDIF 
-                                                                        
-         CALL gf_getLargeH_eS(layer,jspin,nk,en,G) 
+         !the 3D G for charge/DOS lives in the sphere basis, the
+         !surface projections need the full cylinder basis
+         matsize = lapw%nmat
+         IF (l_sph) matsize = lapw_gf%nmat_sphere
+         IF (.NOT.ALLOCATED(g)) THEN
+            ALLOCATE(G(matsize,matsize))
+         ELSEIF (SIZE(G,1) /= matsize) THEN
+            DEALLOCATE(g)
+            ALLOCATE(G(matsize,matsize))
+         ENDIF
+
+         CALL gf_getLargeH_eS(layer,jspin,nk,en,lapw,lapw_gf,l_sph,G)
                                                                         
          !>                                                             
                                                                         
@@ -323,11 +330,6 @@
 !     a constant potential in region II                                 
 !     Daniel Wortmann, Tokyo 2002                                       
 !**********************************************************             
-      USE m_gf_energies  ,ONLY:gf_z 
-      USE m_gf_types
-      USE m_gf_embedding ,ONLY:gf_getemb,gf_setemb 
-      USE m_gf_io2dmat 
-      USE m_gf_math,ONLY:mat_inverse 
       IMPLICIT NONE 
 !     Arguments                                                         
       INTEGER,         INTENT(IN)::en,nk,jspin,region 

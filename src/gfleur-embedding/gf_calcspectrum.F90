@@ -5,7 +5,13 @@
 !--------------------------------------------------------------------------------
 MODULE m_gf_calcspectrum
     use m_juDFT
+    USE m_gf_hsdata
+    USE m_gf_types
+    USE m_gf_spectrum
+    USE m_gf_mkposdef
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC gf_calcspectrum,gf_calcspectrum_simple
 CONTAINS
     SUBROUTINE gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph)
         !-----------------------------------------------
@@ -18,11 +24,6 @@ CONTAINS
         ! Frank Freimuth, January-February 2007
         !           (last modified: 07-02-22) D. Wortmann
         !-----------------------------------------------
-        USE m_gf_hsdata
-        USE m_gf_types
-        use m_juDFT
-        USE m_gf_spectrum
-        USE m_gf_mkposdef
         IMPLICIT NONE
         !<-- Arguments
                                                                         
@@ -163,11 +164,6 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,lapw_gf,jspin,l_sph)
         ! Frank Freimuth, January-February 2007
         !           (last modified: 07-02-22) D. Wortmann
         !-----------------------------------------------
-        USE m_gf_hsdata
-        USE m_gf_types
-        use m_juDFT
-        USE m_gf_spectrum
-        USE m_gf_mkposdef
         IMPLICIT NONE
         !<-- Arguments
 
@@ -296,7 +292,6 @@ subroutine priv_map_hs(jspin,mat,lapw,lapw_gf,hs,l_sph)
     !hs(row,col)=<G_row|M|G_col>, see gf_hsdata) onto the working
     !matrix, optionally compressing out the cylinder basis functions
     !outside the rkmax sphere
-    use m_gf_types
     implicit none
     integer,intent(in)      :: jspin
     type(t_lapw),intent(in) :: lapw
@@ -305,68 +300,18 @@ subroutine priv_map_hs(jspin,mat,lapw,lapw_gf,hs,l_sph)
     complex,INTENT(out)     :: mat(:,:)
     logical,intent(in)      :: l_sph
 
-    integer :: i,j,ii,jj,nv_lo,nv_skip,n,nn
+    integer :: i,j,ii,jj
     integer :: map(lapw%nmat)
 
-    IF (l_sph) THEN
-        nv_skip=lapw%nmat-lapw_gf%nmat_sphere  !no of lapw to be skipped
-        if (lapw%nmat>lapw%nv_tot) THEN
-            !There are some LO
-            nv_lo=lapw%nmat-lapw%nv_tot
-        else
-            nv_lo=0
-        endif
-        if (lapw%nv_tot>lapw%nv(jspin)) then  !noco calculation
-            nv_lo=nv_lo/2
-            nv_skip=nv_skip/2
-        endif
-        n=0
-        nn=0
-
-        map(n+1:n+lapw_gf%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw_gf%nv_sphere(jspin))/)
-        n=n+lapw_gf%nv_sphere(jspin)
-        nn=nn+lapw_gf%nv_sphere(jspin)
-        !skip some lapw
-        if (nv_skip>0) THEN
-            map(n+1:n+nv_skip)=0
-            n=n+nv_skip
-        endif
-        if (lapw%nv_tot>lapw%nv(1)) THEN
-            !noco
-            map(n+1:n+lapw_gf%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw_gf%nv_sphere(jspin))/)
-            n=n+lapw_gf%nv_sphere(jspin)
-            nn=nn+lapw_gf%nv_sphere(jspin)
-            !skip some lapw
-            if (nv_skip>0) THEN
-                map(n+1:n+nv_skip)=0
-                n=n+nv_skip
-            endif
-        endif
-        !add the LO
-        if (nv_lo>0) THEN
-            map(n+1:n+nv_lo)=(/(i,i=nn+1,nn+nv_lo)/)
-            n=n+nv_lo
-            nn=nn+nv_lo
-
-            if (lapw%nv_tot>lapw%nv(1)) THEN
-                map(n+1:n+nv_lo)=(/(i,i=nn+1,nn+nv_lo)/)
-                n=n+nv_lo
-                nn=nn+nv_lo
-            endif
-        endif
-
-        DO i = 1,lapw%nmat
-            ii=map(i)
-            IF (ii==0) CYCLE
-            DO j = 1,lapw%nmat
-                jj=map(j)
-                if (jj==0) cycle
-                mat(jj,ii) = hs(j,i)
-            ENDDO
+    map = gf_hs_map(jspin,lapw,lapw_gf,l_sph)
+    DO i = 1,lapw%nmat
+        ii=map(i)
+        IF (ii==0) CYCLE
+        DO j = 1,lapw%nmat
+            jj=map(j)
+            if (jj==0) cycle
+            mat(jj,ii) = hs(j,i)
         ENDDO
-
-    ELSE
-        mat(:lapw%nmat,:lapw%nmat) = hs(:lapw%nmat,:lapw%nmat)
-    ENDIF
+    ENDDO
 end subroutine
 END
