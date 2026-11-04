@@ -181,8 +181,15 @@ _OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1",
 # no counterpart in a code that wants one 2N basis.
 ORBITRANS_DIR, JUWIP_DIR = "input", "w90files"
 ORBITRANS_NAME = {"rspauli.1": "spin", "anglmomrs.1": "orbital", "rssocmat.1": "spin_orbit",
-                  "WF1_hr.dat": "hoppings", "wig_vectors": "rpts"}
-ORBITRANS_CASES = ("WannFeBcc",)
+                  "WF1_hr.dat": "hoppings", "wig_vectors": "rpts",
+                  "WF1_r.dat": "position", "WF1_bmn.dat": "bmn",
+                  "WF1_cmn.dat": "cmn", "WF1_fmn.dat": "fmn"}
+#> The four names below the first row were missing here while they were present in the
+#> Fortran, and the omission could not fail: with WF1_r.dat absent from the map, op() asked
+#> for input/WF1_r.dat -- which is exactly what the run left behind, because the Fortran
+#> table had no entry for it either. A map repeated by hand agrees with the code it checks
+#> only as long as both are right, so what is asserted below is also the CONTENT.
+ORBITRANS_CASES = ("WannFeBcc", "WannSiDiamond", "WannMoS2")
 JUWIP_CASES = ("WannPtSOCOps",)
 
 
@@ -230,10 +237,33 @@ EXPORT_FILES = {
     # with two spin channels, so the per-channel seedname is exercised at the same time.
     "WannFeAFMCol":  _W90_FILES + ["WF2.amn", "WF2.mmn", "WF2.eig"],   # wannier90
     # orbitrans writes a directory, and the fixture lists what is inside it by relative
-    # path. All four are named: orbitrans reads all four, and a missing one stops it
+    # path. All five are named: orbitrans reads all five, and a missing one stops it
     # long after the run that should have produced it is gone.
     "WannFeBcc": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
-                  f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom"],
+                  f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom",
+                  f"{ORBITRANS_DIR}/ndegen"],
+    #> Here for the two formats no other export case carries: it asks for position and for
+    #> cmn, so the operator the table above was missing a name for is the one this case
+    #> writes, beside one that was already headerless. What it does NOT cover is the
+    #> per-atom count -- see WannMoS2 below.
+    "WannSiDiamond": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
+                      f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom",
+                      f"{ORBITRANS_DIR}/ndegen", f"{ORBITRANS_DIR}/hoppings",
+                      f"{ORBITRANS_DIR}/position", f"{ORBITRANS_DIR}/cmn",
+                      f"{ORBITRANS_DIR}/rpts"],
+    #> The case that tells a per-atom count apart from a per-class one, which takes MORE
+    #> THAN ONE atom group and nothing else: with a single group the index within the class
+    #> IS the index in the cell, whatever the size of that group, so WannSiDiamond -- two
+    #> equivalent atoms in one group -- comes out the same under either reading. This one
+    #> has groups of one and two atoms, so the first atom of the second group is not atom
+    #> one, and a count indexed by the within-class number lands in the wrong line and
+    #> leaves the file a line short.
+    #>
+    #> Two spin channels as well, so the per-atom counts are summed over channels and the
+    #> centres of the second are appended after the first.
+    "WannMoS2": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
+                 f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom",
+                 f"{ORBITRANS_DIR}/ndegen"],
 }
 
 # Every artefact the block can write. A case that asked for none of them must come out
@@ -499,6 +529,50 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"in <export> is what decides, and a writer that runs anyway puts files no "
                 f"one wanted beside the run -- the .mmn of a large mesh is hundreds of "
                 f"megabytes of text, which is the whole reason these are opt-in")
+
+    #> A matrix the transport code reads is taken with list-directed input from the first
+    #> line, so a Wannier90 header reaching it is a syntax error in the middle of a run --
+    #> and in a file whose leading columns still parse as numbers it would be worse than an
+    #> error: plausible values and no complaint. Asserting that the FIRST line is data
+    #> catches the class rather than the case, for whichever operator wrote the file.
+    for name in (f"{ORBITRANS_DIR}/{n}" for n in ("hoppings", "position", "bmn")):
+        if name not in res:
+            continue
+        with open(res[name]) as fh:
+            head = fh.readline().split()
+        assert len(head) >= 7 and all(w.lstrip("-").isdigit() for w in head[:5]), (
+            f"{name} opens with {' '.join(head[:6])!r} rather than a data line. The "
+            f"consumer reads it from line one and has nothing to skip a header with")
+
+    #> ndegen is a file of its own precisely because the block it used to sit in is
+    #> ceil(N_R/15) lines wide: a reader that skips a fixed count instead gets it right for
+    #> one N_R and silently wrong for the next. One value per R-vector is the check.
+    if f"{ORBITRANS_DIR}/ndegen" in res:
+        degen = open(res[f"{ORBITRANS_DIR}/ndegen"]).read().split()
+        n_rpts = sum(1 for line in open(res[f"{ORBITRANS_DIR}/rpts"]) if line.split())
+        assert len(degen) == n_rpts, (
+            f"ndegen holds {len(degen)} values for the {n_rpts} R-vectors in rpts")
+
+    #> The per-atom Wannier counts, checked against the two files written beside them so
+    #> that nothing here is a number to keep up to date: one count per atom of the cell,
+    #> and together they account for every Wannier function.
+    #>
+    #> A projection carries its atom as (ntype, atom) with `atom` counting within the
+    #> equivalence class of its type. Reading that as the index of the atom in the cell
+    #> agrees with this file exactly when there is ONE atom group, because only then is
+    #> firstAtom of every group 1 -- and the size of that group does not matter. So the
+    #> case that makes these two assertions bite is WannMoS2, with its groups of one and
+    #> two atoms, and not a single group holding two.
+    if f"{ORBITRANS_DIR}/N_wann_atom" in res:
+        counts = [int(v) for v in open(res[f"{ORBITRANS_DIR}/N_wann_atom"]).read().split()]
+        n_at = sum(1 for line in open(res[f"{ORBITRANS_DIR}/atom_centers"]) if line.split())
+        n_wf = sum(1 for line in open(res[f"{ORBITRANS_DIR}/wann_centers"]) if line.split())
+        assert len(counts) == n_at, (
+            f"N_wann_atom holds {len(counts)} counts for the {n_at} atoms of atom_centers. "
+            f"orbitrans reads one per atom and runs off the end of a shorter file")
+        assert sum(counts) == n_wf, (
+            f"N_wann_atom accounts for {sum(counts)} of the {n_wf} Wannier functions "
+            f"listed in wann_centers")
 
     omega_i_got = ()
     if test_id in EXPECTED_OMEGA_I:

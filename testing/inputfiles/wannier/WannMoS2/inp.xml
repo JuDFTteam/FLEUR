@@ -95,6 +95,7 @@
             <operator name="hamiltonian"/>
             <operator name="orbital"/>
          </operatorsRs>
+         <export orbitrans="T"/>
       </wannierlib>
 
    </output>

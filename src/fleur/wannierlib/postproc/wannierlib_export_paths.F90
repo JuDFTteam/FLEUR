@@ -33,6 +33,7 @@ MODULE m_wannierlib_export_paths
    PRIVATE
 
    PUBLIC :: wannierlib_export_dir_set, wannierlib_export_file, wannierlib_export_dir
+   PUBLIC :: wannierlib_export_bare
 
    !> Empty until a run sets it, which is also what a run without a consumer flag keeps:
    !> the canonical names in the run directory, exactly as before this table existed.
@@ -106,6 +107,7 @@ CONTAINS
       CASE ('anglmomrs.1');  name = 'orbital'
       CASE ('rssocmat.1');   name = 'spin_orbit'
       CASE ('WF1_hr.dat');   name = 'hoppings'
+      CASE ('WF1_r.dat');    name = 'position'
       !> It reads `dum, R(1:3)` from this one and our fifth column, the degeneracy, is
       !> simply not in its read list -- list-directed input takes what it asks for.
       CASE ('wig_vectors');  name = 'rpts'
@@ -115,5 +117,28 @@ CONTAINS
       CASE DEFAULT;          name = TRIM(canonical)
       END SELECT
    END FUNCTION orbitrans_name
+
+   !> Does this path hold a matrix orbitrans reads, rather than a Wannier90 file?
+   !>
+   !> The three Wannier90 layouts open with three header lines, and the 'hr' one follows
+   !> them with the degeneracy block. orbitrans reads none of that: it takes `hoppings`,
+   !> `position` and `bmn` with list-directed input from the first line, and the
+   !> degeneracies from a file of their own. A header reaching it is a syntax error in
+   !> the middle of a run, and in `rpts` or `lattice`, whose shape is different, it would
+   !> be worse than an error: plausible numbers and no complaint.
+   !>
+   !> Asked of the RESOLVED path and not of the canonical name, because being bare belongs
+   !> to those three names rather than to the export flag: the second channel of a
+   !> collinear run keeps the name WF2_hr.dat, so it keeps the layout that name promises.
+   FUNCTION wannierlib_export_bare(path) RESULT(bare)
+      CHARACTER(LEN=*), INTENT(IN) :: path
+      LOGICAL :: bare
+      INTEGER :: islash
+      CHARACTER(LEN=:), ALLOCATABLE :: base
+
+      islash = INDEX(path, '/', back=.TRUE.)
+      base = TRIM(path(islash + 1:))
+      bare = (base == 'hoppings') .OR. (base == 'position') .OR. (base == 'bmn')
+   END FUNCTION wannierlib_export_bare
 
 END MODULE m_wannierlib_export_paths

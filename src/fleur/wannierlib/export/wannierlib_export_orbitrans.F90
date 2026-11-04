@@ -78,7 +78,7 @@ CONTAINS
 
       !> Last channel: now the total Wannier count is known.
       IF (channel == n_channels) THEN
-         CALL orbitrans_count_wann_per_atom(this, n_channels, nw_atom)
+         CALL orbitrans_count_wann_per_atom(this, atoms, n_channels, nw_atom)
          CALL orbitrans_write_n_wann_atom(nw_atom)
          WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
             '/{lattice,atom_centers,wann_centers,N_wann_atom} for ', &
@@ -194,16 +194,27 @@ CONTAINS
    !> How many Wannier functions sit on each atom, one count per line, summed over the
    !> spin channels because that is the basis orbitrans sees.
    !>
-   !> The projection list is already expanded one entry per atom, so each entry carries
-   !> its atom. A spinor run turns one projection into more than one Wannier function;
-   !> that ratio is read off num_wann instead of assumed, and a ratio that is not whole
-   !> means the projections do not account for the Wannier functions -- which would make
-   !> the file wrong in a way orbitrans has no way to detect.
-   SUBROUTINE orbitrans_count_wann_per_atom(this, n_channels, nw_atom)
+   !> A projection carries its atom as the pair (ntype, atom), where `atom` counts within
+   !> the equivalence class of its type -- which is what builds A_mn, since the type is
+   !> what reaches the radial functions. The index of the atom in the cell is
+   !> firstAtom(ntype) + atom - 1, and this file is per atom of the cell, so that is what
+   !> indexes it and atoms%nat is what sizes it.
+   !>
+   !> Reading `atom` as that index instead agrees with it whenever every class holds one
+   !> atom, which is every cell of one species -- so a monolayer cannot tell the two
+   !> apart. A film of five layers has classes of two, and the file came out with one
+   !> line per distinct class size: two counts for five atoms, and the consumer read off
+   !> the end of it. The assertion below is what makes that visible here instead.
+   !>
+   !> A spinor run turns one projection into more than one Wannier function; that ratio is
+   !> read off num_wann instead of assumed, and a ratio that is not whole means the
+   !> projections do not account for the Wannier functions.
+   SUBROUTINE orbitrans_count_wann_per_atom(this, atoms, n_channels, nw_atom)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+      TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER, INTENT(IN) :: n_channels
       INTEGER, ALLOCATABLE, INTENT(OUT) :: nw_atom(:)
-      INTEGER :: nproj, nat, ip, ia, per_proj
+      INTEGER :: nproj, ip, ia, per_proj
 
       nproj = SIZE(this%proj)
       IF (nproj == 0) CALL juDFT_error('wannierlib: <export orbitrans="T"> found no projections', &
@@ -212,14 +223,22 @@ CONTAINS
          CALL juDFT_error('wannierlib: <export orbitrans="T"> cannot split num_wann over the projections', &
                           calledby='wannierlib_export_orbitrans')
       per_proj = this%num_wann/nproj
-      nat = MAXVAL(this%proj(:)%atom)
 
-      ALLOCATE (nw_atom(nat))
+      ALLOCATE (nw_atom(atoms%nat))
       nw_atom = 0
       DO ip = 1, nproj
-         ia = this%proj(ip)%atom
+         ia = atoms%firstAtom(this%proj(ip)%ntype) + this%proj(ip)%atom - 1
+         IF ((ia < 1) .OR. (ia > atoms%nat)) &
+            CALL juDFT_error('wannierlib: <export orbitrans="T"> built an atom index '// &
+                             'outside the cell', calledby='wannierlib_export_orbitrans')
          nw_atom(ia) = nw_atom(ia) + per_proj*n_channels
       END DO
+
+      IF (SUM(nw_atom) /= n_channels*this%num_wann) &
+         CALL juDFT_error('wannierlib: <export orbitrans="T"> per-atom counts do not sum '// &
+                          'to the Wannier functions there are', &
+                          hint='the projections do not account for every Wannier function', &
+                          calledby='wannierlib_export_orbitrans')
    END SUBROUTINE orbitrans_count_wann_per_atom
 
    !> One line per atom, in atom order, with how many Wannier functions sit on it. It is
