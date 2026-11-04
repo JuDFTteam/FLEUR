@@ -7,6 +7,24 @@ test_wannier.py reads as what it is -- the run plus the claims made about it.
 import re
 
 
+def gauge_unitarity(path):
+    """The deviations wannierlib_store_gauge reports, one entry per spin channel.
+
+    V(k) = u_opt(k) . u_mlwf(k) has orthonormal columns, so V^H V is the num_wann identity
+    at every k of the full mesh; the routine prints the worst departure as it hands the
+    gauge to results. Returns [(spin, deviation), ...] in the order they were written --
+    a collinear jspins=2 run wannierises each channel on its own and so reports twice.
+    """
+    pat = re.compile(r"wannierlib gauge: spin (\d+), "
+                     r"max \|V\^H V - 1\| over the mesh =\s*(\S+)")
+    out = []
+    for line in open(path, errors="ignore"):
+        m = pat.search(line)
+        if m:
+            out.append((int(m.group(1)), float(m.group(2))))
+    return out
+
+
 def spin_sumrule_values(path):
     """The |<s>| column of every 'spin sum-rule check' block FLEUR prints."""
     txt = open(path, errors="ignore").read()

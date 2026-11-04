@@ -22,6 +22,7 @@ Cartesian axes and writes the three Cartesian components in real space.
 """
 from read_tests import read_tests
 from wannier_files import (anglmom_r0,
+                            gauge_unitarity,
                             onsite_weight,
                             perpmag_census,
                             torque_perp_residual,
@@ -142,6 +143,21 @@ EXPECTED_OMEGA_I = {
     "WannFeAFMSOCKfold": 16.719550182,
 }
 OMEGA_I_TOL = 1.0e-5
+
+# The gauge the run hands to results has exactly one consumer -- interpolate_bandstructure,
+# on the electron-phonon path in dfpt/superconductivity -- and nothing in this suite reaches
+# it. What can be asserted from here is the property that consumer depends on: V = u_opt .
+# u_mlwf has orthonormal columns, so V^H V is the num_wann identity at every k of the mesh.
+#
+# The failure this catches is the one the data path invites. run_w90 leaves each rank holding
+# its own k-points and zeros elsewhere, and store_gauge completes the mesh by summing over
+# ranks; a k-point that sum misses stays at zero and gives the null matrix, a deviation of 1.
+# Nothing else here would notice, because the operators are built from the local arrays and
+# never from the completed copy -- the gauge in results is written and read by no one else.
+#
+# 1e-10 is ten orders of magnitude below that 1, and the runs sit at the rounding of a
+# product of this size. Neither population is anywhere near the threshold.
+GAUGE_UNITARY_TOL = 1.0e-10
 
 
 # Real-space operator files written by <operators_r>, per test id. Their presence is
@@ -506,6 +522,20 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             assert omega >= omega_i - OMEGA_I_TOL, (
                 f"total spread Omega {omega} of channel {ch} is below its own invariant part "
                 f"Omega_I {omega_i}, which is impossible: Omega = Omega_I + Omega_OD")
+
+    # Not scoped to a case list: every wannierised run hands its gauge over, so every case
+    # reports, and a case that does not is itself the finding.
+    devs = gauge_unitarity(res["out"])
+    assert devs, (
+        "no 'wannierlib gauge' line in the output, so store_gauge never ran and the "
+        "matrices the electron-phonon interpolation reads were never completed over the "
+        "mesh -- that path would read whatever the previous run left, or nothing")
+    for spin, dev in devs:
+        assert dev < GAUGE_UNITARY_TOL, (
+            f"spin {spin}: max |V^H V - 1| = {dev} over the full mesh, but V = u_opt . "
+            f"u_mlwf has orthonormal columns at every k by construction (tol "
+            f"{GAUGE_UNITARY_TOL}). A value near 1 is a k-point the rank sum left at zero, "
+            f"not a tolerance to widen")
 
     # Omega_total is NOT compared against the reference, at any tolerance. Which of the
     # near-degenerate MLWF minima the iteration reaches follows the order of the
