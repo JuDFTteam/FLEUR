@@ -67,7 +67,8 @@ def gfprep_run(tmp_path_factory):
 
     work = base / "gf"
     work.mkdir()
-    (work / "gfprep_inp").write_text("&GFPREP bulkdir='../bulk/' /\n")
+    # 2D k-points Gamma, X, M: the tests need not be converged
+    (work / "gfprep_inp").write_text("&GFPREP bulkdir='../bulk/' kgrid=2,2 /\n")
     proc, log = _run(gfprep, work)
     assert proc.returncode == 0, f"gfprep failed\n{log[-4000:]}"
     return gfprep, work
@@ -130,7 +131,7 @@ def _run_gfleur(gfprep_run, tmp_path, mode):
     for f in work.iterdir():
         if f.name.startswith("layer") or f.name.startswith("gf_") or f.suffix == ".xsd":
             shutil.copy(f, tmp_path / f.name)
-    gfinp = (tmp_path / "gf_inp").read_text().replace("tmat=t, gmat=t", mode)
+    gfinp = (tmp_path / "gf_inp").read_text().replace("tmat=t, gmat=t /", f"{mode} /\n&BASIS napw=8 /")
     (tmp_path / "gf_inp").write_text(gfinp)
     shutil.copy(GF_EN, tmp_path / "gf_en")
     proc, log = _run(gfleur, tmp_path)
