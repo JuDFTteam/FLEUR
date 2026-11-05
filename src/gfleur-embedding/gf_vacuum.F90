@@ -5,10 +5,12 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_vacuum 
       use m_juDFT
+      USE m_constants, ONLY: oUnit
       USE m_gf_types
       USE m_gf_energies
+      USE m_gf_iodop, ONLY: gf_iodop_readvacemb
 #ifdef old_stuff
-      USE m_constants, ONLY: pi_const, oUnit
+      USE m_constants, ONLY: pi_const
       USE m_gf_fft_singleton
       USE m_gf_io2dmat
 #endif
@@ -65,8 +67,168 @@
       public                  :: gf_vacuum_check_vacpot
 #endif
       public gf_simple_vac
+      public gf_vacemb_init, gf_vacemb, gf_vacemb_active
+
+      !vacuum embedding at the outer planes of a film (side 1: below
+      !layer 1, side 2: above the last layer) from the planar-averaged
+      !potential vz(:,spin) beyond the plane, written by gfprep
+      TYPE t_vacside
+         LOGICAL :: on = .FALSE.
+         REAL    :: delz = 0.0
+         REAL, ALLOCATABLE :: vz(:, :)
+      END TYPE t_vacside
+      TYPE(t_vacside), SAVE   :: vacside(2)
+      INTEGER, SAVE           :: vac_nlayers = 0
+      LOGICAL, SAVE           :: vac_simple = .FALSE.
+      REAL, SAVE              :: vac_energy = 0.0, vac_bmat(2, 2) = 0.0
+      REAL, ALLOCATABLE, SAVE :: vac_bk(:, :)
+      !RK4 steps per grid interval of vz
+      INTEGER, PARAMETER      :: nref = 4
                                                                         
       CONTAINS 
+
+      SUBROUTINE gf_vacemb_init(embinp, cell, kpts, nlayers)
+      !Sets up the vacuum embedding of the sides selected by surface (side 2)
+      !and vacleft (side 1). With simplevacuum the potential beyond the
+      !plane is the constant vacuum_energy, otherwise it is read from
+      !gf_pot.hdf.
+      TYPE(t_embinp), INTENT(IN) :: embinp
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_kpts), INTENT(IN)   :: kpts
+      INTEGER, INTENT(IN)        :: nlayers
+
+      INTEGER :: side, n
+      COMPLEX :: e, s1, s2
+
+      vac_nlayers = nlayers
+      vacside(1)%on = embinp%l_vacleft
+      vacside(2)%on = embinp%l_surface
+      vac_simple = embinp%l_simplevacuum
+      vac_energy = embinp%vacuum_energy
+      vac_bmat = cell%bmat(1:2, 1:2)
+      vac_bk = kpts%bk(1:2, :)
+      IF (vac_simple) THEN
+         WRITE (oUnit, "(a,f12.6)") "vacuum embedding: constant potential ", vac_energy
+         RETURN
+      END IF
+      DO side = 1, 2
+         IF (.NOT. vacside(side)%on) CYCLE
+         IF (.NOT. gf_iodop_readvacemb(side, vacside(side)%delz, vacside(side)%vz)) &
+            CALL juDFT_error("No vacuum embedding potential in gf_pot.hdf", &
+                             hint="generate the layers from a film with gfprep or set simplevacuum=t", &
+                             calledby="gf_vacemb_init")
+         n = SIZE(vacside(side)%vz, 1)
+         WRITE (oUnit, "(a,i1,a,i0,a,f8.4,a,2f12.6)") "vacuum embedding side ", side, ": ", n, &
+            " points, delz=", vacside(side)%delz, ", V(plane), V(end):", &
+            vacside(side)%vz(1, 1), vacside(side)%vz(n, 1)
+         !accuracy of the integration: step doubling at an energy below V(plane)
+         e = CMPLX(vacside(side)%vz(1, 1) - 0.2, 0.01)
+         s1 = priv_vacsigma(vacside(side)%vz(:, 1), vacside(side)%delz, e, 1.0, nref)
+         s2 = priv_vacsigma(vacside(side)%vz(:, 1), vacside(side)%delz, e, 1.0, 2*nref)
+         WRITE (oUnit, "(a,i1,a,2f10.6,a,es10.2)") "vacuum embedding side ", side, &
+            ": Sigma(E=V(plane)-0.2,|k+G|^2=1)=", s2, ", step-doubling difference:", ABS(s1 - s2)
+      END DO
+      END SUBROUTINE gf_vacemb_init
+
+      LOGICAL FUNCTION gf_vacemb_active(side, region)
+      !is the embedding potential of this side and region the vacuum one?
+      INTEGER, INTENT(IN) :: side, region
+      gf_vacemb_active = .FALSE.
+      IF (side == 1 .AND. region == 1) gf_vacemb_active = vacside(1)%on
+      IF (side == 2 .AND. region == vac_nlayers) gf_vacemb_active = vacside(2)%on
+      END FUNCTION gf_vacemb_active
+
+      SUBROUTINE gf_vacemb(side, en, nk, jspin, lapw_gf, sigma)
+      !Vacuum embedding potential, diagonal in the 2D plane waves:
+      !Sigma_GG = 1/2 phi'/phi at the plane, phi the solution decaying (or
+      !outgoing) into the vacuum of the planar-averaged potential
+      INTEGER, INTENT(IN)          :: side, en, nk, jspin
+      TYPE(t_lapw_gf), INTENT(IN)  :: lapw_gf
+      COMPLEX, INTENT(OUT)         :: sigma(:, :)
+
+      INTEGER :: n, nn, js
+      REAL    :: gk(2), q2
+      COMPLEX :: e
+
+      e = gf_Z(en, 0)
+      sigma = CMPLX(0.0, 0.0)
+      nn = SIZE(sigma, 1)
+      IF (lapw_gf%nv2(1) < nn) nn = nn/2 !noco calculation
+      DO n = 1, nn
+         gk = MATMUL(vac_bk(:, nk) + [lapw_gf%k1p(n, 1), lapw_gf%k2p(n, 1)], vac_bmat)
+         q2 = DOT_PRODUCT(gk, gk)
+         IF (vac_simple) THEN
+            sigma(n, n) = -0.5*SQRT(priv_retarded(2.0*(vac_energy - e) + q2, e))
+         ELSE
+            js = MIN(jspin, SIZE(vacside(side)%vz, 2))
+            sigma(n, n) = priv_vacsigma(vacside(side)%vz(:, js), vacside(side)%delz, e, q2, nref)
+         END IF
+      END DO
+      IF (nn /= SIZE(sigma, 1)) sigma(nn + 1:, nn + 1:) = sigma(:nn, :nn)
+      END SUBROUTINE gf_vacemb
+
+      COMPLEX FUNCTION priv_vacsigma(vz, delz, e, q2, nsub)
+      !1/2 phi'(0)/phi(0) for phi'' = (2(V(t)-e)+q2) phi, t the distance
+      !from the plane into the vacuum. Beyond the last grid point V is
+      !constant and phi = exp(-kappa t); the linear system (phi,phi') is
+      !integrated inwards with RK4, nsub steps per grid interval (also
+      !through nodes of phi).
+      REAL, INTENT(IN)    :: vz(:), delz, q2
+      COMPLEX, INTENT(IN) :: e
+      INTEGER, INTENT(IN) :: nsub
+
+      COMPLEX :: u(2), k1(2), k2(2), k3(2), k4(2)
+      REAL    :: h, t
+      INTEGER :: i, n
+
+      n = SIZE(vz)
+      h = delz/nsub
+      u(1) = 1.0
+      u(2) = -SQRT(priv_retarded(2.0*(vz(n) - e) + q2, e))
+      t = (n - 1)*delz
+      DO i = (n - 1)*nsub, 1, -1
+         k1 = priv_rhs(t, u)
+         k2 = priv_rhs(t - 0.5*h, u - 0.5*h*k1)
+         k3 = priv_rhs(t - 0.5*h, u - 0.5*h*k2)
+         k4 = priv_rhs(t - h, u - h*k3)
+         u = u - h/6.0*(k1 + 2.0*k2 + 2.0*k3 + k4)
+         u = u/MAXVAL(ABS(u))
+         t = t - h
+      END DO
+      priv_vacsigma = 0.5*u(2)/u(1)
+      CONTAINS
+         FUNCTION priv_rhs(tt, uu) RESULT(du)
+         REAL, INTENT(IN)    :: tt
+         COMPLEX, INTENT(IN) :: uu(2)
+         COMPLEX             :: du(2)
+         du(1) = uu(2)
+         du(2) = (2.0*(priv_vinterp(vz, tt/delz + 1.0) - e) + q2)*uu(1)
+         END FUNCTION priv_rhs
+      END FUNCTION priv_vacsigma
+
+      COMPLEX FUNCTION priv_retarded(f, e)
+      !f = kappa^2; on the real energy axis the branch of the retarded
+      !Green function (outgoing waves) is selected
+      COMPLEX, INTENT(IN) :: f, e
+      priv_retarded = f
+      IF (ABS(AIMAG(e)) < 1.0E-12) priv_retarded = CMPLX(REAL(f), -1.0E-12)
+      END FUNCTION priv_retarded
+
+      REAL FUNCTION priv_vinterp(f, x)
+      !cubic Lagrange interpolation of f at the (real) grid index x
+      REAL, INTENT(IN) :: f(:), x
+      INTEGER :: i0, i, j
+      REAL    :: l
+      i0 = MIN(MAX(FLOOR(x) - 1, 1), SIZE(f) - 3)
+      priv_vinterp = 0.0
+      DO i = i0, i0 + 3
+         l = 1.0
+         DO j = i0, i0 + 3
+            IF (j /= i) l = l*(x - j)/(i - j)
+         END DO
+         priv_vinterp = priv_vinterp + l*f(i)
+      END DO
+      END FUNCTION priv_vinterp
 
       subroutine gf_simple_vac(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
       integer,intent(in)       :: en,nk

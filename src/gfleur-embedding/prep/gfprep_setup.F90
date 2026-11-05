@@ -25,14 +25,14 @@ CONTAINS
    SUBROUTINE gfprep_write_setup(ilay, geo, atoms, cell)
       INTEGER, INTENT(IN)          :: ilay
       TYPE(t_layergeo), INTENT(IN) :: geo
-      TYPE(t_atoms), INTENT(IN)    :: atoms   !of the bulk
-      TYPE(t_cell), INTENT(IN)     :: cell    !of the bulk
+      TYPE(t_atoms), INTENT(IN)    :: atoms   !of the bulk or film
+      TYPE(t_cell), INTENT(IN)     :: cell    !of the bulk or film
 
       REAL, ALLOCATABLE    :: newpos(:, :), newrmt(:), cutpos(:, :), cutrmt(:)
       REAL, ALLOCATABLE    :: apos(:, :, :, :), armt(:, :, :)
       INTEGER, ALLOCATABLE :: az(:, :, :)
       TYPE(t_embdesc)      :: desc_left, desc_right
-      INTEGER :: na, n, i3, nnew, ncut, nmax, nin(2), nout(2), nall, iz
+      INTEGER :: na, n, i3, i3lo, i3hi, nnew, ncut, nmax, nin(2), nout(2), nall, iz
       REAL    :: cz, zr, rmt, c, xy(2)
       INTEGER(HID_T) :: fid, gid, sid
       INTEGER :: hdferr
@@ -45,13 +45,17 @@ CONTAINS
       ALLOCATE (apos(3, nmax, 3, 2), armt(nmax, 3, 2), az(nmax, 3, 2))
       apos = 0.0; armt = 0.0; az = 0
       nnew = 0; ncut = 0; nin = 0; nout = 0; nall = 0
+      i3lo = FLOOR((geo%zc - geo%d)/cz) - 1; i3hi = CEILING((geo%zc + geo%d)/cz) + 1
+      IF (geo%film) THEN
+         i3lo = 0; i3hi = 0
+      END IF
 
       DO na = 1, atoms%nat
          n = atoms%itype(na)
          rmt = atoms%rmt(n)
          iz = NINT(atoms%zatom(n))
          xy = MATMUL(cell%amat(1:2, 1:2), atoms%taual(1:2, na))
-         DO i3 = FLOOR((geo%zc - geo%d)/cz) - 1, CEILING((geo%zc + geo%d)/cz) + 1
+         DO i3 = i3lo, i3hi
             zr = atoms%pos(3, na) + i3*cz - geo%zc
             IF (ABS(zr - 0.5*c) < rmt .OR. ABS(zr + 0.5*c) < rmt) THEN
                !the MT sphere is cut by an embedding plane

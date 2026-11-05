@@ -8,14 +8,14 @@ k-point mesh and energy contour.
 The executable is built only when HDF5 is available.  A serial build produces
 `gfleur`; an MPI build produces `gfleur_MPI`.  The `gfprep` executable is built
 alongside them and prepares a layered calculation from a converged bulk
-supercell.
+supercell or film.
 
 ## Preparing a calculation
 
 The usual workflow is:
 
 1. Run a converged bulk FLEUR calculation for a supercell stacked along the
-   z direction.
+   z direction, or a film calculation.
 2. In a separate working directory, create `gfprep_inp` and run `gfprep`.
    See [`../prep/README.md`](../prep/README.md) for its input and output.
 3. Adjust the generated `gf_inp`, provide an energy grid in `gf_en`, and run
@@ -211,9 +211,34 @@ with both coordinates on the edge has weight 1/4).
 For a perfect crystal, `T` at every k equals the number of right-moving Bloch
 states of the CBS, which is a useful test.
 
+## Vacuum embedding (films and surfaces)
+
+A layer stack cut out of a FLEUR film by `gfprep` ends at vacuum embedding
+planes. `&EMB surface=t` embeds the upper side of the last layer in the
+vacuum, `vacleft=t` the lower side of layer 1. A side with vacuum embedding
+needs no lead file: with the `default` `gf_io` only the remaining leads are
+read, and without `gf_io` a free film (both sides vacuum) runs with
+`addemb=t`. gfprep writes the `&EMB` line into the `gf_inp` template:
+
+```fortran
+&EMB addemb=T, surface=T, vacleft=T /
+```
+
+The embedding potential is diagonal in the 2D plane waves,
+`Sigma_GG = 1/2 phi'/phi` at the plane, with `phi` the solution of the
+planar-averaged potential beyond the plane that decays into the vacuum (or is
+an outgoing wave above the vacuum level). The potential comes from
+`gf_pot.hdf` (groups `vacemb_side1`, `vacemb_side2`, written by `gfprep`). The
+warping of the potential beyond the plane is neglected; `zvac` in `gfprep`
+moves the planes further out. With `simplevacuum=t` the potential beyond the
+plane is the constant `vacuum_energy`.
+
+The vacuum embedding is available in the `tmat`/`gmat`/`dos` modes, not in
+`charge` (self-consistent surfaces) and `CBS` mode.
+
 ## Not supported
 
-* Film (slab) input for `gfprep` and surface/vacuum embedding.
+* Self-consistent surfaces (`charge=t` with vacuum embedding).
 * Non-collinear calculations in `gfprep`.
 * Spin-orbit coupling, LDA+U and Hubbard-1 are written into the layer inputs
   by `gfprep` but are not used by the Green's-function kernels.

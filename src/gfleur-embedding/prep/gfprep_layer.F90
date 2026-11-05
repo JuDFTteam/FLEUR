@@ -5,8 +5,8 @@
 !--------------------------------------------------------------------------------
 MODULE m_gfprep_layer
    !Construction of the film setup of one layer cut out of the bulk
-   !supercell: atoms, symmetry (the subgroup of the bulk operations
-   !compatible with the film), atom types and the common k-point set.
+   !supercell or film: atoms, symmetry (the subgroup of the operations
+   !compatible with the layer), atom types and the common k-point set.
    USE m_juDFT
    USE m_constants
    USE m_types_atoms
@@ -50,11 +50,16 @@ CONTAINS
       REAL, ALLOCATABLE    :: xy(:, :), z(:)
       INTEGER, ALLOCATABLE :: nb(:), tb(:), opmap(:, :), itype(:), order(:)
       REAL, ALLOCATABLE    :: trans(:, :)
-      INTEGER :: na, i3, nat, n, iop, nop, a, t, ntype, i, k, it
+      INTEGER :: na, i3, i3lo, i3hi, nat, n, iop, nop, a, t, ntype, i, k, it
       REAL    :: cz, zr, rmt
 
       lay%geo = geo
       cz = b%fi%cell%amat(3, 3)
+      !a film has no periodic images along z
+      i3lo = FLOOR((geo%zc - geo%d)/cz) - 1; i3hi = CEILING((geo%zc + geo%d)/cz) + 1
+      IF (geo%film) THEN
+         i3lo = 0; i3hi = 0
+      END IF
 
       !atoms whose MT spheres lie completely within |z|<=d/2
       ALLOCATE (xy(2, 5*b%fi%atoms%nat), z(5*b%fi%atoms%nat), nb(5*b%fi%atoms%nat), tb(5*b%fi%atoms%nat))
@@ -62,7 +67,7 @@ CONTAINS
       DO na = 1, b%fi%atoms%nat
          n = b%fi%atoms%itype(na)
          rmt = b%fi%atoms%rmt(n)
-         DO i3 = FLOOR((geo%zc - geo%d)/cz) - 1, CEILING((geo%zc + geo%d)/cz) + 1
+         DO i3 = i3lo, i3hi
             zr = b%fi%atoms%pos(3, na) + i3*cz - geo%zc
             IF (ABS(zr) + rmt > 0.5*geo%d) CYCLE
             nat = nat + 1
@@ -77,13 +82,13 @@ CONTAINS
 
       !bulk operations, combined with the pure translations of the
       !supercell, that leave the layer invariant (one per rotation)
-      CALL priv_pure_translations(b%fi%atoms, trans)
+      CALL priv_pure_translations(b%fi%atoms, geo%film, trans)
       ALLOCATE (lay%sym%mrot(3, 3, b%fi%sym%nop), lay%sym%tau(3, b%fi%sym%nop), opmap(nat, b%fi%sym%nop))
       nop = 0
       DO iop = 1, b%fi%sym%nop
          DO it = 1, SIZE(trans, 2)
             IF (priv_layer_op(b%fi%sym%mrot(:, :, iop), b%fi%sym%tau(:, iop) + trans(:, it), geo%zc/cz, &
-                              xy(:, :nat), z(:nat), tb(:nat), opmap(:, nop + 1))) THEN
+                              geo%film, xy(:, :nat), z(:nat), tb(:nat), opmap(:, nop + 1))) THEN
                nop = nop + 1
                lay%sym%mrot(:, :, nop) = b%fi%sym%mrot(:, :, iop)
                lay%sym%tau(1:2, nop) = MODULO(b%fi%sym%tau(1:2, iop) + trans(1:2, it) + eps, 1.0) - eps
@@ -140,10 +145,12 @@ CONTAINS
          " types and ", nop, " symmetry operations"
    END SUBROUTINE gfprep_make_layer
 
-   SUBROUTINE priv_pure_translations(atoms, trans)
+   SUBROUTINE priv_pure_translations(atoms, l_film, trans)
       !internal translations (including 0) mapping the bulk supercell
-      !onto itself, e.g. (0,0,1/2) for a cell doubled along z
+      !onto itself, e.g. (0,0,1/2) for a cell doubled along z; in-plane
+      !only for a film
       TYPE(t_atoms), INTENT(IN)      :: atoms
+      LOGICAL, INTENT(IN)            :: l_film
       REAL, ALLOCATABLE, INTENT(OUT) :: trans(:, :)
 
       REAL    :: t(3), d(3), cand(3, atoms%nat)
@@ -155,13 +162,16 @@ CONTAINS
          IF (atoms%itype(na) /= atoms%itype(1)) CYCLE
          t = atoms%taual(:, na) - atoms%taual(:, 1)
          t = t - NINT(t)
+         IF (l_film) t(3) = atoms%taual(3, na) - atoms%taual(3, 1)
+         IF (l_film .AND. ABS(t(3)) > eps) CYCLE
          l_ok = .TRUE.
          DO nb = 1, atoms%nat
             l_found = .FALSE.
             DO nc = 1, atoms%nat
                IF (atoms%itype(nc) /= atoms%itype(nb)) CYCLE
                d = atoms%taual(:, nb) + t - atoms%taual(:, nc)
-               IF (ALL(ABS(d - NINT(d)) < eps)) l_found = .TRUE.
+               IF (.NOT. l_film) d(3) = d(3) - NINT(d(3))
+               IF (ALL(ABS(d(1:2) - NINT(d(1:2))) < eps) .AND. ABS(d(3)) < eps) l_found = .TRUE.
             END DO
             l_ok = l_ok .AND. l_found
          END DO
@@ -172,12 +182,13 @@ CONTAINS
       trans = cand(:, :n)
    END SUBROUTINE priv_pure_translations
 
-   LOGICAL FUNCTION priv_layer_op(mrot, tau, zc_int, xy, z, tb, map)
-      !Checks whether the bulk operation {mrot|tau} is a symmetry of the
-      !layer centered at zc_int (internal bulk coordinate). map returns
+   LOGICAL FUNCTION priv_layer_op(mrot, tau, zc_int, l_film, xy, z, tb, map)
+      !Checks whether the bulk (film) operation {mrot|tau} is a symmetry of
+      !the layer centered at zc_int (internal bulk coordinate). map returns
       !the image of each atom.
       INTEGER, INTENT(IN)  :: mrot(3, 3), tb(:)
       REAL, INTENT(IN)     :: tau(3), zc_int, xy(:, :), z(:)
+      LOGICAL, INTENT(IN)  :: l_film
       INTEGER, INTENT(OUT) :: map(:)
 
       INTEGER :: a, b
@@ -188,7 +199,8 @@ CONTAINS
       IF (ANY(mrot(1:2, 3) /= 0) .OR. ANY(mrot(3, 1:2) /= 0)) RETURN
       !z-translation in the frame of the layer center
       t3 = tau(3) + (mrot(3, 3) - 1)*zc_int
-      IF (ABS(t3 - NINT(t3)) > eps) RETURN
+      IF (.NOT. l_film) t3 = t3 - NINT(t3)
+      IF (ABS(t3) > eps) RETURN
       DO a = 1, SIZE(z)
          xyn = MATMUL(REAL(mrot(1:2, 1:2)), xy(:, a)) + tau(1:2)
          zn = mrot(3, 3)*z(a)

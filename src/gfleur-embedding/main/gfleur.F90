@@ -42,6 +42,7 @@ MODULE m_gfleur_driver
    USE m_gf_dos, ONLY: gf_dos_init, gf_writedos
    USE m_gf_bandbending, ONLY: gf_bandbending
    USE m_gf_embpot_postprocess, ONLY: gf_embpot_spectral
+   USE m_gf_vacuum, ONLY: gf_vacemb_init
    USE m_gf_CBS, ONLY: outCBS_openfile, outCBS_closefile
    USE m_gf_energies, ONLY: gf_noen
    USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize
@@ -125,9 +126,9 @@ CONTAINS
 
       nl = layers%num_layers
 
-      IF (embinp%l_surface) CALL juDFT_error( &
-         "surface/vacuum embedding is not yet ported in this build", &
-         calledby="gfleur_execute")
+      IF ((embinp%l_surface .OR. embinp%l_vacleft) .AND. (embinp%l_charge .OR. embinp%l_CBS)) &
+         CALL juDFT_error("vacuum embedding (surface/vacleft) is not available in charge and CBS mode", &
+                          calledby="gfleur_execute")
 
       IF (gmpi%pe0) THEN
          WRITE (oUnit, *)
@@ -151,6 +152,7 @@ CONTAINS
       CALL gf_OPTIONAL(ld(1)%fi%input%jspins, ld(1)%fi%atoms, ld(1)%fi%input, &
                        ld(1)%nococonv, ld(1)%fi%cell, embinp, lapw(1), &
                        lapw_gf(1), ld(1)%fi%noco, gkpts, ld(1)%fi%sym)
+      IF (embinp%l_surface .OR. embinp%l_vacleft) CALL gf_vacemb_init(embinp, ld(1)%fi%cell, gkpts, nl)
 
       IF (embinp%l_charge) ALLOCATE (qtot_el(0:nl), qtot_nuc(0:nl))
 

@@ -101,12 +101,15 @@
       ENDIF 
                                                                         
                                                                         
-      notused=gf_read2dmat(key,region,1,en,nk,jspin,lapw_gf,G1) 
-      IF(.NOT.gf_read2dmat(key,reg2,2,en,nk,jspin,lapw_gf,G2)) THEN 
-         !on second side we might have a vacuum                         
-         !IF (region == 1) CALL gf_vacuum_embpot(en,nk,g2)
-         CALL juDFT_warn("UUPS, no vacuum potential in gf_embedding")
-          !CALL gf_vacuum_embpot(en,nk,g2)
+      IF (gf_vacemb_active(1,region)) THEN
+         CALL gf_vacemb(1,en,nk,jspin,lapw_gf,G1)
+      ELSE
+         notused=gf_read2dmat(key,region,1,en,nk,jspin,lapw_gf,G1) 
+      ENDIF
+      IF (gf_vacemb_active(2,reg2)) THEN
+         CALL gf_vacemb(2,en,nk,jspin,lapw_gf,G2)
+      ELSEIF(.NOT.gf_read2dmat(key,reg2,2,en,nk,jspin,lapw_gf,G2)) THEN 
+         CALL juDFT_warn("No embedding potential on side 2 in gf_getemb")
       ENDIF 
                                                                         
       END SUBROUTINE gf_GETEMB 
@@ -134,6 +137,10 @@
       IF(PRESENT(altpot)) THEN 
          IF(altpot) key = IO2D_EMBADV 
       ENDIF 
+      IF (gf_vacemb_active(side,region)) THEN
+         CALL gf_vacemb(side,en,nk,jspin,lapw_gf,G1)
+         RETURN
+      ENDIF
       CALL timestart("IO: reading embpot") 
                                                                         
       notused=gf_read2dmat(key,region,side,en,nk,jspin,lapw_gf,G1)

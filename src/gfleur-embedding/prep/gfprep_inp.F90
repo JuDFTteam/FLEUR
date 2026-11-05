@@ -5,8 +5,8 @@
 !--------------------------------------------------------------------------------
 MODULE m_gfprep_inp
    !Input of gfprep (&GFPREP namelist in gfprep_inp) and the layer geometry:
-   !detection of the atomic planes of the bulk supercell, choice of the
-   !embedding planes and the d, dt, c parameters of each layer.
+   !detection of the atomic planes of the bulk supercell or film, choice of
+   !the embedding planes and the d, dt, c parameters of each layer.
    USE m_juDFT
    USE m_constants, ONLY: oUnit
    USE m_types_atoms
@@ -39,6 +39,8 @@ MODULE m_gfprep_inp
       !Gmax of the layers relative to the bulk; the window transform of the
       !interstitial needs more plane waves than the bulk
       REAL               :: gmax_scale = 1.5
+      !film: the vacuum embedding planes lie at +-(z1+zvac)
+      REAL               :: zvac = 0.0
    END TYPE t_gfprep_inp
 
    TYPE t_layergeo
@@ -46,6 +48,9 @@ MODULE m_gfprep_inp
       REAL :: z1, z2, c, zc
       !width of the region containing the MT spheres and the film period
       REAL :: d, dt
+      !layer of a film; side 1 (lower) or 2 (upper) borders the vacuum
+      LOGICAL :: film = .FALSE.
+      LOGICAL :: vac(2) = .FALSE.
    END TYPE t_layergeo
 
 CONTAINS
@@ -56,12 +61,12 @@ CONTAINS
 
       CHARACTER(LEN=200) :: bulkdir
       CHARACTER(LEN=20)  :: prefix
-      REAL    :: plane_tol, dt_addon, vshift, gmax_scale
+      REAL    :: plane_tol, dt_addon, vshift, gmax_scale, zvac
       INTEGER :: planes_per_layer, first_plane, last_plane, kgrid(2)
       REAL    :: zplanes(maxdim)
       LOGICAL :: spinflip(maxdim)
       NAMELIST /GFPREP/ bulkdir, prefix, plane_tol, planes_per_layer, first_plane, &
-         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale
+         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac
 
       LOGICAL :: l_exist
       INTEGER :: n, ios
@@ -72,6 +77,7 @@ CONTAINS
       first_plane = inp%first_plane; last_plane = inp%last_plane
       kgrid = inp%kgrid
       gmax_scale = inp%gmax_scale
+      zvac = inp%zvac
       zplanes = HUGE(1.0)
       spinflip = .FALSE.
 
@@ -98,6 +104,7 @@ CONTAINS
       inp%first_plane = first_plane; inp%last_plane = last_plane
       inp%kgrid = kgrid
       inp%gmax_scale = gmax_scale
+      inp%zvac = zvac
       IF (inp%gmax_scale < 1.0) CALL juDFT_error("gmax_scale<1", calledby="gfprep_read_inp")
       IF (inp%dt_addon <= 0.0) CALL juDFT_error("dt_addon must be positive", calledby="gfprep_read_inp")
       n = COUNT(zplanes < HUGE(1.0))
@@ -112,30 +119,37 @@ CONTAINS
       IF (inp%planes_per_layer < 1) CALL juDFT_error("planes_per_layer<1", calledby="gfprep_read_inp")
    END SUBROUTINE gfprep_read_inp
 
-   SUBROUTINE gfprep_geometry(inp, atoms, cell, geo)
+   SUBROUTINE gfprep_geometry(inp, atoms, cell, l_film, geo)
       !Determines the embedding planes and the geometry of all layers and
-      !documents the choice in gfprep_planes.txt.
+      !documents the choice in gfprep_planes.txt. For a film, a layer range
+      !that includes the outermost atomic plane ends at a vacuum embedding
+      !plane at +-(z1+zvac).
       TYPE(t_gfprep_inp), INTENT(INOUT) :: inp
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_cell), INTENT(IN)          :: cell
+      LOGICAL, INTENT(IN)               :: l_film
       TYPE(t_layergeo), ALLOCATABLE, INTENT(OUT) :: geo(:)
 
       REAL, ALLOCATABLE :: zplane(:), zemb(:)
       INTEGER, ALLOCATABLE :: nplane(:)
-      INTEGER :: np, nl, i, p0, p1
-      REAL    :: cz
+      INTEGER :: np, nl, i, p0, na
+      REAL    :: cz, zs, zmin, zmax
 
       cz = cell%amat(3, 3)
-      CALL priv_atomic_planes(atoms, cz, inp%plane_tol, zplane, nplane)
+      CALL priv_atomic_planes(atoms, cz, inp%plane_tol, l_film, zplane, nplane)
       np = SIZE(zplane)
+      zs = cell%z1 + inp%zvac
 
       IF (ALLOCATED(inp%zplanes)) THEN
          zemb = inp%zplanes
       ELSE
          !auto mode: embedding planes between the atomic planes
          IF (inp%first_plane == 0) inp%first_plane = 1
-         IF (inp%last_plane == 0) inp%last_plane = inp%first_plane + np - 1
+         IF (inp%last_plane == 0) inp%last_plane = MERGE(np, inp%first_plane + np - 1, l_film)
          IF (inp%last_plane < inp%first_plane) CALL juDFT_error("last_plane<first_plane", calledby="gfprep_geometry")
+         IF (l_film .AND. (inp%first_plane < 1 .OR. inp%last_plane > np)) then
+           CALL juDFT_error("first_plane/last_plane outside the atomic planes of the film", calledby="gfprep_geometry")
+         end if
          IF (MOD(inp%last_plane - inp%first_plane + 1, inp%planes_per_layer) /= 0) then
            CALL juDFT_error("Number of planes is not a multiple of planes_per_layer", calledby="gfprep_geometry")
          end if
@@ -143,23 +157,46 @@ CONTAINS
          ALLOCATE (zemb(nl + 1))
          DO i = 0, nl
             p0 = inp%first_plane + i*inp%planes_per_layer
-            zemb(i + 1) = 0.5*(priv_zplane(p0 - 1) + priv_zplane(p0))
+            IF (l_film .AND. p0 == 1) THEN
+               zemb(i + 1) = -zs
+            ELSE IF (l_film .AND. p0 == np + 1) THEN
+               zemb(i + 1) = zs
+            ELSE
+               zemb(i + 1) = 0.5*(priv_zplane(p0 - 1) + priv_zplane(p0))
+            END IF
          END DO
       END IF
 
       nl = SIZE(zemb) - 1
       ALLOCATE (geo(nl))
       DO i = 1, nl
-         CALL priv_layer_geometry(atoms, cz, zemb(i), zemb(i + 1), inp%dt_addon, geo(i))
+         CALL priv_layer_geometry(atoms, cz, l_film, zemb(i), zemb(i + 1), inp%dt_addon, geo(i))
       END DO
-      IF (ABS(SUM(geo(:)%c)/cz - NINT(SUM(geo(:)%c)/cz)) > 1.0E-6) THEN
+      IF (l_film) THEN
+         !a side borders the vacuum if no atom lies beyond its plane
+         zmin = MINVAL(atoms%pos(3, :atoms%nat))
+         zmax = MAXVAL(atoms%pos(3, :atoms%nat))
+         geo(1)%vac(1) = zemb(1) < zmin
+         geo(nl)%vac(2) = zemb(nl + 1) > zmax
+         DO na = 1, atoms%nat
+            IF ((geo(1)%vac(1) .AND. atoms%pos(3, na) - atoms%rmt(atoms%itype(na)) < zemb(1)) .OR. &
+                (geo(nl)%vac(2) .AND. atoms%pos(3, na) + atoms%rmt(atoms%itype(na)) > zemb(nl + 1))) then
+              CALL juDFT_error("A vacuum embedding plane cuts a MT sphere", hint="increase zvac", &
+                               calledby="gfprep_geometry")
+            end if
+         END DO
+      ELSE IF (ABS(SUM(geo(:)%c)/cz - NINT(SUM(geo(:)%c)/cz)) > 1.0E-6) THEN
          WRITE (*, "(a)") "gfprep: note, the layers do not cover an integer number of bulk periods"
          WRITE (oUnit, "(a)") "gfprep: note, the layers do not cover an integer number of bulk periods"
       END IF
 
       !document the setup
       OPEN (98, FILE="gfprep_planes.txt", STATUS="replace", ACTION="write")
-      WRITE (98, "(a)") "# atomic planes of the bulk supercell (one period)"
+      IF (l_film) THEN
+         WRITE (98, "(a)") "# atomic planes of the film"
+      ELSE
+         WRITE (98, "(a)") "# atomic planes of the bulk supercell (one period)"
+      END IF
       WRITE (98, "(a)") "# plane     z(a.u.)  atoms"
       DO i = 1, np
          WRITE (98, "(i7,f12.6,i7)") i, zplane(i), nplane(i)
@@ -169,12 +206,18 @@ CONTAINS
       DO i = 1, nl
          WRITE (98, "(i7,5f12.6)") i, geo(i)%z1, geo(i)%z2, geo(i)%c, geo(i)%d, geo(i)%dt
       END DO
+      IF (geo(1)%vac(1)) WRITE (98, "(a,f12.6)") "# vacuum embedding plane below layer 1 at z=", geo(1)%z1
+      IF (geo(nl)%vac(2)) WRITE (98, "(a,i0,a,f12.6)") "# vacuum embedding plane above layer ", nl, " at z=", geo(nl)%z2
       WRITE (98, "(a)") "# to change the embedding planes set zplanes=... in &GFPREP"
       CLOSE (98)
-      WRITE (oUnit, "(a,i0,a)") "gfprep: ", np, " atomic planes per bulk period"
+      IF (l_film) THEN
+         WRITE (oUnit, "(a,i0,a)") "gfprep: ", np, " atomic planes in the film"
+      ELSE
+         WRITE (oUnit, "(a,i0,a)") "gfprep: ", np, " atomic planes per bulk period"
+      END IF
       DO i = 1, nl
-         WRITE (oUnit, "(a,i4,a,2f12.6,a,3f12.6)") "layer", i, " planes:", geo(i)%z1, geo(i)%z2, &
-            " c,d,dt:", geo(i)%c, geo(i)%d, geo(i)%dt
+         WRITE (oUnit, "(a,i4,a,2f12.6,a,3f12.6,a,2l2)") "layer", i, " planes:", geo(i)%z1, geo(i)%z2, &
+            " c,d,dt:", geo(i)%c, geo(i)%d, geo(i)%dt, " vacuum:", geo(i)%vac
       END DO
 
    CONTAINS
@@ -188,10 +231,11 @@ CONTAINS
       END FUNCTION priv_zplane
    END SUBROUTINE gfprep_geometry
 
-   SUBROUTINE priv_atomic_planes(atoms, cz, tol, zplane, nplane)
-      !Groups the atoms of one bulk period into planes along z
+   SUBROUTINE priv_atomic_planes(atoms, cz, tol, l_film, zplane, nplane)
+      !Groups the atoms of one bulk period (or of the film) into planes along z
       TYPE(t_atoms), INTENT(IN)         :: atoms
       REAL, INTENT(IN)                  :: cz, tol
+      LOGICAL, INTENT(IN)               :: l_film
       REAL, ALLOCATABLE, INTENT(OUT)    :: zplane(:)
       INTEGER, ALLOCATABLE, INTENT(OUT) :: nplane(:)
 
@@ -199,7 +243,11 @@ CONTAINS
       INTEGER :: cnt(atoms%nat)
       INTEGER :: na, i, j, np
 
-      zs = MODULO(atoms%pos(3, :atoms%nat), cz)
+      IF (l_film) THEN
+         zs = atoms%pos(3, :atoms%nat)
+      ELSE
+         zs = MODULO(atoms%pos(3, :atoms%nat), cz)
+      END IF
       !insertion sort, nat is small
       DO i = 2, atoms%nat
          DO j = i, 2, -1
@@ -216,7 +264,7 @@ CONTAINS
          END IF
       END DO
       !merge a plane split by the periodic boundary
-      IF (np > 1 .AND. zs(1) + cz - zs(atoms%nat) < tol) THEN
+      IF (.NOT. l_film .AND. np > 1 .AND. zs(1) + cz - zs(atoms%nat) < tol) THEN
          zsum(1) = zsum(1) + zsum(np) - cnt(np)*cz
          cnt(1) = cnt(1) + cnt(np)
          np = np - 1
@@ -227,15 +275,16 @@ CONTAINS
       nplane = cnt(:np)
    END SUBROUTINE priv_atomic_planes
 
-   SUBROUTINE priv_layer_geometry(atoms, cz, z1, z2, dt_addon, geo)
+   SUBROUTINE priv_layer_geometry(atoms, cz, l_film, z1, z2, dt_addon, geo)
       !Geometry of the layer between the planes z1<z2: d is the smallest
       !symmetric slab around the center containing the MT spheres of all
       !atoms between the planes (at least c)
       TYPE(t_atoms), INTENT(IN)     :: atoms
       REAL, INTENT(IN)              :: cz, z1, z2, dt_addon
+      LOGICAL, INTENT(IN)           :: l_film
       TYPE(t_layergeo), INTENT(OUT) :: geo
 
-      INTEGER :: na, i3
+      INTEGER :: na, i3, i3lo, i3hi
       REAL    :: z, ext
       LOGICAL :: l_found
       REAL, PARAMETER :: eps = 1.0E-6
@@ -243,11 +292,16 @@ CONTAINS
       geo%z1 = z1; geo%z2 = z2
       geo%c = z2 - z1
       geo%zc = 0.5*(z1 + z2)
+      geo%film = l_film
       IF (geo%c <= 0.0) CALL juDFT_error("Embedding planes not ascending", calledby="gfprep_geometry")
       ext = 0.5*geo%c
       l_found = .FALSE.
+      i3lo = FLOOR(z1/cz) - 2; i3hi = CEILING(z2/cz) + 2
+      IF (l_film) THEN
+         i3lo = 0; i3hi = 0
+      END IF
       DO na = 1, atoms%nat
-         DO i3 = FLOOR(z1/cz) - 2, CEILING(z2/cz) + 2
+         DO i3 = i3lo, i3hi
             z = atoms%pos(3, na) + i3*cz
             IF (ABS(z - z1) < eps .OR. ABS(z - z2) < eps) then
               CALL juDFT_error("An atom lies on an embedding plane", calledby="gfprep_geometry")

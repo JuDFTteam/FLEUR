@@ -4,8 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_gfprep_write
-   !Output of gfprep: the layer inp.xml files, the gf_inp template and the
-   !layer potentials/densities in gf_pot.hdf/gf_cdn.hdf
+   !Output of gfprep: the layer inp.xml files, the gf_inp template, the
+   !layer potentials/densities in gf_pot.hdf/gf_cdn.hdf and the potentials
+   !beyond the vacuum embedding planes of a film
 #ifdef CPP_MPI
    USE mpi
 #endif
@@ -15,13 +16,13 @@ MODULE m_gfprep_write
    USE m_types_forcetheo
    USE m_winpXML
    USE m_gf_types, ONLY: t_embinp
-   USE m_gf_iodop, ONLY: gf_wrtdop, gf_wrtcoul, GF_POTFILE, GF_CDNFILE
+   USE m_gf_iodop, ONLY: gf_wrtdop, gf_wrtcoul, gf_iodop_writevacemb, GF_POTFILE, GF_CDNFILE
    USE m_gfprep_inp, ONLY: t_layergeo
    USE m_gfprep_bulk, ONLY: t_gfprep_struct
    USE m_gfprep_layer, ONLY: t_gfprep_layer
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: gfprep_write_inpxml, gfprep_write_gfinp, gfprep_write_potden
+   PUBLIC :: gfprep_write_inpxml, gfprep_write_gfinp, gfprep_write_potden, gfprep_write_vacemb
 
 CONTAINS
 
@@ -68,6 +69,9 @@ CONTAINS
       CALL priv_list("c", geo(:)%c)
       WRITE (98, "(a)") "/"
       WRITE (98, "(a)") "&MODE tmat=t, gmat=t /"
+      !vacuum embedding at the outer planes of a film
+      IF (geo(1)%vac(1) .OR. geo(nl)%vac(2)) &
+         WRITE (98, "(a,l1,a,l1,a)") "&EMB addemb=T, surface=", geo(nl)%vac(2), ", vacleft=", geo(1)%vac(1), " /"
       WRITE (98, "(a)") "&SC iter=1 /"
       CLOSE (98)
    CONTAINS
@@ -105,5 +109,22 @@ CONTAINS
       CALL gf_wrtdop(GF_CDNFILE, ilay, l%fi%input%jspins, embinp, l%fi%atoms, l%stars, l%sphhar, &
                      den_mt, den_pw, .FALSE., comm)
    END SUBROUTINE gfprep_write_potden
+
+   SUBROUTINE gfprep_write_vacemb(side, delz, vz)
+      !Writes the potential beyond a vacuum embedding plane to gf_pot.hdf
+      INTEGER, INTENT(IN) :: side
+      REAL, INTENT(IN)    :: delz, vz(:, :)
+
+      INTEGER :: comm
+
+#ifdef CPP_MPI
+      comm = MPI_COMM_SELF
+#else
+      comm = 0
+#endif
+      CALL gf_iodop_writevacemb(side, delz, vz, comm)
+      WRITE (oUnit, "(a,i1,a,i0,a,f8.4,a,2f12.6)") "gfprep: vacuum embedding potential side ", side, ": ", &
+         SIZE(vz, 1), " points, delz=", delz, ", V(plane), V(end):", vz(1, 1), vz(SIZE(vz, 1), 1)
+   END SUBROUTINE gfprep_write_vacemb
 
 END MODULE m_gfprep_write

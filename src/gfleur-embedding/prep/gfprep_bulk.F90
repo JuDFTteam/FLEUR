@@ -4,8 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_gfprep_bulk
-   !Reading of a FLEUR setup (bulk supercell or a written layer) and the
-   !generation of the bulk potentials from the converged density.
+   !Reading of a FLEUR setup (bulk supercell, film or a written layer) and
+   !the generation of the potentials from the converged density.
    USE m_juDFT
    USE m_constants
    USE m_types_fleurinput
@@ -83,8 +83,8 @@ CONTAINS
    END SUBROUTINE gfprep_read_struct
 
    SUBROUTINE gfprep_bulk_init(fmpi, bulkdir, outxmlFileID, b, den, vTot, vCoul)
-      !Reads the bulk supercell and its converged density from bulkdir and
-      !generates the total and the Coulomb potential.
+      !Reads the bulk supercell (or film) and its converged density from
+      !bulkdir and generates the total and the Coulomb potential.
       TYPE(t_mpi), INTENT(INOUT)           :: fmpi
       CHARACTER(LEN=*), INTENT(IN)         :: bulkdir
       INTEGER, INTENT(IN)                  :: outxmlFileID
@@ -102,8 +102,6 @@ CONTAINS
 
       CALL gfprep_read_struct(bulkdir, outxmlFileID, b, l_stars=.FALSE.)
 
-      IF (b%fi%input%film) CALL juDFT_error("gfprep needs a bulk supercell", &
-                                            hint="the input in "//TRIM(bulkdir)//" is a film", calledby="gfprep_bulk_init")
       IF (ANY(ABS(b%fi%cell%amat(1:2, 3)) > 1.0E-8) .OR. ANY(ABS(b%fi%cell%amat(3, 1:2)) > 1.0E-8)) then
         CALL juDFT_error("The third lattice vector must be perpendicular to the first two", &
                           hint="gfprep stacks the layers along z", calledby="gfprep_bulk_init")
@@ -147,6 +145,13 @@ CONTAINS
       CALL vgen(hybdat, b%fi%field, b%fi%input, b%xcpot, b%fi%atoms, b%sphhar, b%stars, b%fi%vacuum, &
                 b%fi%sym, b%fi%cell, b%fi%sliceplot, fmpi, results, b%fi%noco, nococonv, EnergyDen, &
                 den, vTot, vx, vCoul, vxc, exc)
+      IF (b%fi%input%film) THEN
+         !the lower vacuum of a film with z-reflection symmetry (nvac=1)
+         CALL b%stars%fill_2nd_vac(b%fi%vacuum, den%vac)
+         CALL b%stars%fill_2nd_vac(b%fi%vacuum, vTot%vac)
+         CALL b%stars%fill_2nd_vac(b%fi%vacuum, vCoul%vac)
+         WRITE (oUnit, "(a,i0)") "gfprep: film input, vacua calculated by FLEUR: ", b%fi%vacuum%nvac
+      END IF
    END SUBROUTINE gfprep_bulk_init
 
 END MODULE m_gfprep_bulk

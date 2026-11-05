@@ -34,7 +34,8 @@
                                                                         
       PUBLIC :: gf_loddop,gf_wrtdop,gf_wrtcoul,gf_loddop_name                          &
      &     ,gf_lodcoul,gf_renamepot,gf_iodop_readpseudo                 &
-     &     ,gf_iodop_writepseudo,gf_iodop_writevacuum,gf_iodop_readvacuum
+     &     ,gf_iodop_writepseudo,gf_iodop_writevacuum,gf_iodop_readvacuum &
+     &     ,gf_iodop_writevacemb,gf_iodop_readvacemb
 
       CONTAINS 
 
@@ -155,6 +156,58 @@
 	  CALL  priv_closefile(file_type,mpi_subcom)
       end subroutine
                                                                         
+      subroutine gf_iodop_writevacemb(side,delz,vz,mpi_subcom)
+      ! Write the planar-averaged potential beyond a vacuum embedding
+      ! plane (side 1: below layer 1, side 2: above the last layer);
+      ! vz(1,:) is the value at the plane, the grid spacing is delz
+      implicit none
+      integer,intent(in) :: side,mpi_subcom
+      real,intent(in)    :: delz,vz(:,:)
+      !locals
+      INTEGER(HID_T)     :: fid,gid,did
+      INTEGER            :: hdferr
+      CHARACTER(LEN=12)  :: gname
+
+      write(gname,"(a,i1)") "vacemb_side",side
+      fid = priv_openfile(GF_POTFILE,.FALSE.,mpi_subcom)
+      IF (io_groupexists(fid,gname)) call juDFT_error("gf_pot.hdf contains "//gname//" already")
+      CALL io_gcreate(fid,gname,gid,hdferr)
+      call io_createvar(gid,"vz",H5T_NATIVE_DOUBLE,(/size(vz,1),size(vz,2)/),did)
+      CALL io_write(did,(/1,1/),(/size(vz,1),size(vz,2)/),"vz",vz)
+      CALL io_dclose(did,hdferr)
+      call io_write_att(gid,"delz",delz)
+      CALL io_gclose(gid,hdferr)
+      CALL priv_closefile(GF_POTFILE,mpi_subcom)
+      end subroutine
+
+      logical function gf_iodop_readvacemb(side,delz,vz)
+      ! Read the potential written by gf_iodop_writevacemb; .FALSE. if
+      ! there is none for this side
+      implicit none
+      integer,intent(in)             :: side
+      real,intent(out)               :: delz
+      real,allocatable,intent(out)   :: vz(:,:)
+      !locals
+      INTEGER(HID_T)     :: fid,gid,did
+      INTEGER            :: hdferr,dims(2)
+      CHARACTER(LEN=12)  :: gname
+
+      write(gname,"(a,i1)") "vacemb_side",side
+      fid = priv_openfile(GF_POTFILE)
+      gf_iodop_readvacemb = io_groupexists(fid,gname)
+      IF (gf_iodop_readvacemb) THEN
+         CALL io_gopen(fid,gname,gid,hdferr)
+         CALL io_dopen(gid,"vz",did,hdferr)
+         CALL io_datadim(did,dims)
+         ALLOCATE(vz(dims(1),dims(2)))
+         CALL io_read(did,(/1,1/),dims,"vz",vz)
+         CALL io_dclose(did,hdferr)
+         call io_read_att(gid,"delz",delz)
+         CALL io_gclose(gid,hdferr)
+      ENDIF
+      CALL priv_closefile(GF_POTFILE)
+      end function
+
       !<-- S:gf_iodop_readpseudo(layer,psq)                             
                                                                         
       SUBROUTINE gf_iodop_readpseudo(layer,psq) 

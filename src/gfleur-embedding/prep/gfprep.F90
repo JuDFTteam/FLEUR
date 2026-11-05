@@ -4,12 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_gfprep
-   !gfprep: converts a converged bulk supercell (stacked along z) into the
-   !layered setup of the Green-function embedding code gfleur.
+   !gfprep: converts a converged bulk supercell (stacked along z) or film
+   !into the layered setup of the Green-function embedding code gfleur.
    !
    !Input:  <bulkdir>inp.xml, <bulkdir>cdn.hdf, optional gfprep_inp
    !Output: <prefix><i>_inp.xml, gf_inp (template), gf_setup.hdf,
-   !        gf_pot.hdf, gf_cdn.hdf, gfprep_planes.txt, gfprep.out
+   !        gf_pot.hdf (with the vacuum embedding potentials of a film),
+   !        gf_cdn.hdf, gfprep_planes.txt, gfprep.out
 #ifdef CPP_MPI
    USE mpi
 #endif
@@ -42,9 +43,10 @@ CONTAINS
       TYPE(t_gfprep_layer), ALLOCATABLE :: lays(:)
       TYPE(t_kpts)           :: kpts
       COMPLEX, ALLOCATABLE   :: vpw(:, :), cpw(:), dpw(:, :)
-      REAL, ALLOCATABLE      :: vmt(:, :, :, :), dmt(:, :, :, :)
-      INTEGER :: i, js, jspins, n, ierr, outxml, kgrid(2)
-      REAL    :: dv
+      REAL, ALLOCATABLE      :: vmt(:, :, :, :), dmt(:, :, :, :), vz(:, :)
+      INTEGER :: i, js, jspins, n, ierr, outxml, kgrid(2), nl
+      REAL    :: dv, delz
+      LOGICAL :: l_film
       CHARACTER(LEN=40) :: name
       CHARACTER(LEN=100) :: xml_add
 
@@ -75,6 +77,7 @@ CONTAINS
       CALL gfprep_bulk_init(fmpi, TRIM(inp%bulkdir), outxml, b, den, vTot, vCoul)
       CALL timestop("bulk")
       jspins = b%fi%input%jspins
+      l_film = b%fi%input%film
 
       !optional constant shift of the potential
       dv = inp%vshift
@@ -85,6 +88,10 @@ CONTAINS
          DO js = 1, jspins
             vTot%pw(1, js) = vTot%pw(1, js) + dv
             vCoul%pw(1, js) = vCoul%pw(1, js) + dv
+            IF (l_film) THEN
+               vTot%vac(:, 1, :, js) = vTot%vac(:, 1, :, js) + dv
+               vCoul%vac(:, 1, :, js) = vCoul%vac(:, 1, :, js) + dv
+            END IF
             DO n = 1, b%fi%atoms%ntype
                ASSOCIATE (jri => b%fi%atoms%jri(n))
                   vTot%mt(:jri, 0, n, js) = vTot%mt(:jri, 0, n, js) + dv*b%fi%atoms%rmsh(:jri, n)
@@ -95,8 +102,9 @@ CONTAINS
       END IF
 
       !layer geometry and structures
-      CALL gfprep_geometry(inp, b%fi%atoms, b%fi%cell, geo)
-      ALLOCATE (lays(SIZE(geo)))
+      CALL gfprep_geometry(inp, b%fi%atoms, b%fi%cell, l_film, geo)
+      nl = SIZE(geo)
+      ALLOCATE (lays(nl))
       DO i = 1, SIZE(geo)
          CALL gfprep_make_layer(b, geo(i), inp%gmax_scale, lays(i))
       END DO
@@ -114,17 +122,35 @@ CONTAINS
          ALLOCATE (vpw(l%stars%ng3, jspins), cpw(l%stars%ng3), dpw(l%stars%ng3, jspins))
          ALLOCATE (vmt(l%fi%atoms%jmtd, 0:l%sphhar%nlhd, l%fi%atoms%ntype, jspins))
          ALLOCATE (dmt(l%fi%atoms%jmtd, 0:l%sphhar%nlhd, l%fi%atoms%ntype, jspins))
-         DO js = 1, jspins
-            CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, vTot%pw(:, js), vpw(:, js))
-            CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, den%pw(:, js), dpw(:, js))
-         END DO
-         CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, vCoul%pw(:, 1), cpw)
+         IF (l_film) THEN
+            DO js = 1, jspins
+               CALL gfprep_pwconv_film(b%stars, b%fi%cell, b%fi%vacuum, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, &
+                                       vTot%pw(:, js), vTot%vac(:, :, :, js), vpw(:, js))
+               CALL gfprep_pwconv_film(b%stars, b%fi%cell, b%fi%vacuum, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, &
+                                       den%pw(:, js), den%vac(:, :, :, js), dpw(:, js))
+            END DO
+            CALL gfprep_pwconv_film(b%stars, b%fi%cell, b%fi%vacuum, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, &
+                                    vCoul%pw(:, 1), vCoul%vac(:, :, :, 1), cpw)
+         ELSE
+            DO js = 1, jspins
+               CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, vTot%pw(:, js), vpw(:, js))
+               CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, den%pw(:, js), dpw(:, js))
+            END DO
+            CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, vCoul%pw(:, 1), cpw)
+         END IF
          CALL gfprep_mtconv(b, l, lays(i)%typmap, lays(i)%atmap, vTot%mt(:, :, :, :jspins), vmt)
          CALL gfprep_mtconv(b, l, lays(i)%typmap, lays(i)%atmap, den%mt(:, :, :, :jspins), dmt)
-         CALL gfprep_check("potential", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
-                           vTot%pw(:, 1), vpw(:, 1), vTot%mt, vmt)
-         CALL gfprep_check("density", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
-                           den%pw(:, 1), dpw(:, 1), den%mt, dmt)
+         IF (l_film) THEN
+            CALL gfprep_check("potential", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
+                              vTot%pw(:, 1), vpw(:, 1), vTot%mt, vmt, vTot%vac(:, :, :, 1))
+            CALL gfprep_check("density", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
+                              den%pw(:, 1), dpw(:, 1), den%mt, dmt, den%vac(:, :, :, 1))
+         ELSE
+            CALL gfprep_check("potential", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
+                              vTot%pw(:, 1), vpw(:, 1), vTot%mt, vmt)
+            CALL gfprep_check("density", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
+                              den%pw(:, 1), dpw(:, 1), den%mt, dmt)
+         END IF
 
          IF (inp%spinflip(i) .AND. jspins == 2) THEN
             WRITE (oUnit, "(a,i0)") "gfprep: spins flipped in layer ", i
@@ -137,8 +163,20 @@ CONTAINS
          CALL timestop("layer "//TRIM(name))
       END DO
 
+      !planar-averaged potential beyond the vacuum embedding planes
+      IF (geo(1)%vac(1)) THEN
+         CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 1, -geo(1)%z1, vTot%pw(:, :jspins), &
+                            vTot%vac(:, :, :, :jspins), delz, vz)
+         CALL gfprep_write_vacemb(1, delz, vz)
+      END IF
+      IF (geo(nl)%vac(2)) THEN
+         CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 2, geo(nl)%z2, vTot%pw(:, :jspins), &
+                            vTot%vac(:, :, :, :jspins), delz, vz)
+         CALL gfprep_write_vacemb(2, delz, vz)
+      END IF
+
       CALL gfprep_write_gfinp(inp%prefix, geo)
-      WRITE (*, "(a,i0,a)") "gfprep: ", SIZE(geo), " layers written, see gfprep_planes.txt and gf_inp"
+      WRITE (*, "(a,i0,a)") "gfprep: ", nl, " layers written, see gfprep_planes.txt and gf_inp"
    END SUBROUTINE gfprep_run
 
    SUBROUTINE priv_remove_outputs()

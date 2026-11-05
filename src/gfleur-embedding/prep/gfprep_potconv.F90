@@ -9,6 +9,8 @@ MODULE m_gfprep_potconv
    !Interstitial: the bulk function, taken in the window |z-zc|<dt/2 and
    !smoothly made periodic in the buffer d/2<|z-zc|<dt/2, is expanded with
    !the layer period dt and projected onto the layer stars.
+   !For a film the function is the plane-wave expansion for |z|<z1 and the
+   !vacuum expansion beyond; the window transform is done by quadrature.
    !Muffin-tins: the lattice-harmonic expansion of the corresponding bulk
    !atom is projected onto the lattice harmonics of the layer (lower site
    !symmetry, possibly different local frame) by angular quadrature.
@@ -19,11 +21,17 @@ MODULE m_gfprep_potconv
    USE m_types_cell
    USE m_types_sym
    USE m_types_atoms
+   USE m_types_vacuum
    USE m_ylm
    USE m_gfprep_bulk, ONLY: t_gfprep_struct
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: gfprep_pwconv, gfprep_mtconv, gfprep_check
+   PUBLIC :: gfprep_pwconv, gfprep_pwconv_film, gfprep_vacemb, gfprep_mtconv, gfprep_check
+
+   !composite Gauss-Legendre quadrature of the film transform: points per
+   !panel and largest panel length (a.u.)
+   INTEGER, PARAMETER :: nglf = 10
+   REAL, PARAMETER    :: hpanel = 0.2
 
 CONTAINS
 
@@ -106,6 +114,202 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE priv_window
+
+   SUBROUTINE gfprep_pwconv_film(fs, fcell, fvac, ls, lcell, zc, d, pw_in, vac_in, pw_out)
+      !Film version of gfprep_pwconv: the film function is sampled in the
+      !layer window |z-zc|<dt/2, blended in the buffer as in priv_window, and
+      !projected onto the layer plane waves by quadrature
+      TYPE(t_stars), INTENT(IN)  :: fs, ls       !film and layer stars
+      TYPE(t_cell), INTENT(IN)   :: fcell, lcell
+      TYPE(t_vacuum), INTENT(IN) :: fvac
+      REAL, INTENT(IN)           :: zc, d
+      COMPLEX, INTENT(IN)        :: pw_in(:), vac_in(:, :, :)   !vac(nmzd,ng2,2)
+      COMPLEX, INTENT(OUT)       :: pw_out(:)
+
+      REAL, ALLOCATABLE    :: zq(:), wq(:), za(:), zb(:), wa(:)
+      COMPLEX, ALLOCATABLE :: eq(:, :), g(:)
+      COMPLEX :: c
+      INTEGER :: k1, k2, k3l, is, nq, q
+      REAL    :: dt, b3l
+
+      dt = lcell%amat(3, 3)
+      b3l = tpi_const/dt
+      CALL priv_film_nodes(fcell%z1, zc, d, dt, zq, wq, za, zb, wa)
+      nq = SIZE(zq)
+      ALLOCATE (eq(nq, -ls%mx3:ls%mx3), g(nq))
+      DO k3l = -ls%mx3, ls%mx3
+         eq(:, k3l) = wq*EXP(CMPLX(0.0, -k3l*b3l*zq))/dt
+      END DO
+      pw_out = CMPLX(0.0, 0.0)
+      DO k2 = -ls%mx2, ls%mx2
+         DO k1 = -ls%mx1, ls%mx1
+            IF (ALL(ls%ig(k1, k2, :) == 0)) CYCLE
+            DO q = 1, nq
+               g(q) = wa(q)*priv_filmcoef(fs, fcell, fvac, pw_in, vac_in, k1, k2, za(q))
+               IF (wa(q) < 1.0) g(q) = g(q) + (1.0 - wa(q))*priv_filmcoef(fs, fcell, fvac, pw_in, vac_in, k1, k2, zb(q))
+            END DO
+            DO k3l = -ls%mx3, ls%mx3
+               is = ls%ig(k1, k2, k3l)
+               IF (is == 0) CYCLE
+               c = SUM(g*eq(:, k3l))
+               pw_out(is) = pw_out(is) + c*CONJG(ls%rgphs(k1, k2, k3l))
+            END DO
+         END DO
+      END DO
+      pw_out(:ls%ng3) = pw_out(:ls%ng3)/ls%nstr(:ls%ng3)
+   END SUBROUTINE gfprep_pwconv_film
+
+   SUBROUTINE priv_film_nodes(z1, zc, d, dt, zq, wq, za, zb, wa)
+      !Quadrature nodes zq (relative to zc) and weights wq on [-dt/2,dt/2].
+      !The layer function at zq is wa*f(za)+(1-wa)*f(zb) with absolute film
+      !positions za, zb (zb: periodic image used in the buffer). The panels
+      !end at the kinks of f (|z|=z1) and of the blending (|z|=d/2).
+      REAL, INTENT(IN)               :: z1, zc, d, dt
+      REAL, ALLOCATABLE, INTENT(OUT) :: zq(:), wq(:), za(:), zb(:), wa(:)
+
+      REAL, ALLOCATABLE :: xg(:), wg(:)
+      REAL    :: bp(14), a, b, h, z, u
+      INTEGER :: nbp, i, j, np, ip, n, side, is
+
+      nbp = 0
+      CALL priv_addbp(-0.5*dt); CALL priv_addbp(-0.5*d); CALL priv_addbp(0.5*d); CALL priv_addbp(0.5*dt)
+      DO is = -1, 1, 2
+         CALL priv_addbp(is*z1 - zc)
+         DO side = -1, 1, 2
+            !the image zq-side*dt crosses |z|=z1 inside the buffer
+            z = is*z1 - zc + side*dt
+            IF (ABS(z) > 0.5*d) CALL priv_addbp(z)
+         END DO
+      END DO
+      !sort
+      DO i = 2, nbp
+         DO j = i, 2, -1
+            IF (bp(j) >= bp(j - 1)) EXIT
+            bp(j - 1:j) = [bp(j), bp(j - 1)]
+         END DO
+      END DO
+      CALL priv_gauleg(nglf, xg, wg)
+      n = 0
+      DO i = 1, nbp - 1
+         IF (bp(i + 1) - bp(i) > 1.0E-10) n = n + nglf*CEILING((bp(i + 1) - bp(i))/hpanel)
+      END DO
+      ALLOCATE (zq(n), wq(n), za(n), zb(n), wa(n))
+      n = 0
+      DO i = 1, nbp - 1
+         IF (bp(i + 1) - bp(i) <= 1.0E-10) CYCLE
+         np = CEILING((bp(i + 1) - bp(i))/hpanel)
+         h = (bp(i + 1) - bp(i))/np
+         DO ip = 1, np
+            a = bp(i) + (ip - 1)*h
+            b = a + h
+            DO j = 1, nglf
+               n = n + 1
+               zq(n) = 0.5*(a + b) + 0.5*h*xg(j)
+               wq(n) = 0.5*h*wg(j)
+            END DO
+         END DO
+      END DO
+      DO n = 1, SIZE(zq)
+         za(n) = zc + zq(n)
+         zb(n) = za(n)
+         wa(n) = 1.0
+         IF (ABS(zq(n)) > 0.5*d) THEN
+            u = (ABS(zq(n)) - 0.5*d)/(0.5*(dt - d))
+            wa(n) = 1.0 - 0.5*SIN(0.5*pi_const*u)**2
+            zb(n) = za(n) - SIGN(dt, zq(n))
+         END IF
+      END DO
+   CONTAINS
+      SUBROUTINE priv_addbp(z)
+         REAL, INTENT(IN) :: z
+         IF (z < -0.5*dt - 1.0E-10 .OR. z > 0.5*dt + 1.0E-10) RETURN
+         nbp = nbp + 1
+         bp(nbp) = MAX(-0.5*dt, MIN(0.5*dt, z))
+      END SUBROUTINE priv_addbp
+   END SUBROUTINE priv_film_nodes
+
+   COMPLEX FUNCTION priv_filmcoef(fs, fcell, fvac, pw, vac, k1, k2, z)
+      !Coefficient of the single in-plane G=(k1,k2) of the film function at
+      !the cartesian height z: plane waves for |z|<=z1, vacuum beyond. The
+      !warping is zero beyond nmzxy, the planar average is constant beyond nmz.
+      TYPE(t_stars), INTENT(IN)  :: fs
+      TYPE(t_cell), INTENT(IN)   :: fcell
+      TYPE(t_vacuum), INTENT(IN) :: fvac
+      COMPLEX, INTENT(IN)        :: pw(:), vac(:, :, :)
+      INTEGER, INTENT(IN)        :: k1, k2
+      REAL, INTENT(IN)           :: z
+
+      INTEGER :: k3, is, s2, ivac, nz
+      REAL    :: x
+
+      priv_filmcoef = CMPLX(0.0, 0.0)
+      IF (ABS(k1) > fs%mx1 .OR. ABS(k2) > fs%mx2) RETURN
+      IF (ABS(z) <= fcell%z1) THEN
+         DO k3 = -fs%mx3, fs%mx3
+            is = fs%ig(k1, k2, k3)
+            IF (is == 0) CYCLE
+            priv_filmcoef = priv_filmcoef + pw(is)*fs%rgphs(k1, k2, k3)*EXP(CMPLX(0.0, k3*fcell%bmat(3, 3)*z))
+         END DO
+         RETURN
+      END IF
+      s2 = fs%i2g(k1, k2)
+      IF (s2 == 0) RETURN
+      ivac = MERGE(1, 2, z > 0.0)
+      nz = MERGE(fvac%nmz, fvac%nmzxy, s2 == 1)
+      x = (ABS(z) - fcell%z1)/fvac%delz + 1.0
+      IF (x > nz) THEN
+         IF (s2 == 1) priv_filmcoef = vac(fvac%nmz, 1, ivac)
+         RETURN
+      END IF
+      priv_filmcoef = priv_interp(vac(:nz, s2, ivac), x)*fs%r2gphs(k1, k2)
+   END FUNCTION priv_filmcoef
+
+   COMPLEX FUNCTION priv_interp(f, x)
+      !cubic Lagrange interpolation of f at the (real) grid index x
+      COMPLEX, INTENT(IN) :: f(:)
+      REAL, INTENT(IN)    :: x
+      INTEGER :: i0, i, j
+      REAL    :: l
+      i0 = MIN(MAX(FLOOR(x) - 1, 1), SIZE(f) - 3)
+      priv_interp = CMPLX(0.0, 0.0)
+      DO i = i0, i0 + 3
+         l = 1.0
+         DO j = i0, i0 + 3
+            IF (j /= i) l = l*(x - j)/(i - j)
+         END DO
+         priv_interp = priv_interp + l*f(i)
+      END DO
+   END FUNCTION priv_interp
+
+   SUBROUTINE gfprep_vacemb(fs, fcell, fvac, side, zs, pw, vac, delz, vz)
+      !Planar average of the film potential from the vacuum embedding plane
+      !at |z|=zs (side 1: z=-zs, side 2: z=+zs) outwards on the vacuum grid,
+      !up to the end of the FLEUR vacuum (vz(1) is the value at the plane)
+      TYPE(t_stars), INTENT(IN)      :: fs
+      TYPE(t_cell), INTENT(IN)       :: fcell
+      TYPE(t_vacuum), INTENT(IN)     :: fvac
+      INTEGER, INTENT(IN)            :: side
+      REAL, INTENT(IN)               :: zs
+      COMPLEX, INTENT(IN)            :: pw(:, :), vac(:, :, :, :)   !pw(ng3,js), vac(nmzd,ng2,2,js)
+      REAL, INTENT(OUT)              :: delz
+      REAL, ALLOCATABLE, INTENT(OUT) :: vz(:, :)
+
+      INTEGER :: n, i, js
+      REAL    :: zend, z
+
+      delz = fvac%delz
+      zend = fcell%z1 + (fvac%nmz - 1)*fvac%delz
+      IF (zs >= zend - 3*delz) CALL juDFT_error("Vacuum embedding plane beyond the FLEUR vacuum grid", &
+                                                hint="decrease zvac", calledby="gfprep_vacemb")
+      n = FLOOR((zend - zs)/delz + 1.0E-6) + 1
+      ALLOCATE (vz(n, SIZE(pw, 2)))
+      DO js = 1, SIZE(pw, 2)
+         DO i = 1, n
+            z = (zs + (i - 1)*delz)*(2*side - 3)
+            vz(i, js) = REAL(priv_filmcoef(fs, fcell, fvac, pw(:, js), vac(:, :, :, js), 0, 0, z))
+         END DO
+      END DO
+   END SUBROUTINE gfprep_vacemb
 
    SUBROUTINE gfprep_mtconv(b, l, typmap, atmap, mt_in, mt_out)
       !mt_in/mt_out: (r,lh,type,spin) of bulk and layer
@@ -254,16 +458,18 @@ CONTAINS
       END DO
    END SUBROUTINE priv_gauleg
 
-   SUBROUTINE gfprep_check(name, b, l, ilay, zc, c, typmap, atmap, bpw, lpw, bmt, lmt)
-      !Compares the bulk and the converted layer function at test points
-      !inside the physical region |z|<c/2 (interstitial) and on spheres of
-      !half the MT radius (muffin-tins) for the first spin
+   SUBROUTINE gfprep_check(name, b, l, ilay, zc, c, typmap, atmap, bpw, lpw, bmt, lmt, bvac)
+      !Compares the bulk (film) and the converted layer function at test
+      !points inside the physical region |z|<c/2 (interstitial and, for a
+      !film, vacuum) and on spheres of half the MT radius (muffin-tins) for
+      !the first spin
       CHARACTER(LEN=*), INTENT(IN)      :: name
       TYPE(t_gfprep_struct), INTENT(IN) :: b, l
       INTEGER, INTENT(IN)               :: ilay, typmap(:), atmap(:)
       REAL, INTENT(IN)                  :: zc, c
       COMPLEX, INTENT(IN)               :: bpw(:), lpw(:)
       REAL, INTENT(IN)                  :: bmt(:, 0:, :, :), lmt(:, 0:, :, :)
+      COMPLEX, INTENT(IN), OPTIONAL     :: bvac(:, :, :)   !film vacuum (nmzd,ng2,2)
 
       INTEGER :: i1, i2, i3, t, al, ab, n, j, ip
       REAL    :: r(3), fb, fl, dmax, fmax, y(3), rb(3, 3), rl(3, 3)
@@ -277,7 +483,14 @@ CONTAINS
                r = MATMUL(l%fi%cell%amat(:, 1:2), [i1/6.0, i2/6.0])
                r(3) = 0.999*0.5*c*i3/4.0 + zc
                IF (priv_in_mt(b, r)) CYCLE
-               fb = priv_pweval(b%stars, b%fi%cell, bpw, r)
+               IF (PRESENT(bvac)) THEN
+                  !the plane-wave and vacuum expansions of FLEUR do not match
+                  !exactly at |z|=z1
+                  IF (ABS(ABS(r(3)) - b%fi%cell%z1) < 0.1) CYCLE
+                  fb = priv_filmeval(b, bpw, bvac, r)
+               ELSE
+                  fb = priv_pweval(b%stars, b%fi%cell, bpw, r)
+               END IF
                r(3) = r(3) - zc
                fl = priv_pweval(l%stars, l%fi%cell, lpw, r)
                dmax = MAX(dmax, ABS(fb - fl)); fmax = MAX(fmax, ABS(fb))
@@ -313,10 +526,11 @@ CONTAINS
    LOGICAL FUNCTION priv_in_mt(b, r)
       TYPE(t_gfprep_struct), INTENT(IN) :: b
       REAL, INTENT(IN)                  :: r(3)
-      INTEGER :: na, i1, i2, i3
+      INTEGER :: na, i1, i2, i3, n3
       priv_in_mt = .FALSE.
+      n3 = MERGE(0, 2, b%fi%input%film)
       DO na = 1, b%fi%atoms%nat
-         DO i3 = -2, 2
+         DO i3 = -n3, n3
             DO i2 = -1, 1
                DO i1 = -1, 1
                   IF (NORM2(r - b%fi%atoms%pos(:, na) - MATMUL(b%fi%cell%amat, REAL([i1, i2, i3]))) &
@@ -346,6 +560,28 @@ CONTAINS
       END DO
       priv_pweval = REAL(f)
    END FUNCTION priv_pweval
+
+   REAL FUNCTION priv_filmeval(b, pw, vac, r)
+      !film function at r: plane waves for |z|<=z1, vacuum beyond
+      TYPE(t_gfprep_struct), INTENT(IN) :: b
+      COMPLEX, INTENT(IN)               :: pw(:), vac(:, :, :)
+      REAL, INTENT(IN)                  :: r(3)
+      INTEGER :: k1, k2
+      COMPLEX :: f
+      IF (ABS(r(3)) <= b%fi%cell%z1) THEN
+         priv_filmeval = priv_pweval(b%stars, b%fi%cell, pw, r)
+         RETURN
+      END IF
+      f = CMPLX(0.0, 0.0)
+      DO k2 = -b%stars%mx2, b%stars%mx2
+         DO k1 = -b%stars%mx1, b%stars%mx1
+            IF (b%stars%i2g(k1, k2) == 0) CYCLE
+            f = f + priv_filmcoef(b%stars, b%fi%cell, b%fi%vacuum, pw, vac, k1, k2, r(3))* &
+                EXP(CMPLX(0.0, DOT_PRODUCT(MATMUL(REAL([k1, k2]), b%fi%cell%bmat(1:2, 1:2)), r(1:2))))
+         END DO
+      END DO
+      priv_filmeval = REAL(f)
+   END FUNCTION priv_filmeval
 
    REAL FUNCTION priv_mteval(s, ns, f, y)
       TYPE(t_sphhar), INTENT(IN) :: s

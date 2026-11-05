@@ -40,6 +40,12 @@ runs the binary directly, which is a single rank).
   `gfleur` are taken from the same build directory. Point to it with
   `GFPREP_BINARY=/path/to/build/gfprep`.
 
+* `inputfiles/cu_film/` — a Cu(001) film of three atomic planes (RMT 1.6,
+  Kmax 4.5 set by hand after inpgen), used by `test_gfprep_film.py`. The test
+  converges it with `fleur`, converts it with `gfprep` into one or three
+  layers with vacuum embedding planes on both sides, and compares the DOS
+  peaks of `gfleur` at Gamma with the film eigenvalues of `fleur`.
+
 ## Scope
 
 Only the ported infrastructure is exercised (per-layer `fleur_init`, the

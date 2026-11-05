@@ -62,6 +62,8 @@ MODULE m_gf_types
       LOGICAL :: l_totalmix, l_hdfio
       !use spectral representation to get Green function
       LOGICAL :: l_spectral, l_embspectral, l_simplevacuum
+      !vacuum embedding below layer 1 (l_surface: above the last layer)
+      LOGICAL :: l_vacleft = .FALSE.
       !calculate full Green function instead of only projections
       LOGICAL :: l_fullgreen
       LOGICAL :: l_nogno

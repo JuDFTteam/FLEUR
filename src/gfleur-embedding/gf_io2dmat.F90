@@ -126,6 +126,7 @@
       CHARACTER(LEN = 30) :: name 
       CHARACTER(LEN = 1)  :: mode,rw 
       CHARACTER(LEN = 7)  :: default
+      LOGICAL             :: lead(2)
       INTEGER             :: region,side,id 
       LOGICAL             :: spinrot 
       REAL                :: theta,phi 
@@ -147,7 +148,8 @@
 
       IF (.NOT.(lexist)) THEN
         !No IO wanted
-        if (gfinp%l_addemb)  CALL juDFT_error("addemb set without gf_io-file")
+        if (gfinp%l_addemb.and..not.(gfinp%l_vacleft.and.gfinp%l_surface)) &
+           CALL juDFT_error("addemb set without gf_io-file")
         IF (layers%num_layers==1) RETURN
         !several layers: the temporary T-matrix/embedding storage is still needed
         iohandles = 0
@@ -164,20 +166,27 @@
          close(120)
          !the defaults are written to a scratch unit, the user's gf_io stays untouched
          open(120,FORM ='formatted',STATUS ='scratch',DELIM="APOSTROPHE")
-         write(120,"(i10)") 2
-         mode ="E";region= 1;side=1;rw="r";id=1;spinrot=.FALSE.;theta=0.0;phi = 0.0;shift = 0.0
+         !a side with vacuum embedding has no lead file
+         lead = (/.NOT.gfinp%l_vacleft,.NOT.gfinp%l_surface/)
+         write(120,"(i10)") COUNT(lead)
+         mode ="E";rw="r";id=0;spinrot=.FALSE.;theta=0.0;phi = 0.0;shift = 0.0
          if (gfinp%l_cbs) rw="w"
-         write(120,IO)
-         region=layers%num_layers;side=2;id=2
-         write(120,IO)
-         name         ='embpot11' 
+         if (lead(1)) then
+            region=1;side=1;id=id+1
+            write(120,IO)
+         endif
+         if (lead(2)) then
+            region=layers%num_layers;side=2;id=id+1
+            write(120,IO)
+         endif
          energy_shift = 0.0 
          bias         = .FALSE. 
          kpts_eps     = 1E-5 
          en_eps       = CMPLX(1E-5,1E-5) 
-         write(120,FILE)
+         name         ='embpot11' 
+         if (lead(1)) write(120,FILE)
          name         ='embpotN2' 
-         write(120,FILE)
+         if (lead(2)) write(120,FILE)
          rewind(120)
       endif
 
@@ -235,10 +244,15 @@
       !check for required io-handles
       if (gfinp%l_addemb) THEN
          !is there an left embedding file?
-         if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)<1) &
-            CALL juDFT_error("No left embedding potential supplied with addemb=T")
-         if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)>1) &
-            CALL juDFT_error("Multiple left embedding potentials supplied with addemb=T")
+         if (gfinp%l_vacleft) then
+            if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)>0) &
+                CALL juDFT_error("Left embedding potential supplied with addemb=T & vacleft=T")
+         else
+            if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)<1) &
+               CALL juDFT_error("No left embedding potential supplied with addemb=T")
+            if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)>1) &
+               CALL juDFT_error("Multiple left embedding potentials supplied with addemb=T")
+         endif
          if (gfinp%l_surface) then
             if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==layers%num_layers.and.iohandle%side==2)>0) &
                 CALL juDFT_error("Right embedding potential supplied with addemb=T & surface=T")
