@@ -4,7 +4,15 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_get_spectrum 
+          USE m_gf_types
+          USE m_gf_energies, ONLY: gf_z
+          USE m_juDFT
+          USE m_gf_spectrum
+          USE m_gf_calcspectrum
+          USE m_gf_calcspectrum2
           IMPLICIT NONE
+          PRIVATE
+          PUBLIC gf_get_spectrum
       CONTAINS 
       SUBROUTINE gf_get_spectrum(                                       &
      &     layer,jspin,gfinp,cell,lapw,lapw_gf,                                 &
@@ -16,12 +24,6 @@
 !     subspaces.                                                        
 !     Frank Freimuth, November 2007                                     
 !***************************************************                    
-      USE m_gf_types 
-      USE m_gf_energies,ONLY:gf_z 
-      use m_juDFT 
-      USE m_gf_spectrum 
-      USE m_gf_calcspectrum 
-      USE m_gf_calcspectrum2 
 !      use m_gf_overlap                                                 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: layer 
@@ -58,7 +60,7 @@
      !&                          jspin)
             CALL gf_calcspectrum_simple(layer,lapw,lapw_gf,jspin,l_sph)
          ELSE 
-            CALL gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph)
+            CALL gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph,gfinp%s_eps)
          ENDIF 
          CALL gf_uhuproj(layer,jspin,lapw,lapw_gf,cell,l_nohelpregion,l_sph)
 #ifdef CPP_WANNIER                                                      

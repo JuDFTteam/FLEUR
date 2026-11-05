@@ -13,7 +13,7 @@ MODULE m_gf_calcspectrum
     PRIVATE
     PUBLIC gf_calcspectrum,gf_calcspectrum_simple
 CONTAINS
-    SUBROUTINE gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph)
+    SUBROUTINE gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph,s_eps)
         !-----------------------------------------------
         ! solve generalized eigenvalue problem for spectral representation
         ! the hamiltonian&overlapp are taken from gf_hsdata
@@ -21,6 +21,8 @@ CONTAINS
         ! The matrix of eigenvectors: uhumatrix.
         ! The left surface projected uhumatrix: uhuprojone.
         ! The right surface projected uhumatrix: uhuprojtwo.
+        ! s_eps>0: eigenvectors of S below s_eps*max(eig(S)) are dropped
+        ! (canonical orthogonalization), their states are set to zero.
         ! Frank Freimuth, January-February 2007
         !           (last modified: 07-02-22) D. Wortmann
         !-----------------------------------------------
@@ -31,6 +33,7 @@ CONTAINS
         TYPE(t_lapw),INTENT(IN)   :: lapw
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
         LOGICAL,INTENT(IN)        :: l_sph
+        REAL,INTENT(IN)           :: s_eps
                                                                         
         !>
         !<-- Locals
@@ -106,6 +109,14 @@ CONTAINS
                                                                         
     !write the hamiltonian to full storage
     call priv_map_hs(jspin,uhumatrix,lapw,lapw_gf,hp,l_sph)
+    IF (s_eps>0.0) THEN
+        CALL timestart("diagonalization")
+        CALL priv_canonical_evp(matsize,s_eps,over,uhumatrix,uhueigval,l_pe0)
+        CALL timestop("diagonalization")
+        DEALLOCATE(over)
+        CALL timestop("gf_calcspectrum")
+        RETURN
+    ENDIF
     CALL timestart("work array allocation")
     !calculate eigenvalues and eigenvectors of the generalized
     !eigenvalue problem
@@ -313,5 +324,60 @@ subroutine priv_map_hs(jspin,mat,lapw,lapw_gf,hs,l_sph)
             mat(jj,ii) = hs(j,i)
         ENDDO
     ENDDO
+end subroutine
+subroutine priv_canonical_evp(matsize,s_eps,over,hmat,eig,l_pe0)
+    !solves H c = E S c in the subspace of the eigenvectors of S with
+    !eigenvalues above s_eps*max(eig(S)); the dropped states get zero
+    !eigenvectors (no contribution to G) and an eigenvalue above all others
+    implicit none
+    integer,intent(in)       :: matsize
+    real,intent(in)          :: s_eps
+    complex,intent(inout)    :: over(:,:)
+    complex,intent(inout)    :: hmat(:,:)
+    real,intent(out)         :: eig(:)
+    logical,intent(in)       :: l_pe0
+
+    real,allocatable    :: seig(:)
+    complex,allocatable :: x(:,:),tmp(:,:),hp(:,:)
+    integer             :: m,ndrop,i
+
+    allocate(seig(matsize))
+    call priv_heevd(over,seig)
+    ndrop=count(seig<s_eps*seig(matsize))
+    m=matsize-ndrop
+    if (l_pe0) write(6,"(a,i6,a,i6,a,e10.3)") "canonical orthogonalization: dropped",ndrop, &
+        " of",matsize," eigenvectors of S, min kept eigenvalue",seig(ndrop+1)
+    !X = U_kept diag(1/sqrt(s))
+    allocate(x(matsize,m))
+    do i=1,m
+        x(:,i)=over(:,ndrop+i)/sqrt(seig(ndrop+i))
+    enddo
+    allocate(tmp(matsize,m),hp(m,m))
+    call zgemm('N','N',matsize,m,matsize,cmplx(1.0,0.0),hmat,matsize,x,matsize,cmplx(0.0,0.0),tmp,matsize)
+    call zgemm('C','N',m,m,matsize,cmplx(1.0,0.0),x,matsize,tmp,matsize,cmplx(0.0,0.0),hp,m)
+    call priv_heevd(hp,eig(:m))
+    !back transformation of the eigenvectors
+    call zgemm('N','N',matsize,m,m,cmplx(1.0,0.0),x,matsize,hp,m,cmplx(0.0,0.0),hmat,matsize)
+    hmat(:,m+1:)=cmplx(0.0,0.0)
+    if (ndrop>0) eig(m+1:)=eig(m)+1.0E3
+end subroutine
+
+subroutine priv_heevd(a,w)
+    !eigenvalues (ascending) and eigenvectors of a Hermitian matrix
+    implicit none
+    complex,intent(inout) :: a(:,:)
+    real,intent(out)      :: w(:)
+    complex,allocatable   :: work(:)
+    real,allocatable      :: rwork(:)
+    integer,allocatable   :: iwork(:)
+    integer               :: n,info,iwork_d(1)
+    real                  :: rwork_d(1)
+    complex               :: work_d(1)
+
+    n=size(a,1)
+    call zheevd('V','U',n,a,n,w,work_d,-1,rwork_d,-1,iwork_d,-1,info)
+    allocate(work(int(work_d(1))),rwork(int(rwork_d(1))),iwork(iwork_d(1)))
+    call zheevd('V','U',n,a,n,w,work,size(work),rwork,size(rwork),iwork,size(iwork),info)
+    if (info/=0) call juDFT_error("zheevd failed",calledby="gf_calcspectrum.F90")
 end subroutine
 END

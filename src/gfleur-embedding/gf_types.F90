@@ -77,6 +77,9 @@ MODULE m_gf_types
       REAL    :: Efield, vacuum_energy
       !min and max of z-positions of dos
       REAL    :: z_min, z_max
+      !relative threshold below which eigenvalues of S are dropped
+      !in the spectral representation (0: plain generalized EVP)
+      REAL    :: s_eps = 0.0
       !no of dos-planes
       INTEGER :: nz_dos
       INTEGER :: npw, curr

@@ -4,7 +4,11 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_iogfinp
+      USE m_gf_types
+      USE m_juDFT
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC gf_rgfinp
       CONTAINS
       !<--S: GF_RGFINP
 
@@ -24,8 +28,6 @@
 !
 !     Daniel Wortmann, Juelich 2003
 !***********************************************************************
-      USE m_gf_types
-      use m_juDFT
       IMPLICIT NONE
       !<-- Arguments
       TYPE(t_embinp), INTENT(INOUT) :: embinp
@@ -45,12 +47,12 @@
      &     ,inp2plot,savemem,writehs,IEC,gproj,band,spectral,fullgreen  &
      &     ,nohelpregion,overlap,intdos,hdfio
       INTEGER :: curr,nz_dos
-      REAL    :: z_min,z_max
+      REAL    :: z_min,z_max,s_eps
       CHARACTER(LEN=4)::kpts
       LOGICAL :: doslayer(1000)
       NAMELIST /MODE/ intdos,totalmix,eigen,tmat,gmat,curr,charge,dos   &
      &     ,writeT,potmix,inp2plot,kpts,savemem,writehs,IEC,gproj,band  &
-     &     ,spectral,fullgreen,nz_dos,z_min,z_max,nohelpregion,overlap,hdfio,doslayer
+     &     ,spectral,fullgreen,nz_dos,z_min,z_max,nohelpregion,overlap,hdfio,doslayer,s_eps
       !CBS
       REAL   ::eps_current,eps_non_bloch,CBS_bz,d1,d2,kappa_max
       LOGICAL:: cbs
@@ -165,6 +167,7 @@
             writeHS = .FALSE.;saveMEM=.FALSE.;gproj=.FALSE.             &
      &           ;nohelpregion = .TRUE.;overlap=.FALSE.
             nz_dos = 1;z_min=0.0;z_max=1.0;totalmix= .FALSE.;hdfio=.false.
+            s_eps = 0.0
             doslayer=.true.
             READ(92,NML = MODE)
             embinp%l_hdfio=hdfio
@@ -181,6 +184,7 @@
             embinp%l_writeHS = writeHS;embinp%l_savemem=savemem
             embinp%l_IEC=IEC;embinp%l_gproj=gproj
             embinp%nz_dos=nz_dos;embinp%z_min=z_min;embinp%z_max=z_max
+            embinp%s_eps=s_eps
             IF (.NOT.ALLOCATED(embinp%l_doslayer))                      &
      &           ALLOCATE(embinp%l_doslayer(1000))
             embinp%l_doslayer=doslayer
