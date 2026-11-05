@@ -67,6 +67,17 @@ namelist.  Self-consistency is controlled with the optional `&SC` namelist;
 for example, `iter` selects the number of iterations.  Keep `iter=0` when
 only checking that a newly prepared setup initializes correctly.
 
+## Basis of the layer Green function
+
+The interstitial of a layer is described by plane waves of period `dt`
+along z. `&BASIS napw` (default 15, one value per layer) sets their number;
+thicker layers need more. With `&MODE spectral=t` (default) the Green
+function is built from the eigenstates of the layer Hamiltonian. These plane
+waves are an overcomplete set on the layer, so the overlap matrix becomes
+ill-conditioned as `napw` grows. With `&MODE s_eps=<x>` (default 0, off),
+eigenvectors of the overlap with eigenvalues below `x` times the largest one
+are dropped before the eigenvalue problem is solved, e.g. `s_eps=1e-10`.
+
 ## Energy grid
 
 `gf_en` may contain explicitly listed energies or generated intervals.  For
@@ -95,6 +106,9 @@ For `addemb=t`, provide exactly one readable conventional embedding potential
 
 * the left boundary: `region=1`, `side=1`;
 * the right boundary: `region=<nlayers>`, `side=2`.
+
+A boundary with vacuum embedding (`surface`, `vacleft`, see below) has no
+lead and must not have a read handle.
 
 The first line of `gf_io` is the number of `&IO` records.  It is followed by
 one `&FILE` record for every file ID used by an `&IO` record.  For a two-layer
@@ -130,11 +144,11 @@ The special first line `default` selects a two-boundary default that reads
 `embpot11.hdf` (region 1, side 1) and `embpotN2.hdf` (region `<nlayers>`,
 side 2).  In complex-band-structure mode (`&CBSMODE cbs=t`) the same default
 writes these two files instead, so a CBS run of a bulk-like layer produces the
-lead embedding potentials.  The defaults are built in memory, `gf_io` itself is
-never modified.
+lead embedding potentials.  A side with vacuum embedding is left out of the
+default.  The defaults are built in memory, `gf_io` itself is never modified.
 
 Without a `gf_io` file, runs with `nlayers > 1` keep the layer T-matrices in
-memory; `addemb=t` requires `gf_io`.
+memory; `addemb=t` requires `gf_io` unless both sides have vacuum embedding.
 
 ### Practical requirements for T-matrix embedding potentials
 

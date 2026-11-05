@@ -26,7 +26,7 @@ calculations are not supported.
 | `prefix` | `'layer'` | layer files are `<prefix><i>_inp.xml` |
 | `plane_tol` | 0.2 | atoms closer than this in z (a.u.) form one atomic plane |
 | `planes_per_layer` | 1 | atomic planes per layer (auto mode) |
-| `first_plane`, `last_plane` | 1, one period (film: the last plane) | range of atomic planes (auto mode). Planes continue periodically, so ranges can span several periods |
+| `first_plane`, `last_plane` | 1, one period (film: the last plane) | range of atomic planes (auto mode). In bulk the planes continue periodically, so ranges can span several periods |
 | `zplanes` | – | explicit embedding planes (cartesian z, ascending). Overrides auto mode |
 | `dt_addon` | 1.5 | `dt = d + dt_addon` |
 | `vshift` | 0 | constant shift of the potential; 999 means `-V_int(G=0)` |

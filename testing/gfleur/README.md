@@ -43,14 +43,26 @@ runs the binary directly, which is a single rank).
 * `inputfiles/cu_film/` — a Cu(001) film of three atomic planes (RMT 1.6,
   Kmax 4.5 set by hand after inpgen), used by `test_gfprep_film.py`. The test
   converges it with `fleur`, converts it with `gfprep` into one or three
-  layers with vacuum embedding planes on both sides, and compares the DOS
-  peaks of `gfleur` at Gamma with the film eigenvalues of `fleur`.
+  layers with vacuum embedding planes on both sides (also with `zvac=1`), and
+  compares the DOS peaks of `gfleur` at Gamma with the film eigenvalues of
+  `fleur`. A surface run embeds two film planes between a bulk lead (CBS of
+  `cu_supercell`) and the vacuum.
+
+* `test_gfleur_transport.py` also starts from `cu_supercell` (ABAB stacking,
+  two atomic planes per lattice period), for two MT radii: 2.35 (the
+  embedding planes cut the MT spheres) and 1.6 (they do not). One period is
+  cut as a single layer, and a CBS run (`&CBSMODE cbs=t`) writes the lead
+  embedding potentials. The tests compare the propagating CBS states at Gamma
+  with a `fleur` band run along (0,0,kz), check `spectral=f` against
+  `spectral=t`, and require the transmission of one layer (`curr=-1`) and of
+  a two-layer stack (`curr=3`, `curr=16`) to equal the number of open
+  channels. At E=0.1 with RMT 2.35 the CBS tests are expected to fail
+  (`xfail`) because of the cut spheres.
 
 ## Scope
 
-Only the ported infrastructure is exercised (per-layer `fleur_init`, the
-k×layer×energy parallel setup, step functions, the 2D-matrix/T-matrix stores
-and `gfleur_execute`). The computational kernels (T-matrices, transmission,
-self-consistent charge) need converged per-layer potentials and physically
-reviewed reference data that are not part of this fixture; those belong in a
-follow-up once seed potentials are available.
+Covered: the per-layer setup, gfprep for bulk and films (conversion
+accuracy), T-matrices and Green functions with the gfprep potential, the
+DOS with vacuum embedding, the CBS with the lead embedding potentials, and
+the Landauer transmission. Not covered: self-consistent charge (`charge=t`),
+the bias-dependent current, and MPI runs.
