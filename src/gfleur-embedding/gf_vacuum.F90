@@ -5,6 +5,13 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_vacuum 
       use m_juDFT
+      USE m_gf_types
+      USE m_gf_energies
+#ifdef old_stuff
+      USE m_constants, ONLY: pi_const, oUnit
+      USE m_gf_fft_singleton
+      USE m_gf_io2dmat
+#endif
       IMPLICIT NONE
       PRIVATE 
 #ifdef oldstuff
@@ -62,8 +69,6 @@
       CONTAINS 
 
       subroutine gf_simple_vac(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
-      USE m_gf_types
-      USE m_gf_energies
       integer,intent(in)       :: en,nk
       type(t_lapw),intent(in)  :: lapw
       type(t_lapw_gf),intent(in) :: lapw_gf
@@ -80,15 +85,17 @@
       nn=size(sigma,1)
       if (lapw_gf%nv2(1)<nn) nn=nn/2 !noco calculation
       if (present(efield)) THEN
-         if (abs(efield)>epsilon(0.0)) CALL vacuum_EField(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
-      ELSE
+         if (abs(efield)>epsilon(0.0)) THEN
+            CALL vacuum_EField(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
+            return
+         endif
+      endif
         sigma=cmplx(0.0,0.0)
         DO n=1,nn
-          gk=MATMUL(cell%bmat(1:2,1:2),kpts%bk(1:2,nk)+(/lapw_gf%k1p(n,1),lapw_gf%k2p(n,1)/))
+          gk=MATMUL(kpts%bk(1:2,nk)+(/lapw_gf%k1p(n,1),lapw_gf%k2p(n,1)/),cell%bmat(1:2,1:2))
           s=dot_PRODUCT(gk,gk)
           sigma(n,n)=cmplx(0,0.5)* SQRT(2*(gf_Z(en,0)-vacuum_energy)-s)
         enddo
-      ENDIF
       if (nn.ne.size(sigma,1)) then !noco
         sigma(nn+1:,nn+1:)=sigma(:nn,:nn)
       endif
@@ -103,8 +110,6 @@
 !       01/2007            A. Hanuschkin
 !       modified by DW 2012
 !******************************************
-      USE m_gf_types
-      USE m_gf_energies
       IMPLICIT NONE
       integer,intent(in)       :: en,nk
       type(t_lapw),intent(in)  :: lapw
@@ -143,7 +148,7 @@
       DO n=1,nn
            !initial wavefunction
            !inf. in vacuum region V=vac_pot
-           gk=MATMUL(cell%bmat(:2,:2),kpts%bk(1:2,nk)+(/lapw_gf%k1p(n,1),lapw_gf%k2p(n,1)/))
+           gk=MATMUL(kpts%bk(1:2,nk)+(/lapw_gf%k1p(n,1),lapw_gf%k2p(n,1)/),cell%bmat(:2,:2))
            s=dot_PRODUCT(gk,gk)
            !numerical integration ksq=k**2xh**2
                           !set up k^2*h^2 array
@@ -180,7 +185,6 @@
 !     See Eq. 5.50 from my Thesis!                                      
 !                          D. Wortmann                                  
 !******************************************                             
-      USE m_gf_energies 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: en,nk 
@@ -250,7 +254,6 @@
 !******************************************                             
 !       12/2006            A. Hanuschkin                                
 !******************************************                             
-      USE m_gf_energies 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: en,nk 
@@ -478,7 +481,6 @@
 ! linear E-field E*z+V_vac applyed to the system                        
 !       01/2007            A. Hanuschkin                                
 !******************************************                             
-      USE m_gf_energies 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: en,nk 
@@ -695,7 +697,6 @@
 !     Initializes the private variables of the module                   
 !                          D. Wortmann                                  
 !******************************************                             
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)             :: jspin 
@@ -733,7 +734,6 @@
                                                                         
       !<-- S: gf_vacuum_Poti_init(                                      
       SUBROUTINE gf_vacuum_Poti_init()
-      use m_gf_types
       IMPLICIT NONE
 !******************************************                             
 !     Setup of potential if EmbPot is calculated numericaly             
@@ -753,9 +753,6 @@
                                                                         
 
       subroutine gf_vacuum_check_vacpot(vpw,stars,c,vac_pot)
-      use m_gf_types
-      USE m_constants, ONLY: pi_const, oUnit
-      use m_gf_fft_singleton
       implicit none
       type(t_stars),intent(in)::stars
       complex,intent(in)::vpw(:,:)
@@ -923,9 +920,6 @@
 !                                                                       
 !                          D. Wortmann                                  
 !******************************************                             
-      USE m_gf_types 
-      USE m_gf_energies 
-      USE m_gf_io2dmat 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_embinp),INTENT(IN) :: gfinp

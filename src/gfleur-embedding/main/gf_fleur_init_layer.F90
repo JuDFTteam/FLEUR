@@ -101,6 +101,11 @@ CONTAINS
       !gfleur always inverts the complex (zS - H - Sigma): force complex
       !storage even if the layer has inversion symmetry
       ld%fi%input%l_real = .FALSE.
+      !the MT parts of H and S (hsmt) treat a pair of atoms related by
+      !inversion as twice the real part of one atom, which holds only for
+      !real matrices: every atom is treated on its own
+      ld%fi%sym%invsat = 0
+      ld%fi%sym%invsatnr = 0
       CALL ld%fi%kpts%init(ld%fi%sym, ld%fi%input%film, .FALSE., .FALSE.)
       CALL convn(fmpi%irank == 0, ld%fi%atoms, ld%stars)
 

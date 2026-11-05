@@ -4,6 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_ab_coef 
+      USE m_gf_types
+      USE m_ylm
+      USE m_sphbes
+      USE m_dsphbs
+      USE m_radfun
+      USE m_constants, ONLY: pimach
       IMPLICIT NONE
       private
       complex,allocatable,save :: ab_coef(:,:,:,:,:)
@@ -12,7 +18,6 @@
       CONTAINS 
       SUBROUTINE gf_ab_coef_calc(l_noco,jspin,bk,sym,el,vr0,atoms,cell,lapw,lapw_gf)
       !Calculate the ab_coefs and store in a local module variable
-      USE m_gf_types
 	  !Arguments
       logical,intent(in)       :: l_noco
       INTEGER,INTENT(IN)       :: jspin
@@ -25,12 +30,19 @@
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_atoms),INTENT(IN) :: atoms
 	  !Locals
+      integer :: nv
       if (l_noco) THEN
            ab_spin=2
       else
       	   ab_spin=1
       endif
-	  ALLOCATE(ab_coef(maxval(lapw_gf%nv_sphere),0:MAXVAL(atoms%lmax)*(MAXVAL(atoms%lmax)+2),atoms%nat,2,ab_spin))
+	  !only the entries of the spins used are set in nv_sphere
+	  if (ab_spin==1) then
+	      nv=lapw_gf%nv_sphere(jspin)
+	  else
+	      nv=maxval(lapw_gf%nv_sphere(1:2))
+	  endif
+	  ALLOCATE(ab_coef(nv,0:MAXVAL(atoms%lmax)*(MAXVAL(atoms%lmax)+2),atoms%nat,2,ab_spin))
 
 	  if (ab_spin==1) then
 	      call priv_ab_coef(jspin,bk,sym,el(:,:,jspin),vr0(:,:,jspin),atoms,cell,lapw,lapw_gf,  &
@@ -81,12 +93,6 @@
 !     WARNING: array ab is pretty large                                 
 !                                           Daniel Wortmann             
 !*********************************************************************  
-      USE m_ylm
-      USE m_sphbes
-      USE m_dsphbs
-      USE m_radfun
-      USE m_constants ,ONLY: pimach
-      USE m_gf_types 
       IMPLICIT NONE 
 !     Arguments                                                         
       INTEGER,INTENT(IN)       :: jspin 

@@ -5,7 +5,15 @@
 !--------------------------------------------------------------------------------
 MODULE m_gf_embpot_postprocess
 !Created by wortmann on Sep 10, 2012
+    USE m_gf_types
+    USE m_gf_embedding
+    USE m_gf_math
+    USE m_gf_vacuum
+    USE m_gf_energies
+    USE m_gf_io2dmat
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: gf_embpot_spectral
     CONTAINS
     SUBROUTINE gf_embpot_spectral(jspin,nk,gfinp,layers,lapw,lapw_gf,cell,kpts)
     !This subroutine calculates the green function at the embedding plane
@@ -13,12 +21,6 @@ MODULE m_gf_embpot_postprocess
     !Additionally, the embedding potential of layer=layers%num_layers,side=2 can be used
     !A surface can be simulated by calling the appropriate vacuum routines
     !The surface gr
-    USE m_gf_types
-    USE m_gf_embedding
-    USE m_gf_math
-    USE m_gf_vacuum
-    USE m_gf_energies
-    USE m_gf_io2dmat
     IMPLICIT NONE
     INTEGER,INTENT(IN)       :: jspin,nk
     TYPE(t_embinp),INTENT(IN) :: gfinp
@@ -42,7 +44,7 @@ MODULE m_gf_embpot_postprocess
 
     DO en=1,gf_noen()
         CALL gf_GETEMB2(sig1,1,1,en,nk,jspin,lapw,lapw_gf)
-        IF (gf_io2dmatFID(IO2D_EMB,layers%num_layers,2,IO2D_READ)>0) CALL gf_GETEMB2(sig2,layers%num_layers,2,en,nk,jspin,lapw,lapw_gf)
+        IF (gf_io2dmatFID(IO2D_EMB,layers%num_layers,2,IO2D_READ)>0) CALL gf_GETEMB2(sig2,2,layers%num_layers,en,nk,jspin,lapw,lapw_gf)
         IF (gfinp%l_simplevacuum) THEN
             CALL gf_simple_vac(en,nk,lapw,lapw_gf,kpts,cell,gfinp%vacuum_energy,sig2,gfinp%efield)
         ENDIF

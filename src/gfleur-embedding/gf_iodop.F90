@@ -61,7 +61,7 @@
              call juDFT_warn("Not a potential file for a surface calculation")
              vxy=0.0
              vz=0.0
-             evac=0.0
+             if (present(evac)) evac=0.0
              return
       endif
       !read vz
@@ -139,7 +139,7 @@
       IF (io_groupexists(fid,"vacuum")) THEN
          CALL io_gopen(fid,"vacuum",gid,hdferr)
          call io_dopen(gid,"vz",dvz,hdferr)
-         call io_dopen(gid,"vz",dvxy,hdferr)
+         call io_dopen(gid,"vxy",dvxy,hdferr)
       ELSE
       	CALL io_gcreate(fid,"vacuum",gid,hdferr)
       	call io_createvar(gid,"vz", H5T_NATIVE_DOUBLE,(/size(vz,1),size(vz,2)/),dvz)

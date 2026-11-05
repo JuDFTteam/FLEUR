@@ -163,10 +163,8 @@
                                                      !tmps for matmul   
       COMPLEX :: n1_tmp(-3:3,-3:3),nr_tmp(-3:3,-3:3) 
                                                 !tmp arrays for lapack-g
-      COMPLEX,ALLOCATABLE ::vec1(:),vec2(:) 
+      COMPLEX,ALLOCATABLE ::vec1(:),vec2(:),abv(:) 
       COMPLEX,ALLOCATABLE:: ldos_mat(:,:,:,:) 
-      COMPLEX zdotu 
-      EXTERNAL zdotu 
 
       ! In case of NOCO, call this subroutine recursivly
       if (l_noco) THEN
@@ -224,8 +222,11 @@
      &                    ,lapw_gf%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
      &                    ,SIZE(gmat,1),CONJG(gf_ab_coef_vector(lmp,nt,2,jspin2))      &
      &                    ,1,CMPLX(0.0,0.0),vec2,1)                     
-                     uu=(zdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,1,jspin1),1,vec1,1))
-                     dd=(zdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,2,jspin1),1,vec2,1))
+                     !SUM instead of zdotu (complex BLAS functions break with Accelerate)
+                     abv=gf_ab_coef_vector(lm,nt,1,jspin1)
+                     uu=SUM(abv(:SIZE(vec1))*vec1)
+                     abv=gf_ab_coef_vector(lm,nt,2,jspin1)
+                     dd=SUM(abv(:SIZE(vec2))*vec2)
                      if (jspin_in==3) uu=uu*ddn(l,itype,layer,4)
                      n_tmp(m,mp) = (ddn(l,itype,layer,jspin_in)*dd+uu)           &
      &                    /atoms%neq(itype)                             
