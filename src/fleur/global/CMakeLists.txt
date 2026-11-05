@@ -28,6 +28,7 @@ src/fleur/global/utility.F90
 src/fleur/global/find_enpara.f90
 src/fleur/global/rotMMPmat.f90
 src/fleur/global/symMMPmat.f90
+src/fleur/global/spin_sym.f90
 )
 if (FLEUR_USE_GPU)
   set(fleur_F90 ${fleur_F90}

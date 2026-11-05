@@ -8,6 +8,7 @@ MODULE m_checks
   USE m_juDFT
   USE m_nocoInputCheck
   USE m_socsym
+  USE m_spin_sym, ONLY : inplane_spin_sym_factor
   USE m_constants
 #ifdef CPP_MPI
   USE mpi
@@ -122,6 +123,15 @@ MODULE m_checks
            CALL juDFT_warn("Symmetry operations incompatible with spin quantization axis are present.",&
                            hint="Recreate the input with inpgen while l_soc=T is set, so that the symmetry is &
                                 &reduced accordingly, or use the '-nosym' command line option of inpgen.",&
+                           calledby="check_input_switches")
+        END IF
+     END IF
+
+     IF (noco%l_noco.AND.noco%l_soc.AND.(sym%nop>1)) THEN
+        IF (inplane_spin_sym_factor(sym,cell)<0.5.AND.ANY(ABS(SIN(noco%beta_inp(:atoms%ntype)))>1.0e-6)) THEN
+           CALL juDFT_warn("Symmetry operations rotate the in-plane spin, the in-plane magnetization is projected out.",&
+                           hint="Reduce the symmetry to the operations compatible with the magnetic structure, &
+                                &e.g. by using the '-nosym' command line option of inpgen.",&
                            calledby="check_input_switches")
         END IF
      END IF
