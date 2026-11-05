@@ -5,17 +5,19 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_hs_int
       use m_juDFT
+      USE m_gf_types
       IMPLICIT NONE
+      PRIVATE
       PUBLIC :: gf_hs_int
       CONTAINS
 
-      SUBROUTINE gf_hs_int(lapw, stars, napw, stepf, jspin, fmpi,        &
+      SUBROUTINE gf_hs_int(lapw, stars, napw, stepf, stepmt, jspin, fmpi,&
      &                     bkpt, bbmat, vpw, hmat, smat)
 !*********************************************************************
 !     Interstitial part of the Hamiltonian and overlap matrix of one
 !     layer. Replaces the old hsintstep working on packed storage.
 !
-!     Two differences to the standard FLEUR hs_int:
+!     Differences to the standard FLEUR hs_int:
 !     - the step function is the GF one (zero in the auxiliary
 !       volumes) and is given on the FULL G-difference box
 !       (-mx1:mx1, -mx2:mx2, -2*napw:2*napw) - kinetic energy and
@@ -23,6 +25,10 @@
 !       list, which the standard hs_int cannot do.
 !     - the potential vpw is the GF potential (already warped and
 !       zeroed in the auxiliary volumes).
+!     - kinetic energy: Dirac form 1/2 (k+G_i)(k+G_j) at the embedding
+!       planes, symmetrized Laplace form at the MT spheres as for the
+!       LAPW MT part (hsmt):
+!         T = 1/2 (k+G_i)(k+G_j) Theta_I - 1/4 |G_i-G_j|^2 Theta_MT
 !
 !     The matrix elements are stored in the standard modern
 !     convention: data_c(jrow, icol) = <G_row|M|G_col> for row<=col
@@ -30,7 +36,6 @@
 !
 !     D. Wortmann, Juelich, 2001
 !*********************************************************************
-      USE m_gf_types
       IMPLICIT NONE
 !     ..
 !     .. Arguments ..
@@ -38,6 +43,8 @@
       TYPE(t_stars),INTENT(IN)      :: stars
       INTEGER, INTENT (IN)          :: napw
       COMPLEX, INTENT (IN)          :: stepf(-stars%mx1:,-stars%mx2:,-2 &
+     &     *napw:)
+      COMPLEX, INTENT (IN)          :: stepmt(-stars%mx1:,-stars%mx2:,-2&
      &     *napw:)
       INTEGER, INTENT (IN)          :: jspin
       TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -47,7 +54,7 @@
 !     ..
 !     .. Locals ..
       COMPLEX th,ts
-      REAL bi(3),bj(3),r2
+      REAL bi(3),bj(3),r2,dg2
       INTEGER i,j,i1,i2,i3,in
 
       !loop over the columns (k+G_i)
@@ -61,9 +68,10 @@
             i3 = lapw%gvec(3,j,jspin) - lapw%gvec(3,i,jspin)
             bj = bkpt + lapw%gvec(:,j,jspin)
             r2 = dot_product(bj,matmul(bi,bbmat))
+            dg2 = dot_product(bj-bi,matmul(bj-bi,bbmat))
             !kinetic energy and overlap on the full box
             ts = stepf(i1,i2,i3)
-            th = 0.5*r2*ts
+            th = 0.5*r2*ts - 0.25*dg2*stepmt(i1,i2,i3)
             !add the potential if there is a corresponding star
             IF (ABS(i1)<=stars%mx1.AND.ABS(i2)<=stars%mx2.AND.           &
      &          ABS(i3)<=stars%mx3) THEN

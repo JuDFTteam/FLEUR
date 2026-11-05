@@ -52,7 +52,7 @@
       !>
       !<-- Locals
       INTEGER                   :: nbas,err
-      COMPLEX,ALLOCATABLE       :: ustep(:,:,:)
+      COMPLEX,ALLOCATABLE       :: ustep(:,:,:),ustep_mt(:,:,:)
       CLASS(t_mat),ALLOCATABLE  :: hmat(:,:),smat(:,:)
 
       IF (ld%fi%noco%l_noco) CALL juDFT_error(                           &
@@ -65,6 +65,7 @@
       ALLOCATE(ustep(-ld%stars%mx1:ld%stars%mx1,                         &
      &               -ld%stars%mx2:ld%stars%mx2,                         &
      &        -2*embinp%napw(layer):2*embinp%napw(layer)),stat=err)
+      IF (err==0) ALLOCATE(ustep_mt,MOLD=ustep,stat=err)
       if(err/=0) then
         write(*,*) "Step function:",layer
         write(*,*) ld%stars%mx1,ld%stars%mx2,embinp%napw(layer)
@@ -76,7 +77,7 @@
       ELSE
          CALL gf_initstepsanaly(ld%stars,embinp%napw(layer))
          CALL gf_stepf_nohelpregion(layer,ld%stars%mx1                   &
-     &        ,ld%stars%mx2,embinp%napw(layer),ustep)
+     &        ,ld%stars%mx2,embinp%napw(layer),ustep,ustep_mt)
       ENDIF
       !>
 
@@ -94,7 +95,7 @@
 
       !<-- interstitial contribution to H+S
       CALL timestart("gf_hsint")
-      CALL gf_hs_int(lapw,ld%stars,embinp%napw(layer),ustep,jspin,       &
+      CALL gf_hs_int(lapw,ld%stars,embinp%napw(layer),ustep,ustep_mt,jspin,&
      &               gmpi%fmpi,bk,ld%fi%cell%bbmat,vpw,                  &
      &               hmat(1,1),smat(1,1))
       CALL timestop("gf_hsint")

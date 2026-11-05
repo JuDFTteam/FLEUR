@@ -5,6 +5,12 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_stepsanaly 
       use m_juDFT
+      use m_gf_types
+      use hdf5
+      use m_hdf_tools
+      use m_gf_fft_singleton
+      use m_constants, only: pi_const
+      use m_gf_ballpartfourier, only: ballpartfou
       IMPLICIT NONE
                                                                         
       PRIVATE 
@@ -17,32 +23,37 @@
                                                                         
       SUBROUTINE gf_stepf_nohelpregion(layer,                  &
      &     mx1,mx2,napw,                                                &
-     &     ustep)                                                       
+     &     ustep,ustep_mt)
 !******************************************************                 
 !     Generate the stepfunction for the kinetic energy.                 
 !     Needed for the version without help region.                       
+!     ustep_mt: step function of the MT spheres in the region
 !     Frank Freimuth, October 2007                                      
 !******************************************************                 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)  :: layer
       INTEGER,INTENT(IN)  :: mx1,mx2,napw 
       COMPLEX,INTENT(OUT) :: ustep(-mx1:,-mx2:,-2*napw:) 
+      COMPLEX,INTENT(OUT),OPTIONAL :: ustep_mt(-mx1:,-mx2:,-2*napw:)
                                                                         
-      COMPLEX,ALLOCATABLE :: stepkomplett(:,:,:) 
+      COMPLEX,ALLOCATABLE :: stepkomplett(:,:,:),stepphys(:,:,:)
       INTEGER             :: k1,k2,k3 
                                                                         
 !Obtain the stepfunctions                                               
       ALLOCATE(stepkomplett(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3)) 
-      CALL priv_loadstep(layer,stepkomplett = stepkomplett)
+      ALLOCATE(stepphys(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3))
+      CALL priv_loadstep(layer,stepkomplett = stepkomplett,stepphys = stepphys)
                                                                         
       DO k3 =-2*napw,2*napw 
          DO k2 =-mx2,mx2 
             DO k1 =-mx1,mx1 
                ustep(k1,k2,k3) = stepkomplett(k1,k2,k3) 
+               IF (PRESENT(ustep_mt)) ustep_mt(k1,k2,k3) =             &
+     &              stepphys(k1,k2,k3) - stepkomplett(k1,k2,k3)
             ENDDO 
          ENDDO 
       ENDDO 
-      DEALLOCATE(stepkomplett) 
+      DEALLOCATE(stepkomplett,stepphys)
                                                                         
       END SUBROUTINE gf_stepf_nohelpregion 
                                                                         
@@ -51,8 +62,6 @@
 !     Calculate the correct dimensioning for the step functions.        
 !     Frank Freimuth, November 2007                                     
 !***************************************************************        
-      USE m_gf_types 
-      use m_juDFT 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       TYPE(t_stars),INTENT(IN) :: stars 
@@ -90,10 +99,6 @@
 !     calculate the stepfunctions analytically.                         
 !     Frank Freimuth, April 2007                                        
 !********************************************************************   
-      USE hdf5 
-      USE m_hdf_tools 
-      USE m_gf_types 
-      use m_juDFT 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)       :: layer
@@ -290,10 +295,6 @@
 !     Calculate the convolution in g-space without making use of fft.   
 !     Frank Freimuth, April 2007                                        
 !********************************************************************   
-      USE m_gf_types 
-      USE hdf5 
-      USE m_hdf_tools 
-      USE m_gf_fft_singleton 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)       :: layer
@@ -514,8 +515,6 @@
 !     Calculate the convolution in g-space without making use of fft.   
 !     Frank Freimuth, April 2007                                        
 !********************************************************************   
-      USE m_gf_types 
-      USE m_gf_fft_singleton 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)       :: layer 
@@ -645,9 +644,6 @@
 !   Modification for the g-space-stepfunctions.                         
 !   Frank Freimuth, April 2007                                          
 !-----------------------------------------------                        
-      USE hdf5 
-      USE m_hdf_tools 
-      use m_juDFT 
       IMPLICIT NONE 
                                                                         
       !<-- Arguments                                                    
@@ -785,9 +781,6 @@
 !   Modification for the g-space-stepfunctions.                         
 !   Frank Freimuth, April 2007                                          
 !-----------------------------------------------                        
-      USE hdf5 
-      USE m_hdf_tools 
-      use m_juDFT 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       INTEGER,INTENT(IN)::layer 
@@ -896,7 +889,6 @@
 !  and zero outside of the MTs.                                         
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants, ONLY: pi_const 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       REAL ,INTENT(IN)       :: omtil,bmat(3,3) 
@@ -1034,8 +1026,6 @@
 !  the MT-spheres and which is zero otherwise.                          
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants, ONLY: pi_const 
-      USE m_gf_ballpartfourier,ONLY:ballpartfou
       IMPLICIT NONE 
       !<-- Arguments                                                    
       REAL ,INTENT(IN)     :: omtil,bmat(3,3) 
@@ -1146,8 +1136,6 @@
 !  the MT-spheres and which is zero otherwise.                          
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants, ONLY: pi_const 
-      USE m_gf_ballpartfourier,ONLY:ballpartfou
       IMPLICIT NONE 
       !<-- Arguments                                                    
       REAL ,INTENT(IN)     :: omtil,bmat(3,3) 
@@ -1221,8 +1209,6 @@
 !  the MT-spheres and which is zero otherwise.                          
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants, ONLY: pi_const 
-      USE m_gf_ballpartfourier,ONLY:ballpartfou
       IMPLICIT NONE 
       !<-- Arguments                                                    
       REAL ,INTENT(IN)     :: omtil,bmat(3,3) 
