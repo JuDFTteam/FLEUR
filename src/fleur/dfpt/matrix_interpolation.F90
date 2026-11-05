@@ -4,7 +4,10 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-module m_matrix_interpolation 
+module m_matrix_interpolation
+#ifdef CPP_MPI
+    use mpi
+#endif
     use m_juDFT
     use m_constants
     use m_npy
@@ -140,30 +143,43 @@ contains
 
     end subroutine wannier_matrixq_interpolate
 
-    subroutine wannier_matrixq_forward(fi,matElement,U_mat,kpts_coarse,qpts_coarse,ft)
+    subroutine wannier_matrixq_forward(fi,matElement,U_mat,kpts_coarse,qpts_coarse,ft,k_list,mpi_comm)
 
         ! Build the real-space Wannier-gauge matWannier and the Wigner-Seitz weights.
-        
+        ! With k_list/mpi_comm, matElement holds only the k-points k_list and matWannier is summed over all ranks.
 
         type(t_fleurinput), intent(in)  :: fi
-        complex,            intent(in)  :: matElement(:,:,:,:)    ! nu',nu, kpoints, qpts (nu' at k+q, nu at k)
-        complex,            intent(in)  :: U_mat(:,:,:)           ! bloch, wannier, kpoint
+        complex,            intent(in)  :: matElement(:,:,:,:)    ! nu',nu, local kpoints, qpts (nu' at k+q, nu at k)
+        complex,            intent(in)  :: U_mat(:,:,:)           ! bloch, wannier, kpoint (full coarse mesh)
         type(t_kpts),       intent(in)  :: kpts_coarse            ! coarse Wannier k-mesh
         type(t_kpts),       intent(in)  :: qpts_coarse            ! coarse Wannier q-mesh, summed over its full zone (nkptf/bkf)
         type(t_wann_ft),    intent(out) :: ft
+        integer, optional,  intent(in)  :: k_list(:)              ! global k index of each local slot of matElement
+        integer, optional,  intent(in)  :: mpi_comm
 
-        integer :: ikpt, iqpt, ikqpt, ix, iy, iz, iGrid, iqR
+        integer :: ikpt, nk_i, iqpt, ikqpt, ix, iy, iz, iGrid, iqR
         integer :: boxSize_k, boxSize_q
         integer :: nwann, nk_c, nq_c, nk1, nk2, nk3, nq1, nq2, nq3
         type(t_cell) :: cell
-        integer, allocatable :: supercellR_k(:,:), supercellR_q(:,:)
+        integer, allocatable :: supercellR_k(:,:), supercellR_q(:,:), kpt_list(:)
         complex, allocatable :: matRot(:,:)                       ! wannier-gauge block for one (k,q)
-        complex, allocatable :: matRpK(:,:,:,:)                  ! after q->R_p FT (nwann,nwann, R_p, nk_c)
+        complex, allocatable :: matRpK(:,:,:,:)                  ! after q->R_p FT (nwann,nwann, R_p, local k)
         real :: bkqpt(3)
+#ifdef CPP_MPI
+        integer :: ierr
+#endif
 
         nwann = size(U_mat, 2)
         nk_c  = kpts_coarse%nkpt
         nq_c  = qpts_coarse%nkptf
+
+        if (present(k_list)) then
+            kpt_list = k_list
+        else
+            kpt_list = [(ikpt, ikpt = 1, nk_c)]
+        end if
+        if (size(matElement,3) /= size(kpt_list)) call juDFT_error("matElement k dimension does not match the k list", &
+                                                              calledby="wannier_matrixq_forward")
 
         nk1 = kpts_coarse%nkpt3(1); nk2 = kpts_coarse%nkpt3(2); nk3 = kpts_coarse%nkpt3(3)
         nq1 = qpts_coarse%nkpt3(1); nq2 = qpts_coarse%nkpt3(2); nq3 = qpts_coarse%nkpt3(3)
@@ -210,7 +226,7 @@ contains
         call timestop("Wigner-Seitz weights (k and q)")
 
         allocate(matRot(nwann,nwann))
-        allocate(matRpK(nwann,nwann, 0:ft%ws_q_nNZ-1, nk_c))
+        allocate(matRpK(nwann,nwann, 0:ft%ws_q_nNZ-1, size(kpt_list)))
         allocate(ft%matWannier(nwann,nwann, 0:ft%ws_k_nNZ-1, 0:ft%ws_q_nNZ-1))
         ft%matWannier = cmplx(0.0,0.0)
 
@@ -218,7 +234,8 @@ contains
         ! fourier transform of the q-mesh --> R_p
         call timestart("Forward FT + Wannier gauge")
         matRpK = cmplx(0.0,0.0)
-        do ikpt = 1 , nk_c
+        do nk_i = 1 , size(kpt_list)
+            ikpt = kpt_list(nk_i)
             do iqpt = 1 , nq_c
                 ! fold k+q back into the BZ to find the stored U(k+q)=U(tilde k)
                 bkqpt  = kpts_coarse%bk(:,ikpt) + qpts_coarse%bkf(:,iqpt)
@@ -226,22 +243,30 @@ contains
                 if (ikqpt < 1) call juDFT_error("k+q not on the coarse mesh (q must connect k-points)", &
                                               calledby="wannier_matrixq_forward")
                 ! rotate the matrix element into wannier gauge: U^dagger(k+q) M(k,q) U(k)
-                matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikqpt))),matmul(matElement(:,:,ikpt,iqpt), U_mat(:,:,ikpt)))
-                call ft_ws_forward(ft%ws_q_nNZ, ft%ws_q_Rvecs, qpts_coarse%bkf(:,iqpt), matRot, matRpK(:,:,:,ikpt))
+                matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikqpt))),matmul(matElement(:,:,nk_i,iqpt), U_mat(:,:,ikpt)))
+                call ft_ws_forward(ft%ws_q_nNZ, ft%ws_q_Rvecs, qpts_coarse%bkf(:,iqpt), matRot, matRpK(:,:,:,nk_i))
             end do !iqpt
-            matRpK(:,:,:,ikpt) = matRpK(:,:,:,ikpt) / nq_c
-        end do !ikpt
+            matRpK(:,:,:,nk_i) = matRpK(:,:,:,nk_i) / nq_c
+        end do !nk_i
         call timestop("Forward FT + Wannier gauge")
 
         ! fourier transfrom k -> R_e, for each R_p grid point ----
         call timestart("Forward FT")
         do iqR = 0, ft%ws_q_nNZ-1
-            do ikpt = 1 , nk_c
-                call ft_ws_forward(ft%ws_k_nNZ, ft%ws_k_Rvecs, kpts_coarse%bk(:,ikpt), matRpK(:,:,iqR,ikpt), ft%matWannier(:,:,:,iqR))
-            end do !ikpt
+            do nk_i = 1 , size(kpt_list)
+                call ft_ws_forward(ft%ws_k_nNZ, ft%ws_k_Rvecs, kpts_coarse%bk(:,kpt_list(nk_i)), matRpK(:,:,iqR,nk_i), ft%matWannier(:,:,:,iqR))
+            end do !nk_i
             ft%matWannier(:,:,:,iqR) = ft%matWannier(:,:,:,iqR) / nk_c
         end do
         call timestop("Forward FT")
+
+#ifdef CPP_MPI
+        if (present(mpi_comm)) then
+            call timestart("Forward FT reduction")
+            call MPI_ALLREDUCE(MPI_IN_PLACE, ft%matWannier, size(ft%matWannier), MPI_DOUBLE_COMPLEX, MPI_SUM, mpi_comm, ierr)
+            call timestop("Forward FT reduction")
+        end if
+#endif
 
     end subroutine wannier_matrixq_forward
 

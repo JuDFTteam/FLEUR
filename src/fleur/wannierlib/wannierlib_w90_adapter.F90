@@ -120,7 +120,7 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'spinors', spinors)
     CALL w90_set_option(wannierlib_w90main, 'dump_inputs', .FALSE.)
     IF (this%dis_num_iter > 0) CALL w90_set_option(wannierlib_w90main, 'dis_num_iter', this%dis_num_iter)  ! disentanglement (XML numIter)
-    IF (this%num_iter > 0)     CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
+    IF (this%num_iter >= 0)    CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
     !> How many neighbour shells w90 may try before it gives up on the B1 condition. Its own
     !> default is 36, which is not enough for a film: the mesh is dense in plane and a single
     !> point in z, so shell after shell is rejected by the SVD test and 36 runs out at

@@ -141,7 +141,7 @@ MODULE m_types_wannierlib
     REAL :: dis_froz_min = 0.0
     REAL :: dis_froz_max = 0.0
     INTEGER :: dis_num_iter = 0
-    INTEGER :: num_iter = 0      ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
+    INTEGER :: num_iter = -1     ! MLWF/wannierise iterations (W90 num_iter); -1: W90 default, 0: keep projection gauge
     !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
     !> Off by default, as in Wannier90. The criterion is meaningful here because the
     !> projections are the atomic ones this code builds, which a reader of an arbitrary
@@ -560,7 +560,7 @@ CONTAINS
     END IF
 
     ! --- wannierization (MLWF iteration controls); defaults to the disentanglement values ---
-    this%num_iter = this%dis_num_iter
+    IF (this%dis_num_iter > 0) this%num_iter = this%dis_num_iter
     this%conv_tol = this%dis_conv_tol
     xPathA = '/fleurInput/output/wannierlib/wannierization'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN

@@ -440,7 +440,7 @@ contains
 
    end subroutine dfpt_check_lambda
 
-   subroutine dfpt_unfold_gmat(fi, sym_full, qvec_full, jsp, lambda, mapped_kpt, gmatIBZ, gmatFull)
+   subroutine dfpt_unfold_gmat(fi, sym_full, qvec_full, jsp, lambda, mapped_kpt, k_list, k_list_inv, gmatIBZ, gmatFull)
       !! Fills the full q Brillouin zone from the electron-phonon matrix elements
       !! computed on the irreducible wedge, by
       !! $$\underline{g}^{\kappa'\beta}(S\boldsymbol{k},S\boldsymbol{q})
@@ -456,6 +456,8 @@ contains
       !! For `isym > nop` (time reversal), `invmrot`/`mapped_atom` are only
       !! tabulated up to `nop`, so the spatial operation is `-invmrot` at index
       !! `isym - nop`, and the source block is conjugated
+      !!
+      !! `gmatFull` holds only the target k-points `k_list` of this rank
 
 
       type(t_fleurinput), intent(in)    :: fi
@@ -464,10 +466,12 @@ contains
       integer,            intent(in)    :: jsp
       complex,            intent(in)    :: lambda(:, :, :, :)        ! (nb,nb,nkpt,nsym), same bands as gmat
       integer,            intent(in)    :: mapped_kpt(:, :)               ! (nkpt,nsym): index of S k
+      integer,            intent(in)    :: k_list(:)                 ! global k of each local slot
+      integer,            intent(in)    :: k_list_inv(:)             ! (nkpt): local slot of a global k, returns 0 if k is not on this rank
       complex,            intent(in)    :: gmatIBZ(:, :, :, :, :, :) ! (nb,nb,nkpt,jspins,3nat,nkptIBZ)
-      complex,            intent(inout) :: gmatFull(:, :, :, :, :, :)! (nb,nb,nkpt,jspins,3nat,nkptf)
+      complex,            intent(inout) :: gmatFull(:, :, :, :, :, :)! (nb,nb,size(k_list),jspins,3nat,nkptf)
 
-      integer :: iqf, iq, isym, iopAtom, ik, ikPrime, ikq, iAtom, jAtom
+      integer :: iqf, iq, isym, iopAtom, ik, ikPrime, nk_i, ikq, iAtom, jAtom
       integer :: alpha, beta, iPerturb, iPerturbPrime, nb
       integer :: mrot(3, 3), invmrot(3, 3), rotReal(3, 3), unitMat(3, 3)
       logical :: l_trs
@@ -484,6 +488,9 @@ contains
       end if
       if (size(gmatFull, 6) /= qvec_full%nkptf) then
          call juDFT_error("gmatFull q dimension is not the full BZ size.", calledby="dfpt_unfold_gmat")
+      end if
+      if (size(gmatFull, 3) /= size(k_list)) then
+         call juDFT_error("gmatFull k dimension does not match the local k list.", calledby="dfpt_unfold_gmat")
       end if
 
       call timestart("dfpt unfold gmat")
@@ -509,7 +516,7 @@ contains
          q_0 = qvec_full%bk(:, iq)
 
          if ((.not.l_trs) .and. all(rotReal == unitMat) .and. all(abs(trans) < 1e-9)) then
-            gmatFull(:, :, :, jsp, :, iqf) = gmatIBZ(:, :, :, jsp, :, iq)
+            gmatFull(:, :, :, jsp, :, iqf) = gmatIBZ(:, :, k_list, jsp, :, iq)
             cycle
          end if
 
@@ -525,6 +532,8 @@ contains
 
          do ik = 1, fi%kpts%nkpt
             ikPrime = mapped_kpt(ik, isym)
+            nk_i    = k_list_inv(ikPrime)
+            if (nk_i == 0) cycle !nk_i doesnt belong to irank
             ikq     = fi%kpts%get_nk(fi%kpts%bkf(:, ik) + q_0)
             if (ikq < 1 .or. ikq > fi%kpts%nkpt) then
                call juDFT_error("k+q is not on the k mesh; the q mesh must be commensurate with it.", calledby="dfpt_unfold_gmat")
@@ -546,7 +555,7 @@ contains
                   gtmp = phaseAtom(iAtom)*gtmp
 
                   iPerturbPrime = beta + 3*(jAtom - 1)
-                  gmatFull(:, :, ikPrime, jsp, iPerturbPrime, iqf) = matmul(lamKQ, matmul(gtmp, conjg(transpose(lamK))))
+                  gmatFull(:, :, nk_i, jsp, iPerturbPrime, iqf) = matmul(lamKQ, matmul(gtmp, conjg(transpose(lamK))))
                end do
             end do
          end do

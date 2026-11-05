@@ -84,7 +84,8 @@ contains
         complex, allocatable :: lambda(:,:,:,:)
         integer, allocatable :: mapped_kpt(:,:)
         real,    allocatable :: eig_win(:,:)
-        complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQfull)
+        complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,local kpoints,jsp,iPerturb,iQfull)
+        integer, allocatable :: k_list_inv(:)           ! inverse of fmpi%k_list: local slot of a global k, returns 0 if k is not on this rank
 
 
         type(t_potden) :: grRho3(3), grVtot3(3), grVext3(3), grVc3(3),grgrVext3x3(3,3)
@@ -233,14 +234,20 @@ contains
             qpts = fi%dfpt%qvec
         end if
 
-        allocate(gmatCartBZ(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,qpts%nkptf))
+        ! gmatCartBZ is distributed over the k-points of fmpi%k_list
+        if (fmpi%n_size > 1) call juDFT_error("el-ph unfolding requires one MPI task per k-point (n_size=1)", &
+                                              hint="Use at most as many MPI tasks as k-points", calledby="dfpt_postprocess_elph")
+        allocate(k_list_inv(fi%kpts%nkpt), source=0)
+        k_list_inv(fmpi%k_list) = [(ikpt, ikpt = 1, size(fmpi%k_list))]
+
+        allocate(gmatCartBZ(bandWindowSize,bandWindowSize,size(fmpi%k_list),fi%input%jspins,3*fi%atoms%nat,qpts%nkptf))
         gmatCartBZ = cmplx(0.0,0.0)
 
         ! Construct the phases between rotation and what the solver at k' produced
         do ispin = 1 , fi%input%jspins
             call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt,eig_win)
             if (fmpi%irank==0) call dfpt_check_lambda(fi,lambda,eig_win,1e-6)
-            call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
+            call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,fmpi%k_list,k_list_inv,gmatCart,gmatCartBZ)
             deallocate(lambda,mapped_kpt,eig_win)
         end do
         call timestop("elph symmetry unfolding")
@@ -250,7 +257,7 @@ contains
         if (fi%wannierlib%l_wannierize) then
             call timestart("Wannier Interpolation elph")
             if (fmpi%irank==0) write(*,*) "Starting the interpolation of the matrix element"
-            call el_ph_wannier(fmpi,fi,results,dynMats,gmatCartBZ,qpts,sym_qpts)
+            call el_ph_wannier(fmpi,fi,results,dynMats,gmatCartBZ,qpts,sym_qpts,fmpi%k_list)
             call timestop("Wannier Interpolation elph")
         end if
 
