@@ -31,7 +31,7 @@ MODULE m_constants
      PROCEDURE:: mpi_bc=>mpi_bc_constants
   END TYPE t_constants
 
-  REAL                        :: warp_factor=1.0  !should be set from input later
+  REAL                        :: warp_factor=1.0  !scales c_light; set by expertModes/@warp_factor
   INTEGER,          PARAMETER :: oUnit = 50 !This is the unit number for the out file
   INTEGER,          PARAMETER :: noState_const = 0
   INTEGER,          PARAMETER :: coreState_const = 1
