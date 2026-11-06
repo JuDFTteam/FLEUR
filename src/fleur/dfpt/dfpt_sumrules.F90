@@ -67,8 +67,7 @@ contains
          atomPos(:,iAtom) = matmul(cell%amat, atoms%taual(:,iAtom))
       end do
 
-      ! d and -d give the same conditions, but R and the offset have to carry the
-      ! same sign: mixing them pairs a force constant with the wrong bond.
+      ! bond from atom i in the home cell to atom j in cell R
       do iBond = 1, nNZ
          iGrid = iBond-1
          rCart = matmul(cell%amat, real(Rvecs(:,iBond)))
