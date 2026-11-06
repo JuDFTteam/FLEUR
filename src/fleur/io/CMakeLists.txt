@@ -19,6 +19,7 @@ src/fleur/io/pot_io.F90
 src/fleur/io/banddos_io.F90
 src/fleur/io/greensf_io.F90
 src/fleur/io/writeBasis.F90
+src/fleur/io/writeLapwfn.F90
 src/fleur/io/writeOutHeader.F90
 src/fleur/io/wrtdop.f90
 src/fleur/io/libxc_xctyp.F90

@@ -14,6 +14,10 @@ MODULE m_types_banddos
   PUBLIC:: t_banddos
   TYPE,EXTENDS(t_fleurinput_base):: t_banddos
      LOGICAL :: dos =.FALSE.
+     LOGICAL :: l_lapwfn=.FALSE.         ! output/lapwfn: write lapwfn.data and pwfn.data (CASINO)
+     REAL    :: lapwfn_etot=HUGE(1.0)    ! converged total energy written to the files
+     LOGICAL :: lapwfn_realise=.TRUE.    ! real combinations of degenerate levels at k=G/2
+     CHARACTER(len=200) :: lapwfn_title='FLEUR LAPW orbitals'
      REAL    :: e1_dos=0.5
      REAL    :: e2_dos=-0.5
      REAL    :: sig_dos=0.015
@@ -128,6 +132,10 @@ CONTAINS
     CALL mpi_bc(this%dos_typelist,rank,mpi_comm)
     CALL mpi_bc(this%map_atomtype,rank,mpi_comm)
     CALL mpi_bc(this%global_frame,rank,mpi_comm)
+    CALL mpi_bc(this%l_lapwfn,rank,mpi_comm)
+    CALL mpi_bc(this%lapwfn_etot,rank,mpi_comm)
+    CALL mpi_bc(this%lapwfn_realise,rank,mpi_comm)
+    CALL mpi_bc(rank,mpi_comm,this%lapwfn_title)
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
@@ -141,6 +149,15 @@ CONTAINS
 
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
+    IF (xml%GetNumberOfNodes('/fleurInput/output/lapwfn')==1) THEN
+       this%l_lapwfn = .TRUE.
+       IF (xml%GetNumberOfNodes('/fleurInput/output/lapwfn/@totalEnergy')==1) &
+          this%lapwfn_etot = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/lapwfn/@totalEnergy'))
+       IF (xml%GetNumberOfNodes('/fleurInput/output/lapwfn/@realise')==1) &
+          this%lapwfn_realise = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/lapwfn/@realise'))
+       IF (xml%GetNumberOfNodes('/fleurInput/output/lapwfn/@title')==1) &
+          this%lapwfn_title = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/lapwfn/@title')))
+    END IF
     !this%l_slab = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@slab'))
     all_atoms=.true.
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')

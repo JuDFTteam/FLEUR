@@ -4374,6 +4374,11 @@
                <xsd:documentation>Parameters for calculations using DFPT.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element maxOccurs="1" minOccurs="0" name="lapwfn" type="LapwfnOutputType">
+            <xsd:annotation>
+               <xsd:documentation>Write the LAPW orbitals for CASINO (lapwfn.data, pwfn.data) and stop.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
       </xsd:all>
       <xsd:attribute default="F" name="dos" type="FleurBool" use="optional">
          <xsd:annotation>
@@ -4403,6 +4408,35 @@
       </xsd:attribute>
       <xsd:attribute default="F" name="coreSpec" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="LapwfnOutputType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Writes the all-electron LAPW orbitals of the converged ground state in the
+            code-neutral format read by the quantum Monte Carlo code CASINO: lapwfn.data
+            (spheres, radial functions, core states) and pwfn.data (interstitial plane
+            waves), for the k points of the selected list, then stops. Requires a converged
+            stored density, a non-relativistic calculation (expertModes/@warp_factor="10000.0")
+            and a non-spin-polarized collinear bulk LAPW setup. Contributed by Mike Towler;
+            see src/contributed/CASINO.
+         </xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="totalEnergy" type="FleurDouble" use="required">
+         <xsd:annotation>
+            <xsd:documentation>Total energy (Htr) of the converged calculation (totalEnergy in its out.xml).</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="T" name="realise" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>At k = G/2 replace degenerate levels by real orthonormal combinations.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="FLEUR LAPW orbitals" name="title" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Title written to the files.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="XASOutputType">

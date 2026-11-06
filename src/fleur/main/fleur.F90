@@ -59,6 +59,7 @@ MODULE m_fleur
    USE m_mpi_bc_tool
    USE m_eig66_io
    USE m_writeBasis
+   USE m_writeLapwfn
    USE m_RelaxSpinAxisMagn
    USE m_dfpt
    USE m_abcoeff_store
@@ -524,6 +525,11 @@ CONTAINS
             input_soc = fi%input
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) input_soc%neig = 2*fi%input%neig
             
+
+            IF (fi%banddos%l_lapwfn) THEN
+               IF (fmpi%irank==0) CALL write_lapwfn(fi, xcpot_iter, nococonv, enpara, vTot, results, fmpi, eig_id)
+               CALL juDFT_end("lapwfn.data and pwfn.data written. Fleur ends.", fmpi%irank)
+            END IF
 
             IF (fi%input%gw>0) THEN
                IF (fmpi%irank==0) THEN

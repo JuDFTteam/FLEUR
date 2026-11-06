@@ -1,0 +1,18 @@
+         <kPointLists>
+            <kPointList name="default-1" count="8" nx="4" ny="4" nz="4" type="mesh">
+               <kPoint weight="     1.0000000000000">   0.00/4.00    0.00/4.00    0.00/4.00</kPoint>
+               <kPoint weight="     8.0000000000000">   0.00/4.00    0.00/4.00    1.00/4.00</kPoint>
+               <kPoint weight="     4.0000000000000">   0.00/4.00    0.00/4.00    2.00/4.00</kPoint>
+               <kPoint weight="     6.0000000000000">   0.00/4.00    1.00/4.00    1.00/4.00</kPoint>
+               <kPoint weight="    24.0000000000000">   0.00/4.00    1.00/4.00    2.00/4.00</kPoint>
+               <kPoint weight="    12.0000000000000">   0.00/4.00    1.00/4.00    3.00/4.00</kPoint>
+               <kPoint weight="     3.0000000000000">   0.00/4.00    2.00/4.00    2.00/4.00</kPoint>
+               <kPoint weight="     6.0000000000000">   1.00/4.00    2.00/4.00    3.00/4.00</kPoint>
+            </kPointList>
+                     <kPointList name="qmc" count="4">
+               <kPoint weight="1.0">   0.000000000000    0.000000000000    0.000000000000</kPoint>
+               <kPoint weight="1.0">   0.500000000000    0.500000000000    0.000000000000</kPoint>
+               <kPoint weight="1.0">   0.500000000000    0.000000000000    0.500000000000</kPoint>
+               <kPoint weight="1.0">   0.000000000000    0.500000000000    0.500000000000</kPoint>
+            </kPointList>
+         </kPointLists>
