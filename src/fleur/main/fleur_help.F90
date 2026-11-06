@@ -124,6 +124,7 @@ CONTAINS
 #endif
          )
     CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
+    CALL new_argument(0,"-desym_test","DFPT: build the setup without symmetry in memory and compare the desymmetrized rho and V pointwise","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
     CALL new_argument(0,"-abcoeff_store","Cache and reuse the LAPW matching coefficients (abCoeffs) computed in hsmt_ab","")
     CALL new_argument(0,"-use_scalapack_redist","Use Scalapack for redistributing the matices","")   

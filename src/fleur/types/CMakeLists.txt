@@ -26,6 +26,7 @@ src/fleur/types/types_mpdata.f90
 src/fleur/types/types_mpi.F90
 src/fleur/types/types_mpimat.F90
 src/fleur/types/types_nococonv.F90
+src/fleur/types/types_desym_map.F90
 src/fleur/types/types_parallelLoop.F90
 src/fleur/types/types_potden.F90
 src/fleur/types/types_regionCharges.f90

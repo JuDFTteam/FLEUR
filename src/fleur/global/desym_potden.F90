@@ -1,0 +1,207 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+module m_desym_potden
+   use m_juDFT
+   use m_constants
+   use m_gaussp
+   use m_ylm
+   use m_spgrot
+   use m_outcdn
+   use m_plot, only: getMTSphere
+   use m_types_atoms
+   use m_types_cell
+   use m_types_desym_map
+   use m_types_fleurinput
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   implicit none
+   private
+   public :: desym_potden, desym_check_potden
+
+contains
+
+   subroutine desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, pd, pd_nosym)
+      !! Converts a density or potential of the symmetric setup (fi, stars, sphhar) into the desymmetrized setup (fi_nosym, stars_nosym, sphhar_nosym).
+      type(t_fleurinput), intent(in)  :: fi, fi_nosym
+      type(t_stars),      intent(in)  :: stars, stars_nosym
+      type(t_sphhar),     intent(in)  :: sphhar, sphhar_nosym
+      type(t_desym_map),  intent(in)  :: map
+      type(t_potden),     intent(in)  :: pd
+      type(t_potden),     intent(out) :: pd_nosym
+
+      integer :: it_nosym, it
+
+      if (fi%input%film) call juDFT_error("Vacuum desymmetrization is not implemented yet.", calledby="desym_potden")
+      if (fi%noco%l_noco) call juDFT_error("noco desymmetrization is not implemented yet.", calledby="desym_potden")
+
+      call pd_nosym%init(stars_nosym, fi_nosym%atoms, sphhar_nosym, fi_nosym%vacuum, fi_nosym%noco, fi%input%jspins, pd%potdenType, l_dfpt=allocated(pd%mtIm))
+      pd_nosym%iter = pd%iter
+
+      call desym_pw(fi%sym, stars, stars_nosym, pd%pw, pd_nosym%pw)
+      if (allocated(pd%pw_w)) then
+         allocate(pd_nosym%pw_w, mold=pd_nosym%pw)
+         pd_nosym%pw_w = cmplx(0.0, 0.0)
+         call desym_pw(fi%sym, stars, stars_nosym, pd%pw_w, pd_nosym%pw_w)
+      end if
+
+      do it_nosym = 1, fi_nosym%atoms%ntype
+         it = map%parent_type(it_nosym)
+         call desym_mt(fi, fi_nosym, sphhar, sphhar_nosym, it_nosym, map%type_op(it_nosym), pd%mt(:,:,it,:), pd_nosym%mt(:,:,it_nosym,:))
+         if (allocated(pd%mtIm)) call desym_mt(fi, fi_nosym, sphhar, sphhar_nosym, it_nosym, map%type_op(it_nosym), pd%mtIm(:,:,it,:), pd_nosym%mtIm(:,:,it_nosym,:))
+         pd_nosym%mtCore(:,it_nosym,:) = pd%mtCore(:,it,:)
+         pd_nosym%qint(it_nosym,:)     = pd%qint(it,:)
+         pd_nosym%tec(it_nosym,:)      = pd%tec(it,:)
+      end do
+
+   end subroutine desym_potden
+
+   subroutine desym_pw(sym, stars, stars_nosym, pw, pw_nosym)
+      !! Expands star coefficients of the symmetric setup into star coefficients without symmetry via the star members and phases.
+      type(t_sym),   intent(in)    :: sym
+      type(t_stars), intent(in)    :: stars, stars_nosym
+      complex,       intent(in)    :: pw(:,:)
+      complex,       intent(inout) :: pw_nosym(:,:)
+
+      integer :: is, iop, is_nosym, nspin
+      integer :: kr(3,sym%nop)
+      complex :: ph, ph_nosym
+
+      nspin = min(size(pw,2), size(pw_nosym,2))
+      do is = 1, stars%ng3
+         call spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, stars%kv3(:,is), kr)
+         do iop = 1, sym%nop
+            is_nosym = stars_nosym%ig(kr(1,iop), kr(2,iop), kr(3,iop))
+            if (is_nosym == 0) cycle
+            ph   = stars%rgphs(kr(1,iop), kr(2,iop), kr(3,iop))
+            ph_nosym = stars_nosym%rgphs(kr(1,iop), kr(2,iop), kr(3,iop))
+            if (abs(ph_nosym) < 1e-10) cycle
+            pw_nosym(is_nosym,:nspin) = pw(is,:nspin) * ph / ph_nosym
+         end do
+      end do
+
+   end subroutine desym_pw
+
+   subroutine desym_mt(fi, fi_nosym, sphhar, sphhar_nosym, it_nosym, iop, mt, mt_nosym)
+      !! Rotates the lattice-harmonic expansion of the parent type to the representative atom of type it_nosym
+      !! and projects it onto the lattice harmonics without symmetry. The overlap is integrated on a Gauss mesh.
+      type(t_fleurinput), intent(in)    :: fi, fi_nosym
+      type(t_sphhar),     intent(in)    :: sphhar, sphhar_nosym
+      integer,            intent(in)    :: it_nosym, iop
+      real,               intent(in)    :: mt(:,0:,:)
+      real,               intent(inout) :: mt_nosym(:,0:,:)
+
+      integer :: iatom, nd, nd_nosym, lmax, npts, ip, ilh, ilh_nosym, jri, ispin
+      real    :: rot(3,3), x(3)
+      real,    allocatable :: vg(:,:), wt(:), lh(:,:), lh_nosym(:,:), ovl(:,:), gram(:,:)
+      complex, allocatable :: ylm(:)
+
+      iatom = fi_nosym%atoms%firstAtom(it_nosym)
+      nd    = fi%sym%ntypsy(iatom)
+      nd_nosym  = fi_nosym%sym%ntypsy(iatom)
+      lmax  = max(maxval(sphhar%llh(0:sphhar%nlh(nd),nd)), maxval(sphhar_nosym%llh(0:sphhar_nosym%nlh(nd_nosym),nd_nosym)))
+      jri   = fi_nosym%atoms%jri(it_nosym)
+
+      ! Cartesian form of the operation used in outcdn: rho_atom(x) = rho_rep(rot x)
+      rot = matmul(fi%cell%amat, matmul(real(fi%sym%mrot(:,:,iop)), fi%cell%bmat)) / tpi_const
+
+      npts = (2*lmax+1) * (lmax+1+mod(lmax+1,2))
+      allocate(vg(3,npts), wt(npts), ylm((lmax+1)**2))
+      allocate(lh(npts,0:sphhar%nlh(nd)), lh_nosym(npts,0:sphhar_nosym%nlh(nd_nosym)))
+      call gaussp(lmax, vg, wt)
+
+      do ip = 1, npts
+         call ylm4(lmax, vg(:,ip), ylm)
+         call eval_lh(sphhar_nosym, nd_nosym, ylm, lh_nosym(ip,:))
+         x = matmul(rot, vg(:,ip))
+         call ylm4(lmax, x, ylm)
+         call eval_lh(sphhar, nd, ylm, lh(ip,:))
+      end do
+
+      allocate(ovl(0:sphhar_nosym%nlh(nd_nosym), 0:sphhar%nlh(nd)), gram(0:sphhar_nosym%nlh(nd_nosym), 0:sphhar_nosym%nlh(nd_nosym)))
+      do ilh_nosym = 0, sphhar_nosym%nlh(nd_nosym)
+         do ilh = 0, sphhar%nlh(nd)
+            ovl(ilh_nosym,ilh) = sum(wt * lh_nosym(:,ilh_nosym) * lh(:,ilh))
+         end do
+         do ilh = 0, sphhar_nosym%nlh(nd_nosym)
+            gram(ilh_nosym,ilh) = sum(wt * lh_nosym(:,ilh_nosym) * lh_nosym(:,ilh))
+            if (ilh == ilh_nosym) gram(ilh_nosym,ilh) = gram(ilh_nosym,ilh) - 1.0
+         end do
+      end do
+      if (maxval(abs(gram)) > 1e-8) call juDFT_error("Lattice harmonics of the target group are not orthonormal.", calledby="desym_mt")
+
+      do ispin = 1, min(size(mt,3), size(mt_nosym,3))
+         mt_nosym(:jri,:sphhar_nosym%nlh(nd_nosym),ispin) = matmul(mt(:jri,:sphhar%nlh(nd),ispin), transpose(ovl))
+      end do
+
+   end subroutine desym_mt
+
+   subroutine eval_lh(sphhar, nd, ylm, lh)
+      !! Values of the (real) lattice harmonics of symmetry nd from the spherical harmonics ylm at one point.
+      type(t_sphhar), intent(in)  :: sphhar
+      integer,        intent(in)  :: nd
+      complex,        intent(in)  :: ylm(:)
+      real,           intent(out) :: lh(0:)
+
+      integer :: ilh, imem, l, lm
+      complex :: s
+
+      do ilh = 0, sphhar%nlh(nd)
+         l = sphhar%llh(ilh,nd)
+         s = cmplx(0.0, 0.0)
+         do imem = 1, sphhar%nmem(ilh,nd)
+            lm = l*(l+1) + sphhar%mlh(imem,ilh,nd) + 1
+            s = s + sphhar%clnu(imem,ilh,nd) * ylm(lm)
+         end do
+         lh(ilh) = real(s)
+      end do
+
+   end subroutine eval_lh
+
+   subroutine desym_check_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, pd, pd_nosym, l_potential, ngrid, maxdev)
+      !! Largest deviation between pd and pd_nosym on a regular real-space grid of ngrid^3 points of the unit cell.
+      type(t_fleurinput), intent(in)  :: fi, fi_nosym
+      type(t_stars),      intent(in)  :: stars, stars_nosym
+      type(t_sphhar),     intent(in)  :: sphhar, sphhar_nosym
+      type(t_potden),     intent(in)  :: pd, pd_nosym
+      logical,            intent(in)  :: l_potential
+      integer,            intent(in)  :: ngrid
+      real,               intent(out) :: maxdev
+
+      integer :: ix, iy, iz, jsp, it, iatom, it_nosym, iatom_nosym, iflag
+      integer :: lv(3), lv_nosym(3)
+      real    :: point(3), pt(3), pt_nosym(3), p(3), p_nosym(3), val, val_nosym
+
+      maxdev = 0.0
+      do iz = 0, ngrid-1
+         do iy = 0, ngrid-1
+            do ix = 0, ngrid-1
+               point = matmul(fi%cell%amat, [real(ix), real(iy), real(iz)] / real(ngrid))
+               ! getMTSphere writes lattvec_index unconditionally, so it must be passed
+               call getMTSphere(fi%input, fi%cell, fi%atoms, point, it, iatom, pt, lv)
+               call getMTSphere(fi_nosym%input, fi_nosym%cell, fi_nosym%atoms, point, it_nosym, iatom_nosym, pt_nosym, lv_nosym)
+               if (iatom /= iatom_nosym) call juDFT_error("Atom indices differ between both setups.", calledby="desym_check_potden")
+               iflag = merge(1, 2, iatom /= 0)
+               if (iatom == 0) then
+                  pt = point
+                  pt_nosym = point
+               end if
+               do jsp = 1, fi%input%jspins
+                  p = pt
+                  p_nosym = pt_nosym
+                  call outcdn(p, it, iatom, 0, iflag, jsp, l_potential, stars, fi%vacuum, sphhar, fi%atoms, fi%sym, fi%cell, pd, val, lv)
+                  call outcdn(p_nosym, it_nosym, iatom_nosym, 0, iflag, jsp, l_potential, stars_nosym, fi_nosym%vacuum, sphhar_nosym, &
+                              fi_nosym%atoms, fi_nosym%sym, fi_nosym%cell, pd_nosym, val_nosym, lv_nosym)
+                  maxdev = max(maxdev, abs(val - val_nosym))
+               end do
+            end do
+         end do
+      end do
+
+   end subroutine desym_check_potden
+
+end module m_desym_potden

@@ -16,10 +16,9 @@ MODULE m_dfpt
    USE m_types_BEC
    USE m_types_bfield
    USE m_dfpt_postprocess_pot
-   USE m_desymmetrizer
-   USE m_outcdn
-   USE m_plot
-   USE m_fleur_init
+   USE m_desym_setup
+   USE m_desym_potden
+   USE m_types_desym_map
    USE m_types_lapw
    USE m_types_enpara
    USE m_types_fleurinput
@@ -41,7 +40,7 @@ MODULE m_dfpt
 
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: dfpt, dfpt_desym
+   PUBLIC :: dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
@@ -96,6 +95,11 @@ CONTAINS
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
      
+      if (judft_was_argument("-desym_test")) then
+         call dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, rho, vTot)
+         return
+      end if
+
       if (fmpi%irank==0) call dfpt_check(fi, xcpot)
 
       ! q_results saves the eigen-info for k+q, results1 for the perturbed quantities
@@ -206,135 +210,40 @@ CONTAINS
 
    END SUBROUTINE dfpt
 
-   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
-                         fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
+   subroutine dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, rho, vTot)
+      !! Builds the setup without symmetry in memory, desymmetrizes rho and vTot and reports their largest pointwise deviation.
+      type(t_fleurinput), intent(in) :: fi
+      type(t_mpi),        intent(in) :: fmpi
+      type(t_sphhar),     intent(in) :: sphhar
+      type(t_stars),      intent(in) :: stars
+      type(t_enpara),     intent(in) :: enpara
+      type(t_nococonv),   intent(in) :: nococonv
+      class(t_forcetheo), intent(in) :: forcetheo
+      type(t_potden),     intent(in) :: rho, vTot
 
-      TYPE(t_mpi),        INTENT(INOUT) :: fmpi_nosym
-      TYPE(t_fleurinput), INTENT(INOUT) :: fi_nosym
-      TYPE(t_sphhar),     INTENT(INOUT) :: sphhar_nosym
-      TYPE(t_stars),      INTENT(INOUT) :: stars_nosym
-      TYPE(t_nococonv),   INTENT(INOUT) :: nococonv_nosym
-      TYPE(t_enpara),     INTENT(INOUT) :: enpara_nosym
-      TYPE(t_results),    INTENT(INOUT) :: results_nosym
-      TYPE(t_hybdat),     INTENT(INOUT) :: hybdat_nosym
-      TYPE(t_mpdata),     INTENT(INOUT) :: mpdata_nosym
+      type(t_mpi)        :: fmpi_nosym
+      type(t_fleurinput) :: fi_nosym
+      type(t_stars)      :: stars_nosym
+      type(t_sphhar)     :: sphhar_nosym
+      type(t_enpara)     :: enpara_nosym
+      type(t_nococonv)   :: nococonv_nosym
+      type(t_desym_map)  :: map
+      type(t_potden)     :: rho_nosym, vTot_nosym
+      real :: dev_rho, dev_v
 
-      CLASS(t_xcpot),     ALLOCATABLE, INTENT(INOUT) :: xcpot_nosym
-      CLASS(t_forcetheo), ALLOCATABLE, INTENT(INOUT) :: forcetheo_nosym
+      call desym_setup(fmpi, fi, enpara, nococonv, forcetheo, fmpi_nosym, fi_nosym, stars_nosym, sphhar_nosym, enpara_nosym, nococonv_nosym, map)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, rho, rho_nosym)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, vTot, vTot_nosym)
 
-      TYPE(t_potden), INTENT(INOUT):: rho_nosym, vTot_nosym
-      TYPE(t_fleurinput), INTENT(IN) :: fi
-      TYPE(t_sphhar),     INTENT(IN) :: sphhar
-      TYPE(t_stars),      INTENT(IN) :: stars
-      TYPE(t_nococonv),   INTENT(IN) :: nococonv
-      TYPE(t_enpara),     INTENT(IN) :: enpara
-      TYPE(t_results),    INTENT(IN) :: results
-      TYPE(t_potden),   INTENT(IN) :: rho, vTot
+      if (fmpi%irank == 0) then
+         call desym_check_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, rho, rho_nosym, .false., 20, dev_rho)
+         call desym_check_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, vTot, vTot_nosym, .true., 20, dev_v)
+         write(oUnit, '(a,es12.4)') 'desym test: max deviation of rho:  ', dev_rho
+         write(oUnit, '(a,es12.4)') 'desym test: max deviation of vTot: ', dev_v
+         write(*, '(a,es12.4)') 'desym test: max deviation of rho:  ', dev_rho
+         write(*, '(a,es12.4)') 'desym test: max deviation of vTot: ', dev_v
+      end if
 
-      INTEGER, INTENT(IN) :: grid(3)
-
-      CHARACTER(len=100), INTENT(IN) :: inp_pref
-
-      INTEGER :: ix, iy, iz, iv_old, iflag_old, iv_new, iflag_new
-      INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new!, inversionOp
-      REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new!, atom_shift(3)
-      LOGICAL :: test_desym
-      CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
-                        enpara_nosym, xcpot_nosym, results_nosym, hybdat_nosym, mpdata_nosym, &
-                        inp_pref)
-
-      CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN)
-      CALL vTot_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
-
-      ! TODO: Correctly account for such a shift in the desymmetrization.
-      ! For now: Just build input, that does not necessitate a shift.
-      !        inversionOp = -1
-      !        symOpLoop: DO iSym = 1, sym%nop
-      !           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
-      !              inversionOp = iSym
-      !              EXIT symOpLoop
-      !           END IF
-      !        END DO symOpLoop
-
-      !        atom_shift = 0.0
-      !        IF (inversionOp.GT.0) THEN
-      !           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
-      !              atom_shift = 0.5*sym%tau(:,inversionOp)
-      !           END IF
-      !        END IF
-
-      ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
-      vTot_nosym%pw_w = CMPLX(0.0,0.0)
-
-      CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
-      CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
-      CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
-      CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
-
-      CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
-                              nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
-
-      test_desym = .FALSE.
-      IF (test_desym) THEN
-         DO iz = 0, grid(3)-1
-            DO iy = 0, grid(2)-1
-               DO ix = 0, grid(1)-1
-                  old_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                              fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                              fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)
-
-                  new_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                              fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                              fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)! - &
-                              !atom_shift
-
-                  ! Set region specific parameters for point
-                  ! Get MT sphere for point if point is in MT sphere
-                  CALL getMTSphere(fi%input,fi%cell,fi%atoms,old_point,iType_old,iAtom_old,pt_old)
-                  CALL getMTSphere(fi_nosym%input,fi_nosym%cell,fi_nosym%atoms,new_point,iType_new,iAtom_new,pt_new)
-                  IF (iAtom_old.NE.0) THEN
-                     iv_old = 0
-                     iflag_old = 1
-                  ELSE
-                     iv_old = 0
-                     iflag_old = 2
-                     pt_old(:) = old_point(:)
-                  END IF
-
-                  IF (iAtom_new.NE.0) THEN
-                     iv_new = 0
-                     iflag_new = 1
-                  ELSE
-                     iv_new = 0
-                     iflag_new = 2
-                     pt_new(:) = new_point(:)
-                  END IF
-
-                  ! Old point:
-                  CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.FALSE.,stars,&
-                              fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
-                              rho,xdnout_old)
-                  ! New point:
-                  CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.FALSE.,stars_nosym,&
-                              fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                              rho_nosym,xdnout_new)
-
-                  WRITE(9004,*) xdnout_new-xdnout_old
-
-                  ! Old point:
-                  CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.TRUE.,stars,&
-                              fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
-                              vTot,xdnout_old)
-                  ! New point:
-                  CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.TRUE.,stars_nosym,&
-                              fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                              vTot_nosym,xdnout_new)
-                  WRITE(9005,*) xdnout_new-xdnout_old
-               END DO !x-loop
-            END DO !y-loop
-         END DO !z-loop
-      END IF
-
-   END SUBROUTINE
+   end subroutine dfpt_desym_test
 
 END MODULE m_dfpt

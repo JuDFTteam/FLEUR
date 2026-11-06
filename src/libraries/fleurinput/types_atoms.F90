@@ -161,6 +161,7 @@ CONTAINS
   procedure :: l_apw
   procedure :: udot_rows
   procedure :: num_ab_rows
+  procedure :: split_types
 END TYPE t_atoms
 
 PUBLIC :: t_atoms,t_utype, readAtomAttribute
@@ -919,5 +920,109 @@ SUBROUTINE init_atoms(this,cell)
    this%n_denmat = this%n_u + this%n_hia + this%n_opc
 
 END SUBROUTINE init_atoms
+
+subroutine split_types(this, atoms_nosym, parent_type, ldau_parent)
+   !! Builds atoms_nosym with one type per atom (no symmetry); atom order and positions are kept.
+   !! parent_type(t) is the type in this of new type t, ldau_parent(i) the LDA+U entry in this of new entry i.
+   class(t_atoms), intent(in)          :: this
+   type(t_atoms), intent(out)          :: atoms_nosym
+   integer, allocatable, intent(out)   :: parent_type(:), ldau_parent(:)
+
+   integer :: ntype_nosym, iatom, it, i, n
+
+   ntype_nosym = this%nat
+   parent_type = this%itype
+
+   select type (this)
+   type is (t_atoms)
+      atoms_nosym = this
+   end select
+
+   atoms_nosym%ntype     = ntype_nosym
+   atoms_nosym%itype     = [(iatom, iatom = 1, this%nat)]
+   atoms_nosym%neq       = [(1, iatom = 1, this%nat)]
+   atoms_nosym%firstAtom = atoms_nosym%itype
+
+   atoms_nosym%nz            = this%nz(parent_type)
+   atoms_nosym%zatom         = this%zatom(parent_type)
+   atoms_nosym%jri           = this%jri(parent_type)
+   atoms_nosym%dx            = this%dx(parent_type)
+   atoms_nosym%rmt           = this%rmt(parent_type)
+   atoms_nosym%volmts        = this%volmts(parent_type)
+   atoms_nosym%rmsh          = this%rmsh(:,parent_type)
+   atoms_nosym%lmax          = this%lmax(parent_type)
+   atoms_nosym%lnonsph       = this%lnonsph(parent_type)
+   atoms_nosym%lapw_l        = this%lapw_l(parent_type)
+   atoms_nosym%ncv           = this%ncv(parent_type)
+   atoms_nosym%nlhtyp        = this%nlhtyp(parent_type)
+   ! econf and speciesName are not broadcast and only exist on rank 0
+   if (allocated(this%econf))       atoms_nosym%econf       = this%econf(parent_type)
+   if (allocated(this%speciesName)) atoms_nosym%speciesName = this%speciesName(parent_type)
+   atoms_nosym%bmu           = this%bmu(parent_type)
+   atoms_nosym%l_geo         = this%l_geo(parent_type)
+   atoms_nosym%relax         = this%relax(:,parent_type)
+   atoms_nosym%nlo           = this%nlo(parent_type)
+   atoms_nosym%llo           = this%llo(:,parent_type)
+   atoms_nosym%ulo_der       = this%ulo_der(:,parent_type)
+   atoms_nosym%l_dulo        = this%l_dulo(:,parent_type)
+   atoms_nosym%l_relLO       = this%l_relLO(:,parent_type)
+   atoms_nosym%nqn_relLO     = this%nqn_relLO(:,parent_type)
+   atoms_nosym%nRelLO        = this%nRelLO(parent_type)
+   ! lo1l and nlol start at l=0: allocate first so that the assignment keeps the lower bound
+   deallocate(atoms_nosym%lo1l, atoms_nosym%nlol)
+   allocate(atoms_nosym%lo1l(0:this%llod, ntype_nosym), atoms_nosym%nlol(0:this%llod, ntype_nosym))
+   atoms_nosym%lo1l          = this%lo1l(:,parent_type)
+   atoms_nosym%nlol          = this%nlol(:,parent_type)
+   atoms_nosym%flipSpinPhi   = this%flipSpinPhi(parent_type)
+   atoms_nosym%flipSpinTheta = this%flipSpinTheta(parent_type)
+   atoms_nosym%flipSpinScale = this%flipSpinScale(parent_type)
+   atoms_nosym%l_outputCFcdn = this%l_outputCFcdn(parent_type)
+   atoms_nosym%l_outputCFpot = this%l_outputCFpot(parent_type)
+   atoms_nosym%l_outputCFremove4f = this%l_outputCFremove4f(parent_type)
+   atoms_nosym%lda_atom      = this%lda_atom(parent_type)
+   atoms_nosym%l_nonpolbas   = this%l_nonpolbas(parent_type)
+
+   ! LDA+U entries first, LDA+Hubbard1 entries behind them, as in read_xml_atoms
+   if (allocated(atoms_nosym%lda_u)) deallocate(atoms_nosym%lda_u)
+   if (allocated(atoms_nosym%lda_opc)) deallocate(atoms_nosym%lda_opc)
+   allocate(atoms_nosym%lda_u(4*ntype_nosym), atoms_nosym%lda_opc(4*ntype_nosym))
+   allocate(ldau_parent(this%n_u*ntype_nosym + this%n_hia*ntype_nosym))
+   n = 0
+   atoms_nosym%n_u = 0
+   atoms_nosym%n_hia = 0
+   do it = 1, ntype_nosym
+      do i = 1, this%n_u
+         if (this%lda_u(i)%atomType /= parent_type(it)) cycle
+         n = n + 1
+         atoms_nosym%n_u = atoms_nosym%n_u + 1
+         atoms_nosym%lda_u(n) = this%lda_u(i)
+         atoms_nosym%lda_u(n)%atomType = it
+         ldau_parent(n) = i
+      end do
+   end do
+   do it = 1, ntype_nosym
+      do i = this%n_u + 1, this%n_u + this%n_hia
+         if (this%lda_u(i)%atomType /= parent_type(it)) cycle
+         n = n + 1
+         atoms_nosym%n_hia = atoms_nosym%n_hia + 1
+         atoms_nosym%lda_u(n) = this%lda_u(i)
+         atoms_nosym%lda_u(n)%atomType = it
+         ldau_parent(n) = i
+      end do
+   end do
+   ldau_parent = ldau_parent(:n)
+
+   atoms_nosym%n_opc = 0
+   do it = 1, ntype_nosym
+      do i = 1, this%n_opc
+         if (this%lda_opc(i)%atomType /= parent_type(it)) cycle
+         atoms_nosym%n_opc = atoms_nosym%n_opc + 1
+         atoms_nosym%lda_opc(atoms_nosym%n_opc) = this%lda_opc(i)
+         atoms_nosym%lda_opc(atoms_nosym%n_opc)%atomType = it
+      end do
+   end do
+   atoms_nosym%n_denmat = atoms_nosym%n_u + atoms_nosym%n_hia + atoms_nosym%n_opc
+
+end subroutine split_types
 
 END MODULE m_types_atoms
