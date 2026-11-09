@@ -82,7 +82,7 @@ CONTAINS
       CALL s%stars%init(s%fi%cell, s%fi%sym, s%fi%input%film, s%fi%input%rkmax)
    END SUBROUTINE gfprep_read_struct
 
-   SUBROUTINE gfprep_bulk_init(fmpi, bulkdir, outxmlFileID, b, den, vTot, vCoul)
+   SUBROUTINE gfprep_bulk_init(fmpi, bulkdir, outxmlFileID, b, den, vTot, vCoul, ef_bulk)
       !Reads the bulk supercell (or film) and its converged density from
       !bulkdir and generates the total and the Coulomb potential.
       TYPE(t_mpi), INTENT(INOUT)           :: fmpi
@@ -90,6 +90,7 @@ CONTAINS
       INTEGER, INTENT(IN)                  :: outxmlFileID
       TYPE(t_gfprep_struct), INTENT(OUT)   :: b
       TYPE(t_potden), INTENT(OUT)          :: den, vTot, vCoul
+      REAL, INTENT(OUT)                    :: ef_bulk !Fermi energy stored with the bulk density
 
       TYPE(t_nococonv) :: nococonv
       TYPE(t_results)  :: results
@@ -148,6 +149,7 @@ CONTAINS
                        b%fi%sym, archiveType, CDN_INPUT_DEN_const, 0, ef, dist, l_qfix, den, &
                        inFilename=TRIM(bulkdir)//"cdn")
       WRITE (oUnit, "(a,es12.4)") "gfprep: bulk density read, last distance:", dist
+      ef_bulk = ef
 
       !potentials
       CALL vTot%init(b%stars, b%fi%atoms, b%sphhar, b%fi%vacuum, b%fi%noco, b%fi%input%jspins, POTDEN_TYPE_POTTOT)

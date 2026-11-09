@@ -22,7 +22,7 @@ MODULE m_gfprep_write
    USE m_gfprep_layer, ONLY: t_gfprep_layer
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: gfprep_write_inpxml, gfprep_write_gfinp, gfprep_write_potden, gfprep_write_vacemb
+   PUBLIC :: gfprep_write_inpxml, gfprep_write_gfinp, gfprep_write_gfen, gfprep_write_potden, gfprep_write_vacemb
 
 CONTAINS
 
@@ -87,6 +87,29 @@ CONTAINS
          WRITE (98, "(a)") ","
       END SUBROUTINE priv_list
    END SUBROUTINE gfprep_write_gfinp
+
+
+   SUBROUTINE gfprep_write_gfen(ef)
+      !Template of the energy contour for the charge mode (gf_en.charge): a
+      !semicircle in the complex plane from below the valence bands to the
+      !Fermi energy of the bulk. Rename it to gf_en to use it.
+      REAL, INTENT(IN) :: ef
+
+      REAL, PARAMETER    :: width = 1.0 !start of the contour below E_F
+      INTEGER, PARAMETER :: npts = 15   !2**n-1
+      LOGICAL :: l_exist
+
+      INQUIRE (FILE="gf_en.charge", EXIST=l_exist)
+      IF (l_exist) THEN
+         WRITE (*, *) "gf_en.charge exists and is not overwritten"
+         RETURN
+      END IF
+      OPEN (98, FILE="gf_en.charge", STATUS="new", ACTION="write")
+      WRITE (98, "(a,i10)") "c       ", npts
+      WRITE (98, "(2f10.5)") ef - width, 0.0
+      WRITE (98, "(2f10.5)") ef, 0.0
+      CLOSE (98)
+   END SUBROUTINE gfprep_write_gfen
 
    SUBROUTINE gfprep_write_potden(ilay, l, vtot_mt, vtot_pw, vcoul_pw, den_mt, den_pw, l_noco)
       !Writes the converted potential (gf_pot.hdf) and density (gf_cdn.hdf)

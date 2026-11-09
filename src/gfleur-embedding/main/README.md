@@ -265,6 +265,32 @@ moments. FLEUR requires the symmetry operations of the input to be
 compatible with it. Collinear inputs with `l_soc="T"` (second-variation SOC)
 are rejected by gfprep and gfleur: set `l_noco="T"` instead.
 
+## Charge mode (self-consistency)
+
+`&MODE tmat=t, gmat=t, charge=t /` iterates the charge density of the layers
+between two leads (serial runs, collinear layers, no vacuum embedding yet):
+
+1. Prepare the leads and the stack from the same converged bulk calculation
+   with `gfprep` (same `kgrid` and Gmax scale). `gfprep` writes the Fermi
+   energy of the bulk and the energy contour `gf_en.charge` (semicircle of 15
+   points from 1 Htr below E_F to E_F); copy it to `gf_en`.
+2. Run the CBS of the lead period (see above) with this `gf_en`, with
+   `gf_cdn.hdf` present: it writes `embpot11.hdf`/`embpotN2.hdf` and the
+   `Boundary` group with the Coulomb potential of the leads.
+3. Run the stack with `&EMB addemb=t`, the `gf_io` of the transport runs and
+   e.g. `&SC iter=14, imix=7, maxiter=14, alpha=0.02 /`. `gf_cdn.hdf`
+   and `gf_pot.hdf` of `gfprep` are the start density and potential.
+
+Each iteration prints the total charge (`Total charge neutrality`), the
+l-like MT charges and the distance and step size of the mixing. The Fermi
+energy is fixed by the leads, the charge is not rescaled unless a file
+`qfix` exists. The Hartree response of a metallic stack has a charge-sloshing
+mode that makes plain mixing diverge for `alpha` above about 0.04; use
+Broyden mixing (`imix=7`) with `alpha=0.02`. (The total-charge cap
+`precond=4, g0max=<q>` of the preconditioner did not improve this for Cu.)
+The contour and the cylinder basis converge quickly; the in-plane k-mesh
+needs `kgrid` of at least 4x4 for Cu.
+
 ## Not supported
 
 * Self-consistent surfaces (`charge=t` with vacuum embedding).

@@ -45,7 +45,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: vpw(:, :), cpw(:), dpw(:, :)
       REAL, ALLOCATABLE      :: vmt(:, :, :, :), dmt(:, :, :, :), vz(:, :)
       INTEGER :: i, js, jspins, n, ierr, outxml, kgrid(2), nl, npw, nmt
-      REAL    :: dv, delz
+      REAL    :: dv, delz, ef_bulk
       LOGICAL :: l_film, l_noco
       CHARACTER(LEN=40) :: name
       CHARACTER(LEN=100) :: xml_add
@@ -74,7 +74,7 @@ CONTAINS
 
       !bulk: input, density and potentials
       CALL timestart("bulk")
-      CALL gfprep_bulk_init(fmpi, TRIM(inp%bulkdir), outxml, b, den, vTot, vCoul)
+      CALL gfprep_bulk_init(fmpi, TRIM(inp%bulkdir), outxml, b, den, vTot, vCoul, ef_bulk)
       CALL timestop("bulk")
       jspins = b%fi%input%jspins
       l_film = b%fi%input%film
@@ -184,6 +184,8 @@ CONTAINS
       END IF
 
       CALL gfprep_write_gfinp(inp%prefix, geo)
+      CALL gfprep_write_gfen(ef_bulk)
+      WRITE (*, "(a,f10.5,a)") "gfprep: Fermi energy of the bulk", ef_bulk, " Htr, contour template in gf_en.charge"
       WRITE (*, "(a,i0,a)") "gfprep: ", nl, " layers written, see gfprep_planes.txt and gf_inp"
    CONTAINS
       SUBROUTINE priv_check_offd(ilay)
