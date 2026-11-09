@@ -64,9 +64,6 @@
       IF (ld%fi%noco%l_ss) CALL juDFT_error(                             &
      &     "Spin spirals are not supported by gfleur",                   &
      &     calledby="gf_hs1lapw")
-      IF (ld%fi%noco%l_noco.AND.ld%fi%noco%l_soc) CALL juDFT_error(     &
-     &     "Spin-orbit coupling is not supported by gfleur",             &
-     &     calledby="gf_hs1lapw")
       nsp = MERGE(2,1,ld%fi%noco%l_noco)
       nlo = ld%fi%atoms%nlotot
 

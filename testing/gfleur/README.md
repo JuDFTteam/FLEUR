@@ -66,3 +66,10 @@ accuracy), T-matrices and Green functions with the gfprep potential, the
 DOS with vacuum embedding, the CBS with the lead embedding potentials, and
 the Landauer transmission. Not covered: self-consistent charge (`charge=t`),
 the bias-dependent current, and MPI runs.
+
+* `test_gfleur_noco.py` also covers spin-orbit coupling (first-variation SOC of
+  the noco Hamiltonian, `l_soc="T"` with `l_noco="T"`): the Mn film with the
+  moment along z (symmetry reduced to E and sigma_z, as FLEUR demands for SOC)
+  reproduces the SOC splitting of a d-level pair at Gamma of the `fleur`
+  eigenvalues, and sc Fe with SOC transmits every open channel. Collinear
+  inputs with `l_soc="T"` (second variation) are rejected by gfprep and gfleur.

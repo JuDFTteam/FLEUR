@@ -15,6 +15,10 @@ collinear one. The tests use this on
   moment along z, embedded in the vacuum on both sides (2x2 vacuum embedding
   potential): equal DOS peaks, and the z film run collinearly gives the same DOS.
 
+With spin-orbit coupling (first-variation SOC of the noco Hamiltonian) the same Mn film
+(moment along z, symmetry reduced for SOC) is compared with FLEUR: the SOC splitting of a
+d-level pair at Gamma, and sc Fe with SOC transmits every open channel of its own leads.
+
 Binaries are located via GFPREP_BINARY or <repo>/build*/gfprep; fleur and
 gfleur are taken from the same directory. Missing binaries skip the tests.
 """
@@ -290,13 +294,13 @@ def test_cbs_rotation_two_atoms_mtnocopot(tmp_path):
         assert max(min(dist(k, kb) for kb in b[e]) for k in a[e]) < 1e-5, f"E={e}"
 
 
-def _gf_en_dos():
-    n = round((E_MAX - E_MIN)/E_STEP) + 1
-    return f"l {n:14d}\n" + "".join(f"{E_MIN + i*E_STEP:10.5f}{E_IMAG:10.5f}{1.0:10.5f}{0.0:10.5f}\n"
+def _gf_en_dos(e_min=E_MIN, e_max=E_MAX, e_step=E_STEP, e_imag=E_IMAG):
+    n = round((e_max - e_min)/e_step) + 1
+    return f"l {n:14d}\n" + "".join(f"{e_min + i*e_step:10.5f}{e_imag:10.5f}{1.0:10.5f}{0.0:10.5f}\n"
                                     for i in range(n))
 
 
-def _film_dos(gfleur, prep, run, collinear=False):
+def _film_dos(gfleur, prep, run, collinear=False, window=()):
     """DOS at Gamma of the film embedded in the vacuum on both sides; rows of gf_DOS.raw"""
     _layer_files(prep, run)
     if collinear:
@@ -305,7 +309,7 @@ def _film_dos(gfleur, prep, run, collinear=False):
     assert "&EMB addemb=T, surface=T, vacleft=T /" in gfinp
     (run / "gf_inp").write_text(gfinp.replace("&MODE tmat=t, gmat=t /",
                                               f"&MODE tmat=t, gmat=t, dos=t /\n&BASIS napw={NAPW} /"))
-    (run / "gf_en").write_text(_gf_en_dos())
+    (run / "gf_en").write_text(_gf_en_dos(*window))
     (run / "gf_dos").write_text("&LDOS layer=1, atom=0, l=-1 /\n")
     proc, log = _run(gfleur, run)
     assert proc.returncode == 0, f"gfleur DOS run in {run} failed\n{log[-3000:]}"
@@ -380,3 +384,127 @@ def test_gfleur_rejects_noco_charge_mode(fe1):
     proc, log = _run(gfleur, run)
     assert proc.returncode != 0
     assert "The charge/SCF mode is not available for noco" in log
+
+
+SOC_OPS = {"E": ("1 0 0", "0 1 0", "0 0 1"), "sz": ("1 0 0", "0 1 0", "0 0 -1")}
+
+
+def _soc_film_input(work, ops, soc):
+    """MnFilmX with moment along z, symmetry reduced to ops (FLEUR demands compatibility with
+    SOC), a full 2x2 k mesh and l_soc=soc"""
+    work.mkdir()
+    text = (NOCO_INPUTS / "MnFilmX" / "inp.xml").read_text()
+    text = text.replace('beta="0.5*Pi"', 'beta="0.0"').replace('<soc l_soc="F"', f'<soc l_soc="{soc}"')
+    text = text.replace('itmax="5"', 'itmax="40"').replace('alpha="0.05"', 'alpha="0.15"')
+    (work / "inp.xml").write_text(text)
+    rows = "".join("         <symOp>\n" + "".join(f"            <row-{i + 1}>{SOC_OPS[o][i]} .0</row-{i + 1}>\n"
+                                                   for i in range(3)) + "         </symOp>\n" for o in ops)
+    (work / "sym.xml").write_text(f"      <symmetryOperations>\n{rows}      </symmetryOperations>\n")
+    kp = "".join(f'               <kPoint weight="1.0">  {a}.00/4.00    {b}.00/4.00    0.00/2.00</kPoint>\n'
+                 for a in ("-1", "1") for b in ("-1", "1"))
+    (work / "kpts.xml").write_text('         <kPointLists>\n            <kPointList name="default-5" count="4" '
+                                   f'nx="2" ny="2" nz="1" type="mesh">\n{kp}            </kPointList>\n'
+                                   "         </kPointLists>\n")
+
+
+def _gamma_eigenvalues(fleur, film, work):
+    """Eigenvalues of FLEUR at Gamma for the converged potential of film"""
+    shutil.copytree(film, work)
+    (work / "out.xml").unlink()
+    (work / "kpts.xml").write_text('         <kPointLists>\n            <kPointList name="default-5" count="1" '
+                                   'type="unspecified">\n               <kPoint weight="1.0"> 0.0 0.0 0.0</kPoint>\n'
+                                   "            </kPointList>\n         </kPointLists>\n")
+    _replace(work / "inp.xml", {'itmax="40"': 'itmax="1"'})
+    proc, log = _run(fleur, work)
+    assert proc.returncode == 0, f"fleur Gamma run failed\n{log[-3000:]}"
+    block = re.search(r'<eigenvaluesAt spin="1".*?>(.*?)</eigenvaluesAt>', (work / "out.xml").read_text(), re.S)
+    return [float(x) for x in block.group(1).split()]
+
+
+def test_film_dos_soc(tmp_path):
+    """Mn monolayer, moment along z, with and without SOC: the SOC splitting of the d-level pair
+    near -0.30 Htr at Gamma of the embedded-film DOS equals the splitting of the FLEUR eigenvalues.
+    Both are shifted by the (SOC independent) difference of the two methods."""
+    gfprep, fleur, gfleur = _binaries()
+    window = (-0.32, -0.28, 0.0002, 0.0003)
+    peaks, eigs = {}, {}
+    for soc in ("T", "F"):
+        _soc_film_input(tmp_path / f"in_{soc}", ("E", "sz"), soc)
+        _fleur_run(fleur, tmp_path / f"in_{soc}", tmp_path / f"film_{soc}", {},
+                   files=("inp.xml", "kpts.xml", "sym.xml"))
+        _gfprep(gfprep, tmp_path / f"prep_{soc}", tmp_path / f"film_{soc}", "planes_per_layer=1")
+        rows = _film_dos(gfleur, tmp_path / f"prep_{soc}", tmp_path / f"dos_{soc}", window=window)
+        peaks[soc] = [p for p in _dos_peaks(rows, 4) if -0.3005 < p < -0.2955]
+        eigs[soc] = [e for e in _gamma_eigenvalues(fleur, tmp_path / f"film_{soc}", tmp_path / f"gam_{soc}")
+                     if -0.305 < e < -0.2985]
+    # without SOC the pair is degenerate, SOC splits it
+    assert len(peaks["F"]) == 1 and len(peaks["T"]) == 2
+    assert len(eigs["F"]) == 2 and len(eigs["T"]) == 2
+    assert abs(eigs["F"][1] - eigs["F"][0]) < 3e-4
+    split_fleur = eigs["T"][1] - eigs["T"][0]
+    split_gf = peaks["T"][1] - peaks["T"][0]
+    assert split_fleur > 1e-3
+    assert split_gf == pytest.approx(split_fleur, abs=4e-4)
+
+
+@pytest.fixture(scope="module")
+def fe_soc(tmp_path_factory):
+    """sc Fe, moment along z, SOC: bulk (symmetry reduced to the identity, full k mesh), gfprep, CBS"""
+    gfprep, fleur, gfleur = _binaries()
+    base = tmp_path_factory.mktemp("noco_fe_soc")
+    src = base / "src"
+    src.mkdir()
+    text = (NOCO_INPUTS / "1atz" / "inp.xml").read_text()
+    text = re.sub(r"<symmetryOperations>.*?</symmetryOperations>",
+                  "<symmetryOperations>\n<symOp>\n<row-1>1 0 0 .0</row-1>\n<row-2>0 1 0 .0</row-2>\n"
+                  "<row-3>0 0 1 .0</row-3>\n</symOp>\n</symmetryOperations>", text, flags=re.S)
+    pts = "".join(f'<kPoint weight="1.0"> {a/4} {b/4} {c/4} </kPoint>\n'
+                  for a in (0, 1, 2, -1) for b in (0, 1, 2, -1) for c in (0, 1, 2, -1))
+    text = re.sub(r'<kPointList name="default" count="7">.*?</kPointList>',
+                  f'<kPointList name="default" count="64">\n{pts}</kPointList>', text, flags=re.S)
+    (src / "inp.xml").write_text(text.replace('l_soc="f"', 'l_soc="t"'))
+    _fleur_run(fleur, src, base / "bulk_z", {'itmax="2"': 'itmax="25"', 'alpha=".05000000"': 'alpha=".10000000"'})
+    _gfprep(gfprep, base / "prep_z", base / "bulk_z", "planes_per_layer=1")
+    _cbs(gfleur, base / "prep_z", base / "cbs_z")
+    return gfprep, gfleur, base
+
+
+def test_transmission_soc(fe_soc):
+    """With SOC the layer between its own CBS leads transmits every open channel."""
+    _, gfleur, base = fe_soc
+    run = base / "transport_z"
+    _layer_files(base / "prep_z", run)
+    for f in ("embpot11.hdf", "embpotN2.hdf"):
+        shutil.copy(base / "cbs_z" / f, run / f)
+    (run / "gf_en").write_text(GF_EN)
+    (run / "gf_inp").write_text(_layers_block(base / "prep_z") + "&MODE tmat=f, gmat=t, curr=-1 /\n"
+                                f"&BASIS napw={NAPW} /\n&EMB addemb=t /\n&SC iter=1 /\n")
+    (run / "gf_io").write_text("2\n&IO mode='E', region=1, side=1, rw='r', id=1 /\n"
+                               "&IO mode='E', region=1, side=2, rw='r', id=2 /\n"
+                               "&FILE name='embpot11' /\n&FILE name='embpotN2' /\n")
+    proc, log = _run(gfleur, run)
+    assert proc.returncode == 0, f"gfleur transport run failed\n{log[-3000:]}"
+    states = _bloch_states(base / "cbs_z" / "CBS_bloch.1")
+    lines = (run / "transcurrent").read_text().splitlines()
+    assert len(lines) == 2
+    for line in lines:
+        p = line.split()
+        e = round(float(p[3]), 4)
+        channels = len(states.get((e, 1), [])) // 2
+        assert channels > 0
+        assert float(p[4]) == pytest.approx(channels, abs=1e-3), f"E={e}"
+
+
+def test_gfprep_rejects_collinear_soc(tmp_path):
+    """gfprep stops with a clear message for second-variation SOC (l_soc=T without l_noco)."""
+    gfprep, _, _ = _binaries()
+    bulk = tmp_path / "bulk"
+    bulk.mkdir()
+    shutil.copy(NOCO_INPUTS / "1atz" / "inp.xml", bulk / "inp.xml")
+    _replace(bulk / "inp.xml", {'l_noco="t"': 'l_noco="f"', 'l_soc="f"': 'l_soc="t"'})
+    work = tmp_path / "prep"
+    work.mkdir()
+    (work / "gfprep_inp").write_text("&GFPREP bulkdir='../bulk/' kgrid=1,1 /\n")
+    proc, log = _run(gfprep, work)
+    assert proc.returncode != 0
+    assert "SOC is only supported together with l_noco=T" in log

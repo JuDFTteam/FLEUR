@@ -106,6 +106,9 @@ CONTAINS
         CALL juDFT_error("The third lattice vector must be perpendicular to the first two", &
                           hint="gfprep stacks the layers along z", calledby="gfprep_bulk_init")
       end if
+      IF (b%fi%noco%l_soc .AND. .NOT. b%fi%noco%l_noco) &
+         CALL juDFT_error("SOC is only supported together with l_noco=T", &
+                          hint="the second-variation SOC of collinear inputs is not available", calledby="gfprep_bulk_init")
       IF (b%fi%noco%l_noco) THEN
          IF (b%fi%noco%l_ss) CALL juDFT_error("Spin spirals are not supported by gfprep", calledby="gfprep_bulk_init")
          IF (ANY(b%fi%noco%l_alignMT)) CALL juDFT_error("relaxSQA is not supported by gfprep", &

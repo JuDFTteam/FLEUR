@@ -40,8 +40,8 @@ modes that use the converted potential or perform charge self-consistency.
 
 The layer XML files are the source of the electronic-structure settings:
 basis parameters, local orbitals and the exchange-correlation potential are
-configured there, not in `gf_inp`.  (LDA+U and spin-orbit coupling are
-not supported by the Green's-function kernels, see below.)  All layers must have the same in-plane lattice, two-dimensional
+configured there, not in `gf_inp`.  (LDA+U is not supported by the
+Green's-function kernels, spin-orbit coupling needs `l_noco="T"`, see below.)  All layers must have the same in-plane lattice, two-dimensional
 k-point set, number of spin channels, and non-collinear setting.
 
 ## Minimal `gf_inp`
@@ -255,15 +255,23 @@ Layers with `l_noco="T"` (from a noco bulk or film via `gfprep`) are treated
 in one spinor pass. The CBS, the layer and embedded DOS, the transmission
 and the vacuum embedding work as for collinear layers. In the DOS files the
 third spin is the off-diagonal (up-down) part; the MT DOS is given in the
-local spin frame of each atom type. Not supported: spin spirals,
-spin-orbit coupling with noco, and the `charge` (SCF) mode.
+local spin frame of each atom type. Not supported: spin spirals and the
+`charge` (SCF) mode.
+
+Spin-orbit coupling is the first-variation SOC of the noco Hamiltonian of
+FLEUR (`l_soc="T"` with `l_noco="T"` in the layer inputs, per-type
+`socscale` and `spav` are taken from there). The spin axis follows the
+moments. FLEUR requires the symmetry operations of the input to be
+compatible with it. Collinear inputs with `l_soc="T"` (second-variation SOC)
+are rejected by gfprep and gfleur: set `l_noco="T"` instead.
 
 ## Not supported
 
 * Self-consistent surfaces (`charge=t` with vacuum embedding).
-* Noco: spin spirals, spin-orbit coupling and the `charge` mode.
-* Spin-orbit coupling, LDA+U and Hubbard-1 are written into the layer inputs
-  by `gfprep` but are not used by the Green's-function kernels.
+* Noco: spin spirals and the `charge` mode.
+* Second-variation SOC (`l_soc="T"` with `l_noco="F"`).
+* LDA+U and Hubbard-1 are written into the layer inputs by `gfprep` but are
+  not used by the Green's-function kernels.
 
 ## Running
 
