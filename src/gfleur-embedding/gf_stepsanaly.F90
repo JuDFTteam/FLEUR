@@ -10,7 +10,7 @@
       use m_hdf_tools
       use m_gf_fft_singleton
       use m_constants, only: pi_const
-      use m_gf_ballpartfourier, only: ballpartfou
+      use m_gf_ballpartfourier, only: ballpart_step, n_ballpart_calls, n_ballpart_quad, n_ballpart_neval
       IMPLICIT NONE
                                                                         
       PRIVATE 
@@ -117,7 +117,7 @@
       REAL, ALLOCATABLE   :: cutpos(:,:),newpos(:,:),newrmt(:) 
       REAL, ALLOCATABLE   :: cutrmt(:),posL(:,:),posR(:,:),rmtL(:) 
       REAL, ALLOCATABLE   :: rmtR(:) 
-      REAL                :: c,time1,time2,time3 
+      REAL                :: c 
       LOGICAL             :: success 
       COMPLEX,ALLOCATABLE :: step_tmp(:,:,:) 
                                                                         
@@ -139,7 +139,9 @@
       !>                                                                
                                                                         
       !<-- Check if step functions are present                          
+      CALL timestart("step: load cached")
       CALL priv_loadstep(layer,success = success)
+      CALL timestop("step: load cached")
       IF (success) RETURN 
                                                                         
       WRITE(*,*) "Generating Step-function:",layer 
@@ -196,7 +198,7 @@
 !*************************************************                      
 ! Step functions for interstitial regions.                              
 !*************************************************                      
-      CALL cpu_time(time1) 
+      CALL timestart("step: interstitial (acca/cd)")
       CALL priv_generate_accastep(cell%bmat(3,3),                       &
      &  cell%amat(3,3),c,step_tmp)                                      
       stepkomplett=stepkomplett-step_tmp 
@@ -204,15 +206,14 @@
      &  cell%amat(3,3),c,cell%z1,step_tmp)                              
       stephelpreg_r=step_tmp 
       stephelpreg_l=conjg(step_tmp) 
-      CALL cpu_time(time2) 
-      time2=time2-time1 
+      CALL timestop("step: interstitial (acca/cd)")
                                                                         
 !****************************************************************       
 ! Some of the MT-spheres in [-c/2,c/2] might cut the acca volume.       
 ! The common part of the volumes would be double counted then.          
 ! Calculate the "double counting" here to subtract it again later.      
 !****************************************************************       
-      CALL cpu_time(time1) 
+      CALL timestart("step: cut spheres (layer)")
       CALL priv_generate_ballpartstep_right(cell%omtil,cell%bmat,c,     &
      &                   cell%amat(3,3),newpos,newrmt,step_tmp)         
       stepkomplett=stepkomplett+step_tmp 
@@ -221,8 +222,7 @@
      &                   cell%amat(3,3),newpos,newrmt,step_tmp)         
       stepkomplett=stepkomplett+step_tmp 
       stephelpreg_l=stephelpreg_l-step_tmp 
-      CALL cpu_time(time2) 
-      time2=time2-time1 
+      CALL timestop("step: cut spheres (layer)")
                                                                         
 !**************************************************************         
 ! Step functions due to atoms outside the embedding region.             
@@ -247,7 +247,7 @@
          ENDDO 
          IF (ABS(nl)+ABS(nr) /= 0) CALL juDFT_error(                      &
      &        "Misscount ingf_stepfunction")                            
-         CALL cpu_time(time1) 
+         CALL timestart("step: cut spheres (outside)")
          CALL priv_generate_ballpartstep_right(cell%omtil,cell%bmat,c,  &
      &                  cell%amat(3,3),posR,rmtR,step_tmp)              
          stepkomplett=stepkomplett-step_tmp 
@@ -256,8 +256,7 @@
      &                  cell%amat(3,3),posL,rmtL,step_tmp)              
          stepkomplett=stepkomplett-step_tmp 
          stephelpreg_l=stephelpreg_l+step_tmp 
-         CALL cpu_time(time2) 
-         time2=time2-time1 
+         CALL timestop("step: cut spheres (outside)")
                                                                         
       ENDIF 
       !>                                                                
@@ -267,18 +266,22 @@
 ! Full spheres are considered here, irrespective of whether             
 ! they cut the acca volume.                                             
 !***************************************************************        
-      CALL cpu_time(time1) 
+      CALL timestart("step: MT spheres")
       CALL priv_generate_MTstep(cell%omtil,cell%bmat,newpos,            &
      &                                        newrmt,step_tmp)          
-      CALL cpu_time(time2) 
-      time2=time2-time1 
+      CALL timestop("step: MT spheres")
       stepphys = stepkomplett 
       stepkomplett=stepkomplett-step_tmp 
                                                                         
                                                                         
+      WRITE(*,'(a,i0,a,3i6,a,i0,a,i0,a,i0)') " step layer ",layer," s_dim=",s_DIM, &
+     &     " ballpart calls=",n_ballpart_calls," dqag runs=",n_ballpart_quad, &
+     &     " integrand evals=",n_ballpart_neval
+      CALL timestart("step: save hdf")
       CALL priv_savesteps(layer,stepkomplett=stepkomplett,              &
      &     stephelpreg_r = stephelpreg_r,                               &
      &     stephelpreg_l = stephelpreg_l,stepphys=stepphys)             
+      CALL timestop("step: save hdf")
       DEALLOCATE(stepkomplett,stephelpreg_r,stephelpreg_l,stepphys) 
       DEALLOCATE(step_tmp) 
                                                                         
@@ -572,7 +575,6 @@
                IF(g1>(s_mx1+0.01)) g1 = g1-s_DIM(1) 
                IF(g2>(s_mx2+0.01)) g2 = g2-s_DIM(2) 
                IF(g3>(s_mx3+0.01)) g3 = g3-s_DIM(3) 
-               print *, "Smooth step"
                IF(ABS(g1)>stars%mx1)CYCLE
                IF(ABS(g2)>stars%mx2)CYCLE
                IF(ABS(g3)>stars%mx3)CYCLE
@@ -1018,259 +1020,67 @@
       END SUBROUTINE priv_generate_cdstepright 
                                                                         
                                                                         
-      SUBROUTINE priv_generate_ballpartstep(omtil,bmat,c,amat33,taual,  &
-     &            rmt,step)                                             
-!-----------------------------------------------                        
-!  Calculate the Fourier transform                                      
-!  of the stepfunction which equals one in a part of                    
-!  the MT-spheres and which is zero otherwise.                          
-!  Frank Freimuth, April 2007                                           
-!-----------------------------------------------                        
-      IMPLICIT NONE 
-      !<-- Arguments                                                    
-      REAL ,INTENT(IN)     :: omtil,bmat(3,3) 
-      REAL, INTENT(IN)     :: c,amat33 
-      REAL ,INTENT(IN)     :: taual(:,:) 
-      REAL ,INTENT(IN)     :: rmt(:) 
-                                                                        
-      COMPLEX,INTENT(OUT)  :: step(-s_mx1:,-s_mx2:,-s_mx3:) 
-      !>                                                                
-      !<-- Locals                                                       
-      INTEGER             :: n,k1,k2,k3 
-      REAL                :: rg(3),gs,th,gvec(3),tpi,pi 
-      REAL zcoor,kpara,korthogo 
-      COMPLEX value 
-      !>                                                                
-                                                                        
-                                                                        
-      pi=pi_const 
-      tpi=2.*pi_const 
-                                                                        
-      step = cmplx(0.0,0.0) 
-                                                                        
-      DO n = 1,SIZE(rmt) 
-                                                      !cut right dividin
-       IF(abs(c/2.0-taual(3,n)*amat33)<rmt(n))THEN 
-         zcoor=c/2.0-taual(3,n)*amat33 
-         IF(zcoor>=0)THEN 
+      SUBROUTINE priv_generate_ballpartstep_side(side,omtil,bmat,c,amat33,taual,  &
+     &            rmt,step)
+!-----------------------------------------------
+!  Calculate the Fourier transform of the stepfunction which
+!  equals one in the part of the MT-spheres beyond the dividing
+!  plane z = side*c/2 (side = +1: right, -1: left) which is cut
+!  by the plane, and which is zero otherwise.
+!  Frank Freimuth, April 2007
+!-----------------------------------------------
+      IMPLICIT NONE
+      INTEGER,INTENT(IN)   :: side
+      REAL ,INTENT(IN)     :: omtil,bmat(3,3)
+      REAL, INTENT(IN)     :: c,amat33
+      REAL ,INTENT(IN)     :: taual(:,:)
+      REAL ,INTENT(IN)     :: rmt(:)
+
+      COMPLEX,INTENT(OUT)  :: step(-s_mx1:,-s_mx2:,-s_mx3:)
+
+      INTEGER :: n
+      REAL    :: pi,zcoor
+
+      pi=pi_const
+      step = cmplx(0.0,0.0)
+
+      DO n = 1,SIZE(rmt)
+         zcoor = side*c/2.0-taual(3,n)*amat33
+         IF (ABS(zcoor)>=rmt(n)) CYCLE
+         IF(zcoor>=0)THEN
             step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3-          &
-     &               (rmt(n))**2*zcoor  +   zcoor**3/3.0     )/omtil    
-         ELSE 
+     &               (rmt(n))**2*zcoor  +   zcoor**3/3.0     )/omtil
+         ELSE
             step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3+          &
-     &               (rmt(n))**2*zcoor  -   zcoor**3/3.0     )/omtil    
-         ENDIF 
-         DO k1 = -s_mx1,s_mx1 
-            gvec(1)=k1 
-            DO k2 = -s_mx2,s_mx2 
-               gvec(2)=k2 
-               DO k3 = -s_mx3,s_mx3 
-                  IF (k1 == 0.AND.k2 == 0.AND.k3 == 0) CYCLE 
-                  gvec(3)=k3 
-                  rg  = MATMUL(gvec,bmat) 
-                  gs = SQRT(dot_PRODUCT(rg,rg))*rmt(n) 
-                  th =-tpi*dot_PRODUCT(gvec,taual(:,n)) 
-                  kpara=rg(3) 
-                  korthogo=sqrt( rg(1)*rg(1) + rg(2)*rg(2) ) 
-                  IF(zcoor>=0)THEN 
-                    CALL ballpartfou(rmt(n),zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                       conjg(value)*cmplx(cos(th),sin(th))/omtil  
-                  ELSE 
-                    CALL ballpartfou(rmt(n),-zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                             value *cmplx(cos(th),sin(th))/omtil  
-                  ENDIF 
-               ENDDO 
-            ENDDO 
-         ENDDO 
-              !right dividing plane is cut                              
-       ENDIF 
-                                                       !cut left dividin
-       IF(abs(-c/2.0-taual(3,n)*amat33)<rmt(n))THEN 
-         zcoor=-c/2.0-taual(3,n)*amat33 
-         IF(zcoor>=0)THEN 
-            step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3-          &
-     &               (rmt(n))**2*zcoor  +   zcoor**3/3.0     )/omtil    
-         ELSE 
-            step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3+          &
-     &               (rmt(n))**2*zcoor  -   zcoor**3/3.0     )/omtil    
-         ENDIF 
-         DO k1 = -s_mx1,s_mx1 
-            gvec(1)=k1 
-            DO k2 = -s_mx2,s_mx2 
-               gvec(2)=k2 
-               DO k3 = -s_mx3,s_mx3 
-                  IF (k1 == 0.AND.k2 == 0.AND.k3 == 0) CYCLE 
-                  gvec(3)=k3 
-                  rg  = MATMUL(gvec,bmat) 
-                  gs = SQRT(dot_PRODUCT(rg,rg))*rmt(n) 
-                  th =-tpi*dot_PRODUCT(gvec,taual(:,n)) 
-                  kpara=rg(3) 
-                  korthogo=sqrt( rg(1)*rg(1) + rg(2)*rg(2) ) 
-                  IF(zcoor>=0)THEN 
-                    CALL ballpartfou(rmt(n),zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                       conjg(value)*cmplx(cos(th),sin(th))/omtil  
-                  ELSE 
-                    CALL ballpartfou(rmt(n),-zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                             value *cmplx(cos(th),sin(th))/omtil  
-                  ENDIF 
-               ENDDO 
-            ENDDO 
-         ENDDO 
-              !left dividing plane is cut                               
-       ENDIF 
-            !loop over atoms                                            
-      ENDDO 
-                                                                        
-      END SUBROUTINE priv_generate_ballpartstep 
-                                                                        
-                                                                        
+     &               (rmt(n))**2*zcoor  -   zcoor**3/3.0     )/omtil
+         ENDIF
+         CALL ballpart_step(omtil,bmat,rmt(n),zcoor,taual(:,n),         &
+     &                      s_mx1,s_mx2,s_mx3,step)
+      ENDDO
+      END SUBROUTINE priv_generate_ballpartstep_side
+
       SUBROUTINE priv_generate_ballpartstep_right(                      &
      &            omtil,bmat,c,amat33,taual,                            &
-     &            rmt,step)                                             
-!-----------------------------------------------                        
-!  Calculate the Fourier transform                                      
-!  of the stepfunction which equals one in a part of                    
-!  the MT-spheres and which is zero otherwise.                          
-!  Frank Freimuth, April 2007                                           
-!-----------------------------------------------                        
-      IMPLICIT NONE 
-      !<-- Arguments                                                    
-      REAL ,INTENT(IN)     :: omtil,bmat(3,3) 
-      REAL, INTENT(IN)     :: c,amat33 
-      REAL ,INTENT(IN)     :: taual(:,:) 
-      REAL ,INTENT(IN)     :: rmt(:) 
-                                                                        
-      COMPLEX,INTENT(OUT)  :: step(-s_mx1:,-s_mx2:,-s_mx3:) 
-      !>                                                                
-      !<-- Locals                                                       
-      INTEGER             :: n,k1,k2,k3 
-      REAL                :: rg(3),gs,th,gvec(3),tpi,pi 
-      REAL zcoor,kpara,korthogo 
-      COMPLEX value 
-      !>                                                                
-                                                                        
-                                                                        
-      pi=pi_const 
-      tpi=2.*pi_const 
-                                                                        
-      step = cmplx(0.0,0.0) 
-                                                                        
-      DO n = 1,SIZE(rmt) 
-                                                      !cut right dividin
-       IF(abs(c/2.0-taual(3,n)*amat33)<rmt(n))THEN 
-         zcoor=c/2.0-taual(3,n)*amat33 
-         IF(zcoor>=0)THEN 
-            step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3-          &
-     &               (rmt(n))**2*zcoor  +   zcoor**3/3.0     )/omtil    
-         ELSE 
-            step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3+          &
-     &               (rmt(n))**2*zcoor  -   zcoor**3/3.0     )/omtil    
-         ENDIF 
-         DO k1 = -s_mx1,s_mx1 
-            gvec(1)=k1 
-            DO k2 = -s_mx2,s_mx2 
-               gvec(2)=k2 
-               DO k3 = -s_mx3,s_mx3 
-                  IF (k1 == 0.AND.k2 == 0.AND.k3 == 0) CYCLE 
-                  gvec(3)=k3 
-                  rg  = MATMUL(gvec,bmat) 
-                  gs = SQRT(dot_PRODUCT(rg,rg))*rmt(n) 
-                  th =-tpi*dot_PRODUCT(gvec,taual(:,n)) 
-                  kpara=rg(3) 
-                  korthogo=sqrt( rg(1)*rg(1) + rg(2)*rg(2) ) 
-                  IF(zcoor>=0)THEN 
-                    CALL ballpartfou(rmt(n),zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                       conjg(value)*cmplx(cos(th),sin(th))/omtil  
-                  ELSE 
-                    CALL ballpartfou(rmt(n),-zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                             value *cmplx(cos(th),sin(th))/omtil  
-                  ENDIF 
-               ENDDO 
-            ENDDO 
-         ENDDO 
-              !right dividing plane is cut                              
-       ENDIF 
-            !loop over atoms                                            
-      ENDDO 
-                                                                        
-      END SUBROUTINE priv_generate_ballpartstep_right 
-                                                                        
+     &            rmt,step)
+      IMPLICIT NONE
+      REAL ,INTENT(IN)     :: omtil,bmat(3,3)
+      REAL, INTENT(IN)     :: c,amat33
+      REAL ,INTENT(IN)     :: taual(:,:)
+      REAL ,INTENT(IN)     :: rmt(:)
+      COMPLEX,INTENT(OUT)  :: step(-s_mx1:,-s_mx2:,-s_mx3:)
+      CALL priv_generate_ballpartstep_side(1,omtil,bmat,c,amat33,taual,rmt,step)
+      END SUBROUTINE priv_generate_ballpartstep_right
+
       SUBROUTINE priv_generate_ballpartstep_left(                       &
      &            omtil,bmat,c,amat33,taual,                            &
-     &            rmt,step)                                             
-!-----------------------------------------------                        
-!  Calculate the Fourier transform                                      
-!  of the stepfunction which equals one in a part of                    
-!  the MT-spheres and which is zero otherwise.                          
-!  Frank Freimuth, April 2007                                           
-!-----------------------------------------------                        
-      IMPLICIT NONE 
-      !<-- Arguments                                                    
-      REAL ,INTENT(IN)     :: omtil,bmat(3,3) 
-      REAL, INTENT(IN)     :: c,amat33 
-      REAL ,INTENT(IN)     :: taual(:,:) 
-      REAL ,INTENT(IN)     :: rmt(:) 
-                                                                        
-      COMPLEX,INTENT(OUT)  :: step(-s_mx1:,-s_mx2:,-s_mx3:) 
-      !>                                                                
-      !<-- Locals                                                       
-      INTEGER             :: n,k1,k2,k3 
-      REAL                :: rg(3),gs,th,gvec(3),tpi,pi 
-      REAL zcoor,kpara,korthogo 
-      COMPLEX value 
-      !>                                                                
-                                                                        
-                                                                        
-      pi=pi_const 
-      tpi=2.*pi_const 
-                                                                        
-      step = cmplx(0.0,0.0) 
-                                                                        
-      DO n = 1,SIZE(rmt) 
-                                                       !cut left dividin
-       IF(abs(-c/2.0-taual(3,n)*amat33)<rmt(n))THEN 
-         zcoor=-c/2.0-taual(3,n)*amat33 
-         IF(zcoor>=0)THEN 
-            step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3-          &
-     &               (rmt(n))**2*zcoor  +   zcoor**3/3.0     )/omtil    
-         ELSE 
-            step(0,0,0)=step(0,0,0)+pi*(  2.0/3.0*(rmt(n))**3+          &
-     &               (rmt(n))**2*zcoor  -   zcoor**3/3.0     )/omtil    
-         ENDIF 
-         DO k1 = -s_mx1,s_mx1 
-            gvec(1)=k1 
-            DO k2 = -s_mx2,s_mx2 
-               gvec(2)=k2 
-               DO k3 = -s_mx3,s_mx3 
-                  IF (k1 == 0.AND.k2 == 0.AND.k3 == 0) CYCLE 
-                  gvec(3)=k3 
-                  rg  = MATMUL(gvec,bmat) 
-                  gs = SQRT(dot_PRODUCT(rg,rg))*rmt(n) 
-                  th =-tpi*dot_PRODUCT(gvec,taual(:,n)) 
-                  kpara=rg(3) 
-                  korthogo=sqrt( rg(1)*rg(1) + rg(2)*rg(2) ) 
-                  IF(zcoor>=0)THEN 
-                    CALL ballpartfou(rmt(n),zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                       conjg(value)*cmplx(cos(th),sin(th))/omtil  
-                  ELSE 
-                    CALL ballpartfou(rmt(n),-zcoor,kpara,korthogo,value) 
-                    step(k1,k2,k3) = step(k1,k2,k3)+                    &
-     &                             value *cmplx(cos(th),sin(th))/omtil  
-                  ENDIF 
-               ENDDO 
-            ENDDO 
-         ENDDO 
-              !left dividing plane is cut                               
-       ENDIF 
-            !loop over atoms                                            
-      ENDDO 
-                                                                        
-      END SUBROUTINE priv_generate_ballpartstep_left 
-                                                                        
-      END                                           
+     &            rmt,step)
+      IMPLICIT NONE
+      REAL ,INTENT(IN)     :: omtil,bmat(3,3)
+      REAL, INTENT(IN)     :: c,amat33
+      REAL ,INTENT(IN)     :: taual(:,:)
+      REAL ,INTENT(IN)     :: rmt(:)
+      COMPLEX,INTENT(OUT)  :: step(-s_mx1:,-s_mx2:,-s_mx3:)
+      CALL priv_generate_ballpartstep_side(-1,omtil,bmat,c,amat33,taual,rmt,step)
+      END SUBROUTINE priv_generate_ballpartstep_left
+
+      END MODULE m_gf_stepsanaly
