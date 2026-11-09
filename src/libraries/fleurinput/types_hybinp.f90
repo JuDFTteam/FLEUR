@@ -39,6 +39,8 @@ MODULE m_types_hybinp
       PROCEDURE :: mpi_bc => mpi_bc_hybinp
       PROCEDURE :: init => init_hybinp
       PROCEDURE :: gen_map => gen_map_hybinp
+      PROCEDURE :: gen_map_all
+      PROCEDURE :: gen_d_wgn2
    END TYPE t_hybinp
    PUBLIC t_hybinp
 
@@ -132,36 +134,89 @@ CONTAINS
       type(t_sym), intent(in)        :: sym
       class(t_xcpot), intent(in)     :: xcpot
 
-      integer :: isym, iisym, l, m2, m1
-
       IF (xcpot%is_hybrid() .OR. input%l_rdmft) THEN
-         !             IF( ANY( atoms%l_geo  ) )&
-         !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
-         !                  &                    calledby ="fleur")
-
          CALL self%gen_map(atoms, sym)
-
-         ! calculate d_wgn
-         ALLOCATE (self%d_wgn2(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd, 0:atoms%lmaxd, sym%nsym))
-         CALL d_wigner(sym%nop, sym%mrot, cell%bmat, atoms%lmaxd, self%d_wgn2(:, :, 1:, :sym%nop))
-         self%d_wgn2(:, :, 0, :) = 1
-
-         DO isym = sym%nop + 1, sym%nsym
-            iisym = isym - sym%nop
-            DO l = 0, atoms%lmaxd
-               DO m2 = -l, l
-                  DO m1 = -l, -1
-                     self%d_wgn2(m1, m2, l, isym)  = self%d_wgn2(-m1, m2, l, iisym)*(-1)**m1
-                     self%d_wgn2(-m1, m2, l, isym) = self%d_wgn2( m1, m2, l, iisym)*(-1)**m1
-                  END DO
-                  self%d_wgn2(0, m2, l, isym) = self%d_wgn2(0, m2, l, iisym)
-               END DO
-            END DO
-         END DO
+         CALL self%gen_d_wgn2(atoms, cell, sym)
       ELSE
          ALLOCATE (self%map(0, 0), self%tvec(0, 0, 0), self%d_wgn2(0, 0, 0, 0))
       ENDIF
    END SUBROUTINE init_hybinp
+
+   subroutine gen_d_wgn2(self, atoms, cell, sym)
+      !! Wigner d matrices of all operations for l = 0..lmaxd, incl. the time-reversal half (isym > nop).
+      class(t_hybinp), intent(inout) :: self
+      type(t_atoms),   intent(in)    :: atoms
+      type(t_cell),    intent(in)    :: cell
+      type(t_sym),     intent(in)    :: sym
+
+      integer :: isym, iisym, l, m2, m1
+
+      if (allocated(self%d_wgn2)) deallocate(self%d_wgn2)
+      allocate(self%d_wgn2(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd, 0:atoms%lmaxd, sym%nsym))
+      call d_wigner(sym%nop, sym%mrot, cell%bmat, atoms%lmaxd, self%d_wgn2(:, :, 1:, :sym%nop))
+      self%d_wgn2(:, :, 0, :) = 1
+
+      do isym = sym%nop + 1, sym%nsym
+         iisym = isym - sym%nop
+         do l = 0, atoms%lmaxd
+            do m2 = -l, l
+               do m1 = -l, -1
+                  self%d_wgn2(m1, m2, l, isym)  = self%d_wgn2(-m1, m2, l, iisym)*(-1)**m1
+                  self%d_wgn2(-m1, m2, l, isym) = self%d_wgn2( m1, m2, l, iisym)*(-1)**m1
+               end do
+               self%d_wgn2(0, m2, l, isym) = self%d_wgn2(0, m2, l, iisym)
+            end do
+         end do
+      end do
+
+   end subroutine gen_d_wgn2
+
+   subroutine gen_map_all(self, atoms, sym, l_film)
+      !! Image atom and lattice vector of every atom under every operation, searching all atoms
+      !! (gen_map only searches the equivalent atoms of the same type).
+      class(t_hybinp), intent(inout) :: self
+      type(t_atoms),   intent(in)    :: atoms
+      type(t_sym),     intent(in)    :: sym
+      logical,         intent(in)    :: l_film
+
+      integer :: iatom, jatom, isym, iisym, ratom
+      real    :: rtaual(3), dvec(3), dist, minDist
+
+      if (allocated(self%map))  deallocate(self%map)
+      if (allocated(self%tvec)) deallocate(self%tvec)
+      allocate(self%map(atoms%nat, sym%nsym), source=0)
+      allocate(self%tvec(3, atoms%nat, sym%nsym), source=0)
+
+      do isym = 1, sym%nsym
+         iisym = isym
+         if (isym > sym%nop) iisym = isym - sym%nop
+
+         do iatom = 1, atoms%nat
+            rtaual = matmul(sym%mrot(:, :, iisym), atoms%taual(:, iatom)) + sym%tau(:, iisym)
+
+            ratom   = 0
+            minDist = 1e33
+            do jatom = 1, atoms%nat
+               dvec = map_to_unit(rtaual - atoms%taual(:, jatom))
+               ! a film is not periodic along z
+               if (l_film) dvec(3) = rtaual(3) - atoms%taual(3, jatom)
+               dist = norm2(dvec)
+               if (dist < minDist) then
+                  minDist = dist
+                  ratom   = jatom
+               end if
+            end do
+
+            if (minDist > 1e-6) call judft_error("No image atom for a symmetry operation.", calledby="gen_map_all")
+            if (atoms%nz(atoms%itype(ratom)) /= atoms%nz(atoms%itype(iatom))) &
+               call judft_error("Symmetry maps an atom onto a different element.", calledby="gen_map_all")
+
+            self%map(iatom, isym)     = ratom
+            self%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
+         end do
+      end do
+
+   end subroutine gen_map_all
 
    SUBROUTINE gen_map_hybinp(hybinp, atoms, sym)
        

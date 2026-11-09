@@ -21,7 +21,7 @@ module m_desym_potden
    use m_types_sym
    implicit none
    private
-   public :: desym_potden, desym_check_potden
+   public :: desym_potden, desym_check_potden, potden_on_grid
 
 contains
 
@@ -172,36 +172,46 @@ contains
       integer,            intent(in)  :: ngrid
       real,               intent(out) :: maxdev
 
-      integer :: ix, iy, iz, jsp, it, iatom, it_nosym, iatom_nosym, iflag
-      integer :: lv(3), lv_nosym(3)
-      real    :: point(3), pt(3), pt_nosym(3), p(3), p_nosym(3), val, val_nosym
+      real, allocatable :: vals(:,:), vals_nosym(:,:), points(:,:)
 
-      maxdev = 0.0
+      call potden_on_grid(fi, stars, sphhar, pd, l_potential, ngrid, points, vals)
+      call potden_on_grid(fi_nosym, stars_nosym, sphhar_nosym, pd_nosym, l_potential, ngrid, points, vals_nosym)
+      maxdev = maxval(abs(vals - vals_nosym))
+
+   end subroutine desym_check_potden
+
+   subroutine potden_on_grid(fi, stars, sphhar, pd, l_potential, ngrid, points, vals)
+      !! Values of pd at the ngrid^3 points of a regular grid of the unit cell (cartesian points(3,ngrid^3)), vals(ngrid^3,jspins).
+      type(t_fleurinput),   intent(in)  :: fi
+      type(t_stars),        intent(in)  :: stars
+      type(t_sphhar),       intent(in)  :: sphhar
+      type(t_potden),       intent(in)  :: pd
+      logical,              intent(in)  :: l_potential
+      integer,              intent(in)  :: ngrid
+      real, allocatable,    intent(out) :: points(:,:), vals(:,:)
+
+      integer :: ix, iy, iz, ip, jsp, it, iatom, iflag, lv(3)
+      real    :: pt(3), p(3)
+
+      allocate(points(3, ngrid**3), vals(ngrid**3, fi%input%jspins))
+      ip = 0
       do iz = 0, ngrid-1
          do iy = 0, ngrid-1
             do ix = 0, ngrid-1
-               point = matmul(fi%cell%amat, [real(ix), real(iy), real(iz)] / real(ngrid))
+               ip = ip + 1
+               points(:,ip) = matmul(fi%cell%amat, [real(ix), real(iy), real(iz)] / real(ngrid))
                ! getMTSphere writes lattvec_index unconditionally, so it must be passed
-               call getMTSphere(fi%input, fi%cell, fi%atoms, point, it, iatom, pt, lv)
-               call getMTSphere(fi_nosym%input, fi_nosym%cell, fi_nosym%atoms, point, it_nosym, iatom_nosym, pt_nosym, lv_nosym)
-               if (iatom /= iatom_nosym) call juDFT_error("Atom indices differ between both setups.", calledby="desym_check_potden")
+               call getMTSphere(fi%input, fi%cell, fi%atoms, points(:,ip), it, iatom, pt, lv)
                iflag = merge(1, 2, iatom /= 0)
-               if (iatom == 0) then
-                  pt = point
-                  pt_nosym = point
-               end if
+               if (iatom == 0) pt = points(:,ip)
                do jsp = 1, fi%input%jspins
                   p = pt
-                  p_nosym = pt_nosym
-                  call outcdn(p, it, iatom, 0, iflag, jsp, l_potential, stars, fi%vacuum, sphhar, fi%atoms, fi%sym, fi%cell, pd, val, lv)
-                  call outcdn(p_nosym, it_nosym, iatom_nosym, 0, iflag, jsp, l_potential, stars_nosym, fi_nosym%vacuum, sphhar_nosym, &
-                              fi_nosym%atoms, fi_nosym%sym, fi_nosym%cell, pd_nosym, val_nosym, lv_nosym)
-                  maxdev = max(maxdev, abs(val - val_nosym))
+                  call outcdn(p, it, iatom, 0, iflag, jsp, l_potential, stars, fi%vacuum, sphhar, fi%atoms, fi%sym, fi%cell, pd, vals(ip,jsp), lv)
                end do
             end do
          end do
       end do
 
-   end subroutine desym_check_potden
+   end subroutine potden_on_grid
 
 end module m_desym_potden

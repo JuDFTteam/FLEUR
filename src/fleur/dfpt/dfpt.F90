@@ -18,6 +18,8 @@ MODULE m_dfpt
    USE m_dfpt_postprocess_pot
    USE m_desym_setup
    USE m_desym_potden
+   USE m_desym_eigvec
+   USE m_npy, only: save_npy
    USE m_types_desym_map
    USE m_types_lapw
    USE m_types_enpara
@@ -96,7 +98,7 @@ CONTAINS
       nspins = MERGE(2, 1, fi%noco%l_noco)
      
       if (judft_was_argument("-desym_test")) then
-         call dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, rho, vTot)
+         call dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, xcpot, hybdat, rho, vTot, eig_id, results)
          return
       end if
 
@@ -210,8 +212,8 @@ CONTAINS
 
    END SUBROUTINE dfpt
 
-   subroutine dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, rho, vTot)
-      !! Builds the setup without symmetry in memory, desymmetrizes rho and vTot and reports their largest pointwise deviation.
+   subroutine dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, xcpot, hybdat, rho, vTot, eig_id, results)
+      !! Builds the setup without symmetry in memory, desymmetrizes rho, vTot and the eigenvectors and reports their largest deviations.
       type(t_fleurinput), intent(in) :: fi
       type(t_mpi),        intent(in) :: fmpi
       type(t_sphhar),     intent(in) :: sphhar
@@ -219,7 +221,11 @@ CONTAINS
       type(t_enpara),     intent(in) :: enpara
       type(t_nococonv),   intent(in) :: nococonv
       class(t_forcetheo), intent(in) :: forcetheo
+      class(t_xcpot),     intent(in) :: xcpot
+      type(t_hybdat),     intent(inout) :: hybdat
       type(t_potden),     intent(in) :: rho, vTot
+      integer,            intent(in) :: eig_id
+      type(t_results),    intent(in) :: results
 
       type(t_mpi)        :: fmpi_nosym
       type(t_fleurinput) :: fi_nosym
@@ -229,19 +235,41 @@ CONTAINS
       type(t_nococonv)   :: nococonv_nosym
       type(t_desym_map)  :: map
       type(t_potden)     :: rho_nosym, vTot_nosym
-      real :: dev_rho, dev_v
+      type(t_results)    :: results_nosym
+      integer :: eig_id_nosym
+      real :: dev_rho, dev_v, dev_cmt, res_ham, dev_orth
+      real, allocatable :: points(:,:), vals(:,:)
 
       call desym_setup(fmpi, fi, enpara, nococonv, forcetheo, fmpi_nosym, fi_nosym, stars_nosym, sphhar_nosym, enpara_nosym, nococonv_nosym, map)
       call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, rho, rho_nosym)
       call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, vTot, vTot_nosym)
+      call desym_eigvec(fi, enpara, nococonv, vTot, eig_id, results, fmpi_nosym, fi_nosym, enpara_nosym, nococonv_nosym, vTot_nosym, &
+                        map, eig_id_nosym, results_nosym, dev_cmt)
+      call desym_dump_eigvec(fmpi_nosym, fi_nosym, nococonv_nosym, eig_id_nosym)
+      call desym_check_hamiltonian(fmpi_nosym, fi_nosym, stars_nosym, sphhar_nosym, xcpot, hybdat, enpara_nosym, nococonv_nosym, results_nosym, &
+                                   rho_nosym, vTot_nosym, eig_id_nosym, res_ham, dev_orth)
+      call close_eig(eig_id_nosym)
 
       if (fmpi%irank == 0) then
          call desym_check_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, rho, rho_nosym, .false., 20, dev_rho)
          call desym_check_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, vTot, vTot_nosym, .true., 20, dev_v)
+
+         ! Desymmetrized rho and vTot on the grid, compared with a run without symmetry by run_desym_test.sh
+         call potden_on_grid(fi_nosym, stars_nosym, sphhar_nosym, rho_nosym, .false., 20, points, vals)
+         call save_npy("desym_grid.npy", points)
+         call save_npy("desym_rho.npy", vals)
+         call potden_on_grid(fi_nosym, stars_nosym, sphhar_nosym, vTot_nosym, .true., 20, points, vals)
+         call save_npy("desym_vtot.npy", vals)
          write(oUnit, '(a,es12.4)') 'desym test: max deviation of rho:  ', dev_rho
          write(oUnit, '(a,es12.4)') 'desym test: max deviation of vTot: ', dev_v
+         write(oUnit, '(a,es12.4)') 'desym test: max deviation of MT coefficients of the rotated eigenvectors: ', dev_cmt
          write(*, '(a,es12.4)') 'desym test: max deviation of rho:  ', dev_rho
          write(*, '(a,es12.4)') 'desym test: max deviation of vTot: ', dev_v
+         write(*, '(a,es12.4)') 'desym test: max deviation of MT coefficients of the rotated eigenvectors: ', dev_cmt
+         write(oUnit, '(a,es12.4)') 'desym test: max |(H - eps S) z| of the rotated eigenvectors: ', res_ham
+         write(oUnit, '(a,es12.4)') 'desym test: max |z^H S z - 1| of the rotated eigenvectors: ', dev_orth
+         write(*, '(a,es12.4)') 'desym test: max |(H - eps S) z| of the rotated eigenvectors: ', res_ham
+         write(*, '(a,es12.4)') 'desym test: max |z^H S z - 1| of the rotated eigenvectors: ', dev_orth
       end if
 
    end subroutine dfpt_desym_test

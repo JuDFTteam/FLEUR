@@ -27,9 +27,7 @@ module m_dfpt_lambda
    use m_genMTBasis, only: genMTBasis
    use m_hs_int_direct
    use m_inv3
-   use m_dwigner
    use m_dfpt_dynmat_fourier, only: remap_fullsym_atoms
-   use m_map_to_unit
    use m_vacfun
    use m_types_abc
    use m_types_atoms
@@ -581,29 +579,13 @@ contains
       integer, allocatable, intent(out) :: n_r(:, :)
       integer,              intent(out) :: maxlmindx, maxn_r
 
-      integer :: itype, l, m1, m2, isym, iisym, ilo, jlo, iOrd, jOrd, lmaxd
+      integer :: itype, l, ilo, jlo, iOrd, jOrd, lmaxd
 
       lmaxd = fi%atoms%lmaxd
 
-      call gen_map_all_atoms(fi%atoms, sym_full, fi%input%film, hybinp)
-
-      ! Wigner d matrices, l = 0..lmaxd, including the time-reversal half
-      allocate (hybinp%d_wgn2(-lmaxd:lmaxd, -lmaxd:lmaxd, 0:lmaxd, sym_full%nsym))
-      call d_wigner(sym_full%nop, sym_full%mrot, fi%cell%bmat, lmaxd, hybinp%d_wgn2(:, :, 1:, :sym_full%nop))
-      hybinp%d_wgn2(:, :, 0, :) = 1
-
-      do isym = sym_full%nop + 1, sym_full%nsym
-         iisym = isym - sym_full%nop
-         do l = 0, lmaxd
-            do m2 = -l, l
-               do m1 = -l, -1
-                  hybinp%d_wgn2(m1, m2, l, isym)  = hybinp%d_wgn2(-m1, m2, l, iisym)*(-1)**m1
-                  hybinp%d_wgn2(-m1, m2, l, isym) = hybinp%d_wgn2(m1, m2, l, iisym)*(-1)**m1
-               end do
-               hybinp%d_wgn2(0, m2, l, isym) = hybinp%d_wgn2(0, m2, l, iisym)
-            end do
-         end do
-      end do
+      ! DFPT runs without symmetry, so the images of an atom lie in other types
+      call hybinp%gen_map_all(fi%atoms, sym_full, fi%input%film)
+      call hybinp%gen_d_wgn2(fi%atoms, fi%cell, sym_full)
 
       ! waveftrafo_gen_cmt needs only mpdata%num_radfun_per_l.
       call mpdata%set_num_radfun_per_l(fi%atoms)
@@ -645,60 +627,6 @@ contains
       end do
 
    end subroutine setup_rotation_data
-
-   subroutine gen_map_all_atoms(atoms, sym_full, l_film, hybinp)
-      !! Atom map and lattice-vector table for `waveftrafo_gen_cmt`, searching all
-      !! atoms rather than only the equivalents of one type. `t_hybinp%gen_map`
-      !! restricts the search to `neq(itype)`.
-      !! DFPT runs with -nosym, types are broken up
-
-
-      type(t_atoms),  intent(in)    :: atoms
-      type(t_sym),    intent(in)    :: sym_full
-      logical,        intent(in)    :: l_film
-      type(t_hybinp), intent(inout) :: hybinp
-
-      integer :: iatom, jatom, isym, iisym, ratom
-      real    :: rtaual(3), dvec(3), dist, minDist
-
-      if (allocated(hybinp%map))  deallocate (hybinp%map)
-      if (allocated(hybinp%tvec)) deallocate (hybinp%tvec)
-      allocate (hybinp%map(atoms%nat, sym_full%nsym), source=0)
-      allocate (hybinp%tvec(3, atoms%nat, sym_full%nsym), source=0)
-
-      do isym = 1, sym_full%nsym
-         iisym = isym
-         if (isym > sym_full%nop) iisym = isym - sym_full%nop
-
-         do iatom = 1, atoms%nat
-            rtaual = matmul(sym_full%mrot(:, :, iisym), atoms%taual(:, iatom)) + sym_full%tau(:, iisym)
-
-            ratom   = 0
-            minDist = 1e33
-            do jatom = 1, atoms%nat
-               dvec = map_to_unit(rtaual - atoms%taual(:, jatom))
-               ! a film is not periodic along z
-               if (l_film) dvec(3) = rtaual(3) - atoms%taual(3, jatom)
-               dist = norm2(dvec)
-               if (dist < minDist) then
-                  minDist = dist
-                  ratom   = jatom
-               end if
-            end do
-
-            if (minDist > 1e-6) then
-               call juDFT_error("No image atom for a full-group operation; the fullsym_ cell does not match the DFPT cell.", calledby="gen_map_all_atoms")
-            end if
-            if (atoms%nz(atoms%itype(ratom)) /= atoms%nz(atoms%itype(iatom))) then
-               call juDFT_error("Symmetry maps an atom onto a different element.", calledby="gen_map_all_atoms")
-            end if
-
-            hybinp%map(iatom, isym)     = ratom
-            hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
-         end do
-      end do
-
-   end subroutine gen_map_all_atoms
 
    subroutine cmt_from_z(fi, usdus, nococonv, lapw, zMat, jsp, nbands, maxlmindx, cmt)
       !! Expands an eigenvector into muffin-tin coefficients, in the hybrid-code
