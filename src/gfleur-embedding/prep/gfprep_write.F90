@@ -40,7 +40,7 @@ CONTAINS
       kptsSelection = ""
       kptsSelection(1) = kpts%kptsName
       CALL w_inpXML(lay%atoms, lay%vacuum, lay%input, b%stars, b%fi%sliceplot, forcetheo, b%fi%banddos, &
-                    b%fi%dfpt, lay%cell, lay%sym, b%xcpot, b%fi%noco, b%fi%mpinp, b%fi%hybinp, kptsArray, &
+                    b%fi%dfpt, lay%cell, lay%sym, b%xcpot, lay%noco, b%fi%mpinp, b%fi%hybinp, kptsArray, &
                     kptsSelection, lay%enpara, b%fi%gfinp, b%fi%hub1inp, .FALSE., [.TRUE., .TRUE., .TRUE., .TRUE.], &
                     filename=filename, add_filename="")
    END SUBROUTINE gfprep_write_inpxml
@@ -88,12 +88,13 @@ CONTAINS
       END SUBROUTINE priv_list
    END SUBROUTINE gfprep_write_gfinp
 
-   SUBROUTINE gfprep_write_potden(ilay, l, vtot_mt, vtot_pw, vcoul_pw, den_mt, den_pw)
+   SUBROUTINE gfprep_write_potden(ilay, l, vtot_mt, vtot_pw, vcoul_pw, den_mt, den_pw, l_noco)
       !Writes the converted potential (gf_pot.hdf) and density (gf_cdn.hdf)
       INTEGER, INTENT(IN)               :: ilay
       TYPE(t_gfprep_struct), INTENT(IN) :: l
       REAL, INTENT(IN)                  :: vtot_mt(:, 0:, :, :), den_mt(:, 0:, :, :)
       COMPLEX, INTENT(IN)               :: vtot_pw(:, :), vcoul_pw(:), den_pw(:, :)
+      LOGICAL, INTENT(IN)               :: l_noco
 
       TYPE(t_embinp) :: embinp
       INTEGER :: comm
@@ -104,10 +105,10 @@ CONTAINS
       comm = 0
 #endif
       CALL gf_wrtdop(GF_POTFILE, ilay, l%fi%input%jspins, embinp, l%fi%atoms, l%stars, l%sphhar, &
-                     vtot_mt, vtot_pw, .FALSE., comm)
+                     vtot_mt, vtot_pw, l_noco, comm)
       CALL gf_wrtcoul(GF_POTFILE, ilay, l%stars, vpw=vcoul_pw)
       CALL gf_wrtdop(GF_CDNFILE, ilay, l%fi%input%jspins, embinp, l%fi%atoms, l%stars, l%sphhar, &
-                     den_mt, den_pw, .FALSE., comm)
+                     den_mt, den_pw, l_noco, comm)
    END SUBROUTINE gfprep_write_potden
 
    SUBROUTINE gfprep_write_vacemb(side, delz, vz)

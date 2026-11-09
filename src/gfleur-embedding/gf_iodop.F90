@@ -300,7 +300,7 @@
 ! locals                                                                
 !     scalars                                                           
 !     the hdf-IDs                                                       
-      INTEGER(HID_T)::fid,pwid,pwodid,vrid,gid,ggid 
+      INTEGER(HID_T)::fid,pwid,pwodid,vrid,vrodid,gid,ggid 
       INTEGER::hdferr,dims(3)
 !     needed for input checking                                         
       INTEGER::ntype_in,n3d_in,jrid_in,nlhd_in,jspins_in
@@ -362,6 +362,15 @@
          endif
       ENDIF 
       DEALLOCATE(vr_tmp) 
+      !off-diagonal MT part (local frame) of a noco potential with l_mtNocoPot
+      IF (SIZE(vr,4)>=4.AND.io_dataexists(gid,'vrod')) THEN
+         CALL io_dopen(gid,'vrod',vrodid,hdferr)
+         ALLOCATE(vr_tmp(jrid_in,nlhd_in+1,ntype_in,2))
+         CALL io_read(vrodid,(/1,1,1,1/),(/jrid_in,nlhd_in+1,ntype_in,2/),"vr_tmp",vr_tmp)
+         vr(:jrid_in,0:nlhd_in,:ntype_in,3:4)=vr_tmp
+         DEALLOCATE(vr_tmp)
+         CALL io_dclose(vrodid,hdferr)
+      ENDIF
 !                                                                       
 !     read interstitial part                                            
 !                                                                       
@@ -392,7 +401,8 @@
             endif
       endif
       if(present(noco)) then
-      IF (noco%l_noco ) THEN
+      !callers that only need the diagonal spins pass vpw(:,jspins)
+      IF (noco%l_noco.AND.SIZE(vpw,2)>=3) THEN
          IF (io_dataexists(gid,'pwod')) THEN 
             CALL io_dopen(gid, 'pwod', pwodid, hdferr) 
             ALLOCATE(pwd_in(n3d_in,1,2)) 
@@ -478,15 +488,16 @@
 ! locals                                                                
                                                                         
 !     the hdf-IDs                                                       
-      INTEGER(HID_T)::fid,vrid,pwid,pwodid,gid,avpwid,ffid 
+      INTEGER(HID_T)::fid,vrid,vrodid,pwid,pwodid,gid,avpwid,ffid 
       INTEGER       ::vrdim(4),pwdim(3),avdim(2) 
       INTEGER       ::pwstart(3),pwcount(3) 
       INTEGER       ::hdferr 
       LOGICAL       ::lexist 
       REAL          :: av(2*stars%mx3+1,jspins+1)
-      logical       :: l_valence
+      logical       :: l_valence,l_vrod
 
       l_valence=.false.
+      l_vrod=.false.
       if (present(l_valence_only)) l_valence=l_valence_only
       write(*,*) file_type,layer,l_valence
 !  OPEN FILE and get ID's                                               
@@ -509,6 +520,10 @@
         CALL io_createvar(gid,"vr_valence", H5T_NATIVE_DOUBLE,vrdim,vrid)
       else
         CALL io_createvar(gid,"vr", H5T_NATIVE_DOUBLE,vrdim,vrid)
+        !off-diagonal MT part of a noco potential with l_mtNocoPot
+        l_vrod=l_noco.AND.SIZE(vr,4)>=4
+        IF (l_vrod) CALL io_createvar(gid,"vrod",H5T_NATIVE_DOUBLE,     &
+     &       (/vrdim(1:3),2/),vrodid)
                                                                         
         pwdim=(/ stars%ng3,jspins,2 /)
         CALL io_createvar(gid,"pw", H5T_NATIVE_DOUBLE,pwdim,pwid)
@@ -539,7 +554,12 @@
       CALL io_write(vrid,(/1,1,1,1/),vrdim,"vr",vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),1:1))
       IF (jspins>1) THEN 
          CALL io_write(vrid,(/1,1,1,2/),vrdim,"vr",vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),2:2))
-      ENDIF 
+      ENDIF
+      IF (l_vrod) THEN
+         vrdim(4)=2
+         CALL io_write(vrodid,(/1,1,1,1/),vrdim,"vrod",vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),3:4))
+         CALL io_dclose(vrodid,hdferr)
+      ENDIF
 
 
       if (.not.l_valence) then
@@ -562,7 +582,7 @@
       CALL priv_writestarinfo(gid,stars) 
                                                                         
       !<-- Write planar av. of charge                                   
-      av = priv_getPlanar(stars,vpw) 
+      av = priv_getPlanar(stars,vpw(:,:jspins)) 
       CALL io_write(avpwid,(/1,1/),shape(av),"av",av)
 
       !>                                                                

@@ -4,7 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_embdos 
+          USE m_gf_types
+          USE m_gf_energies
+          USE m_gf_math
+          USE m_gf_embedding
+          USE m_gf_apws
           IMPLICIT NONE
+          PRIVATE
+          PUBLIC :: gf_embdos
                                                                         
       CONTAINS 
       !<-- S:gf_embdos(jspins,lapw,kpts,cell,noco,gfinp)                
@@ -13,11 +20,6 @@
 ! DESC:Calculate eigenvalues of imag(Sigma) and interpret this as a kind
 !                 Daniel Wortmann, (08-04-17)                           
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_energies 
-      USE m_gf_math 
-      USE m_gf_embedding 
-      USE m_gf_apws 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       INTEGER,INTENT(IN)         :: jspins 
@@ -41,7 +43,8 @@
       OPEN(99,FILE ="gf_embdos") 
       OPEN(98,FILE ="gf_embdos_S") 
       OPEN(97,FILE ="gf_embdos_AS") 
-      DO jspin = 1,jspins 
+      !noco: one spinor pass
+      DO jspin = 1,MERGE(1,jspins,noco%l_noco)
          DO nk = 1,kpts%nkpt 
             CALL gf_apws(                                               &
      &           jspins,jspin,kpts%bk(:,nk),.FALSE.,atoms,input,sym,    &

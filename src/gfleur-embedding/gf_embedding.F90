@@ -274,7 +274,7 @@
      &              ,lapw%kp(n2,jspin)+lapw_gf%nv2_tot/2)))/norm+H(n1,n2 &
      &              +lapw_gf%nv_tot_sphere/2)
 !               dn dn                                                   
-               H(n1+lapw_gf%nv_tot_sphere/2,n2+lapw%nv_tot/2) = (e1*              &
+               H(n1+lapw_gf%nv_tot_sphere/2,n2+lapw_gf%nv_tot_sphere/2) = (e1*              &
      &              G1(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2,lapw%kp(n2  &
      &              ,jspin)+lapw_gf%nv2_tot/2)+e2                          &
      &              *G2(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2,lapw%kp(n2 &

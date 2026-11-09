@@ -106,8 +106,16 @@ CONTAINS
         CALL juDFT_error("The third lattice vector must be perpendicular to the first two", &
                           hint="gfprep stacks the layers along z", calledby="gfprep_bulk_init")
       end if
-      IF (b%fi%noco%l_noco) CALL juDFT_error("Non-collinear bulk calculations are not supported by gfprep", &
-                                            calledby="gfprep_bulk_init")
+      IF (b%fi%noco%l_noco) THEN
+         IF (b%fi%noco%l_ss) CALL juDFT_error("Spin spirals are not supported by gfprep", calledby="gfprep_bulk_init")
+         IF (ANY(b%fi%noco%l_alignMT)) CALL juDFT_error("relaxSQA is not supported by gfprep", &
+                                                        hint="use the relaxed angles as alpha/beta", &
+                                                        calledby="gfprep_bulk_init")
+         IF (ANY(b%fi%noco%l_constrained) .OR. ANY(b%fi%noco%l_fixedMoment)) &
+            CALL juDFT_error("Constrained moments are not supported by gfprep", calledby="gfprep_bulk_init")
+         IF (ANY(b%fi%noco%l_unrestrictMT) .AND. .NOT. ALL(b%fi%noco%l_unrestrictMT)) &
+            CALL juDFT_error("l_mtNocoPot must be the same for all atom types", calledby="gfprep_bulk_init")
+      END IF
 
       !remaining setup as in fleur_init (the step function is needed by vgen)
       CALL make_xcpot(fmpi, b%xcpot, b%fi%atoms, b%fi%input)
@@ -131,6 +139,8 @@ CONTAINS
                                           calledby="gfprep_bulk_init")
       CALL den%init(b%stars, b%fi%atoms, b%sphhar, b%fi%vacuum, b%fi%noco, b%fi%input%jspins, POTDEN_TYPE_DEN)
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+      IF (b%fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+      IF (ANY(b%fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
       CALL readDensity(b%stars, b%fi%noco, b%fi%vacuum, b%fi%atoms, b%fi%cell, b%sphhar, b%fi%input, &
                        b%fi%sym, archiveType, CDN_INPUT_DEN_const, 0, ef, dist, l_qfix, den, &
                        inFilename=TRIM(bulkdir)//"cdn")

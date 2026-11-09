@@ -153,7 +153,10 @@
       e = gf_Z(en, 0)
       sigma = CMPLX(0.0, 0.0)
       nn = SIZE(sigma, 1)
-      IF (lapw_gf%nv2(1) < nn) nn = nn/2 !noco calculation
+      IF (lapw_gf%nv2(1) < nn) THEN
+         CALL priv_vacemb_noco(side, e, nk, lapw_gf, sigma)
+         RETURN
+      END IF
       DO n = 1, nn
          gk = MATMUL(vac_bk(:, nk) + [lapw_gf%k1p(n, 1), lapw_gf%k2p(n, 1)], vac_bmat)
          q2 = DOT_PRODUCT(gk, gk)
@@ -164,8 +167,124 @@
             sigma(n, n) = priv_vacsigma(vacside(side)%vz(:, js), vacside(side)%delz, e, q2, nref)
          END IF
       END DO
-      IF (nn /= SIZE(sigma, 1)) sigma(nn + 1:, nn + 1:) = sigma(:nn, :nn)
       END SUBROUTINE gf_vacemb
+
+      SUBROUTINE priv_vacemb_noco(side, e, nk, lapw_gf, sigma)
+      !Noco: 2x2 spin blocks of Sigma (order up G's, down G's). With the
+      !noco vz (V11,V22,Re V21,Im V21) the matrix equation is integrated,
+      !a collinear vz gives diag(Sigma_up,Sigma_down).
+      INTEGER, INTENT(IN)          :: side, nk
+      COMPLEX, INTENT(IN)          :: e
+      TYPE(t_lapw_gf), INTENT(IN)  :: lapw_gf
+      COMPLEX, INTENT(OUT)         :: sigma(:, :)
+
+      INTEGER :: n, nn, nc
+      REAL    :: gk(2), q2
+      COMPLEX :: s2(2, 2)
+
+      sigma = CMPLX(0.0, 0.0)
+      nn = SIZE(sigma, 1)/2
+      DO n = 1, nn
+         gk = MATMUL(vac_bk(:, nk) + [lapw_gf%k1p(n, 1), lapw_gf%k2p(n, 1)], vac_bmat)
+         q2 = DOT_PRODUCT(gk, gk)
+         s2 = CMPLX(0.0, 0.0)
+         IF (vac_simple) THEN
+            s2(1, 1) = -0.5*SQRT(priv_retarded(2.0*(vac_energy - e) + q2, e))
+            s2(2, 2) = s2(1, 1)
+         ELSE
+            nc = SIZE(vacside(side)%vz, 2)
+            IF (nc >= 4) THEN
+               s2 = priv_vacsigma2(vacside(side)%vz, vacside(side)%delz, e, q2, nref)
+            ELSE
+               s2(1, 1) = priv_vacsigma(vacside(side)%vz(:, 1), vacside(side)%delz, e, q2, nref)
+               s2(2, 2) = priv_vacsigma(vacside(side)%vz(:, MIN(2, nc)), vacside(side)%delz, e, q2, nref)
+            END IF
+         END IF
+         sigma(n, n) = s2(1, 1)
+         sigma(n + nn, n + nn) = s2(2, 2)
+         sigma(n + nn, n) = s2(2, 1)
+         sigma(n, n + nn) = s2(1, 2)
+      END DO
+      END SUBROUTINE priv_vacemb_noco
+
+      FUNCTION priv_vacsigma2(vz, delz, e, q2, nsub) RESULT(sig)
+      !2x2 version of priv_vacsigma for the spin matrix potential
+      !V = [[V11, conjg(V21)], [V21, V22]]: Sigma = 1/2 Phi' Phi^-1 with
+      !Phi'' = (2(V(t)-e)+q2) Phi. Beyond the grid Phi = exp(-K t); the
+      !columns of (Phi,Phi') are orthonormalized after each step.
+      REAL, INTENT(IN)    :: vz(:, :), delz, q2
+      COMPLEX, INTENT(IN) :: e
+      INTEGER, INTENT(IN) :: nsub
+      COMPLEX             :: sig(2, 2)
+
+      COMPLEX :: u(4, 2), k1(4, 2), k2(4, 2), k3(4, 2), k4(4, 2)
+      COMPLEX :: w(2, 2), kap(2), pinv(2, 2), det
+      REAL    :: h, t, ev(2)
+      INTEGER :: i, n, j
+
+      n = SIZE(vz, 1)
+      h = delz/nsub
+      !K = W diag(kappa) W^+ from the eigenvectors of V at the end
+      CALL priv_heig2(vz(n, 1), vz(n, 2), CMPLX(vz(n, 3), vz(n, 4)), ev, w)
+      DO j = 1, 2
+         kap(j) = SQRT(priv_retarded(2.0*(ev(j) - e) + q2, e))
+      END DO
+      u = CMPLX(0.0, 0.0)
+      u(1, 1) = 1.0; u(2, 2) = 1.0
+      u(3:4, :) = -MATMUL(w, MATMUL(RESHAPE([kap(1), CMPLX(0.0, 0.0), CMPLX(0.0, 0.0), kap(2)], [2, 2]), &
+                                    TRANSPOSE(CONJG(w))))
+      t = (n - 1)*delz
+      DO i = (n - 1)*nsub, 1, -1
+         k1 = priv_rhs2(t, u)
+         k2 = priv_rhs2(t - 0.5*h, u - 0.5*h*k1)
+         k3 = priv_rhs2(t - 0.5*h, u - 0.5*h*k2)
+         k4 = priv_rhs2(t - h, u - h*k3)
+         u = u - h/6.0*(k1 + 2.0*k2 + 2.0*k3 + k4)
+         !Gram-Schmidt of the two columns (a right multiplication)
+         u(:, 1) = u(:, 1)/SQRT(SUM(ABS(u(:, 1))**2))
+         u(:, 2) = u(:, 2) - DOT_PRODUCT(u(:, 1), u(:, 2))*u(:, 1)
+         u(:, 2) = u(:, 2)/SQRT(SUM(ABS(u(:, 2))**2))
+         t = t - h
+      END DO
+      det = u(1, 1)*u(2, 2) - u(1, 2)*u(2, 1)
+      pinv = RESHAPE([u(2, 2), -u(2, 1), -u(1, 2), u(1, 1)], [2, 2])/det
+      sig = 0.5*MATMUL(u(3:4, :), pinv)
+      CONTAINS
+         FUNCTION priv_rhs2(tt, uu) RESULT(du)
+         REAL, INTENT(IN)    :: tt
+         COMPLEX, INTENT(IN) :: uu(4, 2)
+         COMPLEX             :: du(4, 2)
+         COMPLEX :: a(2, 2)
+         REAL    :: x
+         x = tt/delz + 1.0
+         a(1, 1) = 2.0*(priv_vinterp(vz(:, 1), x) - e) + q2
+         a(2, 2) = 2.0*(priv_vinterp(vz(:, 2), x) - e) + q2
+         a(2, 1) = 2.0*CMPLX(priv_vinterp(vz(:, 3), x), priv_vinterp(vz(:, 4), x))
+         a(1, 2) = CONJG(a(2, 1))
+         du(1:2, :) = uu(3:4, :)
+         du(3:4, :) = MATMUL(a, uu(1:2, :))
+         END FUNCTION priv_rhs2
+      END FUNCTION priv_vacsigma2
+
+      SUBROUTINE priv_heig2(a, d, b, ev, w)
+      !eigenvalues ev and eigenvectors (columns of w) of [[a,conjg(b)],[b,d]]
+      REAL, INTENT(IN)     :: a, d
+      COMPLEX, INTENT(IN)  :: b
+      REAL, INTENT(OUT)    :: ev(2)
+      COMPLEX, INTENT(OUT) :: w(2, 2)
+      REAL :: m, r, nrm
+      m = 0.5*(a + d)
+      r = SQRT(0.25*(a - d)**2 + ABS(b)**2)
+      IF (ABS(b) < 1.0E-14) THEN
+         ev = [a, d]
+         w = RESHAPE([CMPLX(1.0, 0.0), CMPLX(0.0, 0.0), CMPLX(0.0, 0.0), CMPLX(1.0, 0.0)], [2, 2])
+         RETURN
+      END IF
+      ev = [m + r, m - r]
+      nrm = SQRT((ev(1) - d)**2 + ABS(b)**2)
+      w(:, 1) = [CMPLX(ev(1) - d, 0.0), b]/nrm
+      w(:, 2) = [-CONJG(b), CMPLX(ev(1) - d, 0.0)]/nrm
+      END SUBROUTINE priv_heig2
 
       COMPLEX FUNCTION priv_vacsigma(vz, delz, e, q2, nsub)
       !1/2 phi'(0)/phi(0) for phi'' = (2(V(t)-e)+q2) phi, t the distance
@@ -331,6 +450,7 @@
            dphi = -0.5 * ((phi(1)-phi(1+1))/(xdistance)+((phi(1+1)-phi(1+2)))/(xdistance)  )
            sigma(n,n)= 0.5*dphi/phi(1)
       ENDDO
+      if (nn.ne.size(sigma,1)) sigma(nn+1:,nn+1:)=sigma(:nn,:nn) !noco
 
 
       END SUBROUTINE

@@ -4,6 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_curvy2dprojector 
+      USE m_gf_types
+      USE hdf5
+      USE m_hdf_tools
+      USE m_juDFT
+      USE m_gf_circlestep
+      USE m_gf_curvystep
+      USE m_gf_math
       IMPLICIT NONE
       PRIVATE 
       COMPLEX, ALLOCATABLE, SAVE :: curvyproject(:,:,:)
@@ -27,13 +34,6 @@
       SUBROUTINE gf_curvy2dinit(layer,lapw,lapw_gf,cell,l_twothreeproj)
                                                                         
                                                                         
-      USE m_gf_types 
-      USE hdf5 
-      USE m_hdf_tools 
-      use m_juDFT 
-      USE m_gf_circlestep 
-      USE m_gf_curvystep 
-      USE m_gf_math 
                                                                         
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: layer
@@ -181,11 +181,6 @@
 !**************************************************                     
       SUBROUTINE gf_curvy2dprojector(layer,                             &
      &     cell,lapw,lapw_gf,l_twothreeproj)                                    
-      USE m_gf_types 
-      use m_juDFT 
-      USE m_gf_math 
-      USE hdf5 
-      USE m_hdf_tools 
                                                                         
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: layer 
@@ -454,7 +449,6 @@
 !                                                                       
 !           (last modified:08-06-30) D. Wortmann                        
 !-----------------------------------------------                        
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_lapw),INTENT(IN)      :: lapw
@@ -464,7 +458,7 @@
       !>                                                                
       !<-- Locals                                                       
       LOGICAL             :: tp 
-      INTEGER             :: nv,nmat
+      INTEGER             :: nv
       !>                                                                
       tp = .FALSE. 
       IF (PRESENT(transposed)) tp = transposed 
@@ -473,35 +467,31 @@
 
       IF (.NOT.tp) THEN 
          !<-- normal projector
-         if (size(proj,2)>lapw_gf%nmat_sphere) then
+         !full basis or restricted to the rkmax sphere
+         if (size(proj,2)==lapw%nmat) then
              nv=lapw%nv(1)
-             nmat=lapw%nmat
          else
              nv=lapw_gf%nv_sphere(1)
-             nmat=lapw_gf%nmat_sphere
          endif
          proj(1:lapw_gf%nv2(1),1:nv) = curvyproject(1:lapw_gf%nv2(1),1:nv,1)
          proj(lapw_gf%nv2_tot+1:lapw_gf%nv2_tot+lapw_gf%nv2(1),1:nv) =   &
      &        curvyproject(1:lapw_gf%nv2(1),1:nv,2)
                                                                         
          IF (lapw_gf%nv2(1) /= lapw_gf%nv2_tot) THEN 
-            !noco                                                       
-            proj(lapw_gf%nv2_tot/2+1:lapw_gf%nv2_tot/2+lapw_gf%nv2(1),nmat/2+1:nmat/2+nv) =               &
+            !noco: stored order PW up, PW down, LO up, LO down
+            proj(lapw_gf%nv2_tot/2+1:lapw_gf%nv2_tot/2+lapw_gf%nv2(1),nv+1:2*nv) =               &
      &           curvyproject(1:lapw_gf%nv2(1),1:nv,1)
             proj(3*lapw_gf%nv2_tot/2+1:3*lapw_gf%nv2_tot/2+lapw_gf%nv2(1)        &
-     &           ,nmat/2+1:nmat/2+nv) =               &
+     &           ,nv+1:2*nv) =               &
      &           curvyproject(1:lapw_gf%nv2(1),1:nv,2)
          ENDIF 
          !>                                                             
       ELSE 
          !<-- transposed version
-         if (size(proj,1)>lapw_gf%nmat_sphere) then
+         if (size(proj,1)==lapw%nmat) then
              nv=lapw%nv(1)
-             nmat=lapw%nmat
          else
              nv=lapw_gf%nv_sphere(1)
-             nmat=lapw_gf%nmat_sphere
-
          endif
          proj(1:nv,1:lapw_gf%nv2(1)) = TRANSPOSE(CONJG(            &
      &        curvyproject(1:lapw_gf%nv2(1),1:nv,1)))
@@ -510,10 +500,10 @@
      &        ))                                                        
           IF (lapw_gf%nv2(1) /= lapw_gf%nv2_tot) THEN 
              !noco                                                      
-             proj(nmat/2+1:nmat/2+nv,lapw_gf%nv2_tot/2   &
+             proj(nv+1:2*nv,lapw_gf%nv2_tot/2   &
      &            +1:lapw_gf%nv2_tot/2+lapw_gf%nv2(1)) =                      &
      &            TRANSPOSE(CONJG(curvyproject(1:lapw_gf%nv2(1),1:nv,1)))
-             proj(nmat/2+1:nmat/2+nv,3*lapw_gf%nv2_tot/2 &
+             proj(nv+1:2*nv,3*lapw_gf%nv2_tot/2 &
      &            +1:3*lapw_gf%nv2_tot/2+lapw_gf%nv2(1)) =                    &
      &            TRANSPOSE(CONJG(curvyproject(1:lapw_gf%nv2(1),1:nv,2)))
           ENDIF 

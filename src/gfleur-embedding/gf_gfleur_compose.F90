@@ -5,12 +5,31 @@
 !--------------------------------------------------------------------------------
 MODULE m_gf_gfleur_compose
     use m_juDFT
+    use m_gf_energies
+    use m_gf_tmat
+    use m_gf_types
+    use m_gf_gmatfromtmat
+    use m_gf_read_tmat
+    use m_gf_gfcn
+    use m_gf_landauer
+    use m_gf_propaembcurr
+    use m_gf_propaembcurr2
+    use m_gf_propaembcurr3
+    use m_gf_current4
+    use m_gf_get_spectrum
+    use m_gf_spectrum
+    use m_gf_cdnskval
+    use m_gf_ab_coef
+    use m_gf_nognofinalize
+    use m_gf_dos
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: gf_gfleur_compose
 CONTAINS
     SUBROUTINE gf_gfleur_compose(layer,noco,gfinp,layers,nk,          &
     jspin,sym,cell,fmpi,lapw,lapw_gf,                  &
     kpts,pot_aux,charge,qmtl_new,                     &
-    atoms,stars,sphhar,vr,enpara)
+    atoms,stars,sphhar,vr,enpara,nococonv)
         !****************************************************
         !     num_layers>1 => calculate the properties of the
         !       composed system using the information on the
@@ -19,23 +38,6 @@ CONTAINS
         !       system
         !     Frank Freimuth, November 2007
         !****************************************************
-        USE m_gf_energies
-        USE m_gf_tmat
-        USE m_gf_types
-        USE m_gf_gmatfromtmat
-        USE m_gf_read_tmat
-        USE m_gf_gfcn
-        USE m_gf_landauer
-        USE m_gf_propaembcurr
-        USE m_gf_propaembcurr2
-        USE m_gf_propaembcurr3
-        USE m_gf_current4
-        USE m_gf_get_spectrum
-        USE m_gf_spectrum
-        USE m_gf_cdnskval
-        USE m_gf_ab_coef
-        USE m_gf_nognofinalize
-        USE m_gf_dos
         IMPLICIT NONE
         INTEGER,INTENT(IN)::layer
         TYPE(t_noco),INTENT(IN)::noco
@@ -57,6 +59,7 @@ CONTAINS
         TYPE(t_stars),INTENT(IN)    :: stars
         REAL, INTENT(INOUT)         :: vr(:,0:,:,:)
         TYPE(t_enpara),INTENT(IN)   :: enpara
+        TYPE(t_nococonv),INTENT(IN) :: nococonv
 
         COMPLEX,ALLOCATABLE::g(:,:)
         COMPLEX,ALLOCATABLE::g_sum(:,:)
@@ -119,7 +122,7 @@ CONTAINS
                         endif
                         CALL timestart("gf_dos_mt")
                         CALL gf_dos_mt(layer,atoms,gfinp,                     &
-                        g,sym,en,jspin,kpts%wtkpt(nk),nk,noco%l_noco,lapw,lapw_gf)
+                        g,sym,en,jspin,kpts%wtkpt(nk),nk,noco%l_noco,lapw,lapw_gf,nococonv)
                         IF (gfinp%l_intdos)  CALL gf_dos_INT(gfinp,layer      &
                         ,fmpi,lapw,lapw_gf,stars,jspin,cell%omtil,G,kpts%wtkpt(nk&
                         ),en,nk,noco%l_noco)

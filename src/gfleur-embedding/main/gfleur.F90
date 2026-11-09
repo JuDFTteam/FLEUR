@@ -310,7 +310,8 @@ CONTAINS
                                             gmpi, lapw(layer), lapw_gf(layer), gkpts, pot_aux, &
                                             ld(layer)%cdn_new, ld(layer)%qmtl_new, &
                                             ld(layer)%fi%atoms, ld(layer)%stars, &
-                                            ld(layer)%sphhar, ld(layer)%vTot%mt, ld(layer)%enpara)
+                                            ld(layer)%sphhar, ld(layer)%vTot%mt, ld(layer)%enpara, &
+                                            ld(layer)%nococonv)
                      CALL timestop("gf_gfleur_compose")
                   END IF
                END DO
@@ -387,7 +388,7 @@ CONTAINS
       CALL timestop("iteration loop")
 
       IF (nl == 1 .AND. embinp%l_CBS) &
-         CALL gf_bandbending(lapw(1), lapw_gf(1), ld(1)%fi%input%jspins, gkpts%nkpt)
+         CALL gf_bandbending(lapw(1), lapw_gf(1), nspins, gkpts%nkpt)
 
       !<-- output
       CALL timestart("gf_writedos")

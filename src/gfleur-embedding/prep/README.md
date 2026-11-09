@@ -15,8 +15,13 @@ cd gf && gfprep
 ```
 
 The bulk directory is only read; it may also hold a film calculation. The
-third lattice vector must be perpendicular to the first two. Non-collinear
-calculations are not supported.
+third lattice vector must be perpendicular to the first two.
+
+Non-collinear bulks and films (`l_noco`, also with `l_mperp` and `l_mtNocoPot`)
+are supported: the layer inp.xml gets the noco setup of the bulk and the
+angles `alpha`, `beta` of the bulk type of each layer atom group. Not supported:
+spin spirals, `l_relaxSQA`, constrained moments, `l_mtNocoPot` only for some
+types, and `spinflip`.
 
 ## Input: `&GFPREP` in `gfprep_inp` (optional)
 
@@ -54,9 +59,10 @@ a MT sphere.
   * `stepinfo`: the MT spheres of the layer and the outer spheres cut by the embedding planes;
   * `embdesc`: the descriptors of the two embedding planes.
 * `gf_pot.hdf` holds the total potential (`pot`) and the Coulomb potential (`coulpot`). `gf_cdn.hdf` holds the density.
-* For a film, `gf_pot.hdf` also holds `vacemb_side1` and `vacemb_side2`: the planar-averaged potential `vz(z,spin)` beyond the vacuum embedding plane below layer 1 and above the last layer, from the plane to the end of the FLEUR vacuum grid with spacing `delz` (attribute).
+  For noco, `pot` also contains `pwod` (the interstitial off-diagonal part V21 or rho21, global frame) and, with `l_mperp`, `vrod` (the MT components 3:4, local frame of each atom).
+* For a film, `gf_pot.hdf` also holds `vacemb_side1` and `vacemb_side2`: the planar-averaged potential `vz(z,spin)` (noco: `V11, V22, Re V21, Im V21`) beyond the vacuum embedding plane below layer 1 and above the last layer, from the plane to the end of the FLEUR vacuum grid with spacing `delz` (attribute).
 * `gfprep_planes.txt` lists the atomic planes and the chosen layers.
-* `gfprep.out` holds the log, including a self-check: bulk and layer functions are compared at interstitial points with `|z| < c/2` and inside the MT spheres.
+* `gfprep.out` holds the log, including a self-check: bulk and layer functions are compared at interstitial points with `|z| < c/2` and inside the MT spheres. For noco there are additional lines `potential21` and `density21` for the off-diagonal parts.
 
 ## Method
 

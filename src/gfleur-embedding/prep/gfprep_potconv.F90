@@ -284,7 +284,8 @@ CONTAINS
    SUBROUTINE gfprep_vacemb(fs, fcell, fvac, side, zs, pw, vac, delz, vz)
       !Planar average of the film potential from the vacuum embedding plane
       !at |z|=zs (side 1: z=-zs, side 2: z=+zs) outwards on the vacuum grid,
-      !up to the end of the FLEUR vacuum (vz(1) is the value at the plane)
+      !up to the end of the FLEUR vacuum (vz(1) is the value at the plane).
+      !Noco (3 components): vz = V11, V22, Re V21, Im V21
       TYPE(t_stars), INTENT(IN)      :: fs
       TYPE(t_cell), INTENT(IN)       :: fcell
       TYPE(t_vacuum), INTENT(IN)     :: fvac
@@ -296,17 +297,20 @@ CONTAINS
 
       INTEGER :: n, i, js
       REAL    :: zend, z
+      COMPLEX :: c
 
       delz = fvac%delz
       zend = fcell%z1 + (fvac%nmz - 1)*fvac%delz
       IF (zs >= zend - 3*delz) CALL juDFT_error("Vacuum embedding plane beyond the FLEUR vacuum grid", &
                                                 hint="decrease zvac", calledby="gfprep_vacemb")
       n = FLOOR((zend - zs)/delz + 1.0E-6) + 1
-      ALLOCATE (vz(n, SIZE(pw, 2)))
+      ALLOCATE (vz(n, MERGE(4, SIZE(pw, 2), SIZE(pw, 2) == 3)))
       DO js = 1, SIZE(pw, 2)
          DO i = 1, n
             z = (zs + (i - 1)*delz)*(2*side - 3)
-            vz(i, js) = REAL(priv_filmcoef(fs, fcell, fvac, pw(:, js), vac(:, :, :, js), 0, 0, z))
+            c = priv_filmcoef(fs, fcell, fvac, pw(:, js), vac(:, :, :, js), 0, 0, z)
+            vz(i, js) = REAL(c)
+            IF (js == 3) vz(i, 4) = AIMAG(c)
          END DO
       END DO
    END SUBROUTINE gfprep_vacemb
@@ -458,11 +462,11 @@ CONTAINS
       END DO
    END SUBROUTINE priv_gauleg
 
-   SUBROUTINE gfprep_check(name, b, l, ilay, zc, c, typmap, atmap, bpw, lpw, bmt, lmt, bvac)
+   SUBROUTINE gfprep_check(name, b, l, ilay, zc, c, typmap, atmap, bpw, lpw, bmt, lmt, bvac, jsmt)
       !Compares the bulk (film) and the converted layer function at test
       !points inside the physical region |z|<c/2 (interstitial and, for a
-      !film, vacuum) and on spheres of half the MT radius (muffin-tins) for
-      !the first spin
+      !film, vacuum) and on spheres of half the MT radius (muffin-tins);
+      !the MT component is jsmt (default 1, 0 skips the muffin-tins)
       CHARACTER(LEN=*), INTENT(IN)      :: name
       TYPE(t_gfprep_struct), INTENT(IN) :: b, l
       INTEGER, INTENT(IN)               :: ilay, typmap(:), atmap(:)
@@ -470,9 +474,11 @@ CONTAINS
       COMPLEX, INTENT(IN)               :: bpw(:), lpw(:)
       REAL, INTENT(IN)                  :: bmt(:, 0:, :, :), lmt(:, 0:, :, :)
       COMPLEX, INTENT(IN), OPTIONAL     :: bvac(:, :, :)   !film vacuum (nmzd,ng2,2)
+      INTEGER, INTENT(IN), OPTIONAL     :: jsmt
 
-      INTEGER :: i1, i2, i3, t, al, ab, n, j, ip
-      REAL    :: r(3), fb, fl, dmax, fmax, y(3), rb(3, 3), rl(3, 3)
+      INTEGER :: i1, i2, i3, t, al, ab, n, j, ip, js
+      REAL    :: r(3), dmax, fmax, y(3), rb(3, 3), rl(3, 3)
+      COMPLEX :: fb, fl
       REAL, PARAMETER :: dirs(3, 3) = RESHAPE([0.3, 0.5, 0.81, -0.7, 0.2, 0.68, 0.1, -0.9, -0.42], [3, 3])
 
       !interstitial points only
@@ -502,6 +508,9 @@ CONTAINS
       WRITE (*, "(a,a,a,i0,a,es11.3)") "gfprep check ", name, " layer ", ilay, &
          " interstitial: relative deviation", dmax/MAX(fmax, 1.0E-12)
 
+      js = 1
+      IF (PRESENT(jsmt)) js = jsmt
+      IF (js == 0) RETURN
       dmax = 0.0; fmax = 0.0
       DO t = 1, l%fi%atoms%ntype
          n = typmap(t)
@@ -512,8 +521,8 @@ CONTAINS
          j = l%fi%atoms%jri(t)/2
          DO ip = 1, 3
             y = dirs(:, ip)/NORM2(dirs(:, ip))
-            fb = priv_mteval(b%sphhar, b%fi%sym%ntypsy(ab), bmt(j, :, n, 1), MATMUL(rb, y))
-            fl = priv_mteval(l%sphhar, l%fi%sym%ntypsy(al), lmt(j, :, t, 1), MATMUL(rl, y))
+            fb = priv_mteval(b%sphhar, b%fi%sym%ntypsy(ab), bmt(j, :, n, js), MATMUL(rb, y))
+            fl = priv_mteval(l%sphhar, l%fi%sym%ntypsy(al), lmt(j, :, t, js), MATMUL(rl, y))
             dmax = MAX(dmax, ABS(fb - fl)); fmax = MAX(fmax, ABS(fb))
          END DO
       END DO
@@ -541,7 +550,7 @@ CONTAINS
       END DO
    END FUNCTION priv_in_mt
 
-   REAL FUNCTION priv_pweval(s, cell, pw, r)
+   COMPLEX FUNCTION priv_pweval(s, cell, pw, r)
       TYPE(t_stars), INTENT(IN) :: s
       TYPE(t_cell), INTENT(IN)  :: cell
       COMPLEX, INTENT(IN)       :: pw(:)
@@ -558,10 +567,10 @@ CONTAINS
             END DO
          END DO
       END DO
-      priv_pweval = REAL(f)
+      priv_pweval = f
    END FUNCTION priv_pweval
 
-   REAL FUNCTION priv_filmeval(b, pw, vac, r)
+   COMPLEX FUNCTION priv_filmeval(b, pw, vac, r)
       !film function at r: plane waves for |z|<=z1, vacuum beyond
       TYPE(t_gfprep_struct), INTENT(IN) :: b
       COMPLEX, INTENT(IN)               :: pw(:), vac(:, :, :)
@@ -580,7 +589,7 @@ CONTAINS
                 EXP(CMPLX(0.0, DOT_PRODUCT(MATMUL(REAL([k1, k2]), b%fi%cell%bmat(1:2, 1:2)), r(1:2))))
          END DO
       END DO
-      priv_filmeval = REAL(f)
+      priv_filmeval = f
    END FUNCTION priv_filmeval
 
    REAL FUNCTION priv_mteval(s, ns, f, y)

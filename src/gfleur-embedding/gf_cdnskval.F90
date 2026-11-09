@@ -4,7 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_cdnskval 
+      USE m_gf_ab_coef
+      USE m_gf_pwden
+      USE m_gf_rhocdnmt
+      USE m_gf_types
+      USE m_radfun
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_cdnskval
 #define cdebug                                                          
       CONTAINS 
       recursive SUBROUTINE gf_cdnskval(l_noco,fmpi,                     &
@@ -25,11 +32,6 @@
 !                                                                       
 !                                      Frank Freimuth, April 2007       
 !*********************************************************************  
-      USE m_gf_ab_coef 
-      USE m_gf_pwden 
-      USE m_gf_rhocdnmt 
-      USE m_gf_types 
-      USE m_radfun 
                                                                         
       IMPLICIT NONE 
       !<--Arguments                                                     
@@ -111,7 +113,7 @@
             endif
             call gf_cdnskval(.false.,fmpi,                                      &
              lapw,lapw_gf,2,nk,nsymt,enpara,vr,                               &
-              Gfkt(size(gfkt,1)/2+1:,size(gfkt,2)/2+1:),                        &
+              Gs,                        &
               atoms,stars,sphhar,cell,sym,kpts,               &
               qpw_s,rho_s,qmtl_s)
             !call gf_cdnskval(.false.,                                           &

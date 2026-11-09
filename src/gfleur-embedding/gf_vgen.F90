@@ -5,6 +5,16 @@
 !--------------------------------------------------------------------------------
 MODULE m_gf_vgen
     use m_juDFT
+    use m_constants, only: oUnit, pi_const
+    use m_gf_plot
+    use m_gf_potdis
+    use m_gf_mix
+    use m_gf_types
+    use m_gf_iodop
+    use m_gf_stepsanaly
+    use m_gf_checkdop
+    use m_fleur_pot
+    use m_gf_cdntot
     IMPLICIT NONE
     !*****************************************************************
     ! Potential setup for the gfleur code, per layer, on the modern
@@ -24,11 +34,6 @@ CONTAINS
         ! Returns the (warped) interstitial potential and the MT potential
         ! of every layer in ld(:)%vTot for the following GF calculation.
         !*****************************************************************
-        USE m_constants, ONLY: oUnit
-        USE m_gf_plot
-        USE m_gf_potdis
-        USE m_gf_mix
-        USE m_gf_types
         IMPLICIT NONE
         TYPE(t_gfmpi),INTENT(INOUT)  :: gmpi
         TYPE(t_embinp),INTENT(IN)    :: embinp
@@ -81,11 +86,6 @@ CONTAINS
         ! Reads the potential from gf_pot.hdf into ld%vTot and applies the
         ! GF step function to the interstitial part.
         !*****************************************************************
-        USE m_constants,ONLY:pi_const
-        USE m_gf_types
-        USE m_gf_iodop
-        USE m_gf_stepsanaly
-        USE m_gf_checkdop
         IMPLICIT NONE
         INTEGER,INTENT(IN)          :: layer
         INTEGER, INTENT (IN)        :: jspins
@@ -100,8 +100,9 @@ CONTAINS
 
         ispins=jspins
         IF (ld%fi%noco%l_noco) ispins=3
+        !noco with l_mperp: MT components 3:4 (local frame)
         ALLOCATE(vr(SIZE(ld%vTot%mt,1),0:SIZE(ld%vTot%mt,2)-1,               &
-     &              SIZE(ld%vTot%mt,3),jspins))
+     &              SIZE(ld%vTot%mt,3),SIZE(ld%vTot%mt,4)))
         ALLOCATE(vpw(ld%stars%ng3,ispins))
         ALLOCATE(vpw_w(ld%stars%ng3,ispins))
         vr=0.0;vpw=0.0
@@ -119,7 +120,7 @@ CONTAINS
             ENDDO
         ENDDO
         CALL gf_checkdop(ld%fi%atoms,ld%fi%cell,ld%stars,ld%sphhar,          &
-     &       ld%fi%sym,.FALSE.,vpw,vr_c)
+     &       ld%fi%sym,.FALSE.,vpw(:,:jspins),vr_c(:,:,:,:jspins))
         DEALLOCATE(vr_c)
 #endif
 
@@ -137,8 +138,8 @@ CONTAINS
      &           vpw(:,js),vpw_w(:,js))
         ENDDO
 
-        ld%vTot%mt = vr
-        ld%vTot%pw(:,1:jspins) = vpw_w(:,1:jspins)
+        ld%vTot%mt(:,:,:,:SIZE(vr,4)) = vr
+        ld%vTot%pw(:,1:ispins) = vpw_w(:,1:ispins)
     END SUBROUTINE
 
 
@@ -148,13 +149,6 @@ CONTAINS
         ! to gf_pot.hdf (the old file is renamed to gf_pot<N>.hdf);
         ! gf_vgen_read reloads it afterwards.
         !*****************************************************************
-        USE m_constants, ONLY : oUnit, pi_const
-        USE m_gf_types
-        USE m_gf_iodop
-        USE m_gf_checkdop
-        USE m_gf_plot
-        USE m_fleur_pot
-        USE m_gf_cdntot
         IMPLICIT NONE
         INTEGER, INTENT (IN)         :: layer
         INTEGER, INTENT (IN)         :: jspins

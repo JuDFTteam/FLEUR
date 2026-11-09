@@ -48,18 +48,21 @@
       END SUBROUTINE
 
       !<-- S: gf_storeHS(jspin,nk,layer,hmat,smat)
-      SUBROUTINE gf_storeHS(jspin,nk,layer,hmat,smat)
+      SUBROUTINE gf_storeHS(jspin,nk,layer,hmat,smat,perm)
 !-----------------------------------------------
 !     stores the assembled H and S of one (layer,spin,k). The input
 !     matrices have only their upper triangle filled (modern hsmt
-!     convention); the Hermitian completion happens here.
+!     convention); the Hermitian completion happens here. perm maps
+!     the input basis index onto the stored one (noco reordering).
 !-----------------------------------------------
       IMPLICIT NONE
       !<-- Arguments
       INTEGER,INTENT(IN)  :: jspin,nk,layer
       COMPLEX,INTENT(IN)  :: hmat(:,:),smat(:,:)
+      INTEGER,INTENT(IN),OPTIONAL :: perm(:)
       !>
-      INTEGER             :: n1,n2,nbas,err
+      INTEGER             :: n1,n2,nbas,err,i1,i2
+      INTEGER,ALLOCATABLE :: p(:)
       nbas = SIZE(hmat,1)
       IF (allocated(H)) THEN
          IF (SIZE(H,1) /= nbas)  DEALLOCATE(H,s)
@@ -72,12 +75,19 @@
       spin            = jspin
       k               = nk
       stored_layer    = layer
+      IF (PRESENT(perm)) THEN
+         p = perm
+      ELSE
+         p = [(n1,n1=1,nbas)]
+      ENDIF
       DO n1 = 1,nbas
+         i1 = p(n1)
          DO n2 = 1,n1
-            H(n2,n1) = hmat(n2,n1)
-            S(n2,n1) = smat(n2,n1)
-            H(n1,n2) = CONJG(hmat(n2,n1))
-            S(n1,n2) = CONJG(smat(n2,n1))
+            i2 = p(n2)
+            H(i2,i1) = hmat(n2,n1)
+            S(i2,i1) = smat(n2,n1)
+            H(i1,i2) = CONJG(hmat(n2,n1))
+            S(i1,i2) = CONJG(smat(n2,n1))
          ENDDO
       ENDDO
       END SUBROUTINE
@@ -151,17 +161,14 @@
          map = (/(i,i=1,lapw%nmat)/)
          RETURN
       ENDIF
-      nv_skip=lapw%nmat-lapw_gf%nmat_sphere  !no of lapw to be skipped
+      nv_skip=lapw%nv(jspin)-lapw_gf%nv_sphere(jspin)  !no of lapw to be skipped
       if (lapw%nmat>lapw%nv_tot) THEN
          !There are some LO
          nv_lo=lapw%nmat-lapw%nv_tot
       else
          nv_lo=0
       endif
-      if (lapw%nv_tot>lapw%nv(jspin)) then  !noco calculation
-         nv_lo=nv_lo/2
-         nv_skip=nv_skip/2
-      endif
+      if (lapw%nv_tot>lapw%nv(jspin)) nv_lo=nv_lo/2  !noco calculation
       n=0
       nn=0
 

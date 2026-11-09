@@ -121,10 +121,14 @@
       !<-- S:gf_dos_mt                                                  
                                                                         
       recursive SUBROUTINE gf_dos_mt(layer,atoms,gfinp,                           &
-     &     gmat,sym,en,jspin_in,wk,nk,l_noco,lapw,lapw_gf)
+     &     gmat,sym,en,jspin_in,wk,nk,l_noco,lapw,lapw_gf,nococonv,ityp_only)
 !*****************************************************************      
 !     This subroutine constructs the density matrix for l<4 for all     
 !     atom types.                                                       
+!     Noco: the spin blocks of G (order PW up, PW down, LOs) are        
+!     rotated into the local spin frame of each atom type (U^+ G U as   
+!     in hsmt) and the spin components 1,2,3 (up-up,down-down,up-down) 
+!     are done for this type only (ityp_only).                          
 !*****************************************************************      
       IMPLICIT NONE 
 !     Arguments                                                         
@@ -142,8 +146,12 @@
                                        !weight of kpt                   
       REAL   ,INTENT(IN)         :: wk
       logical,intent(in)         :: l_noco
+      TYPE(t_nococonv),INTENT(IN),OPTIONAL :: nococonv
+      INTEGER,INTENT(IN),OPTIONAL :: ityp_only
 !     Locals
-      INTEGER :: jspin,jspin1,jspin2
+      INTEGER :: jspin,jspin1,jspin2,nv,ic,t1,t2,s1,s2
+      COMPLEX :: u(2,2),ud,du
+      COMPLEX,ALLOCATABLE :: gs(:,:)
                                            !lm-loops                    
       INTEGER :: l,lm,lmp,m,mp 
                                            !atoms-loops                 
@@ -166,18 +174,30 @@
       COMPLEX,ALLOCATABLE ::vec1(:),vec2(:),abv(:) 
       COMPLEX,ALLOCATABLE:: ldos_mat(:,:,:,:) 
 
-      ! In case of NOCO, call this subroutine recursivly
+      ! In case of NOCO, call this subroutine recursivly per atom type
       if (l_noco) THEN
-      	call gf_dos_mt(layer,atoms,gfinp,                           &
-     &     gmat(:size(gmat,1)/2,:size(gmat,2)/2)                    &
-     &     ,sym,en,1,wk,nk,.false.,lapw,lapw_gf)
-        call gf_dos_mt(layer,atoms,gfinp,                           &
-     &     gmat(size(gmat,1)/2+1:,size(gmat,2)/2+1:)                    &
-     &     ,sym,en,2,wk,nk,.false.,lapw,lapw_gf)
-        call gf_dos_mt(layer,atoms,gfinp,                           &
-     &     gmat(:size(gmat,1)/2,size(gmat,2)/2+1:)                    &
-     &     ,sym,en,3,wk,nk,.false.,lapw,lapw_gf)
-        return
+         nv=lapw_gf%nv_sphere(1)
+         ALLOCATE(gs(nv,nv))
+         DO itype=1,atoms%ntype
+            u=0.0;u(1,1)=1.0;u(2,2)=1.0
+            IF (PRESENT(nococonv)) u=nococonv%umat(itype)
+            DO ic=1,3
+               s1=MERGE(2,1,ic==2)
+               s2=MERGE(1,2,ic==1)
+               gs=0.0
+               DO t1=1,2
+                  DO t2=1,2
+                     IF (ABS(u(t1,s1)*u(t2,s2))<1.E-12) CYCLE
+                     gs=gs+CONJG(u(t1,s1))*u(t2,s2)*                     &
+     &                  gmat((t1-1)*nv+1:t1*nv,(t2-1)*nv+1:t2*nv)
+                  ENDDO
+               ENDDO
+               call gf_dos_mt(layer,atoms,gfinp,gs,sym,en,ic,wk,nk,       &
+     &              .false.,lapw,lapw_gf,ityp_only=itype)
+            ENDDO
+         ENDDO
+         DEALLOCATE(gs)
+         return
       endif
       !<--Before first call, the wigner-matrixes and radial normalisatio
       if (jspin_in<3) THEN
@@ -203,6 +223,12 @@
       ALLOCATE(vec1(lapw_gf%nv_sphere(jspin)),vec2(lapw_gf%nv_sphere(jspin)))
       nt = 0 
       DO itype=1,atoms%ntype 
+         IF (PRESENT(ityp_only)) THEN
+            IF (itype/=ityp_only) THEN
+               nt = nt + atoms%neq(itype)
+               CYCLE
+            ENDIF
+         ENDIF
          DO na = 1,atoms%neq(itype) 
             nt = nt + 1 
             DO l=0,3 
@@ -227,7 +253,14 @@
                      uu=SUM(abv(:SIZE(vec1))*vec1)
                      abv=gf_ab_coef_vector(lm,nt,2,jspin1)
                      dd=SUM(abv(:SIZE(vec2))*vec2)
-                     if (jspin_in==3) uu=uu*ddn(l,itype,layer,4)
+                     du=SUM(abv(:SIZE(vec1))*vec1)
+                     if (jspin_in==3) THEN
+                        !radial overlaps of different spins incl. u-udot
+                        abv=gf_ab_coef_vector(lm,nt,1,jspin1)
+                        ud=SUM(abv(:SIZE(vec2))*vec2)
+                        uu=uu*ddn(l,itype,layer,4)+ud*ddn(l,itype,layer,5) &
+     &                     +du*ddn(l,itype,layer,6)
+                     endif
                      n_tmp(m,mp) = (ddn(l,itype,layer,jspin_in)*dd+uu)           &
      &                    /atoms%neq(itype)                             
                   ENDDO 
@@ -261,8 +294,15 @@
                                                                         
       !>                                                                
                                                                         
+      IF (PRESENT(ityp_only)) THEN
+         CALL io_WRITE(ldos_id,(/1,1,1,1,ityp_only,en,nk,jspin_in,layer/),(/1,7,7,4,1,1,1,1,1/), &
+     &        "ldos_mat",REAL(ldos_mat(:,:,:,ityp_only:ityp_only)))
+         CALL io_WRITE(ldos_id,(/2,1,1,1,ityp_only,en,nk,jspin_in,layer/),(/1,7,7,4,1,1,1,1,1/), &
+     &        "ldos_mat",AIMAG(ldos_mat(:,:,:,ityp_only:ityp_only)))
+      ELSE
       CALL io_WRITE(ldos_id,(/1,1,1,1,1,en,nk,jspin_in,layer/),(/1,7,7,4        ,atoms%ntype,1,1,1,1/),"ldos_mat",REAL(ldos_mat))
       CALL io_WRITE(ldos_id,(/2,1,1,1,1,en,nk,jspin_in,layer/),(/1,7,7,4        ,atoms%ntype,1,1,1,1/),"ldos_mat",AIMAG(ldos_mat))
+      ENDIF
                                                                         
       DEALLOCATE(vec1,vec2,ldos_mat) 
                                                                         
@@ -326,7 +366,7 @@
          IF(.NOT.ALLOCATED(ddn)) THEN 
             firstcall=.TRUE.
             IF (l_noco) THEN
-                ALLOCATE(ddn(0:3,MAXVAL(atoms%ntype),layers%num_layers,4))
+                ALLOCATE(ddn(0:3,MAXVAL(atoms%ntype),layers%num_layers,6))
             ELSE
                 ALLOCATE(ddn(0:3,MAXVAL(atoms%ntype),layers%num_layers,jspins))
             ENDIF
@@ -379,6 +419,10 @@
                          atoms(layer)%dx(itype),atoms(layer)%jri(itype),ddn(l,itype,layer,3))
                          CALL intgr0(f(:,1,1)*f(:,1,2)+f(:,2,1)*f(:,2,2),atoms(layer)%rmsh(1,itype),  &
                          atoms(layer)%dx(itype),atoms(layer)%jri(itype),ddn(l,itype,layer,4))
+                         CALL intgr0(f(:,1,1)*g(:,1,2)+f(:,2,1)*g(:,2,2),atoms(layer)%rmsh(1,itype),  &
+                         atoms(layer)%dx(itype),atoms(layer)%jri(itype),ddn(l,itype,layer,5))
+                         CALL intgr0(g(:,1,1)*f(:,1,2)+g(:,2,1)*f(:,2,2),atoms(layer)%rmsh(1,itype),  &
+                         atoms(layer)%dx(itype),atoms(layer)%jri(itype),ddn(l,itype,layer,6))
                     ENDIF
                ENDDO
              ENDDO
@@ -603,7 +647,7 @@
      &                 ,ndos," : atom =",n," totaldos"                  
                   dos_raw(:,:jspins,ndos) = dos_dia(:,:jspins,0) 
                ENDIF 
-               layer_dos(:,:jspins,layer) = layer_dos(:,:jspin,layer)+dos_dia(:,:jspins,0)
+               layer_dos(:,:jspins,layer) = layer_dos(:,:jspins,layer)+dos_dia(:,:jspins,0)
             ENDIF 
             !>                                                          
             !<-- the l-decomposed dos                                   
@@ -648,7 +692,7 @@
       OPEN(99,FILE ="gf_DOS.raw",FORM ='formatted') 
       DO n = 1,gf_NoEn() 
          WRITE(99,'(99(f0.5,1x))') REAL(gf_Z(n,0)),                     &
-     &        ((2*(jspin-1.5)*AIMAG(dos_raw(n,jspin,l)),l = 1,ndos)     &
+     &        ((priv_spinfac(jspin)*AIMAG(dos_raw(n,jspin,l)),l = 1,ndos) &
      &        ,jspin                                      = 1,jspins)   
       ENDDO 
       CLOSE(99) 
@@ -662,13 +706,14 @@
          OPEN(99,FILE =filename,FORM ='formatted') 
          DO n = 1,gf_NoEn() 
             WRITE(99,'(99(f0.5,1x))') REAL(gf_Z(n,0)),                  &
-     &           (2*(jspin-1.5)*(aimag(layer_dos(n,jspin,layer)))              &
+     &           (priv_spinfac(jspin)*(aimag(layer_dos(n,jspin,layer)))       &
      &           ,jspin = 1,jspins)                                     
          ENDDO 
          CLOSE(99) 
          !<-- Calculate the eigenvalue sum for the total energy         
          energy = AIMAG(SUM(gf_allz(layer)*layer_dos(:,1,layer))) 
-         IF (jspins == 2) THEN 
+         IF (jspins >= 2) THEN 
+            !noco (jspins=3): spin 3 is the off-diagonal part
             energy  = energy+AIMAG(SUM(gf_allz(layer)*layer_dos(:,2     &
      &           ,layer)))                                              
          ELSE 
@@ -701,7 +746,7 @@
             ENDDO 
          ENDDO 
          !OUTPUT                                                        
-         WRITE(99,'(99(f0.6,1x))') x,((2*(jspin-1.5)*AIMAG(dos_inter(l  &
+         WRITE(99,'(99(f0.6,1x))') x,((priv_spinfac(jspin)*AIMAG(dos_inter(l  &
      &        ,jspin)),l = 1,ndos),jspin = 1,jspins)                    
       ENDDO 
       CLOSE(99) 
@@ -724,6 +769,13 @@
                                                                         
       !>                                                                
       END SUBROUTINE 
+
+      PURE REAL FUNCTION priv_spinfac(jspin)
+      !sign of the DOS columns: up positive, down negative; the noco
+      !off-diagonal part (jspin=3) is written as -Im
+      INTEGER,INTENT(IN) :: jspin
+      priv_spinfac = MERGE(2*(jspin-1.5),-1.0,jspin<3)
+      END FUNCTION priv_spinfac
                                                                         
       !>                                                                
                                                                         
@@ -758,13 +810,16 @@
       !>
 
       !In noco-case call subroutine recursively
+      !(global frame, stored order PW up, PW down, LOs)
       if (l_noco) THEN
+        n1=lapw_gf%nv_sphere(1)
         call gf_dos_int(gfinp,layer,fmpi,lapw,lapw_gf,stars,1,omtil,    &
-            G(:size(G,1)/2,:size(g,2)/2),                      &
+            G(:n1,:n1),                      &
             wk,en,nk,.false.)
-     call gf_dos_int(gfinp,layer,fmpi,lapw,lapw_gf,stars,2,omtil,    &
-            G(size(G,1)/2+1:,size(g,2)/2+1:),                      &
+        call gf_dos_int(gfinp,layer,fmpi,lapw,lapw_gf,stars,2,omtil,    &
+            G(n1+1:2*n1,n1+1:2*n1),                      &
             wk,en,nk,.false.)
+        return
       endif
 
 

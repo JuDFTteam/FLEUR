@@ -14,6 +14,7 @@ MODULE m_gfprep_layer
    USE m_types_sym
    USE m_types_input
    USE m_types_vacuum
+   USE m_types_noco
    USE m_types_kpts
    USE m_types_enparaXML
    USE m_gfprep_inp, ONLY: t_layergeo
@@ -31,6 +32,7 @@ MODULE m_gfprep_layer
       TYPE(t_cell)      :: cell
       TYPE(t_vacuum)    :: vacuum
       TYPE(t_input)     :: input
+      TYPE(t_noco)      :: noco
       !layer type -> bulk type, layer atom -> bulk atom
       INTEGER, ALLOCATABLE :: typmap(:), atmap(:)
    END TYPE t_gfprep_layer
@@ -264,6 +266,8 @@ CONTAINS
             at%nlo = atb%nlo(m)
             at%llo = atb%llo(:, m)
             at%ulo_der = atb%ulo_der(:, m)
+            at%l_dulo = atb%l_dulo(:, m)
+            at%l_relLO = atb%l_relLO(:, m)
          END ASSOCIATE
          at%lmaxd = MAXVAL(at%lmax)
 
@@ -309,7 +313,48 @@ CONTAINS
          IF (atb%nlod > 0) lay%enpara%qn_ello(:, :, jsp) = b%fi%enparaXML%qn_ello(:, lay%typmap, jsp)
       END DO
       lay%enpara%evac0 = eVac0Default_const
+
+      CALL priv_fill_noco(b%fi%noco, lay%typmap, lay%noco)
    END SUBROUTINE priv_fill_atoms
+
+   SUBROUTINE priv_fill_noco(nb, typmap, nl)
+      !noco parameters of the layer types, taken from their bulk types
+      TYPE(t_noco), INTENT(IN)  :: nb
+      INTEGER, INTENT(IN)       :: typmap(:)
+      TYPE(t_noco), INTENT(OUT) :: nl
+
+      INTEGER :: ntb
+
+      nl = nb
+      ntb = MAXVAL(typmap)
+      nl%alph_inp = priv_map_r(nb%alph_inp, 0.0)
+      nl%beta_inp = priv_map_r(nb%beta_inp, 0.0)
+      nl%mix_RelaxWeightOffD = priv_map_r(nb%mix_RelaxWeightOffD, 1.0)
+      nl%socscale = priv_map_r(nb%socscale, 1.0)
+      nl%l_unrestrictMT = priv_map_l(nb%l_unrestrictMT)
+      nl%l_alignMT = priv_map_l(nb%l_alignMT)
+      nl%l_constrained = priv_map_l(nb%l_constrained)
+      nl%l_fixedMoment = priv_map_l(nb%l_fixedMoment)
+      nl%l_spinoffd_ldau = priv_map_l(nb%l_spinoffd_ldau)
+   CONTAINS
+      FUNCTION priv_map_r(a, default) RESULT(r)
+         REAL, ALLOCATABLE, INTENT(IN) :: a(:)
+         REAL, INTENT(IN)              :: default
+         REAL :: r(SIZE(typmap))
+         r = default
+         IF (ALLOCATED(a)) THEN
+            IF (SIZE(a) >= ntb) r = a(typmap)
+         END IF
+      END FUNCTION priv_map_r
+      FUNCTION priv_map_l(a) RESULT(r)
+         LOGICAL, ALLOCATABLE, INTENT(IN) :: a(:)
+         LOGICAL :: r(SIZE(typmap))
+         r = .FALSE.
+         IF (ALLOCATED(a)) THEN
+            IF (SIZE(a) >= ntb) r = a(typmap)
+         END IF
+      END FUNCTION priv_map_l
+   END SUBROUTINE priv_fill_noco
 
    SUBROUTINE gfprep_kpts(lays, kgrid, l_timerev, kpts)
       !The 2D k-point set shared by all layers: a Gamma-centered grid

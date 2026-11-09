@@ -44,9 +44,9 @@ CONTAINS
       TYPE(t_kpts)           :: kpts
       COMPLEX, ALLOCATABLE   :: vpw(:, :), cpw(:), dpw(:, :)
       REAL, ALLOCATABLE      :: vmt(:, :, :, :), dmt(:, :, :, :), vz(:, :)
-      INTEGER :: i, js, jspins, n, ierr, outxml, kgrid(2), nl
+      INTEGER :: i, js, jspins, n, ierr, outxml, kgrid(2), nl, npw, nmt
       REAL    :: dv, delz
-      LOGICAL :: l_film
+      LOGICAL :: l_film, l_noco
       CHARACTER(LEN=40) :: name
       CHARACTER(LEN=100) :: xml_add
 
@@ -78,6 +78,12 @@ CONTAINS
       CALL timestop("bulk")
       jspins = b%fi%input%jspins
       l_film = b%fi%input%film
+      l_noco = b%fi%noco%l_noco
+      !noco: off-diagonal interstitial (and vacuum) part, MT 3:4 with l_mperp
+      npw = MERGE(3, jspins, l_noco)
+      nmt = MERGE(4, jspins, l_noco .AND. b%fi%noco%l_mperp)
+      IF (l_noco .AND. ANY(inp%spinflip)) CALL juDFT_error("spinflip is not available for noco", &
+                                                           calledby="gfprep")
 
       !optional constant shift of the potential
       dv = inp%vshift
@@ -119,11 +125,12 @@ CONTAINS
          CALL gfprep_write_inpxml(TRIM(name)//"inp.xml", b, lays(i), kpts)
          CALL gfprep_read_struct(TRIM(name), 0, l)
 
-         ALLOCATE (vpw(l%stars%ng3, jspins), cpw(l%stars%ng3), dpw(l%stars%ng3, jspins))
-         ALLOCATE (vmt(l%fi%atoms%jmtd, 0:l%sphhar%nlhd, l%fi%atoms%ntype, jspins))
-         ALLOCATE (dmt(l%fi%atoms%jmtd, 0:l%sphhar%nlhd, l%fi%atoms%ntype, jspins))
+         CALL priv_check_noco(b, l, lays(i)%typmap)
+         ALLOCATE (vpw(l%stars%ng3, npw), cpw(l%stars%ng3), dpw(l%stars%ng3, npw))
+         ALLOCATE (vmt(l%fi%atoms%jmtd, 0:l%sphhar%nlhd, l%fi%atoms%ntype, nmt))
+         ALLOCATE (dmt(l%fi%atoms%jmtd, 0:l%sphhar%nlhd, l%fi%atoms%ntype, nmt))
          IF (l_film) THEN
-            DO js = 1, jspins
+            DO js = 1, npw
                CALL gfprep_pwconv_film(b%stars, b%fi%cell, b%fi%vacuum, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, &
                                        vTot%pw(:, js), vTot%vac(:, :, :, js), vpw(:, js))
                CALL gfprep_pwconv_film(b%stars, b%fi%cell, b%fi%vacuum, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, &
@@ -132,14 +139,14 @@ CONTAINS
             CALL gfprep_pwconv_film(b%stars, b%fi%cell, b%fi%vacuum, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, &
                                     vCoul%pw(:, 1), vCoul%vac(:, :, :, 1), cpw)
          ELSE
-            DO js = 1, jspins
+            DO js = 1, npw
                CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, vTot%pw(:, js), vpw(:, js))
                CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, den%pw(:, js), dpw(:, js))
             END DO
             CALL gfprep_pwconv(b%stars, b%fi%cell, l%stars, l%fi%cell, geo(i)%zc, geo(i)%d, vCoul%pw(:, 1), cpw)
          END IF
-         CALL gfprep_mtconv(b, l, lays(i)%typmap, lays(i)%atmap, vTot%mt(:, :, :, :jspins), vmt)
-         CALL gfprep_mtconv(b, l, lays(i)%typmap, lays(i)%atmap, den%mt(:, :, :, :jspins), dmt)
+         CALL gfprep_mtconv(b, l, lays(i)%typmap, lays(i)%atmap, vTot%mt(:, :, :, :nmt), vmt)
+         CALL gfprep_mtconv(b, l, lays(i)%typmap, lays(i)%atmap, den%mt(:, :, :, :nmt), dmt)
          IF (l_film) THEN
             CALL gfprep_check("potential", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
                               vTot%pw(:, 1), vpw(:, 1), vTot%mt, vmt, vTot%vac(:, :, :, 1))
@@ -151,13 +158,14 @@ CONTAINS
             CALL gfprep_check("density", b, l, i, geo(i)%zc, geo(i)%c, lays(i)%typmap, lays(i)%atmap, &
                               den%pw(:, 1), dpw(:, 1), den%mt, dmt)
          END IF
+         IF (l_noco) CALL priv_check_offd(i)
 
          IF (inp%spinflip(i) .AND. jspins == 2) THEN
             WRITE (oUnit, "(a,i0)") "gfprep: spins flipped in layer ", i
             vpw = vpw(:, [2, 1]); dpw = dpw(:, [2, 1])
             vmt = vmt(:, :, :, [2, 1]); dmt = dmt(:, :, :, [2, 1])
          END IF
-         CALL gfprep_write_potden(i, l, vmt, vpw, cpw, dmt, dpw)
+         CALL gfprep_write_potden(i, l, vmt, vpw, cpw, dmt, dpw, l_noco)
          CALL gfprep_write_setup(i, geo(i), b%fi%atoms, b%fi%cell)
          DEALLOCATE (vpw, cpw, dpw, vmt, dmt)
          CALL timestop("layer "//TRIM(name))
@@ -165,19 +173,55 @@ CONTAINS
 
       !planar-averaged potential beyond the vacuum embedding planes
       IF (geo(1)%vac(1)) THEN
-         CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 1, -geo(1)%z1, vTot%pw(:, :jspins), &
-                            vTot%vac(:, :, :, :jspins), delz, vz)
+         CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 1, -geo(1)%z1, vTot%pw(:, :npw), &
+                            vTot%vac(:, :, :, :npw), delz, vz)
          CALL gfprep_write_vacemb(1, delz, vz)
       END IF
       IF (geo(nl)%vac(2)) THEN
-         CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 2, geo(nl)%z2, vTot%pw(:, :jspins), &
-                            vTot%vac(:, :, :, :jspins), delz, vz)
+         CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 2, geo(nl)%z2, vTot%pw(:, :npw), &
+                            vTot%vac(:, :, :, :npw), delz, vz)
          CALL gfprep_write_vacemb(2, delz, vz)
       END IF
 
       CALL gfprep_write_gfinp(inp%prefix, geo)
       WRITE (*, "(a,i0,a)") "gfprep: ", nl, " layers written, see gfprep_planes.txt and gf_inp"
+   CONTAINS
+      SUBROUTINE priv_check_offd(ilay)
+         !self-check of the off-diagonal (spin 21) components
+         INTEGER, INTENT(IN) :: ilay
+         INTEGER :: jsmt
+         jsmt = MERGE(3, 0, nmt == 4)
+         IF (l_film) THEN
+            CALL gfprep_check("potential21", b, l, ilay, geo(ilay)%zc, geo(ilay)%c, lays(ilay)%typmap, &
+                              lays(ilay)%atmap, vTot%pw(:, 3), vpw(:, 3), vTot%mt, vmt, vTot%vac(:, :, :, 3), jsmt=jsmt)
+            CALL gfprep_check("density21", b, l, ilay, geo(ilay)%zc, geo(ilay)%c, lays(ilay)%typmap, &
+                              lays(ilay)%atmap, den%pw(:, 3), dpw(:, 3), den%mt, dmt, den%vac(:, :, :, 3), jsmt=jsmt)
+         ELSE
+            CALL gfprep_check("potential21", b, l, ilay, geo(ilay)%zc, geo(ilay)%c, lays(ilay)%typmap, &
+                              lays(ilay)%atmap, vTot%pw(:, 3), vpw(:, 3), vTot%mt, vmt, jsmt=jsmt)
+            CALL gfprep_check("density21", b, l, ilay, geo(ilay)%zc, geo(ilay)%c, lays(ilay)%typmap, &
+                              lays(ilay)%atmap, den%pw(:, 3), dpw(:, 3), den%mt, dmt, jsmt=jsmt)
+         END IF
+      END SUBROUTINE priv_check_offd
    END SUBROUTINE gfprep_run
+
+   SUBROUTINE priv_check_noco(b, l, typmap)
+      !The layer read back must carry the noco setup of the bulk types
+      TYPE(t_gfprep_struct), INTENT(IN) :: b, l
+      INTEGER, INTENT(IN)               :: typmap(:)
+      INTEGER :: t
+      IF (l%fi%noco%l_noco .NEQV. b%fi%noco%l_noco) &
+         CALL juDFT_error("BUG: l_noco of a layer differs from the bulk", calledby="gfprep")
+      IF (.NOT. b%fi%noco%l_noco) RETURN
+      IF (l%fi%noco%l_mperp .NEQV. b%fi%noco%l_mperp) &
+         CALL juDFT_error("BUG: l_mperp of a layer differs from the bulk", calledby="gfprep")
+      DO t = 1, l%fi%atoms%ntype
+         IF (ABS(l%fi%noco%alph_inp(t) - b%fi%noco%alph_inp(typmap(t))) > 1.0E-6 .OR. &
+             ABS(l%fi%noco%beta_inp(t) - b%fi%noco%beta_inp(typmap(t))) > 1.0E-6 .OR. &
+             (l%fi%noco%l_unrestrictMT(t) .NEQV. b%fi%noco%l_unrestrictMT(typmap(t)))) &
+            CALL juDFT_error("BUG: noco angles of a layer type differ from its bulk type", calledby="gfprep")
+      END DO
+   END SUBROUTINE priv_check_noco
 
    SUBROUTINE priv_remove_outputs()
       !Results of an earlier run would be mixed with the new ones

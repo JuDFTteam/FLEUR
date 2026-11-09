@@ -9,6 +9,7 @@
       use m_gf_hsdata
       use m_gf_hs_int
       use m_hsmt
+      use m_eigen_redist_matrix, only: eigen_redist_matrix
       use m_gf_spectrum, only: gf_spectrum_clean
       use m_gf_stepsanaly, only: gf_initstepsanaly, gf_stepf_nohelpregion
       IMPLICIT NONE
@@ -31,6 +32,9 @@
 !       tlmplm data prepared by gf_tlmplminit (local_ham)
 !     - the matrices are dense t_mat objects; the assembled H,S are
 !       stored Hermitian-completed in gf_hsdata
+!     - noco: the 2x2 spin blocks are combined as in FLEUR into the
+!       order [PW up,LO up,PW down,LO down] and stored in the gfleur
+!       order [PW up,PW down,LO up,LO down]
 !     Daniel Wortmann, Sat Mar  2 13:46:30 2002
 !*****************************************************************
 
@@ -51,15 +55,20 @@
 
       !>
       !<-- Locals
-      INTEGER                   :: nbas,err
+      INTEGER                   :: err,nsp,i,j,nlo,n
+      INTEGER,ALLOCATABLE       :: perm(:)
       COMPLEX,ALLOCATABLE       :: ustep(:,:,:),ustep_mt(:,:,:)
       CLASS(t_mat),ALLOCATABLE  :: hmat(:,:),smat(:,:)
+      TYPE(t_mat)               :: hfin,sfin
 
-      IF (ld%fi%noco%l_noco) CALL juDFT_error(                           &
-     &     "noco not yet supported in the gfleur port",                  &
+      IF (ld%fi%noco%l_ss) CALL juDFT_error(                             &
+     &     "Spin spirals are not supported by gfleur",                   &
      &     calledby="gf_hs1lapw")
-
-      nbas = lapw%nv(jspin) + ld%fi%atoms%nlotot
+      IF (ld%fi%noco%l_noco.AND.ld%fi%noco%l_soc) CALL juDFT_error(     &
+     &     "Spin-orbit coupling is not supported by gfleur",             &
+     &     calledby="gf_hs1lapw")
+      nsp = MERGE(2,1,ld%fi%noco%l_noco)
+      nlo = ld%fi%atoms%nlotot
 
       !<-- the GF step function on the full G-difference box
       ALLOCATE(ustep(-ld%stars%mx1:ld%stars%mx1,                         &
@@ -88,16 +97,21 @@
       CALL  gf_spectrum_clean()
 
       !<-- allocate the dense matrices (always complex)
-      ALLOCATE(t_mat::smat(1,1),hmat(1,1))
-      CALL smat(1,1)%init(.FALSE.,nbas,nbas)
-      CALL hmat(1,1)%init(smat(1,1))
+      ALLOCATE(t_mat::smat(nsp,nsp),hmat(nsp,nsp))
+      DO i = 1,nsp
+         DO j = 1,nsp
+            CALL smat(i,j)%init(.FALSE.,lapw%nv(MERGE(i,jspin,nsp==2))+nlo, &
+     &                          lapw%nv(MERGE(j,jspin,nsp==2))+nlo)
+            CALL hmat(i,j)%init(smat(i,j))
+         ENDDO
+      ENDDO
       !>
 
       !<-- interstitial contribution to H+S
       CALL timestart("gf_hsint")
       CALL gf_hs_int(lapw,ld%stars,embinp%napw(layer),ustep,ustep_mt,jspin,&
      &               gmpi%fmpi,bk,ld%fi%cell%bbmat,vpw,                  &
-     &               hmat(1,1),smat(1,1))
+     &               hmat,smat)
       CALL timestop("gf_hsint")
       !>
       !<-- MT-contribution to H and S
@@ -109,7 +123,20 @@
       !>
 
       !<-- store the assembled matrices (Hermitian completion inside)
-      CALL gf_storeHS(jspin,nk,layer,hmat(1,1)%data_c,smat(1,1)%data_c)
+      IF (nsp==1) THEN
+         CALL gf_storeHS(jspin,nk,layer,hmat(1,1)%data_c,smat(1,1)%data_c)
+      ELSE
+         CALL eigen_redist_matrix(gmpi%fmpi,lapw,ld%fi%atoms,smat,sfin)
+         CALL eigen_redist_matrix(gmpi%fmpi,lapw,ld%fi%atoms,hmat,hfin,sfin)
+         !FLEUR order -> gfleur order
+         ALLOCATE(perm(sfin%matsize1))
+         n = lapw%nv(1)
+         perm(1:n) = [(i,i=1,n)]
+         perm(n+1:n+nlo) = [(lapw%nv_tot+i,i=1,nlo)]
+         perm(n+nlo+1:n+nlo+lapw%nv(2)) = [(n+i,i=1,lapw%nv(2))]
+         perm(n+nlo+lapw%nv(2)+1:) = [(lapw%nv_tot+nlo+i,i=1,nlo)]
+         CALL gf_storeHS(jspin,nk,layer,hfin%data_c,sfin%data_c,perm)
+      ENDIF
       IF ((embinp%l_charge.or.embinp%l_dos.OR.embinp%l_writehs.OR.       &
      &     .NOT.embinp%l_spectral).AND.gmpi%fmpi%n_rank == 0)            &
      &     CALL gf_writeHS(embinp%l_savemem)
