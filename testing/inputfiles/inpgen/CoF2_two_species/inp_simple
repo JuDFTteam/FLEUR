@@ -1,0 +1,18 @@
+tetragonal CoF2, two Co species by non-integer id and four equivalent F
+
+&input film=f /
+
+&lattice latsys='tP' a0=1.8897269 a=4.6954 c=3.1774 /
+
+6
+27.01  0.0     0.0     0.0
+27.02  0.5     0.5     0.5
+9   0.3052  0.3052  0.0
+9   0.6948  0.6948  0.0
+9   0.8052  0.1948  0.5
+9   0.1948  0.8052  0.5
+
+&atom element="Co" id=27.01 lo="3s 3p" bmu=3.0 /
+&atom element="Co" id=27.02 lo="3s 3p" bmu=-3.0 /
+&comp kmax=4.4 /
+&kpt div1=2 div2=2 div3=2 /

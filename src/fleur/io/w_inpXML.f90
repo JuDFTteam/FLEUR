@@ -140,6 +140,11 @@ CONTAINS
       INTEGER :: wannNumBands, wannMinBand, wannMaxBand, wannSemicore
       INTEGER :: ityp_w, ilo_w, ios_w
       CHARACTER(len=1000) :: wannArg
+      LOGICAL :: l_wannProj, wannSeen(0:103), wannChan(0:3, 0:103)
+      INTEGER :: wannNumWann, wannNbReq, wannSpinM, wannNat, wannSub
+      INTEGER :: iEl_w, iCh_w, iPos_w, iSep_w, iCut_w, l_w, nz_w
+      CHARACTER(len=1000) :: wannSpec, wannItem, wannMod
+      CHARACTER(len=8) :: wannChStr
 
       l_include = l_includeIn .or. .not. present(filename)
       l_explicit = l_explicitIn .OR. .not. present(filename)
@@ -157,12 +162,123 @@ CONTAINS
       wannMinBand = 0
       wannMaxBand = 0
       wannSemicore = 0
+      l_wannProj = .FALSE.
+      wannSpinM = 1
       IF (l_wannOpt) THEN
          wannArg = juDFT_string_for_argument("-wann")
-         READ (wannArg, *, iostat=ios_w) wannNumBands
-         IF (ios_w /= 0 .OR. wannNumBands < 1) CALL juDFT_error( &
-              "-wann needs a positive number of bands", calledby="w_inpXML", &
-              hint="Write it as -wann 36. A flag passed as the value is swallowed silently.")
+         l_wannProj = INDEX(wannArg, ':') > 0
+         wannChan = .FALSE.
+         wannSeen = .FALSE.
+         wannNumWann = 0
+         wannNbReq = 0
+         wannSpinM = MERGE(2, 1, noco%l_soc .OR. noco%l_noco)
+
+         IF (l_wannProj) THEN
+            !A value carrying a colon is a projection list, not a count:
+            !ELEMENT:channels items separated by commas, channels a subset of
+            !s, p, d and f, and an optional #nbands=N at the end. The key is the
+            !element symbol, so one item reaches every species of that element.
+            !The channels are therefore held per atomic number, which also lets
+            !num_wann be summed over atom types -- the species list does not
+            !exist yet here, and is built further down.
+            wannSpec = ADJUSTL(wannArg)
+            iCut_w = INDEX(wannSpec, '#')
+            IF (iCut_w > 0) THEN
+               wannMod = ADJUSTL(wannSpec(iCut_w + 1:))
+               wannSpec = wannSpec(:iCut_w - 1)
+               IF (wannMod(1:7) /= 'nbands=') CALL juDFT_error( &
+                    "-wann: the only modifier is #nbands=N", calledby="w_inpXML", &
+                    hint="Write it as -wann Fe:spd#nbands=48")
+               READ (wannMod(8:), *, iostat=ios_w) wannNbReq
+               IF (ios_w /= 0 .OR. wannNbReq < 1) CALL juDFT_error( &
+                    "-wann: #nbands needs a positive number", calledby="w_inpXML")
+            END IF
+
+            DO WHILE (LEN_TRIM(wannSpec) > 0)
+               iPos_w = INDEX(wannSpec, ',')
+               IF (iPos_w > 0) THEN
+                  wannItem = wannSpec(:iPos_w - 1)
+                  wannSpec = wannSpec(iPos_w + 1:)
+               ELSE
+                  wannItem = wannSpec
+                  wannSpec = ''
+               END IF
+               wannItem = ADJUSTL(wannItem)
+               IF (LEN_TRIM(wannItem) == 0) CYCLE
+
+               iSep_w = INDEX(wannItem, ':')
+               IF (iSep_w < 2) CALL juDFT_error( &
+                    "-wann: every item needs ELEMENT:channels", calledby="w_inpXML", &
+                    hint="Write it as -wann Cu:spd,Mn:spd,Ge:sp")
+
+               nz_w = -1
+               DO iEl_w = 0, 103
+                  IF (TRIM(ADJUSTL(namat_const(iEl_w))) == &
+                      TRIM(ADJUSTL(wannItem(:iSep_w - 1)))) THEN
+                     nz_w = iEl_w
+                     EXIT
+                  END IF
+               END DO
+               IF (nz_w < 0) CALL juDFT_error( &
+                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " is not an element symbol", calledby="w_inpXML")
+               !A key that matches nothing would write a species without
+               !projections, and the run would only fail later, in wannierlib_amn.
+               IF (.NOT. ANY(atoms%nz(:) == nz_w)) CALL juDFT_error( &
+                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " is not in this structure", calledby="w_inpXML")
+               IF (wannSeen(nz_w)) CALL juDFT_error( &
+                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " appears twice", calledby="w_inpXML", &
+                    hint="Put all of its channels in one item, as Fe:spd.")
+               wannSeen(nz_w) = .TRUE.
+
+               DO iCh_w = iSep_w + 1, LEN_TRIM(wannItem)
+                  SELECT CASE (wannItem(iCh_w:iCh_w))
+                  CASE ('s')
+                     wannChan(0, nz_w) = .TRUE.
+                  CASE ('p')
+                     wannChan(1, nz_w) = .TRUE.
+                  CASE ('d')
+                     wannChan(2, nz_w) = .TRUE.
+                  CASE ('f')
+                     wannChan(3, nz_w) = .TRUE.
+                  CASE (' ')
+                  CASE DEFAULT
+                     CALL juDFT_error("-wann: "//wannItem(iCh_w:iCh_w)// &
+                          " is not one of s, p, d, f", calledby="w_inpXML")
+                  END SELECT
+               END DO
+               IF (.NOT. ANY(wannChan(:, nz_w))) CALL juDFT_error( &
+                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " was given no channels", calledby="w_inpXML")
+            END DO
+
+            !num_wann exactly as init_wannierlib counts it: the 2l+1 of every
+            !channel, over the atoms of each type, doubled where the eigenvectors
+            !are spinors. The sum runs over TYPES, which is what makes it blind
+            !to how the species were split.
+            DO ityp_w = 1, atoms%ntype
+               DO l_w = 0, 3
+                  IF (wannChan(l_w, atoms%nz(ityp_w))) wannNumWann = &
+                     wannNumWann + (2*l_w + 1)*atoms%neq(ityp_w)
+               END DO
+            END DO
+            wannNumWann = wannSpinM*wannNumWann
+
+            !numbands defaults to num_wann: a one-shot projection, which
+            !wannierlib_band_window already treats as "no disentanglement".
+            wannNumBands = MERGE(wannNbReq, wannNumWann, wannNbReq > 0)
+            IF (wannNumBands < wannNumWann) CALL juDFT_error( &
+                 "-wann: #nbands is smaller than num_wann", calledby="w_inpXML", &
+                 hint="Wannier90 needs at least as many bands as Wannier functions.")
+         ELSE
+            READ (wannArg, *, iostat=ios_w) wannNumBands
+            IF (ios_w /= 0 .OR. wannNumBands < 1) CALL juDFT_error( &
+                 "-wann needs a positive number of bands, or an ELEMENT:channels list", &
+                 calledby="w_inpXML", hint="Write it as -wann 36 or as "// &
+                 "-wann Cu:spd,Mn:spd,Ge:sp. A flag passed as the value is swallowed silently.")
+         END IF
          wannSemicore = 0
          DO ityp_w = 1, atoms%ntype
             DO ilo_w = 1, atoms%nlo(ityp_w)
@@ -570,9 +686,45 @@ WRITE (fileNum, 242) fr(1.0)
             WRITE (fileNum, 324) TRIM(ADJUSTL(loType)), l, n, atoms%ulo_der(ilo, iAtomType)
          END DO
 
+         IF (l_wannProj) THEN
+            nz_w = atoms%nz(iAtomType)
+            !Atoms of this species: the same sum over types that init_wannierlib
+            !makes, because more than one type can carry the same species name.
+            wannNat = 0
+            DO ityp_w = 1, atoms%ntype
+               IF (TRIM(atoms%speciesname(ityp_w)) == TRIM(speciesNames(iSpecies))) &
+                  wannNat = wannNat + atoms%neq(ityp_w)
+            END DO
+            wannChStr = ''
+            wannSub = 0
+            DO l_w = 0, 3
+               IF (.NOT. wannChan(l_w, nz_w)) CYCLE
+               WRITE (fileNum, 901) l_w
+               wannChStr = TRIM(wannChStr)//' '//'spdf'(l_w + 1:l_w + 1)
+               wannSub = wannSub + (2*l_w + 1)*wannNat*wannSpinM
+            END DO
+            !Printed before anything runs: the only way to see that the
+            !element-to-species translation hit the species it was meant to.
+            IF (wannSub > 0) THEN
+               WRITE (*, 902) iSpecies, TRIM(speciesName), &
+                  TRIM(ADJUSTL(namat_const(nz_w))), wannNat, &
+                  TRIM(ADJUSTL(wannChStr)), wannSub
+            ELSE
+               WRITE (*, 903) iSpecies, TRIM(speciesName), &
+                  TRIM(ADJUSTL(namat_const(nz_w)))
+            END IF
+901         FORMAT('         <wannierproj l="', i0, '" m="0"/>')
+902         FORMAT('   species ', i0, '  "', a, '"  ', a, '  atoms ', i0, &
+                   '   ', a, ' -> ', i0)
+903         FORMAT('   species ', i0, '  "', a, '"  ', a, &
+                   '   no projections')
+         END IF
+
          WRITE (fileNum, '(a)') '      </species>'
       END DO
       WRITE (fileNum, '(a)') '   </atomSpecies>'
+      IF (l_wannProj) WRITE (*, '(a,i0,a,i0)') &
+         '   num_wann = ', wannNumWann, ',  numbands = ', wannNumBands
 
       if (.not. l_include(3)) then
          close (99)

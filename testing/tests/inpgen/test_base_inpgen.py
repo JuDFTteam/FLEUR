@@ -63,3 +63,115 @@ def test_inpgen_Si_inputfile_content(execute_inpgen, clean_workdir):
         assert file1 in res_file_names
 
     # Now we test if the namelists are really set in the inp.xml
+
+
+@pytest.mark.inpgen
+@pytest.mark.bulk
+@pytest.mark.fast
+def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
+    """-wann ELEMENT:channels writes the trial orbitals and sizes the window.
+
+    The two silicon atoms are one species with neq=2, so the count has to pick up
+    the atoms of the species and not the species: s and p give (1+3)*2 = 8, and d
+    alone gives 5*2 = 10. numbands follows num_wann when no #nbands is asked for,
+    which is the one-shot projection wannierlib_band_window already returns early
+    on, and #nbands raises the window without touching the projections.
+    """
+    folder = './inputfiles/inpgen/Si_no_para/'
+
+    res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:sp'])
+    with open(res['inp.xml']) as f:
+        content = f.read()
+    assert content.count('<wannierproj l=') == 2
+    assert '<wannierproj l="0" m="0"/>' in content
+    assert '<wannierproj l="1" m="0"/>' in content
+    assert 'numBands="8"' in content
+    clean_workdir()
+
+    res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:d'])
+    with open(res['inp.xml']) as f:
+        content = f.read()
+    assert content.count('<wannierproj l=') == 1
+    assert '<wannierproj l="2" m="0"/>' in content
+    assert 'numBands="10"' in content
+    clean_workdir()
+
+    res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:sp#nbands=24'])
+    with open(res['inp.xml']) as f:
+        content = f.read()
+    assert content.count('<wannierproj l=') == 2
+    assert 'numBands="24"' in content
+    clean_workdir()
+
+    # The bare number keeps its old meaning: a window and no projections.
+    res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', '24'])
+    with open(res['inp.xml']) as f:
+        content = f.read()
+    assert '<wannierproj l=' not in content
+    assert 'numBands="24"' in content
+    clean_workdir()
+
+    # And without the flag at all. The species loop asks whether a projection
+    # list was given, which has to hold for a run that never looked at one.
+    res = execute_inpgen(folder, ['-f', 'inp_simple'])
+    with open(res['inp.xml']) as f:
+        content = f.read()
+    assert '<wannierproj l=' not in content
+    assert '<wannierlib' not in content
+
+    clean_workdir()
+
+
+@pytest.mark.inpgen
+@pytest.mark.bulk
+@pytest.mark.fast
+def test_inpgen_wann_projections_reach_every_species(execute_inpgen, clean_workdir):
+    """One key reaches every species of its element.
+
+    In CoF2 the two cobalt sites are separate species, written by non-integer ids,
+    while the four fluorines are one species with neq=4. A single Co key therefore
+    has to land in both cobalt species, and the F key has to count four atoms:
+    3 + 3 + 2 = 8 entries and 9 + 9 + 4*4 = 34 Wannier functions. That is what
+    makes the count independent of how the species came out, which a single-species
+    structure cannot show.
+    """
+    folder = './inputfiles/inpgen/CoF2_two_species/'
+
+    res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Co:spd,F:sp'])
+    with open(res['inp.xml']) as f:
+        content = f.read()
+
+    species = content.split('<species name=')
+    assert len(species) == 4          # the split leaves the preamble in front
+    assert species[1].count('<wannierproj l=') == 3
+    assert species[2].count('<wannierproj l=') == 3
+    assert species[3].count('<wannierproj l=') == 2
+    assert content.count('<wannierproj l=') == 8
+    assert 'numBands="34"' in content
+
+    clean_workdir()
+
+
+@pytest.mark.inpgen
+@pytest.mark.bulk
+@pytest.mark.fast
+def test_inpgen_wann_projections_refused(execute_inpgen, clean_workdir):
+    """A key that cannot be honoured stops inpgen instead of writing a short answer.
+
+    Without these, a typo leaves a species with no projections and the run only
+    fails much later, when wannierlib_amn finds nothing to project onto. The
+    fixture reports a non-zero inpgen with pytest.fail, whose exception derives
+    from BaseException rather than Exception.
+    """
+    folder = './inputfiles/inpgen/Si_no_para/'
+
+    for bad in ('Fw:sp',            # not an element symbol
+                'Cu:sp',            # an element, but not in this structure
+                'Si:sp,Si:d',       # the same element twice
+                'Si:spx',           # not an s, p, d or f
+                'Si:',              # no channels at all
+                'Si:sp#nbands=4',   # fewer bands than Wannier functions
+                'Si:sp#kmax=4'):    # not a modifier
+        with pytest.raises(BaseException):
+            execute_inpgen(folder, ['-f', 'inp_simple', '-wann', bad])
+        clean_workdir()
