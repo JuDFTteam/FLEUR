@@ -49,8 +49,8 @@ CONTAINS
 
 SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real,&
-                  qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
+                  hub1inp, cdnvalJob1, results, results1, bqpt, iDtype, iDir, l_real,&
+                  qm_eid_id,dfpt_eigm_id)!,starsmq,results1m,cdnvalJob1m)
 
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
    
@@ -78,7 +78,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
    TYPE(t_potden),        INTENT(IN)    :: vTot
    TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob, cdnvalJob1
-   TYPE(t_results),       INTENT(INOUT) :: resultsdummy, resultsdummy1
+   TYPE(t_results),       INTENT(INOUT) :: results, results1
    TYPE(t_potden),        INTENT(INOUT) :: den
 
    ! Scalar Arguments
@@ -88,9 +88,9 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    REAL, INTENT(IN) :: bqpt(3)
 
    INTEGER, OPTIONAL, INTENT(IN)    :: qm_eid_id, dfpt_eigm_id
-   TYPE(t_stars), OPTIONAL, INTENT(IN)         :: starsmq
-   TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: resultsdummy1m
-   TYPE(t_cdnvalJob), OPTIONAL, INTENT(IN)    :: cdnvalJob1m
+   !TYPE(t_stars), OPTIONAL, INTENT(IN)         :: starsmq
+   !TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: results1m
+   !TYPE(t_cdnvalJob), OPTIONAL, INTENT(IN)    :: cdnvalJob1m
 
    ! Local Scalars
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,ispinpr,jsp,itype,ikG,iqdir
@@ -101,7 +101,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
    ! Local Arrays
    COMPLEX ::  f_b8_dummy(3, atoms%ntype)
-   REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:),we1m(:),eig1m(:)
+   REAL,ALLOCATABLE :: we(:),eig(:),we1(:)!,eig1(:),we1m(:),eig1m(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
 
    TYPE (t_lapw)              :: lapw, lapwq, lapwmq
@@ -187,13 +187,13 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
       we  = cdnvalJob%weights(ev_list,ikpt)
       we1  = cdnvalJob1%weights(ev_list,ikpt)
-      eig = resultsdummy%eig(ev_list,ikpt,jsp)
-      eig1 = resultsdummy1%eig(ev_list,ikpt,jsp)
+      eig = results%eig(ev_list,ikpt,jsp)
+      !eig1 = results1%eig(ev_list,ikpt,jsp)
 
-      IF (l_minusq) THEN
-         we1m = cdnvalJob1m%weights(ev_list,ikpt)
-         eig1m = resultsdummy1m%eig(ev_list,ikpt,jsp)
-      END IF
+      !IF (l_minusq) THEN
+      !   we1m = cdnvalJob1m%weights(ev_list,ikpt)
+      !   eig1m = results1m%eig(ev_list,ikpt,jsp)
+      !END IF
 
       IF (cdnvalJob%l_evp) THEN
          IF (minval(ev_list) > skip_tt) skip_t = 0
@@ -219,7 +219,6 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
       IF (l_minusq) CALL read_eig(dfpt_eigm_id,ikpt,jsp,list=ev_list,neig=nbands1m,zmat=zMat1m)
 
-      ! TODO: Implement correct spin logic here! Only collinear operational for now!
       if (sternheimerJob%l_IBScorrection) then
          DO sp_noco = 1, MERGE(2,1,noco%l_noco) ! effective noco switch
             isp_nv = MERGE(sp_noco,jsp,noco%l_noco) ! spin index for lapw
@@ -265,26 +264,26 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
             call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat)
             call abc1(ispin)%init(input, atoms, noccbd, itype)
             call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1)
-            DO ispinpr = ispin,ispin !TODO no real noco here
-                                       !In future this could perhaps be generalized according to code in cdnval. The two following if statements have to be understood in this context then.
-               
-               IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
-                  call abcpref(ispin)%init(input, atoms, noccbd, itype)
-                  call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMatPref)
-                  abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
-               END IF
-               IF (l_minusq) THEN
-                  call abc1m(ispin)%init(input, atoms, noccbd, itype)
-                  call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1m)
-                  if (sternheimerJob%l_IBScorrection.and.idtype==itype) then
-                     abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof
-                  end if
-               END IF
+            IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
+               call abcpref(ispin)%init(input, atoms, noccbd, itype)
+               call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMatPref)
+               abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
+            END IF
+            IF (l_minusq) THEN
+               call abc1m(ispin)%init(input, atoms, noccbd, itype)
+               call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1m)
+               if (sternheimerJob%l_IBScorrection.and.idtype==itype) then
+                  abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof
+               end if
+            END IF
+         enddo
+         DO ispin = jsp_start, jsp_end
+            DO ispinpr = jsp_start, jsp_end
                if (l_minusq) then
-                  CALL judft_bug("dfpt_cdnval: abc1m used to calculate density matrix")
+                  call denmatrix(ispin,ispinpr,itype)%rhonmt(atoms, sphhar, we, noccbd, itype,sym, .false., abc(ispin), abc(ispinpr),abc1(ispinpr),bqpt=bqpt,we1=we1,abc1m=abc1m(ispin))
                else
                   !Now calculate the density matrix as needed to construct the charge
-                  call denmatrix(ispin,ispinpr,itype)%rhonmt(atoms, sphhar, we, noccbd, itype,sym, .false., abc(ispin), abc1(ispinpr),bqpt=bqpt,we1=we1)
+                  call denmatrix(ispin,ispinpr,itype)%rhonmt(atoms, sphhar, we, noccbd, itype,sym, .false., abc(ispin), abc(ispinpr),abc1(ispinpr),bqpt=bqpt,we1=we1)
                end if
             ENDDO
          enddo
@@ -295,10 +294,10 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
          ! valence density in the interstitial region
          IF (.NOT.l_minusq) THEN
             CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                       jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir)
+                       jspin,lapw,noccbd,ev_list,we,eig,den,results,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir)
          ELSE
             CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                       jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir,lapwmq,zMat1m)
+                       jspin,lapw,noccbd,ev_list,we,eig,den,results,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir,lapwmq,zMat1m)
          END IF
          IF (input%film) THEN
             CALL vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddosdummy,&
@@ -313,8 +312,8 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    CALL MPI_BARRIER(fmpi%MPI_COMM, ierr)
    DO ispin = jsp_start, jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuum,input,noco,ispin,dosdummy,vacdosdummy,&
-                       resultsdummy,den)
-      DO ispinpr = jsp_start, ispin
+                       results,den)
+      DO ispinpr = jsp_start, jsp_end
          DO itype = 1, atoms%ntype
             call denmatrix(ispin, ispinpr, itype)%mpi_collect(fmpi)
          end do
@@ -327,9 +326,9 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
       CALL timestart("denmatrix%to_full_density")
       DO itype = 1, atoms%ntype
          DO ispin = jsp_start, jsp_end
-            DO ispinpr = ispin,ispin
+            DO ispinpr = jsp_start, jsp_end
                call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
-                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=den%mtIm)
+                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=den%mtIm, l_minusq=l_minusq)
             ENDDO               
          enddo
       END DO      
