@@ -135,9 +135,7 @@ CONTAINS
       END IF
       archiveType = dfptArchiveType(fi%noco)
       l_exist = .FALSE.
-      l_existm = .FALSE.
       IF (fmpi%irank == 0) l_exist = isDfptDensityPresent(archiveType, dfpt_tag, qpts%bk(:,iQ))
-      IF (fmpi%irank == 0 .AND. l_minusq) l_existm = isDfptDensityPresent(archiveType, TRIM(dfpt_tag)//'m', -qpts%bk(:,iQ))
 
       
       IF (fmpi%irank == 0) THEN
