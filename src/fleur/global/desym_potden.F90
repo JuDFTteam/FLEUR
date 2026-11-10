@@ -61,41 +61,41 @@ contains
    end subroutine desym_potden
 
    subroutine desym_pw(sym, stars, stars_nosym, pw, pw_nosym)
-      !! Expands star coefficients of the symmetric setup into star coefficients without symmetry via the star members and phases.
+      !! Expands star coefficients of the symmetric setup into the plane-wave coefficients without symmetry (iG: index of G there).
       type(t_sym),   intent(in)    :: sym
       type(t_stars), intent(in)    :: stars, stars_nosym
       complex,       intent(in)    :: pw(:,:)
       complex,       intent(inout) :: pw_nosym(:,:)
 
-      integer :: is, iop, is_nosym, nspin
-      integer :: kr(3,sym%nop)
-      complex :: ph, ph_nosym
+      integer :: iStar, iop, iG, nspin
+      integer :: gMembers(3,sym%nop)
+      complex :: phase, phase_nosym
 
       nspin = min(size(pw,2), size(pw_nosym,2))
-      do is = 1, stars%ng3
-         call spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, stars%kv3(:,is), kr)
+      do iStar = 1, stars%ng3
+         call spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, stars%kv3(:,iStar), gMembers)
          do iop = 1, sym%nop
-            is_nosym = stars_nosym%ig(kr(1,iop), kr(2,iop), kr(3,iop))
-            if (is_nosym == 0) cycle
-            ph   = stars%rgphs(kr(1,iop), kr(2,iop), kr(3,iop))
-            ph_nosym = stars_nosym%rgphs(kr(1,iop), kr(2,iop), kr(3,iop))
-            if (abs(ph_nosym) < 1e-10) cycle
-            pw_nosym(is_nosym,:nspin) = pw(is,:nspin) * ph / ph_nosym
+            iG = stars_nosym%ig(gMembers(1,iop), gMembers(2,iop), gMembers(3,iop))
+            if (iG == 0) cycle
+            phase       = stars%rgphs(gMembers(1,iop), gMembers(2,iop), gMembers(3,iop))
+            phase_nosym = stars_nosym%rgphs(gMembers(1,iop), gMembers(2,iop), gMembers(3,iop))
+            if (abs(phase_nosym) < 1e-10) cycle
+            pw_nosym(iG,:nspin) = pw(iStar,:nspin) * phase / phase_nosym
          end do
       end do
 
    end subroutine desym_pw
 
    subroutine desym_vac(fi, stars, stars_nosym, vac, vac_nosym)
-      !! Expands the 2D star coefficients of both vacua into 2D star coefficients without symmetry.
+      !! Expands the 2D star coefficients of both vacua into the 2D plane-wave coefficients without symmetry (iG2: index of G_par there).
       type(t_fleurinput), intent(in)    :: fi
       type(t_stars),      intent(in)    :: stars, stars_nosym
       complex,            intent(in)    :: vac(:,:,:,:)
       complex,            intent(inout) :: vac_nosym(:,:,:,:)
 
-      integer :: is2, iop, is2_nosym, nspin
-      integer :: kr(2,fi%sym%nop2)
-      complex :: ph, ph_nosym
+      integer :: iStar2, iop, iG2, nspin
+      integer :: gMembers(2,fi%sym%nop2)
+      complex :: phase, phase_nosym
       complex, allocatable :: vac_both(:,:,:,:)
 
       ! With nvac = 1 only the upper vacuum is stored; the lower one follows by symmetry
@@ -103,15 +103,15 @@ contains
       call stars%fill_2nd_vac(fi%vacuum, vac_both)
 
       nspin = min(size(vac,4), size(vac_nosym,4))
-      do is2 = 1, stars%ng2
-         call spgrot(fi%sym%nop2, fi%sym%symor, fi%sym%mrot(:2,:2,:), fi%sym%tau(:2,:), fi%sym%invtab, stars%kv2(:,is2), kr)
+      do iStar2 = 1, stars%ng2
+         call spgrot(fi%sym%nop2, fi%sym%symor, fi%sym%mrot(:2,:2,:), fi%sym%tau(:2,:), fi%sym%invtab, stars%kv2(:,iStar2), gMembers)
          do iop = 1, fi%sym%nop2
-            is2_nosym = stars_nosym%i2g(kr(1,iop), kr(2,iop))
-            if (is2_nosym == 0) cycle
-            ph       = stars%r2gphs(kr(1,iop), kr(2,iop))
-            ph_nosym = stars_nosym%r2gphs(kr(1,iop), kr(2,iop))
-            if (abs(ph_nosym) < 1e-10) cycle
-            vac_nosym(:,is2_nosym,:,:nspin) = vac_both(:,is2,:,:nspin) * ph / ph_nosym
+            iG2 = stars_nosym%i2g(gMembers(1,iop), gMembers(2,iop))
+            if (iG2 == 0) cycle
+            phase       = stars%r2gphs(gMembers(1,iop), gMembers(2,iop))
+            phase_nosym = stars_nosym%r2gphs(gMembers(1,iop), gMembers(2,iop))
+            if (abs(phase_nosym) < 1e-10) cycle
+            vac_nosym(:,iG2,:,:nspin) = vac_both(:,iStar2,:,:nspin) * phase / phase_nosym
          end do
       end do
 
