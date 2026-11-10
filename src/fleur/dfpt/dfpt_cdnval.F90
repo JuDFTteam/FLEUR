@@ -49,8 +49,8 @@ CONTAINS
 
 SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real,&
-                  qm_eid_id,dfpt_eigm_id)!,starsmq,resultsdummy1m,cdnvalJob1m)
+                  hub1inp, cdnvalJob1, results, results1, bqpt, iDtype, iDir, l_real,&
+                  qm_eid_id,dfpt_eigm_id)!,starsmq,results1m,cdnvalJob1m)
 
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
    
@@ -78,7 +78,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
    TYPE(t_potden),        INTENT(IN)    :: vTot
    TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob, cdnvalJob1
-   TYPE(t_results),       INTENT(INOUT) :: resultsdummy, resultsdummy1
+   TYPE(t_results),       INTENT(INOUT) :: results, results1
    TYPE(t_potden),        INTENT(INOUT) :: den
 
    ! Scalar Arguments
@@ -89,7 +89,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
    INTEGER, OPTIONAL, INTENT(IN)    :: qm_eid_id, dfpt_eigm_id
    !TYPE(t_stars), OPTIONAL, INTENT(IN)         :: starsmq
-   !TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: resultsdummy1m
+   !TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: results1m
    !TYPE(t_cdnvalJob), OPTIONAL, INTENT(IN)    :: cdnvalJob1m
 
    ! Local Scalars
@@ -101,7 +101,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
    ! Local Arrays
    COMPLEX ::  f_b8_dummy(3, atoms%ntype)
-   REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:)!,we1m(:),eig1m(:)
+   REAL,ALLOCATABLE :: we(:),eig(:),we1(:)!,eig1(:),we1m(:),eig1m(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
 
    TYPE (t_lapw)              :: lapw, lapwq, lapwmq
@@ -187,12 +187,12 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
       we  = cdnvalJob%weights(ev_list,ikpt)
       we1  = cdnvalJob1%weights(ev_list,ikpt)
-      eig = resultsdummy%eig(ev_list,ikpt,jsp)
-      eig1 = resultsdummy1%eig(ev_list,ikpt,jsp)
+      eig = results%eig(ev_list,ikpt,jsp)
+      !eig1 = results1%eig(ev_list,ikpt,jsp)
 
       !IF (l_minusq) THEN
       !   we1m = cdnvalJob1m%weights(ev_list,ikpt)
-      !   eig1m = resultsdummy1m%eig(ev_list,ikpt,jsp)
+      !   eig1m = results1m%eig(ev_list,ikpt,jsp)
       !END IF
 
       IF (cdnvalJob%l_evp) THEN
@@ -294,10 +294,10 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
          ! valence density in the interstitial region
          IF (.NOT.l_minusq) THEN
             CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                       jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir)
+                       jspin,lapw,noccbd,ev_list,we,eig,den,results,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir)
          ELSE
             CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                       jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir,lapwmq,zMat1m)
+                       jspin,lapw,noccbd,ev_list,we,eig,den,results,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir,lapwmq,zMat1m)
          END IF
          IF (input%film) THEN
             CALL vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddosdummy,&
@@ -312,7 +312,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    CALL MPI_BARRIER(fmpi%MPI_COMM, ierr)
    DO ispin = jsp_start, jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuum,input,noco,ispin,dosdummy,vacdosdummy,&
-                       resultsdummy,den)
+                       results,den)
       DO ispinpr = jsp_start, jsp_end
          DO itype = 1, atoms%ntype
             call denmatrix(ispin, ispinpr, itype)%mpi_collect(fmpi)

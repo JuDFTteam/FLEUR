@@ -43,9 +43,9 @@ CONTAINS
 
 SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
                   kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
-                  enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
+                  enpara,cell,noco,nococonv,vTot,results, results1,&
                   archiveType, xcpot,outDen,bqpt,iDtype,iDir,l_real,&
-                  qm_eid_id,dfpt_eigm_id)!,starsmq,resultsdummy1m)
+                  qm_eid_id,dfpt_eigm_id)!,starsmq,results1m)
 
    
 
@@ -53,7 +53,7 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
 
    ! Type instance arguments
    TYPE(t_sternheimerJob),INTENT(IN):: sternheimerJob
-   TYPE(t_results),INTENT(INOUT)    :: resultsdummy, resultsdummy1
+   TYPE(t_results),INTENT(INOUT)    :: results, results1
    TYPE(t_mpi),INTENT(IN)           :: fmpi
    TYPE(t_enpara),INTENT(IN)        :: enpara
    TYPE(t_banddos),INTENT(IN)       :: banddosdummy
@@ -81,7 +81,7 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
 
    INTEGER, OPTIONAL, INTENT(IN)    :: qm_eid_id, dfpt_eigm_id
    !TYPE(t_stars), OPTIONAL, INTENT(IN)         :: starsmq
-   !TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: resultsdummy1m
+   !TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: results1m
 
    ! Local type instances
    TYPE(t_regionCharges)          :: regCharges
@@ -104,27 +104,27 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
    CALL moments%init(fmpi,input,sphhar,atoms)
    
    !initalize data for DOS
-   if (noco%l_noco) resultsdummy%eig(:,:,2)=resultsdummy%eig(:,:,1)
-   !if (noco%l_noco) resultsdummy1%eig(:,:,2)=resultsdummy1%eig(:,:,1)
-   !if (noco%l_noco.and.l_minusq) resultsdummy1%eig(:,:,2)=resultsdummy1%eig(:,:,1)
-   CALL dosdummy%init(input,atoms,kpts,banddosdummy,.false.,resultsdummy%eig)
-   CALL vacdosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
+   if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
+   !if (noco%l_noco) results1%eig(:,:,2)=results1%eig(:,:,1)
+   !if (noco%l_noco.and.l_minusq) results1%eig(:,:,2)=results1%eig(:,:,1)
+   CALL dosdummy%init(input,atoms,kpts,banddosdummy,.false.,results%eig)
+   CALL vacdosdummy%init(input,atoms,kpts,banddosdummy,results%eig)
 
    CALL timestart("dfpt_cdngen: cdnval")
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp)
-      CALL cdnvalJob%init(fmpi,input,kpts,noco,resultsdummy,jspin)
-      CALL cdnvalJob1%init(fmpi,input,kpts,noco,resultsdummy1,jspin)
+      CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
+      CALL cdnvalJob1%init(fmpi,input,kpts,noco,results1,jspin)
       !IF (l_minusq) THEN
-      !CALL cdnvalJob1m%init(fmpi,input,kpts,noco,resultsdummy1m,jspin)
+      !CALL cdnvalJob1m%init(fmpi,input,kpts,noco,results1m,jspin)
       ! The -q arguments are optional and stay absent without l_minusq
       CALL dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
                        vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-                       hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real,&
-                       qm_eid_id,dfpt_eigm_id)!,starsmq,resultsdummy1m,cdnvalJob1m)
+                       hub1inp, cdnvalJob1, results, results1, bqpt, iDtype, iDir, l_real,&
+                       qm_eid_id,dfpt_eigm_id)!,starsmq,results1m,cdnvalJob1m)
       !ELSE
       !   CALL dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
       !                    vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-      !                    hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real)
+      !                    hub1inp, cdnvalJob1, results, results1, bqpt, iDtype, iDir, l_real)
       !END IF
    END DO
    CALL timestop("dfpt_cdngen: cdnval")
