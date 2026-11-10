@@ -5,6 +5,9 @@
 !--------------------------------------------------------------------------------
 MODULE m_gf_vgen
     use m_juDFT
+#ifdef CPP_MPI
+    use mpi
+#endif
     use m_constants, only: oUnit, pi_const
     use m_gf_plot
     use m_gf_potdis
@@ -45,12 +48,21 @@ CONTAINS
         COMPLEX,INTENT(OUT)          :: pot_aux(:,:)
 
         LOGICAL :: l_exist
-        INTEGER :: layer,layer_loop
+        INTEGER :: layer,layer_loop,ierr
         REAL    :: c_layer
 
         INQUIRE(FILE='gf_cdn.hdf',EXIST=l_exist)
         l_exist=l_exist.AND.embinp%l_charge
         pot_aux=0.0
+        !The interstitial Coulomb potential is generated on one PE
+        !(gf_makeintcoulpot) and written to gf_pot.hdf for all layers; every
+        !PE reads those of its layers before gf_vgen_make renames the file.
+        IF (gfmix%iter>0.AND.l_exist.AND.gmpi%k_kpts(1) == 1) THEN
+            DO layer_loop = 1,gmpi%kl_LayerperPE
+                layer = gmpi%kl_layers(layer_loop)
+                CALL gf_lodcoul(GF_POTFILE,layer,vpw=ld(layer)%vTot%pw(:,1))
+            ENDDO
+        ENDIF
         DO layer_loop = 1,gmpi%kl_LayerperPE
             layer = gmpi%kl_layers(layer_loop)
             IF (gfmix%iter>0.AND.l_exist.AND.gmpi%k_kpts(1) == 1) THEN
@@ -58,7 +70,7 @@ CONTAINS
                 c_layer = MERGE(layers%c(layer),ld(layer)%fi%cell%amat(3,3), &
      &                          layers%c(layer)>0.0)
                 CALL gf_potdis(jspins,ld(layer)%fi%atoms,ld(layer)%stars,     &
-     &               ld(layer)%sphhar,gmpi%fmpi,ld(layer)%fi%sym,             &
+     &               ld(layer)%sphhar,gmpi%fself,ld(layer)%fi%sym,             &
      &               ld(layer)%fi%cell,c_layer,.TRUE.,layer)
             ENDIF
         ENDDO
@@ -66,6 +78,10 @@ CONTAINS
      &      embinp%l_potmix) THEN
             CALL gf_mix(gmpi,embinp,gfmix,layers,ld,jspins)
         ENDIF
+#ifdef CPP_MPI
+        !the potential was (re)written by the PEs that own the layers
+        CALL MPI_BARRIER(gmpi%fmpi%mpi_comm,ierr)
+#endif
         !     Now read the potential from the file!
         IF (gmpi%pe0) WRITE(oUnit,*) "Reading potential from gf_pot.hdf"
         DO layer_loop = 1,gmpi%kl_LayerperPE
@@ -176,7 +192,7 @@ CONTAINS
         !<-- load the charge density and check neutrality
         CALL gf_loddop(GF_CDNFILE,layer,jspins,ld%fi%atoms,ld%stars,         &
      &       ld%sphhar,rho,qpw,ld%fi%noco)
-        CALL gf_cdntot(layer,gmpi%fmpi,jspins,ld%stars,ld%fi%cell,           &
+        CALL gf_cdntot(layer,gmpi%fself,jspins,ld%stars,ld%fi%cell,           &
      &       ld%fi%atoms,rho,qpw,q_el,q_nuc)
         ! spin sum for the Coulomb potential
         IF (jspins==2) THEN
@@ -186,17 +202,17 @@ CONTAINS
         IF (vchk) CALL gf_checkdop(ld%fi%atoms,ld%fi%cell,ld%stars,          &
      &       ld%sphhar,ld%fi%sym,.TRUE.,qpw(:,1:1),rho)
 
-        !<-- interstitial Coulomb potential (filled by gf_makeintcoulpot)
+        !<-- interstitial Coulomb potential (read from gf_pot.hdf by gf_vgen)
         vpw(:,1) = ld%vTot%pw(:,1)
         IF (SIZE(vpw,2)>1) vpw(:,2:)=0.0
         !<-- Coulomb potential in the MT spheres
-        CALL fleur_vmts(gmpi%fmpi,ld,vpw,rho,vr)
+        CALL fleur_vmts(gmpi%fself,ld,vpw,rho,vr)
         CALL gf_plot(layer,ld%stars,ld%fi%cell,ld%fi%atoms,ld%fi%sym,1,vpw,   &
      &       GF_PLOT_HARTREE,ld%sphhar,vr)
         IF (vchk) CALL gf_checkdop(ld%fi%atoms,ld%fi%cell,ld%stars,          &
      &       ld%sphhar,ld%fi%sym,.FALSE.,vpw(:,1:1),vr)
         !<-- XC potential
-        CALL fleur_xcpot(ld,gmpi%fmpi,layer,jspins,vr,vpw)
+        CALL fleur_xcpot(ld,gmpi%fself,layer,jspins,vr,vpw)
         IF (vchk) CALL gf_checkdop(ld%fi%atoms,ld%fi%cell,ld%stars,          &
      &       ld%sphhar,ld%fi%sym,.FALSE.,vpw(:,1:1),vr)
 

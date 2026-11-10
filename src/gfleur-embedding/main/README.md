@@ -311,11 +311,25 @@ beyond the plane (+0.2 e for Cu(001)). Broyden mixing with `imix=7` was
 unstable here; `imix=5, alpha=0.02` converges in about 25 iterations, plain
 linear mixing is stable. A vacuum on the left (free film) is not supported.
 
+## MPI
+
+`gfleur_MPI` distributes the k-points over the ranks; with enough ranks the
+layers are distributed as well. The charge mode runs in parallel: the layer
+owners (the ranks of the first k-group) sum the partial densities of all
+k-groups, the interstitial Coulomb potential is generated on rank 0 and the
+densities are mixed there (the files are exchanged through the shared file
+system, serial HDF5 is sufficient). The CBS of the leads is a serial
+preparation step (one rank). A charge run on two or three ranks reproduces
+the serial one. The FLEUR kernels called per layer get a communicator of
+their own (`gmpi%fself`), the PEs other than rank 0 discard the XML output of
+these kernels.
+
 ## Not supported
 
 * Charge mode with a vacuum on the left (free film, `vacleft=t`), and a self-consistent
   vacuum (potential and charge beyond the last plane are frozen).
 * Noco: spin spirals; the `charge` mode only reliably for moments along z.
+* MPI: the CBS (lead embedding potentials) and the vacuum embedding are serial; a free film is not supported.
 * Second-variation SOC (`l_soc="T"` with `l_noco="F"`).
 * LDA+U and Hubbard-1 are written into the layer inputs by `gfprep` but are
   not used by the Green's-function kernels.

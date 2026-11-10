@@ -5,6 +5,9 @@
 !--------------------------------------------------------------------------------
 MODULE m_gf_calcspectrum
     use m_juDFT
+#ifdef CPP_MPI
+    USE mpi
+#endif
     USE m_gf_hsdata
     USE m_gf_types
     USE m_gf_spectrum

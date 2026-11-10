@@ -7,7 +7,17 @@
 #ifdef CPP_MPI
       USE mpi
 #endif
+#ifndef CPP_TEST
+      USE m_gf_types
+      USE m_juDFT
+      USE m_constants, ONLY: oUnit
+#endif
+#ifdef CPP_MPI
+      USE m_juDFT
+#endif
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_setup_mpi_groups
 !-----------------------------------------------
 ! DESC:determine different parallelization levels
 !      The GF parallelization works on t_gfmpi: the standard FLEUR
@@ -27,7 +37,6 @@
 !
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
       IMPLICIT NONE
       !<--Arguments
       TYPE(t_kpts),INTENT(IN)    :: kpts
@@ -60,7 +69,6 @@
 !  create a subcom with all members that write on gf_pot and gf_iodop
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
       IMPLICIT NONE
       !<--Arguments
       TYPE(t_gfmpi),INTENT(INOUT) :: gmpi
@@ -107,6 +115,11 @@
       gmpi%fmpi%n_rank = 0
       gmpi%fmpi%n_size = 1
       gmpi%fmpi%sub_comm = gmpi%self_subcom
+      !FLEUR kernels called by a single PE (layer owner) must not communicate
+      gmpi%fself = gmpi%fmpi
+      gmpi%fself%mpi_comm = gmpi%self_subcom
+      gmpi%fself%irank = 0
+      gmpi%fself%isize = 1
 
       END SUBROUTINE
       !>
@@ -117,8 +130,6 @@
 !  full parallelization over kpts+(layers or energies)
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      use m_juDFT
       IMPLICIT NONE
       !<--Arguments
       TYPE(t_kpts),INTENT(IN)     :: kpts
@@ -204,8 +215,6 @@
 !  prints the information on parallelization
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      USE m_constants, ONLY: oUnit
       IMPLICIT NONE
       !<--Arguments
                                       !no of layers, no of kpts
@@ -311,7 +320,6 @@
       !               loopsize a multiple of com->isize, if this fails an invalid subcom and unallocated local_elements is returned
       !UNBALANCED_PARALLEL: if isize<loop each PE does one or more loop-elements
       !                     if isize>loop each loop-element is done by one or more PE
-      use m_juDFT
       IMPLICIT NONE
       INTEGER,INTENT(IN)               ::com,loopsize,strategy
       INTEGER,ALLOCATABLE,INTENT(OUT)  ::local_elements(:)

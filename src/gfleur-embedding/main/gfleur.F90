@@ -193,7 +193,7 @@ CONTAINS
 #endif
             IF (gmpi%pe0) THEN
                CALL priv_gather(ld, layers, atoms=atoms, stars=stars, cell=cell, potential=potential)
-               CALL gf_makeintcoulpot(ld(1)%fi%input%jspins, layers, stars, gmpi%fmpi, &
+               CALL gf_makeintcoulpot(ld(1)%fi%input%jspins, layers, stars, gmpi%fself, &
                                       embinp, potential, vac_pot, atoms, cell, ld(1)%fi%sym)
                DO layer = 1, nl
                   ld(layer)%vTot%pw = potential(layer)%pw
@@ -222,15 +222,15 @@ CONTAINS
             DO layer_loop = 1, gmpi%kl_LayerperPE
                layer = gmpi%kl_layers(layer_loop)
                !enpara%update and the core states use enpara%vr/vr_core, set from vTot here
-               CALL assign_enpara_potential(ld(layer)%enpara, gmpi%fmpi, ld(layer)%fi%atoms, &
+               CALL assign_enpara_potential(ld(layer)%enpara, gmpi%fself, ld(layer)%fi%atoms, &
                                             ld(layer)%fi%input, ld(layer)%vTot, ld(layer)%xcpot, &
                                             no_mgga, ld(layer)%cdn_new, ld(layer)%sphhar, &
                                             ld(layer)%fi%sym, ld(layer)%stars, ld(layer)%fi%vacuum, &
                                             ld(layer)%fi%noco, no_mgga)
-               CALL ld(layer)%enpara%update(gmpi%fmpi, ld(layer)%fi%atoms, &
+               CALL ld(layer)%enpara%update(gmpi%fself, ld(layer)%fi%atoms, &
                                             ld(layer)%fi%vacuum, ld(layer)%fi%input, &
                                             ld(layer)%vTot, ld(layer)%hub1data)
-               CALL gf_tlmplminit(ld(layer), gmpi%fmpi)
+               CALL gf_tlmplminit(ld(layer), gmpi%fself)
             END DO
          END IF
          !>

@@ -190,7 +190,7 @@ CONTAINS
                 CALL timestop("gf_nognofinalize")
             ENDIF
             CALL timestart("gf_cdnskval")
-            CALL gf_cdnskval(noco%l_noco,fmpi%fmpi,                            &
+            CALL gf_cdnskval(noco%l_noco,fmpi%fself,                            &
             lapw,lapw_gf,jspin,nk,                                &
             MAXVAL(sym%ntypsy),enpara,vr(:,0,:,:),              &
             G_sum,atoms,stars,sphhar,                             &

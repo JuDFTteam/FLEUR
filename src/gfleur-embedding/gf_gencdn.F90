@@ -7,7 +7,18 @@
       USE m_constants, ONLY: oUnit
       use m_juDFT
       use m_juDFT 
+      use m_gf_cdntot
+      use m_gf_types
+      use m_gf_plot
+      use m_gf_iodop
+      use m_cored
+      use m_gf_fft_singleton
+#ifdef CPP_MPI
+      use mpi
+#endif
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_gencdn
       CONTAINS 
       SUBROUTINE gf_gencdn(layer,jspin,l_chargefromstates,              &
      &     jspins,gfinp,input,atoms,cell,sym,kpts,stars,sphhar,fmpi,     &
@@ -18,11 +29,6 @@
 !                                                                       
 !                          Daniel Wortmann, Sat Feb 23 12:52:14 2002    
 !*****************************************************************      
-      USE m_gf_cdntot 
-      USE m_gf_types 
-      USE m_gf_plot 
-      USE m_gf_iodop 
-      USE m_cored
       IMPLICIT NONE 
 !     .. Scalar Arguments ..                                            
       INTEGER, INTENT(IN)          :: jspin,jspins,layer
@@ -72,10 +78,8 @@
       !<-- Collect charge from different PEs                            
                                                                         
 #ifdef CPP_MPI                                                          
-      IF (fmpi%fmpi%isize/=1) THEN
-         CALL juDFT_error("MPI charge collection (gf_MPIcollect) is not "//&
-     &        "yet ported",calledby="gf_gencdn")
-      ENDIF 
+      !sum the partial k-point sums on the first PE of the layer
+      IF (fmpi%fmpi%isize/=1) CALL priv_collect(fmpi,rho,qpw,qmtl)
 #endif                                                                  
                                       ! this PE does not have the       
       IF (fmpi%k_kpts(1) /= 1) RETURN 
@@ -145,7 +149,7 @@
 !                                                                       
       CALL priv_plotPlanar(stars,qpw) 
       IF (jspin==jspins.or.l_noco) THEN
-         CALL gf_cdntot(layer,fmpi%fmpi,jspins,stars,cell,atoms,rho(:,0:,:,:) &
+         CALL gf_cdntot(layer,fmpi%fself,jspins,stars,cell,atoms,rho(:,0:,:,:) &
      &        ,qpw(:,:),qtot_el(layer),qtot_nuc(layer))                 
          !<-- generate gf_cdn.diff file for totalcharge mixing          
          IF (gfinp%l_totalmix.AND..NOT.lexist) THEN 
@@ -159,13 +163,49 @@
       ENDIF 
       END SUBROUTINE 
       !<-- S:priv_plotPlanar(stars,qpw)                                 
+#ifdef CPP_MPI
+      SUBROUTINE priv_collect(gmpi,rho,qpw,qmtl)
+!-----------------------------------------------
+!     Sum the charge of the k-point groups: the PEs that work on the
+!     same layers (samelayer_subcom) add their partial sums on its
+!     first PE, which then holds the density of the layer.
+!-----------------------------------------------
+      IMPLICIT NONE
+      TYPE(t_gfmpi),INTENT(IN) :: gmpi
+      REAL,INTENT(INOUT)       :: rho(:,0:,:,:)
+      COMPLEX,INTENT(INOUT)    :: qpw(:,:)
+      REAL,INTENT(INOUT)       :: qmtl(:,:)
+      REAL,ALLOCATABLE    :: rbuf(:),rres(:)
+      COMPLEX,ALLOCATABLE :: cbuf(:),cres(:)
+      INTEGER :: rank,e
+
+      CALL MPI_COMM_RANK(gmpi%samelayer_subcom,rank,e)
+      !density of the muffin-tin spheres
+      rbuf = RESHAPE(rho,(/SIZE(rho)/))
+      ALLOCATE(rres(SIZE(rbuf)))
+      CALL MPI_REDUCE(rbuf,rres,SIZE(rbuf),MPI_DOUBLE_PRECISION,MPI_SUM,0,gmpi%samelayer_subcom,e)
+      IF (rank==0) rho = RESHAPE(rres,SHAPE(rho))
+      DEALLOCATE(rbuf,rres)
+      !l-like charge
+      rbuf = RESHAPE(qmtl,(/SIZE(qmtl)/))
+      ALLOCATE(rres(SIZE(rbuf)))
+      CALL MPI_REDUCE(rbuf,rres,SIZE(rbuf),MPI_DOUBLE_PRECISION,MPI_SUM,0,gmpi%samelayer_subcom,e)
+      IF (rank==0) qmtl = RESHAPE(rres,SHAPE(qmtl))
+      DEALLOCATE(rbuf,rres)
+      !interstitial
+      cbuf = RESHAPE(qpw,(/SIZE(qpw)/))
+      ALLOCATE(cres(SIZE(cbuf)))
+      CALL MPI_REDUCE(cbuf,cres,SIZE(cbuf),MPI_DOUBLE_COMPLEX,MPI_SUM,0,gmpi%samelayer_subcom,e)
+      IF (rank==0) qpw = RESHAPE(cres,SHAPE(qpw))
+      DEALLOCATE(cbuf,cres)
+      END SUBROUTINE priv_collect
+#endif
+
       SUBROUTINE priv_plotPlanar(stars,qpw) 
 !-----------------------------------------------                        
 !     calculate the planar average of the charge/potential in pw        
 !             (last modified: 04-08-13) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_fft_singleton 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_stars),INTENT(IN) :: stars 
@@ -204,8 +244,6 @@
       !per-type loop over the modern cored (replaces the old EXTERNAL
       !cored call; deliberately NOT cdncore, which would additionally
       !spread core tails into the interstitial)
-      USE m_cored
-      USE m_gf_types
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_sphhar),INTENT(IN) :: sphhar

@@ -128,6 +128,8 @@ MODULE m_gf_types
    !(set up in gf_mpi_groups).
    TYPE t_gfmpi
       TYPE(t_mpi) :: fmpi
+      !the same for FLEUR kernels called by a single PE (own communicator MPI_COMM_SELF)
+      TYPE(t_mpi) :: fself
       LOGICAL     :: pe0 = .FALSE.  !this PE does I/O (fmpi%irank==0)
       !k-parallelization
       INTEGER              :: k_kperPE, k_PEperK, k_rank

@@ -79,3 +79,7 @@ the bias-dependent current, and MPI runs.
   convergence) and a semi-infinite Cu(001) surface (upper four planes of the 7-plane film in
   `inputfiles/cu_film7` between a shifted bulk lead and the frozen vacuum, converged with `imix=5`
   to the charges of the film). The module takes about twenty minutes.
+
+  The charge test `test_charge_mpi_equals_serial` needs an MPI build: run the module with
+  `GFPREP_BINARY=<serial build>/gfprep GFLEUR_BINARY=<MPI build>/gfleur_MPI GFLEUR_MPI="mpirun -np 2"`
+  (the lead CBS runs always use one rank). It skips without `GFLEUR_MPI`.

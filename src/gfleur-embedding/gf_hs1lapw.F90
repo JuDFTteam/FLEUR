@@ -107,14 +107,14 @@
       !<-- interstitial contribution to H+S
       CALL timestart("gf_hsint")
       CALL gf_hs_int(lapw,ld%stars,embinp%napw(layer),ustep,ustep_mt,jspin,&
-     &               gmpi%fmpi,bk,ld%fi%cell%bbmat,vpw,                  &
+     &               gmpi%fself,bk,ld%fi%cell%bbmat,vpw,                  &
      &               hmat,smat)
       CALL timestop("gf_hsint")
       !>
       !<-- MT-contribution to H and S
       CALL timestart("hssphn")
       CALL hsmt(ld%fi%atoms,ld%fi%sym,ld%enpara,jspin,ld%fi%input,       &
-     &          gmpi%fmpi,ld%fi%noco,ld%nococonv,ld%fi%cell,lapw,        &
+     &          gmpi%fself,ld%fi%noco,ld%nococonv,ld%fi%cell,lapw,        &
      &          ld%tlmplm,smat,hmat)
       CALL timestop("hssphn")
       !>
@@ -123,8 +123,8 @@
       IF (nsp==1) THEN
          CALL gf_storeHS(jspin,nk,layer,hmat(1,1)%data_c,smat(1,1)%data_c)
       ELSE
-         CALL eigen_redist_matrix(gmpi%fmpi,lapw,ld%fi%atoms,smat,sfin)
-         CALL eigen_redist_matrix(gmpi%fmpi,lapw,ld%fi%atoms,hmat,hfin,sfin)
+         CALL eigen_redist_matrix(gmpi%fself,lapw,ld%fi%atoms,smat,sfin)
+         CALL eigen_redist_matrix(gmpi%fself,lapw,ld%fi%atoms,hmat,hfin,sfin)
          !FLEUR order -> gfleur order
          ALLOCATE(perm(sfin%matsize1))
          n = lapw%nv(1)

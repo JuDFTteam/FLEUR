@@ -84,7 +84,7 @@
       DO layer = 1,nl
          c_layer = MERGE(layers%c(layer),cell(layer)%amat(3,3),layers%c(layer)>0.0)
          CALL gf_potdis(jspins,atoms(layer),stars(layer),sphhar(layer),      &
-     &        gmpi%fmpi,sym(layer),cell(layer),c_layer,embinp%l_potmix,       &
+     &        gmpi%fself,sym(layer),cell(layer),c_layer,embinp%l_potmix,       &
      &        layer,distance,volume,ld(layer)%enpara)
       ENDDO
       WRITE(oUnit,*) "Total distance of all layers:",1000*SQRT(distance/volume)

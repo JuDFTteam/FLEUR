@@ -35,9 +35,14 @@ moment along z exactly (same stack charge, same MT charge, same distance). For t
 the MT d charge differs by 0.37 e and the stack charge by 0.34 e: the first iteration is not yet
 rotation invariant (known problem, xfail).
 
+MPI: with GFLEUR_BINARY=<path of gfleur_MPI> and GFLEUR_MPI="mpirun -np 2" the gfleur runs of these
+tests use several ranks (the k-points are distributed, the density is summed over the ranks of a
+layer). The results must equal the serial ones.
+
 Binaries are located via GFPREP_BINARY or <repo>/build*/gfprep; fleur and gfleur are taken from
 the same directory. Missing binaries skip the tests.
 """
+import os
 import re
 import shutil
 import subprocess
@@ -58,6 +63,14 @@ SCF_MIX = "imix=7, maxiter=14, alpha=0.02"
 Env = namedtuple("Env", "gfprep gfleur bulk base prep lead cbs")
 
 
+def _run_gf(gfleur, cwd, timeout=3600, mpi=True):
+    """gfleur, optionally under a launcher (GFLEUR_MPI="mpirun -np 2"); mpi=False for the serial
+    preparation runs (CBS of the leads)"""
+    cmd = (os.environ.get("GFLEUR_MPI", "").split() if mpi else []) + [str(gfleur)]
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=dict(os.environ))
+    return proc, proc.stdout + "\n" + proc.stderr
+
+
 def _gfprep(gfprep, work, bulk, options):
     work.mkdir()
     # relative path: the xml file name handling of FLEUR is limited to 100 characters
@@ -72,7 +85,7 @@ def _layers_block(prep):
     return text[:text.index("\n/\n") + 3]
 
 
-def _gfleur_charge(env, name, sc, copy_cdn=True):
+def _gfleur_charge(env, name, sc, copy_cdn=True, mpi=True):
     """gfleur charge run of the stack with the given &SC line, returns (run dir, log)"""
     run = env.base / name
     run.mkdir()
@@ -88,7 +101,7 @@ def _gfleur_charge(env, name, sc, copy_cdn=True):
                                "&FILE name='embpot11' /\n&FILE name='embpotN2' /\n")
     if not copy_cdn:
         (run / "gf_cdn.hdf").unlink()
-    proc, log = _run(env.gfleur, run)
+    proc, log = _run_gf(env.gfleur, run, mpi=mpi)
     return run, proc, log
 
 
@@ -122,6 +135,8 @@ def env(tmp_path_factory):
         pytest.skip("no gfprep binary found (set GFPREP_BINARY or build the gfprep target)")
     fleur = _sibling(gfprep, ["fleur", "fleur_MPI"])
     gfleur = _sibling(gfprep, ["gfleur", "gfleur_MPI"])
+    if os.environ.get("GFLEUR_BINARY"):
+        gfleur = Path(os.environ["GFLEUR_BINARY"])
     if fleur is None or gfleur is None:
         pytest.skip(f"fleur/gfleur binaries missing next to {gfprep}")
     base = tmp_path_factory.mktemp("charge")
@@ -140,7 +155,7 @@ def env(tmp_path_factory):
                                 "&CBSMODE cbs=t /\n&SC iter=1 /\n")
     shutil.copy(lead / "gf_en.charge", cbs / "gf_en")
     (cbs / "gf_io").write_text("default\n")
-    proc, log = _run(gfleur, cbs)
+    proc, log = _run_gf(gfleur, cbs, mpi=False)
     assert proc.returncode == 0, f"gfleur CBS run failed\n{log[-3000:]}"
     for f in ("embpot11.hdf", "embpotN2.hdf"):
         assert (cbs / f).is_file(), f"{f} missing"
@@ -251,7 +266,7 @@ def surf(env):
                                 "&CBSMODE cbs=t /\n&SC iter=1 /\n")
     shutil.copy(prep / "gf_en.charge", cbs / "gf_en")
     (cbs / "gf_io").write_text("default\n")
-    proc, log = _run(env.gfleur, cbs)
+    proc, log = _run_gf(env.gfleur, cbs, mpi=False)
     assert proc.returncode == 0, f"gfleur CBS run of the lead failed\n{log[-3000:]}"
     return film, prep, cbs
 
@@ -268,7 +283,7 @@ def _surface_run(env, surf, name, sc):
     assert "&EMB addemb=T, surface=T, vacleft=F /" in gfinp
     (run / "gf_inp").write_text(_layers_block(prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
                                 f"&BASIS napw={NAPW} /\n&EMB addemb=T, surface=T, vacleft=F /\n{sc}\n")
-    proc, log = _run(env.gfleur, run)
+    proc, log = _run_gf(env.gfleur, run)
     return run, proc, log
 
 
@@ -332,7 +347,7 @@ def test_charge_rejects_vacuum_on_the_left(env, surf):
     shutil.copy(prep / "gf_en.charge", run / "gf_en")
     (run / "gf_inp").write_text(_layers_block(prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
                                 f"&BASIS napw={NAPW} /\n&EMB addemb=T, surface=T, vacleft=T /\n&SC iter=1 /\n")
-    proc, log = _run(env.gfleur, run)
+    proc, log = _run_gf(env.gfleur, run)
     assert proc.returncode != 0
     assert "charge mode with vacuum on the left is not supported" in log
 
@@ -361,7 +376,7 @@ def _noco_stack(env, d):
                                 "&CBSMODE cbs=t /\n&SC iter=1 /\n")
     shutil.copy(prep / "gf_en.charge", cbs / "gf_en")
     (cbs / "gf_io").write_text("default\n")
-    proc, log = _run(env.gfleur, cbs)
+    proc, log = _run_gf(env.gfleur, cbs, mpi=False)
     assert proc.returncode == 0, f"gfleur CBS run failed\n{log[-3000:]}"
 
     def run(name, sc, collinear=False):
@@ -379,7 +394,7 @@ def _noco_stack(env, d):
         (work / "gf_io").write_text("2\n&IO mode='E', region=1, side=1, rw='r', id=1 /\n"
                                     "&IO mode='E', region=1, side=2, rw='r', id=2 /\n"
                                     "&FILE name='embpot11' /\n&FILE name='embpotN2' /\n")
-        proc, log = _run(env.gfleur, work)
+        proc, log = _run_gf(env.gfleur, work)
         # the collinear control reads noco-prepared files: it crashes when it writes the new density,
         # after the quantities compared by the tests are in the output
         assert collinear or proc.returncode == 0, f"gfleur charge run failed\n{log[-3000:]}"
@@ -423,3 +438,19 @@ def test_noco_charge_rotation_invariance(noco_z, noco_x):
     out_x = noco_x("noco_inv", sc)
     assert _mt_total(out_x) == pytest.approx(_mt_total(out_z), abs=0.02)
     assert _neutrality(out_x)[0] == pytest.approx(_neutrality(out_z)[0], abs=0.02)
+
+
+@pytest.mark.skipif(not os.environ.get("GFLEUR_MPI"), reason="set GFLEUR_BINARY=<gfleur_MPI> and GFLEUR_MPI='mpirun -np 2'")
+def test_charge_mpi_equals_serial(env):
+    """The charge mode on several ranks (k-points distributed, density summed per layer, mixing on
+    rank 0 from the files) equals the serial run: stack charge, MT charge and the distances of
+    three mixing iterations."""
+    sc = "&SC iter=3, imix=0, alpha=0.02 /"
+    out = {}
+    for name, mpi in (("ser", False), ("par", True)):
+        run, proc, log = _gfleur_charge(env, f"mpi_{name}", sc, mpi=mpi)
+        assert proc.returncode == 0, f"gfleur charge run ({name}) failed\n{log[-3000:]}"
+        out[name] = (run / "out").read_text()
+    assert _neutrality(out["par"]) == pytest.approx(_neutrality(out["ser"]), abs=1e-6)
+    assert _distances(out["par"]) == pytest.approx(_distances(out["ser"]), rel=1e-6)
+    assert _mt_total(out["par"]) == pytest.approx(_mt_total(out["ser"]), abs=1e-6)

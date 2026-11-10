@@ -5,6 +5,9 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_CBS 
       USE m_constants, ONLY: oUnit
+#ifdef CPP_MPI
+      USE mpi
+#endif
       use m_juDFT
       USE hdf5
       USE m_gf_types

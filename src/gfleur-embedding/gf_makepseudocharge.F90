@@ -4,8 +4,16 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_makepseudocharge 
-      USE m_constants, ONLY: oUnit
+      USE m_constants, ONLY: oUnit, POTDEN_TYPE_DEN
+      USE m_gf_types
+      USE m_gf_iodop
+      USE m_fleur_psqpw
+      USE m_gf_stepsanaly
+      USE m_gf_plot
+      USE m_gf_fft_singleton
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_makepseudocharge
                                                                         
 !      PRIVATE                                                          
       REAL,PARAMETER :: gausscale = 3.0 
@@ -17,12 +25,6 @@
 ! DESC:Construct the pseudo charge                                      
 !           (last modified: 07-11-20) D. Wortmann                       
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_iodop 
-      USE m_fleur_psqpw 
-      USE m_gf_stepsanaly 
-      USE m_gf_plot 
-      USE m_constants, ONLY: POTDEN_TYPE_DEN
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER                    :: layer,jspins 
@@ -65,7 +67,7 @@
      &              ld%fi%noco,jspins,POTDEN_TYPE_DEN)
       den%mt = rho
       den%pw = qpw
-      CALL fleur_psqpw(gmpi%fmpi,ld,den,1,psq)                                                
+      CALL fleur_psqpw(gmpi%fself,ld,den,1,psq)                                                
 !      CALL gf_plot(layer,stars,cell,atoms,sym,1,qpw,GF_PLOT_CHARGE)!res
 !     $     ,1/)),GF_PLOT_CHARGE)                                       
       !<-- convolute with step-function                                 
@@ -114,8 +116,6 @@
 !     calculate the planar average of the charge/potential in pw        
 !             (last modified: 04-08-13) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_fft_singleton 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_stars),INTENT(IN) :: stars 

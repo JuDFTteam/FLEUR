@@ -941,7 +941,9 @@
 #ifdef CPP_MPI                                                          
       IF (PRESENT(mpi_subcom)) THEN 
         if(iodop_subcom==-1) iodop_subcom=mpi_subcom
+#ifdef CPP_HDFMPI
         if(iodop_subcom.ne.mpi_subcom) call juDFT_warn("Parallelisation error in gf_iodop")
+#endif
          CALL MPI_COMM_RANK(mpi_subcom,irank,mpierr) 
          CALL MPI_COMM_SIZE(mpi_subcom,isize,mpierr) 
          IF (irank<isize-1) THEN 

@@ -6,7 +6,14 @@
 ! Module that contains code to diagonalize the vacuum Hamiltonian
 Module m_gf_vacuum_hs
       use m_juDFT
-	use m_juDFT
+#ifdef CPP_MPI
+      use mpi
+#endif
+      use m_gf_types
+      use m_gf_iodop
+      use m_vacfun
+      use m_gf_energies
+      use m_gf_math
     implicit none
     private
 	!defaults for vacuum grid
@@ -22,8 +29,6 @@ Module m_gf_vacuum_hs
     subroutine gf_vacuum_diagonalize(fmpi,vacuum,input,nococonv,lapw,lapw_gf,stars,cell,sym,kpts,enpara,jspins,nk,l_noco)
     ! Set up the vacuum Hamiltonian and diagonalize it, store resulting eigenvectors and eigenvalues
     ! for later use
-	use m_gf_types
-	use m_gf_iodop,only:gf_iodop_readvacuum,GF_POTFILE
     implicit none
     type(t_lapw),intent(in) ::  lapw
     type(t_lapw_gf),intent(in) :: lapw_gf
@@ -98,7 +103,6 @@ Module m_gf_vacuum_hs
 
 	subroutine priv_mpi_bcast_HS(fmpi,jspins)
 	! subroutine to distribute diagonalized vacuum Hamiltonian on all PE
-	use m_gf_types
 	implicit none
 	type(t_mpi),intent(in)::fmpi
 	integer,intent(in)    ::jspins
@@ -127,9 +131,6 @@ Module m_gf_vacuum_hs
 	end subroutine
 
 	subroutine 	gf_vacuum_getHS(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,jspin,jspins,nk,l_noco,sym,kpts,enpara_vac,cell,h_mat,s_mat,l_sym)
-	use m_gf_types
-	use m_vacfun !modern interface
-	use m_gf_iodop
     implicit none
     type(t_mpi),intent(in)::     fmpi
     type(t_vacuum),intent(in)::  vacuum
@@ -234,8 +235,6 @@ Module m_gf_vacuum_hs
 
 
 	subroutine gf_generate_embpot(en,jspin,sigma)
-	use m_gf_energies
-	use m_gf_math
 	implicit none
 	integer,intent(in)::en,jspin
 	complex,intent(out)::sigma(:,:)

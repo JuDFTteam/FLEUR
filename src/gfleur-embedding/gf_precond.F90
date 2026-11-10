@@ -5,14 +5,17 @@
 !--------------------------------------------------------------------------------
 module m_gf_precond
     use m_juDFT
-    implicit none
-    contains
-    subroutine gf_precond(layer,ld,gmpi,mix,jspins,d_qpw,d_rho)
     use m_fleur_psqpw
     use m_qpwtonmt
     use m_gf_types
     use m_gf_stepsanaly
     use m_gf_precond_stepweight
+    use m_gf_fft_singleton
+    implicit none
+    private
+    public :: gf_precond
+    contains
+    subroutine gf_precond(layer,ld,gmpi,mix,jspins,d_qpw,d_rho)
     implicit none
     integer,intent(in)        :: layer
     type(t_gflayer),intent(in),target :: ld
@@ -48,7 +51,7 @@ module m_gf_precond
              ld%fi%noco,1,1001)
          dden%pw(:,1)=d_qpw(:,jspin)
          dden%mt(:,:,:,1)=d_rho(:,:,:,jspin)
-         call fleur_psqpw(gmpi%fmpi,ld,dden,1,psq,no_core=.true.)
+         call fleur_psqpw(gmpi%fself,ld,dden,1,psq,no_core=.true.)
 
          call priv_plot(stars,psq,2,layer,"Pseudo_Charge")
 
@@ -91,7 +94,7 @@ module m_gf_precond
 
 
          rho4 = 0.0
-         CALL qpw_to_nmt(sphhar,atoms,stars,sym,cell,gmpi%fmpi,1,4,     &
+         CALL qpw_to_nmt(sphhar,atoms,stars,sym,cell,gmpi%fself,1,4,     &
              d_qpw(:,jspin)-psq,rho4)
          d_rho(:,:,:,jspin)=d_rho(:,:,:,jspin)+rho4(:,:,:,1)
     enddo
@@ -99,8 +102,6 @@ module m_gf_precond
     end subroutine gf_precond
 
     SUBROUTINE priv_plot(stars,qpw,num,layer,text)
-    USE m_gf_fft_singleton
-    use m_gf_types
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN)    :: stars
     COMPLEX,INTENT(IN)          :: qpw(:)
@@ -130,8 +131,6 @@ module m_gf_precond
 
 
     SUBROUTINE priv_simplestep(stars,cell,qpw)
-    USE m_gf_fft_singleton
-    use m_gf_types
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN)    :: stars
     type(t_cell),intent(in)     :: cell

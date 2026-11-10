@@ -72,6 +72,10 @@ CONTAINS
          xml_add = ""
          CALL startFleur_XMLOutput(xml_add)
          outxmlFileID = getXMLOutputUnitNumber()
+      ELSE
+         !the FLEUR kernels called by every PE write xml elements: the other
+         !PEs discard them
+         CALL startXMLOutput("/dev/null", "fleurOutput")
       END IF
 
       !Read the gf_inp-file (control parameters + layer decomposition)
