@@ -100,8 +100,6 @@ CONTAINS
       IF (ld(1)%fi%noco%l_noco) THEN
          IF (ANY(ld(:)%fi%noco%l_ss)) CALL juDFT_error("Spin spirals are not supported by gfleur", &
                                                        calledby="gf_init")
-         IF (embinp%l_charge) CALL juDFT_error("The charge/SCF mode is not available for noco", &
-                                               hint="use the CBS, DOS or transport modes", calledby="gf_init")
       END IF
 
       !SOC is the first-variation SOC of the noco Hamiltonian

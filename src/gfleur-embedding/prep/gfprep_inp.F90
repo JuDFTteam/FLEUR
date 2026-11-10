@@ -44,6 +44,10 @@ MODULE m_gfprep_inp
       !keep the operations that flip z in the layers; a layer of a stack with
       !a lead or a surface (charge mode) is not mirror symmetric: zmirror=f
       LOGICAL            :: zmirror = .TRUE.
+      !energy contour of gf_en.charge: starts ewidth (Htr) below E_F, nen points (2**n-1);
+      !semicore valence states need a larger ewidth
+      REAL               :: ewidth = 1.0
+      INTEGER            :: nen = 15
    END TYPE t_gfprep_inp
 
    TYPE t_layergeo
@@ -64,12 +68,12 @@ CONTAINS
 
       CHARACTER(LEN=200) :: bulkdir
       CHARACTER(LEN=20)  :: prefix
-      REAL    :: plane_tol, dt_addon, vshift, gmax_scale, zvac
-      INTEGER :: planes_per_layer, first_plane, last_plane, kgrid(2)
+      REAL    :: plane_tol, dt_addon, vshift, gmax_scale, zvac, ewidth
+      INTEGER :: planes_per_layer, first_plane, last_plane, kgrid(2), nen
       REAL    :: zplanes(maxdim)
       LOGICAL :: spinflip(maxdim), zmirror
       NAMELIST /GFPREP/ bulkdir, prefix, plane_tol, planes_per_layer, first_plane, &
-         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac, zmirror
+         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac, zmirror, ewidth, nen
 
       LOGICAL :: l_exist
       INTEGER :: n, ios
@@ -82,6 +86,7 @@ CONTAINS
       gmax_scale = inp%gmax_scale
       zvac = inp%zvac
       zmirror = inp%zmirror
+      ewidth = inp%ewidth; nen = inp%nen
       zplanes = HUGE(1.0)
       spinflip = .FALSE.
 
@@ -109,6 +114,7 @@ CONTAINS
       inp%kgrid = kgrid
       inp%gmax_scale = gmax_scale
       inp%zmirror = zmirror
+      inp%ewidth = ewidth; inp%nen = nen
       inp%zvac = zvac
       IF (inp%gmax_scale < 1.0) CALL juDFT_error("gmax_scale<1", calledby="gfprep_read_inp")
       IF (inp%dt_addon <= 0.0) CALL juDFT_error("dt_addon must be positive", calledby="gfprep_read_inp")

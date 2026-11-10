@@ -47,9 +47,6 @@
       TYPE(t_potden) :: den,vTot,vx,vxc,exc,EnergyDen
       !>
 
-      IF (ld%fi%noco%l_noco) CALL juDFT_error(                           &
-     &     "noco not yet supported in the gfleur port",                  &
-     &     calledby="fleur_pot")
       IF (ld%xcpot%exc_is_metagga()) CALL juDFT_error(                   &
      &     "metagga not supported in gfleur",calledby="fleur_pot")
 
@@ -57,7 +54,7 @@
       CALL den%init(ld%stars,ld%fi%atoms,ld%sphhar,ld%fi%vacuum,         &
      &             ld%fi%noco,jspins,POTDEN_TYPE_DEN)
       CALL gf_loddop(GF_CDNFILE,layer,jspins,ld%fi%atoms,ld%stars,       &
-     &        ld%sphhar,den%mt,den%pw)
+     &        ld%sphhar,den%mt,den%pw,ld%fi%noco)
       !>
 
       !<-- Coulomb potential is equal for both spins
@@ -80,8 +77,8 @@
       IF (.NOT.ALLOCATED(vx%pw_w)) ALLOCATE(vx%pw_w,mold=vx%pw)
       IF (.NOT.ALLOCATED(vxc%pw_w)) ALLOCATE(vxc%pw_w,mold=vxc%pw)
       IF (.NOT.ALLOCATED(exc%pw_w)) ALLOCATE(exc%pw_w,mold=exc%pw)
-      vTot%mt = vr
-      vTot%pw = vpw
+      vTot%mt(:,:,:,1:SIZE(vr,4)) = vr
+      vTot%pw(:,1:SIZE(vpw,2)) = vpw
       vTot%pw_w = 0.0
       !>
 
@@ -94,8 +91,8 @@
       CALL vmt_xc(fmpi,ld%sphhar,ld%fi%atoms,den,ld%xcpot,ld%fi%input,   &
      &            ld%fi%sym,EnergyDen,ld%fi%noco,vTot,vx,exc,vxc)
 
-      vr = vTot%mt
-      vpw = vTot%pw
+      vr = vTot%mt(:,:,:,1:SIZE(vr,4))
+      vpw = vTot%pw(:,1:SIZE(vpw,2))
 
       END SUBROUTINE
 

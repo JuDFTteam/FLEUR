@@ -89,14 +89,12 @@ CONTAINS
    END SUBROUTINE gfprep_write_gfinp
 
 
-   SUBROUTINE gfprep_write_gfen(ef)
+   SUBROUTINE gfprep_write_gfen(ef, width, npts)
       !Template of the energy contour for the charge mode (gf_en.charge): a
       !semicircle in the complex plane from below the valence bands to the
       !Fermi energy of the bulk. Rename it to gf_en to use it.
-      REAL, INTENT(IN) :: ef
-
-      REAL, PARAMETER    :: width = 1.0 !start of the contour below E_F
-      INTEGER, PARAMETER :: npts = 15   !2**n-1
+      REAL, INTENT(IN)    :: ef, width   !the contour starts width below E_F
+      INTEGER, INTENT(IN) :: npts        !2**n-1
       LOGICAL :: l_exist
 
       INQUIRE (FILE="gf_en.charge", EXIST=l_exist)

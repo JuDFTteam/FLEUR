@@ -255,8 +255,12 @@ Layers with `l_noco="T"` (from a noco bulk or film via `gfprep`) are treated
 in one spinor pass. The CBS, the layer and embedded DOS, the transmission
 and the vacuum embedding work as for collinear layers. In the DOS files the
 third spin is the off-diagonal (up-down) part; the MT DOS is given in the
-local spin frame of each atom type. Not supported: spin spirals and the
-`charge` (SCF) mode.
+local spin frame of each atom type. The charge mode runs for noco layers
+(density of the local spin frames and the interstitial off-diagonal part);
+for a moment along z it equals the collinear charge mode, for other
+directions the first iteration is not yet rotation invariant (the MT d
+charge of sc Fe differs by 0.4 e between x and z). Not supported: spin
+spirals.
 
 Spin-orbit coupling is the first-variation SOC of the noco Hamiltonian of
 FLEUR (`l_soc="T"` with `l_noco="T"` in the layer inputs, per-type
@@ -311,7 +315,7 @@ linear mixing is stable. A vacuum on the left (free film) is not supported.
 
 * Charge mode with a vacuum on the left (free film, `vacleft=t`), and a self-consistent
   vacuum (potential and charge beyond the last plane are frozen).
-* Noco: spin spirals and the `charge` mode.
+* Noco: spin spirals; the `charge` mode only reliably for moments along z.
 * Second-variation SOC (`l_soc="T"` with `l_noco="F"`).
 * LDA+U and Hubbard-1 are written into the layer inputs by `gfprep` but are
   not used by the Green's-function kernels.

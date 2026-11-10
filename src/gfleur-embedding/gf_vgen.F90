@@ -60,8 +60,6 @@ CONTAINS
                 CALL gf_potdis(jspins,ld(layer)%fi%atoms,ld(layer)%stars,     &
      &               ld(layer)%sphhar,gmpi%fmpi,ld(layer)%fi%sym,             &
      &               ld(layer)%fi%cell,c_layer,.TRUE.,layer)
-                IF (ld(layer)%fi%noco%l_noco) CALL juDFT_warn(               &
-     &               "In NoCo-calculation spin rotation of potential is missing")
             ENDIF
         ENDDO
         IF (gfmix%iter>0.AND.l_exist.AND.gmpi%k_kpts(1) == 1.AND.             &
@@ -160,14 +158,16 @@ CONTAINS
         REAL,ALLOCATABLE    :: vr(:,:,:,:),rho(:,:,:,:)
         COMPLEX,ALLOCATABLE :: vpw(:,:),qpw(:,:)
         REAL                :: q_el,q_nuc
-        INTEGER             :: js,n,nlhd,jmtd
+        INTEGER             :: js,n,nlhd,jmtd,ispins
 
         nlhd=SIZE(ld%sphhar%clnu,2)-1
         jmtd=SIZE(ld%fi%atoms%rmsh,1)
         ALLOCATE(vr(jmtd,0:nlhd,ld%fi%atoms%ntype,jspins))
-        ALLOCATE(vpw(ld%stars%ng3,jspins))
+        !noco: the third interstitial component is the off-diagonal part
+        ispins = MERGE(3,jspins,ld%fi%noco%l_noco)
+        ALLOCATE(vpw(ld%stars%ng3,ispins))
         ALLOCATE(rho(jmtd,0:nlhd,ld%fi%atoms%ntype,jspins))
-        ALLOCATE(qpw(ld%stars%ng3,jspins))
+        ALLOCATE(qpw(ld%stars%ng3,ispins))
         vr = 0.0; vpw = 0.0; rho = 0.0; qpw = 0.0
 
         IF (gmpi%pe0) WRITE (oUnit,FMT = 8000)
@@ -175,7 +175,7 @@ CONTAINS
 
         !<-- load the charge density and check neutrality
         CALL gf_loddop(GF_CDNFILE,layer,jspins,ld%fi%atoms,ld%stars,         &
-     &       ld%sphhar,rho,qpw)
+     &       ld%sphhar,rho,qpw,ld%fi%noco)
         CALL gf_cdntot(layer,gmpi%fmpi,jspins,ld%stars,ld%fi%cell,           &
      &       ld%fi%atoms,rho,qpw,q_el,q_nuc)
         ! spin sum for the Coulomb potential

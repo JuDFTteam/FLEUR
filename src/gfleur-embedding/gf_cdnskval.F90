@@ -17,7 +17,7 @@
       recursive SUBROUTINE gf_cdnskval(l_noco,fmpi,                     &
      &     lapw,lapw_gf,jspin,nk,nsymt,enpara,vr,                       &
      &     Gfkt,atoms,stars,sphhar,cell,sym,kpts,                       &
-     &     qpw_s,rho_s,qmtl_s)                                          
+     &     qpw_s,rho_s,qmtl_s,nococonv,l_nomt,l_nopw,ityp)              
                                                                         
 !*********************************************************************  
 !     Generates the valence charge from the Green function for a single 
@@ -48,6 +48,11 @@
       TYPE(t_lapw),INTENT(IN)    :: lapw
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       TYPE(t_enpara),INTENT(IN)  :: enpara 
+      !noco: spin frames of the atom types; skip the MT / the interstitial part;
+      !accumulate the MT density of one atom type only
+      TYPE(t_nococonv),INTENT(IN),OPTIONAL :: nococonv
+      LOGICAL,INTENT(IN),OPTIONAL :: l_nomt,l_nopw
+      INTEGER,INTENT(IN),OPTIONAL :: ityp
       TYPE(t_kpts),INTENT(IN)    :: kpts 
       !>                                                                
                                                                         
@@ -84,45 +89,67 @@
       REAL   ,ALLOCATABLE ::  rho(:,:,:,:) 
       REAL   ,ALLOCATABLE :: qmtl(:,:)
       COMPLEX,ALLOCATABLE :: gs(:,:)
-      integer             :: nv,nlo
+      integer             :: nv,nlo,it,ic,t1,t2
+      COMPLEX             :: u(2,2),c
+      COMPLEX,ALLOCATABLE :: qpw3(:)
+      LOGICAL             :: l_pw,l_mt
       !>                                                                
 
-      !in case of noco call subroutine recursively
+      !noco: the interstitial density is calculated in the global spin
+      !frame (diagonal blocks and the off-diagonal part), the MT density
+      !of every atom type in its local spin frame
       if (l_noco) then
-            !spin-up-spin-up
-            allocate(gs(size(gfkt,1)/2,size(gfkt,2)/2))
             nv=lapw_gf%nv_sphere(1)
             nlo=(lapw_gf%nmat_sphere-lapw_gf%nv_tot_sphere)/2
-            gs(:nv,:nv)=gfkt(:nv,:nv)
-            if (nlo>0) then
-                gs(:nv,nv+1:nv+nlo)=gfkt(:nv,2*nv+1:2*nv+nlo)
-                gs(nv+1:nv+nlo,:nv)=gfkt(2*nv+1:2*nv+nlo,:nv)
-                gs(nv+1:nv+nlo,nv+1:nv+nlo)=gfkt(2*nv+1:2*nv+nlo,2*nv+1:2*nv+nlo)
+            allocate(gs(nv+nlo,nv+nlo))
+            !interstitial, diagonal blocks
+            do t1=1,2
+               gs=0.0
+               gs(:nv,:nv)=gfkt((t1-1)*nv+1:t1*nv,(t1-1)*nv+1:t1*nv)
+               call gf_cdnskval(.false.,fmpi,                                   &
+                 lapw,lapw_gf,t1,nk,nsymt,enpara,vr,                            &
+                 gs,atoms,stars,sphhar,cell,sym,kpts,                           &
+                 qpw_s,rho_s,qmtl_s,l_nomt=.true.)
+            enddo
+            !interstitial, off-diagonal part
+            if (size(qpw_s,2)>=3) then
+               allocate(qpw3(size(qpw_s,1)))
+               qpw3=0.0
+               call gf_pwden(lapw,lapw_gf,stars,1,cell%omtil,                   &
+                 gfkt(1:nv,nv+1:2*nv),qpw3,gfkt(nv+1:2*nv,1:nv))
+               qpw_s(:,3)=qpw_s(:,3)+kpts%wtkpt(nk)*qpw3
+               deallocate(qpw3)
             endif
-            call gf_cdnskval(.false.,fmpi,                                      &
-              lapw,lapw_gf,1,nk,nsymt,enpara,vr,                               &
-              Gs,                        &
-              atoms,stars,sphhar,cell,sym,kpts,               &
-              qpw_s,rho_s,qmtl_s)
-            !spin-down-spin-down
-            gs(:nv,:nv)=gfkt(nv+1:2*nv,nv+1:2*nv)
-            if (nlo>0) then
-                gs(:nv,nv+1:nv+nlo)=gfkt(nv+1:2*nv,2*nv+nlo+1:2*nv+2*nlo)
-                gs(nv+1:nv+nlo,:nv)=gfkt(2*nv+nlo+1:2*nv+2*nlo,nv+1:2*nv)
-                gs(nv+1:nv+nlo,nv+1:nv+nlo)=gfkt(2*nv+nlo+1:2*nv+2*nlo,2*nv+nlo+1:2*nv+2*nlo)
-            endif
-            call gf_cdnskval(.false.,fmpi,                                      &
-             lapw,lapw_gf,2,nk,nsymt,enpara,vr,                               &
-              Gs,                        &
-              atoms,stars,sphhar,cell,sym,kpts,               &
-              qpw_s,rho_s,qmtl_s)
-            !call gf_cdnskval(.false.,                                           &
-            ! lapw,3,nk,nsymt,enpara,vr,                               &
-            !  Gfkt(size(gfkt,1)/2+1:,:size(gfkt,2)/2),                        &
-            !  atoms,stars,sphhar,cell,sym,kpts,               &
-            !  qpw_s,rho_s,qmtl_s)
+            !MT: local spin channels of every atom type
+            do it=1,atoms%ntype
+               u=0.0;u(1,1)=1.0;u(2,2)=1.0
+               if (present(nococonv)) u=nococonv%umat(it)
+               do ic=1,2
+                  gs=0.0
+                  do t1=1,2
+                     do t2=1,2
+                        c=CONJG(u(t1,ic))*u(t2,ic)
+                        if (ABS(c)<1.E-12) cycle
+                        gs(:nv,:nv)=gs(:nv,:nv)+c*gfkt((t1-1)*nv+1:t1*nv,(t2-1)*nv+1:t2*nv)
+                        if (nlo>0) then
+                           gs(:nv,nv+1:)=gs(:nv,nv+1:)+c*gfkt((t1-1)*nv+1:t1*nv,2*nv+(t2-1)*nlo+1:2*nv+t2*nlo)
+                           gs(nv+1:,:nv)=gs(nv+1:,:nv)+c*gfkt(2*nv+(t1-1)*nlo+1:2*nv+t1*nlo,(t2-1)*nv+1:t2*nv)
+                           gs(nv+1:,nv+1:)=gs(nv+1:,nv+1:)+c*gfkt(2*nv+(t1-1)*nlo+1:2*nv+t1*nlo,2*nv+(t2-1)*nlo+1:2*nv+t2*nlo)
+                        endif
+                     enddo
+                  enddo
+                  call gf_cdnskval(.false.,fmpi,                                &
+                    lapw,lapw_gf,ic,nk,nsymt,enpara,vr,                         &
+                    gs,atoms,stars,sphhar,cell,sym,kpts,                        &
+                    qpw_s,rho_s,qmtl_s,l_nopw=.true.,ityp=it)
+               enddo
+            enddo
             return
       endif
+      l_pw=.TRUE.
+      IF (PRESENT(l_nopw)) l_pw=.NOT.l_nopw
+      l_mt=.TRUE.
+      IF (PRESENT(l_nomt)) l_mt=.NOT.l_nomt
 
                                                                         
       !<-- debug write out Greenfunction                                
@@ -148,17 +175,17 @@
                                                                         
       !<-- Calculate interstitial charge                                
 
-      CALL timestart("gf_pwden") 
-      CALL gf_pwden(                                                    &
-     &     lapw,lapw_gf,stars,jspin,cell%omtil,                                 &
-     &     GFKT,                                                        &
-     &     qpw)                                                         
-      CALL timestop("gf_pwden") 
-
-      !>
-      qpw_s(:,jspin) = qpw_s(:,jspin)+kpts%wtkpt(nk)*qpw
+      IF (l_pw) THEN
+         CALL timestart("gf_pwden")
+         CALL gf_pwden(                                                 &
+     &        lapw,lapw_gf,stars,jspin,cell%omtil,                      &
+     &        GFKT,                                                     &
+     &        qpw)
+         CALL timestop("gf_pwden")
+         qpw_s(:,jspin) = qpw_s(:,jspin)+kpts%wtkpt(nk)*qpw
+      ENDIF
       deallocate(qpw)
-      if (jspin>2) return ! No calculation of 3rd component for MTs
+      if (jspin>2 .OR. .NOT.l_mt) return ! No calculation of 3rd component for MTs
                                                                         
       !<--Calculate MT charge                                           
 
@@ -203,8 +230,13 @@
       DEALLOCATE(fg,ddn,us,dus,uds,duds) 
                                                                         
 
-      rho_s = rho_s+kpts%wtkpt(nk)*rho 
-      qmtl_s = qmtl_s+kpts%wtkpt(nk)*qmtl 
+      IF (PRESENT(ityp)) THEN
+         rho_s(:,:,ityp,:) = rho_s(:,:,ityp,:)+kpts%wtkpt(nk)*rho(:,:,ityp,:)
+         qmtl_s(:,ityp) = qmtl_s(:,ityp)+kpts%wtkpt(nk)*qmtl(:,ityp)
+      ELSE
+         rho_s = rho_s+kpts%wtkpt(nk)*rho 
+         qmtl_s = qmtl_s+kpts%wtkpt(nk)*qmtl 
+      ENDIF
       DEALLOCATE(rho,qmtl)
       END SUBROUTINE gf_cdnskval 
       END                                           

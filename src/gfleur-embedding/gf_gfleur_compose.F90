@@ -197,7 +197,7 @@ CONTAINS
             cell,sym,kpts,                                &
             charge%pw(:,:),                                  &
             charge%mt(:,0:,:,:),                             &
-            qmtl_new(:,:))
+            qmtl_new(:,:),nococonv)
 
             CALL timestop("gf_cdnskval")
             DEALLOCATE(g_sum)

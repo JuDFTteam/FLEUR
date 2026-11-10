@@ -235,7 +235,8 @@
       real,allocatable::f(:,:),ff(:,:),s(:),rho(:)
 
 
-      jspins=size(drho,4)
+      !noco: only the two spin-diagonal components in the local frames
+      jspins=MIN(2,size(drho,4))
       allocate(rho(size(drho,1)))
       allocate(s(size(drho,1)),ff(size(drho,1),2),f(size(drho,1),2))
 
@@ -246,7 +247,7 @@
             rho=drho(:,0,itype,jspin)/atoms%rmsh(:,itype)**2
             CALL intgr3(abs(rho),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm1)
             DO l=0,2
-                IF (.NOT.ALLOCATED(ud_loc%us)) CALL ud_loc%init(atoms,jspin)
+                IF (.NOT.ALLOCATED(ud_loc%us)) CALL ud_loc%init(atoms,jspins)
                 CALL radfun(l,itype,jspin,enpara%el0(l,itype,jspin),          &
                             vr(:,1,itype,jspin),atoms,f(:,:),ff(:,:),          &
                             ud_loc,nodeu,noded,wronk)

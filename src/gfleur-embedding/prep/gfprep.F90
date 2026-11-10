@@ -193,7 +193,7 @@ CONTAINS
       END IF
 
       CALL gfprep_write_gfinp(inp%prefix, geo)
-      CALL gfprep_write_gfen(ef_bulk)
+      CALL gfprep_write_gfen(ef_bulk, inp%ewidth, inp%nen)
       WRITE (*, "(a,f10.5,a)") "gfprep: Fermi energy of the bulk", ef_bulk, " Htr, contour template in gf_en.charge"
       WRITE (*, "(a,i0,a)") "gfprep: ", nl, " layers written, see gfprep_planes.txt and gf_inp"
    CONTAINS

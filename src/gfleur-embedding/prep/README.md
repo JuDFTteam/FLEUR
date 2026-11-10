@@ -39,6 +39,7 @@ types, and `spinflip`.
 | `kgrid` | bulk grid | 2D k-point grid shared by all layers |
 | `gmax_scale` | 1.5 | Gmax of the layers relative to the bulk |
 | `zvac` | 0 | film: the vacuum embedding planes lie at `±(z1+zvac)`, `z1` = dVac/2 of the film |
+| `ewidth`, `nen` | 1, 15 | contour of `gf_en.charge`: starts `ewidth` Htr below E_F, `nen` points (2**n-1). Semicore valence states (Fe 3s3p) need a larger `ewidth` (4) and more points |
 | `zmirror` | `T` | keep the symmetry operations that flip z in the layers; set `F` for a stack with a lead or a surface (charge mode), whose layers are not mirror symmetric |
 
 In auto mode, the embedding planes lie midway between the atomic planes.

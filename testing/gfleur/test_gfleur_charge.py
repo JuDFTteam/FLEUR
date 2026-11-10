@@ -29,6 +29,12 @@ so the stack converges to a charge of +0.205 e. The layers must not be mirror sy
 in gfprep), the Coulomb solver cannot handle planar stars with kz>=0 only. Plain linear mixing is stable
 (alpha=0.02); Broyden (imix=7) is not, imix=5 converges in ~25 iterations (distance 7.6 -> 0.06).
 
+Noco (sc Fe, one atom per period, moment along z or x, the semicore 3s3p states need a contour
+that starts 4 Htr below E_F): the noco charge mode reproduces the collinear first iteration for the
+moment along z exactly (same stack charge, same MT charge, same distance). For the moment along x
+the MT d charge differs by 0.37 e and the stack charge by 0.34 e: the first iteration is not yet
+rotation invariant (known problem, xfail).
+
 Binaries are located via GFPREP_BINARY or <repo>/build*/gfprep; fleur and gfleur are taken from
 the same directory. Missing binaries skip the tests.
 """
@@ -329,3 +335,91 @@ def test_charge_rejects_vacuum_on_the_left(env, surf):
     proc, log = _run(env.gfleur, run)
     assert proc.returncode != 0
     assert "charge mode with vacuum on the left is not supported" in log
+
+
+NOCO_INPUTS = Path(__file__).resolve().parent.parent / "inputfiles" / "noco"
+NOCO_PREP = "planes_per_layer=1 ewidth=4.0 nen=31"
+
+
+def _noco_stack(env, d):
+    """sc Fe with the moment along d: bulk, gfprep (one layer), lead CBS on the contour; returns a function
+    running the stack (one layer between its own leads) in charge mode"""
+    base = env.base / f"noco_{d}"
+    base.mkdir()
+    fleur = _sibling(env.gfprep, ["fleur", "fleur_MPI"])
+    bulk = base / "bulk"
+    shutil.copytree(NOCO_INPUTS / f"1at{d}", bulk)
+    _replace(bulk / "inp.xml", {'itmax="2"': 'itmax="25"', 'alpha=".05000000"': 'alpha=".10000000"'})
+    proc, log = _run(fleur, bulk)
+    assert proc.returncode == 0 and (bulk / "cdn.hdf").is_file(), f"bulk fleur run failed\n{log[-3000:]}"
+    prep = base / "prep"
+    _gfprep(env.gfprep, prep, bulk, NOCO_PREP)
+    cbs = base / "cbs"
+    cbs.mkdir()
+    _layer_files(prep, cbs)
+    (cbs / "gf_inp").write_text(_layers_block(prep) + f"&MODE tmat=t, gmat=t /\n&BASIS napw={NAPW} /\n"
+                                "&CBSMODE cbs=t /\n&SC iter=1 /\n")
+    shutil.copy(prep / "gf_en.charge", cbs / "gf_en")
+    (cbs / "gf_io").write_text("default\n")
+    proc, log = _run(env.gfleur, cbs)
+    assert proc.returncode == 0, f"gfleur CBS run failed\n{log[-3000:]}"
+
+    def run(name, sc, collinear=False):
+        work = base / name
+        work.mkdir()
+        _layer_files(prep, work)
+        for f in ("embpot11.hdf", "embpotN2.hdf"):
+            shutil.copy(cbs / f, work / f)
+        shutil.copy(prep / "gf_en.charge", work / "gf_en")
+        if collinear:
+            for f in work.glob("layer*_inp.xml"):
+                _replace(f, {'l_noco="T"': 'l_noco="F"'})
+        (work / "gf_inp").write_text(_layers_block(prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
+                                     f"&BASIS napw={NAPW} /\n&EMB addemb=t /\n{sc}\n")
+        (work / "gf_io").write_text("2\n&IO mode='E', region=1, side=1, rw='r', id=1 /\n"
+                                    "&IO mode='E', region=1, side=2, rw='r', id=2 /\n"
+                                    "&FILE name='embpot11' /\n&FILE name='embpotN2' /\n")
+        proc, log = _run(env.gfleur, work)
+        # the collinear control reads noco-prepared files: it crashes when it writes the new density,
+        # after the quantities compared by the tests are in the output
+        assert collinear or proc.returncode == 0, f"gfleur charge run failed\n{log[-3000:]}"
+        return (work / "out").read_text()
+    return run
+
+
+def _mt_total(out):
+    """valence charge in the MT spheres, summed over the spin passes of a collinear run"""
+    return sum(float(x) for x in re.findall(r"total valence charge in MT-spheres:\s*(\S+)", out))
+
+
+@pytest.fixture(scope="module")
+def noco_z(env):
+    return _noco_stack(env, "z")
+
+
+@pytest.fixture(scope="module")
+def noco_x(env):
+    return _noco_stack(env, "x")
+
+
+def test_noco_charge_equals_collinear(noco_z):
+    """Moment along z: the noco charge mode gives the collinear first iteration."""
+    sc = "&SC iter=1, imix=0, alpha=0.0 /"
+    out_n = noco_z("noco", sc)
+    out_c = noco_z("collinear", sc, collinear=True)
+    assert _neutrality(out_n)[0] == pytest.approx(_neutrality(out_c)[0], abs=1e-6)
+    assert _mt_total(out_n) == pytest.approx(_mt_total(out_c), abs=1e-6)
+    assert _distances(out_n)[0] == pytest.approx(_distances(out_c)[0], rel=1e-6)
+    # the stack holds most of the 26 electrons of the Fe atom (semicore included)
+    assert abs(_neutrality(out_n)[0]) < 3.0
+
+
+@pytest.mark.xfail(reason="the MT density of the local spin frames is not yet rotation invariant "
+                          "(MT d charge 5.64 for x against 5.27 for z)", strict=True)
+def test_noco_charge_rotation_invariance(noco_z, noco_x):
+    """Without SOC the charge does not depend on the direction of the moment."""
+    sc = "&SC iter=1, imix=0, alpha=0.0 /"
+    out_z = noco_z("noco_inv", sc)
+    out_x = noco_x("noco_inv", sc)
+    assert _mt_total(out_x) == pytest.approx(_mt_total(out_z), abs=0.02)
+    assert _neutrality(out_x)[0] == pytest.approx(_neutrality(out_z)[0], abs=0.02)
