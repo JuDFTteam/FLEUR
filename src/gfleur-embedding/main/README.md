@@ -268,7 +268,8 @@ are rejected by gfprep and gfleur: set `l_noco="T"` instead.
 ## Charge mode (self-consistency)
 
 `&MODE tmat=t, gmat=t, charge=t /` iterates the charge density of the layers
-between two leads (serial runs, collinear layers, no vacuum embedding yet):
+between two leads, or between one lead and the vacuum of a surface (serial runs,
+collinear layers):
 
 1. Prepare the leads and the stack from the same converged bulk calculation
    with `gfprep` (same `kgrid` and Gmax scale). `gfprep` writes the Fermi
@@ -291,9 +292,25 @@ Broyden mixing (`imix=7`) with `alpha=0.02`. (The total-charge cap
 The contour and the cylinder basis converge quickly; the in-plane k-mesh
 needs `kgrid` of at least 4x4 for Cu.
 
+**Surface (semi-infinite, lead below and vacuum above).** Prepare the stack
+from the top planes of a thick film (about seven planes of Cu(001)) with
+`zmirror=f` in `&GFPREP` (the layers must not be mirror symmetric in z) and
+the lead from the bulk with `vshift` set to the difference of the Fermi
+energies of the film and the bulk. Use the `gf_en.charge` of the stack for
+the lead CBS and the stack, and `&EMB addemb=t, surface=t, vacleft=f /`. The
+vacuum beyond the last embedding plane is frozen: its potential (embedding
+potential) and its charge are not updated. The Coulomb problem uses the
+planar field of the vacuum at the plane stored by `gfprep` (`vcfield` in
+`gf_pot.hdf`) and the decay `V' = -|G_par| V` for the other components. The
+stack therefore converges to a net charge equal to the electrons of the film
+beyond the plane (+0.2 e for Cu(001)). Broyden mixing with `imix=7` was
+unstable here; `imix=5, alpha=0.02` converges in about 25 iterations, plain
+linear mixing is stable. A vacuum on the left (free film) is not supported.
+
 ## Not supported
 
-* Self-consistent surfaces (`charge=t` with vacuum embedding).
+* Charge mode with a vacuum on the left (free film, `vacleft=t`), and a self-consistent
+  vacuum (potential and charge beyond the last plane are frozen).
 * Noco: spin spirals and the `charge` mode.
 * Second-variation SOC (`l_soc="T"` with `l_noco="F"`).
 * LDA+U and Hubbard-1 are written into the layer inputs by `gfprep` but are

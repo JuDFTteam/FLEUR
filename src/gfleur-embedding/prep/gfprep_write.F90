@@ -134,10 +134,11 @@ CONTAINS
                      den_mt, den_pw, l_noco, comm)
    END SUBROUTINE gfprep_write_potden
 
-   SUBROUTINE gfprep_write_vacemb(side, delz, vz)
+   SUBROUTINE gfprep_write_vacemb(side, delz, vz, vcfield)
       !Writes the potential beyond a vacuum embedding plane to gf_pot.hdf
       INTEGER, INTENT(IN) :: side
       REAL, INTENT(IN)    :: delz, vz(:, :)
+      REAL, INTENT(IN), OPTIONAL :: vcfield
 
       INTEGER :: comm
 
@@ -146,7 +147,7 @@ CONTAINS
 #else
       comm = 0
 #endif
-      CALL gf_iodop_writevacemb(side, delz, vz, comm)
+      CALL gf_iodop_writevacemb(side, delz, vz, comm, vcfield)
       WRITE (oUnit, "(a,i1,a,i0,a,f8.4,a,2f12.6)") "gfprep: vacuum embedding potential side ", side, ": ", &
          SIZE(vz, 1), " points, delz=", delz, ", V(plane), V(end):", vz(1, 1), vz(SIZE(vz, 1), 1)
    END SUBROUTINE gfprep_write_vacemb

@@ -8,7 +8,12 @@
       USE mpi
 #endif
       USE m_constants, ONLY: oUnit
-          IMPLICIT NONE
+      USE m_gf_checkdop, ONLY: gf_checkdop
+      USE m_gf_iodop, ONLY: gf_renamepot, gf_wrtdop, GF_CDNFILE
+      USE m_gf_types
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_charge, gf_charge_sum
 !-----------------------------------------------                        
 ! DESC:Mix and possibly write out the charge                            
 !                 Daniel Wortmann, (06-05-12)                           
@@ -23,12 +28,6 @@
 !    finalize charge density by writing to file and mixing etc          
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
-      USE m_gf_fft 
-      USE m_gf_checkdop 
-      USE m_gf_iodop 
-      USE m_gf_types 
-      use m_juDFT 
-      use m_gf_vacuum_charge
       IMPLICIT NONE 
                                                                         
       !<-- Arguments                                                    
@@ -92,7 +91,7 @@
       CALL gf_wrtdop(GF_CDNFILE,layer,jspins,                           &
      &     gfinp,atoms,stars,sphhar,                                    &
      &     rho(:,0:,:,:),pwd(:,:),.FALSE.,fmpi%iodop_subcom)             
-      if (gfinp%l_surface.and.layer==1) call gf_vacuum_writecharge(fmpi)
+      !the vacuum beyond the last layer is frozen: no vacuum charge
       !>                                                                
                                                                         
                                                                         

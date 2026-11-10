@@ -45,7 +45,8 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: vpw(:, :), cpw(:), dpw(:, :)
       REAL, ALLOCATABLE      :: vmt(:, :, :, :), dmt(:, :, :, :), vz(:, :)
       INTEGER :: i, js, jspins, n, ierr, outxml, kgrid(2), nl, npw, nmt
-      REAL    :: dv, delz, ef_bulk
+      REAL    :: dv, delz, ef_bulk, vcfield
+      REAL, ALLOCATABLE :: vzc(:, :)
       LOGICAL :: l_film, l_noco
       CHARACTER(LEN=40) :: name
       CHARACTER(LEN=100) :: xml_add
@@ -112,7 +113,7 @@ CONTAINS
       nl = SIZE(geo)
       ALLOCATE (lays(nl))
       DO i = 1, SIZE(geo)
-         CALL gfprep_make_layer(b, geo(i), inp%gmax_scale, lays(i))
+         CALL gfprep_make_layer(b, geo(i), inp%gmax_scale, lays(i), inp%zmirror)
       END DO
       kgrid = inp%kgrid
       IF (ANY(kgrid < 1)) kgrid = b%fi%kpts%nkpt3(1:2)
@@ -180,7 +181,15 @@ CONTAINS
       IF (geo(nl)%vac(2)) THEN
          CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 2, geo(nl)%z2, vTot%pw(:, :npw), &
                             vTot%vac(:, :, :, :npw), delz, vz)
-         CALL gfprep_write_vacemb(2, delz, vz)
+         !planar Coulomb field of the vacuum at the plane (frozen in the charge mode)
+         IF (npw == 1) THEN
+            CALL gfprep_vacemb(b%stars, b%fi%cell, b%fi%vacuum, 2, geo(nl)%z2, vCoul%pw(:, 1:1), &
+                               vCoul%vac(:, :, :, 1:1), delz, vzc)
+            vcfield = (-3.0*vzc(1, 1) + 4.0*vzc(2, 1) - vzc(3, 1))/(2.0*delz)
+            CALL gfprep_write_vacemb(2, delz, vz, vcfield)
+         ELSE
+            CALL gfprep_write_vacemb(2, delz, vz)
+         END IF
       END IF
 
       CALL gfprep_write_gfinp(inp%prefix, geo)

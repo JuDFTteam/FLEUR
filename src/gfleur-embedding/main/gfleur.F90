@@ -126,8 +126,12 @@ CONTAINS
 
       nl = layers%num_layers
 
-      IF ((embinp%l_surface .OR. embinp%l_vacleft) .AND. (embinp%l_charge .OR. embinp%l_CBS)) &
-         CALL juDFT_error("vacuum embedding (surface/vacleft) is not available in charge and CBS mode", &
+      IF ((embinp%l_surface .OR. embinp%l_vacleft) .AND. embinp%l_CBS) &
+         CALL juDFT_error("vacuum embedding (surface/vacleft) is not available in CBS mode", &
+                          calledby="gfleur_execute")
+      IF (embinp%l_charge .AND. embinp%l_vacleft) &
+         CALL juDFT_error("charge mode with vacuum on the left is not supported", &
+                          hint="only the semi-infinite surface (lead on the left, surface=t) is", &
                           calledby="gfleur_execute")
 
       IF (gmpi%pe0) THEN

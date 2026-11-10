@@ -41,6 +41,9 @@ MODULE m_gfprep_inp
       REAL               :: gmax_scale = 1.5
       !film: the vacuum embedding planes lie at +-(z1+zvac)
       REAL               :: zvac = 0.0
+      !keep the operations that flip z in the layers; a layer of a stack with
+      !a lead or a surface (charge mode) is not mirror symmetric: zmirror=f
+      LOGICAL            :: zmirror = .TRUE.
    END TYPE t_gfprep_inp
 
    TYPE t_layergeo
@@ -64,9 +67,9 @@ CONTAINS
       REAL    :: plane_tol, dt_addon, vshift, gmax_scale, zvac
       INTEGER :: planes_per_layer, first_plane, last_plane, kgrid(2)
       REAL    :: zplanes(maxdim)
-      LOGICAL :: spinflip(maxdim)
+      LOGICAL :: spinflip(maxdim), zmirror
       NAMELIST /GFPREP/ bulkdir, prefix, plane_tol, planes_per_layer, first_plane, &
-         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac
+         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac, zmirror
 
       LOGICAL :: l_exist
       INTEGER :: n, ios
@@ -78,6 +81,7 @@ CONTAINS
       kgrid = inp%kgrid
       gmax_scale = inp%gmax_scale
       zvac = inp%zvac
+      zmirror = inp%zmirror
       zplanes = HUGE(1.0)
       spinflip = .FALSE.
 
@@ -104,6 +108,7 @@ CONTAINS
       inp%first_plane = first_plane; inp%last_plane = last_plane
       inp%kgrid = kgrid
       inp%gmax_scale = gmax_scale
+      inp%zmirror = zmirror
       inp%zvac = zvac
       IF (inp%gmax_scale < 1.0) CALL juDFT_error("gmax_scale<1", calledby="gfprep_read_inp")
       IF (inp%dt_addon <= 0.0) CALL juDFT_error("dt_addon must be positive", calledby="gfprep_read_inp")

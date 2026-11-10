@@ -41,11 +41,12 @@ MODULE m_gfprep_layer
 
 CONTAINS
 
-   SUBROUTINE gfprep_make_layer(b, geo, gmax_scale, lay)
+   SUBROUTINE gfprep_make_layer(b, geo, gmax_scale, lay, l_zmirror)
       TYPE(t_gfprep_struct), INTENT(IN)   :: b
       TYPE(t_layergeo), INTENT(IN)        :: geo
       REAL, INTENT(IN)                    :: gmax_scale  !Gmax(layer)/Gmax(bulk)
       TYPE(t_gfprep_layer), INTENT(INOUT) :: lay
+      LOGICAL, INTENT(IN), OPTIONAL       :: l_zmirror   !keep the operations that flip z
 
       !candidate atoms: in-plane internal coordinates, z relative to the
       !layer center (cartesian), bulk atom and bulk type
@@ -88,6 +89,9 @@ CONTAINS
       ALLOCATE (lay%sym%mrot(3, 3, b%fi%sym%nop), lay%sym%tau(3, b%fi%sym%nop), opmap(nat, b%fi%sym%nop))
       nop = 0
       DO iop = 1, b%fi%sym%nop
+         IF (PRESENT(l_zmirror)) THEN
+            IF (.NOT. l_zmirror .AND. b%fi%sym%mrot(3, 3, iop) == -1) CYCLE
+         END IF
          DO it = 1, SIZE(trans, 2)
             IF (priv_layer_op(b%fi%sym%mrot(:, :, iop), b%fi%sym%tau(:, iop) + trans(:, it), geo%zc/cz, &
                               geo%film, xy(:, :nat), z(:nat), tb(:nat), opmap(:, nop + 1))) THEN

@@ -19,6 +19,16 @@ The self-consistent fixed point of the stack approaches the fleur values. The Ha
 of the stack has a charge-sloshing mode (eigenvalue of the order of 50): plain mixing needs
 alpha below 0.04, Broyden mixing is used with alpha=0.02.
 
+Surface (frozen vacuum): the upper four planes of a 7-plane Cu(001) film (testing/gfleur/inputfiles/
+cu_film7, planes 4-7, one layer per plane) between a bulk lead below (planes 2-3 of the supercell, its
+potential shifted to the Fermi energy of the film) and the vacuum above. The vacuum beyond the last
+embedding plane is not updated: gfprep stores its planar Coulomb field at the plane, which is the Neumann
+condition of the Coulomb problem for the planar component (G_par=0); the other components decay,
+V' = -|G_par| V. The vacuum holds 0.205 e of the electrons of the film (the last layer has 28.795 of 29),
+so the stack converges to a charge of +0.205 e. The layers must not be mirror symmetric in z (`zmirror=f`
+in gfprep), the Coulomb solver cannot handle planar stars with kz>=0 only. Plain linear mixing is stable
+(alpha=0.02); Broyden (imix=7) is not, imix=5 converges in ~25 iterations (distance 7.6 -> 0.06).
+
 Binaries are located via GFPREP_BINARY or <repo>/build*/gfprep; fleur and gfleur are taken from
 the same directory. Missing binaries skip the tests.
 """
@@ -33,6 +43,7 @@ import pytest
 from test_gfleur_transport import (BULK_INPUTS, MT_SETUPS, _find_gfprep, _layer_files, _replace, _run,
                                    _sibling)
 
+FILM7 = Path(__file__).resolve().parent / "inputfiles" / "cu_film7"
 KGRID = "kgrid=4,4"
 NAPW = 8
 SCF_ITER = 14
@@ -193,3 +204,128 @@ def test_charge_needs_cdn(env):
     run, proc, log = _gfleur_charge(env, "nocdn", "&SC iter=2, imix=0, alpha=0.02 /", copy_cdn=False)
     assert proc.returncode != 0
     assert "No self-consistency without gf_cdn.hdf" in log
+
+
+SURF_ITER = 26
+SURF_MIX = "imix=5, maxiter=26, alpha=0.02"
+# layer 1-4 of the stack are the film planes 4-7: atom types 2, 1, 3, 4 of cu_film7
+FILM7_TYPES = (2, 1, 3, 4)
+
+
+def _film7_mt_charges(film):
+    """(s,p,d,f,total) of the atom types of the 7-plane film (last iteration)"""
+    blocks = re.findall(r'<mtCharge atomType="(\d)" total="(\S+)" s="(\S+)" p="(\S+)" d="(\S+)" f="(\S+)"/>',
+                        (film / "out.xml").read_text())[-4:]
+    return {int(b[0]): tuple(float(x) for x in b[2:]) + (float(b[1]),) for b in blocks}
+
+
+def _fermi(out_xml):
+    return float(re.findall(r'<FermiEnergy value="(\S+)"', out_xml.read_text())[-1])
+
+
+@pytest.fixture(scope="module")
+def surf(env):
+    """7-plane film, lead from the bulk (shifted to the film), stack of the planes 4-7 on the lead."""
+    fleur = _sibling(env.gfprep, ["fleur", "fleur_MPI"])
+    film = env.base / "film7"
+    shutil.copytree(FILM7, film)
+    proc, log = _run(fleur, film)
+    assert proc.returncode == 0 and (film / "cdn.hdf").is_file(), f"film fleur run failed\n{log[-3000:]}"
+    vshift = _fermi(film / "out.xml") - _fermi(env.bulk / "out.xml")
+
+    # the stack first: its contour is also used for the lead
+    prep = env.base / "surf_prep"
+    _gfprep(env.gfprep, prep, film, "planes_per_layer=1 first_plane=4 zmirror=f")
+    lead = env.base / "surf_lead_prep"
+    _gfprep(env.gfprep, lead, env.bulk, f"planes_per_layer=2 first_plane=2 last_plane=3 vshift={vshift:.6f}")
+    cbs = env.base / "surf_cbs"
+    cbs.mkdir()
+    _layer_files(lead, cbs)
+    (cbs / "gf_inp").write_text(_layers_block(lead) + f"&MODE tmat=t, gmat=t /\n&BASIS napw={NAPW} /\n"
+                                "&CBSMODE cbs=t /\n&SC iter=1 /\n")
+    shutil.copy(prep / "gf_en.charge", cbs / "gf_en")
+    (cbs / "gf_io").write_text("default\n")
+    proc, log = _run(env.gfleur, cbs)
+    assert proc.returncode == 0, f"gfleur CBS run of the lead failed\n{log[-3000:]}"
+    return film, prep, cbs
+
+
+def _surface_run(env, surf, name, sc):
+    film, prep, cbs = surf
+    run = env.base / name
+    run.mkdir()
+    _layer_files(prep, run)
+    shutil.copy(cbs / "embpot11.hdf", run / "embpot11.hdf")
+    shutil.copy(prep / "gf_en.charge", run / "gf_en")
+    (run / "gf_io").write_text("default\n")
+    gfinp = (prep / "gf_inp").read_text()
+    assert "&EMB addemb=T, surface=T, vacleft=F /" in gfinp
+    (run / "gf_inp").write_text(_layers_block(prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
+                                f"&BASIS napw={NAPW} /\n&EMB addemb=T, surface=T, vacleft=F /\n{sc}\n")
+    proc, log = _run(env.gfleur, run)
+    return run, proc, log
+
+
+def test_surface_gfprep_outputs(env, surf):
+    """The layers of the stack have no z mirror (planar stars of both signs); the Coulomb field of the
+    vacuum is stored (positive: the potential rises into the vacuum)."""
+    film, prep, cbs = surf
+    out = (prep / "gfprep.out").read_text()
+    assert "vacuum embedding potential side 2" in out
+    proc = subprocess.run(["h5dump", "-a", "/vacemb_side2/vcfield", str(prep / "gf_pot.hdf")],
+                          capture_output=True, text=True)
+    field = float(re.findall(r"\(0\):\s*(\S+)", proc.stdout)[0])
+    assert 0.05 < field < 0.2
+    for i in range(1, 5):
+        proc = subprocess.run(["h5dump", "-d", f"/layer-{i}/stars/kv3", "-y", "-O", str(prep / "gf_pot.hdf")],
+                              capture_output=True, text=True)
+        kv = [int(float(x)) for x in re.findall(r"-?\d+", proc.stdout)]
+        kz = [kv[j + 2] for j in range(0, len(kv) - 2, 3) if kv[j] == 0 and kv[j + 1] == 0]
+        assert min(kz) < 0, f"layer {i} is mirror symmetric"
+
+
+def test_surface_first_iteration(env, surf):
+    """One iteration from the film density: the Coulomb potential between the lead and the vacuum is
+    smooth (no spurious net charge), MT charges within 0.2 e of the film, stack charge about +0.2 e."""
+    film, prep, cbs = surf
+    run, proc, log = _surface_run(env, surf, "surface1", "&SC iter=1, imix=0, alpha=0.0 /")
+    assert proc.returncode == 0, f"gfleur surface run failed\n{log[-3000:]}"
+    out = (run / "out").read_text()
+    assert 0.0 < _neutrality(out)[0] < 0.8
+    assert _distances(out)[0] < 12.0
+    ref = _film7_mt_charges(film)
+    for (s, p, d, f, tot), t in zip(re.findall(r"\n\s+\d --> 1\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)", out)[-4:], FILM7_TYPES):
+        assert float(tot) == pytest.approx(ref[t][4], abs=0.2)
+
+
+def test_surface_converges(env, surf):
+    """SCF of the surface: the distance falls by two orders of magnitude, the stack converges to the
+    charge with the vacuum electrons missing (+0.205 e), the MT charges of all layers equal those of
+    the film planes."""
+    film, prep, cbs = surf
+    run, proc, log = _surface_run(env, surf, "surface_scf", f"&SC iter={SURF_ITER}, {SURF_MIX} /")
+    assert proc.returncode == 0, f"gfleur surface run failed\n{log[-3000:]}"
+    out = (run / "out").read_text()
+    dist, q = _distances(out), _neutrality(out)
+    assert len(dist) == SURF_ITER
+    assert dist[-1] < dist[0]/50
+    assert q[-1] == pytest.approx(0.205, abs=0.04)
+    ref = _film7_mt_charges(film)
+    layers = re.findall(r"\n\s+\d --> 1\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)", out)[-4:]
+    for (s, p, d, f, tot), t in zip(layers, FILM7_TYPES):
+        assert float(d) == pytest.approx(ref[t][2], abs=0.03)
+        assert float(tot) == pytest.approx(ref[t][4], abs=0.04)
+
+
+def test_charge_rejects_vacuum_on_the_left(env, surf):
+    """A vacuum on the left (free film) is not supported in the charge mode."""
+    film, prep, cbs = surf
+    run = env.base / "vacleft"
+    run.mkdir()
+    _layer_files(prep, run)
+    shutil.copy(prep / "gf_en.charge", run / "gf_en")
+    (run / "gf_inp").write_text(_layers_block(prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
+                                f"&BASIS napw={NAPW} /\n&EMB addemb=T, surface=T, vacleft=T /\n&SC iter=1 /\n")
+    proc, log = _run(env.gfleur, run)
+    assert proc.returncode != 0
+    assert "charge mode with vacuum on the left is not supported" in log

@@ -39,6 +39,7 @@ types, and `spinflip`.
 | `kgrid` | bulk grid | 2D k-point grid shared by all layers |
 | `gmax_scale` | 1.5 | Gmax of the layers relative to the bulk |
 | `zvac` | 0 | film: the vacuum embedding planes lie at `±(z1+zvac)`, `z1` = dVac/2 of the film |
+| `zmirror` | `T` | keep the symmetry operations that flip z in the layers; set `F` for a stack with a lead or a surface (charge mode), whose layers are not mirror symmetric |
 
 In auto mode, the embedding planes lie midway between the atomic planes.
 
@@ -61,6 +62,7 @@ a MT sphere.
 * `gf_pot.hdf` holds the total potential (`pot`) and the Coulomb potential (`coulpot`). `gf_cdn.hdf` holds the density.
   For noco, `pot` also contains `pwod` (the interstitial off-diagonal part V21 or rho21, global frame) and, with `l_mperp`, `vrod` (the MT components 3:4, local frame of each atom).
 * For a film, `gf_pot.hdf` also holds `vacemb_side1` and `vacemb_side2`: the planar-averaged potential `vz(z,spin)` (noco: `V11, V22, Re V21, Im V21`) beyond the vacuum embedding plane below layer 1 and above the last layer, from the plane to the end of the FLEUR vacuum grid with spacing `delz` (attribute).
+* For a film with the upper vacuum embedding plane, `gf_pot.hdf` also holds the planar Coulomb field of the vacuum at the plane (`vcfield` in `vacemb_side2`), used by the charge mode of a surface.
 * `gf_en.charge` is a template of the energy contour for the charge mode: a semicircle with 15 points from 1 Htr below the Fermi energy of the bulk (stored with the bulk density, also printed by gfprep) to the Fermi energy. Rename it to `gf_en`. The lead calculation of a charge run must use the same contour. An existing file is kept.
 * `gfprep_planes.txt` lists the atomic planes and the chosen layers.
 * `gfprep.out` holds the log, including a self-check: bulk and layer functions are compared at interstitial points with `|z| < c/2` and inside the MT spheres. For noco there are additional lines `potential21` and `density21` for the off-diagonal parts.

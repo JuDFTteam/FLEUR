@@ -73,3 +73,9 @@ the bias-dependent current, and MPI runs.
   reproduces the SOC splitting of a d-level pair at Gamma of the `fleur`
   eigenvalues, and sc Fe with SOC transmits every open channel. Collinear
   inputs with `l_soc="T"` (second variation) are rejected by gfprep and gfleur.
+
+* `test_gfleur_charge.py` tests the charge mode (self-consistency): a stack of two Cu layers
+  between bulk leads (fixed point from the bulk density, zero-mixing stationarity, Broyden
+  convergence) and a semi-infinite Cu(001) surface (upper four planes of the 7-plane film in
+  `inputfiles/cu_film7` between a shifted bulk lead and the frozen vacuum, converged with `imix=5`
+  to the charges of the film). The module takes about twenty minutes.

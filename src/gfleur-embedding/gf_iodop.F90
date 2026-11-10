@@ -35,7 +35,7 @@
       PUBLIC :: gf_loddop,gf_wrtdop,gf_wrtcoul,gf_loddop_name                          &
      &     ,gf_lodcoul,gf_renamepot,gf_iodop_readpseudo                 &
      &     ,gf_iodop_writepseudo,gf_iodop_writevacuum,gf_iodop_readvacuum &
-     &     ,gf_iodop_writevacemb,gf_iodop_readvacemb
+     &     ,gf_iodop_writevacemb,gf_iodop_readvacemb,gf_iodop_readvacfield
 
       CONTAINS 
 
@@ -156,13 +156,15 @@
 	  CALL  priv_closefile(file_type,mpi_subcom)
       end subroutine
                                                                         
-      subroutine gf_iodop_writevacemb(side,delz,vz,mpi_subcom)
+      subroutine gf_iodop_writevacemb(side,delz,vz,mpi_subcom,vcfield)
       ! Write the planar-averaged potential beyond a vacuum embedding
       ! plane (side 1: below layer 1, side 2: above the last layer);
       ! vz(1,:) is the value at the plane, the grid spacing is delz
       implicit none
       integer,intent(in) :: side,mpi_subcom
       real,intent(in)    :: delz,vz(:,:)
+      !planar Coulomb field dV/dz of the frozen vacuum at the plane (z outwards)
+      real,intent(in),optional :: vcfield
       !locals
       INTEGER(HID_T)     :: fid,gid,did
       INTEGER            :: hdferr
@@ -176,9 +178,38 @@
       CALL io_write(did,(/1,1/),(/size(vz,1),size(vz,2)/),"vz",vz)
       CALL io_dclose(did,hdferr)
       call io_write_att(gid,"delz",delz)
+      if (present(vcfield)) call io_write_att(gid,"vcfield",vcfield)
       CALL io_gclose(gid,hdferr)
       CALL priv_closefile(GF_POTFILE,mpi_subcom)
       end subroutine
+
+      logical function gf_iodop_readvacfield(side,vcfield)
+      ! Planar Coulomb field of the frozen vacuum at the embedding plane;
+      ! .FALSE. if the file has none (gfprep before the charge mode)
+      implicit none
+      integer,intent(in) :: side
+      real,intent(out)   :: vcfield
+      !locals
+      INTEGER(HID_T)     :: fid,gid
+      INTEGER            :: hdferr
+      LOGICAL            :: l_att
+      CHARACTER(LEN=12)  :: gname
+
+      vcfield = 0.0
+      gf_iodop_readvacfield = .FALSE.
+      write(gname,"(a,i1)") "vacemb_side",side
+      fid = priv_openfile(GF_POTFILE)
+      IF (io_groupexists(fid,gname)) THEN
+         CALL io_gopen(fid,gname,gid,hdferr)
+         CALL h5aexists_f(gid,"vcfield",l_att,hdferr)
+         IF (l_att) THEN
+            call io_read_att(gid,"vcfield",vcfield)
+            gf_iodop_readvacfield = .TRUE.
+         ENDIF
+         CALL io_gclose(gid,hdferr)
+      ENDIF
+      CALL priv_closefile(GF_POTFILE)
+      end function
 
       logical function gf_iodop_readvacemb(side,delz,vz)
       ! Read the potential written by gf_iodop_writevacemb; .FALSE. if

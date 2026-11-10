@@ -13,8 +13,17 @@
 !as used in the GF-code
 !------------------------------------------------------------
       USE m_gf_iodop
+      USE m_gf_types
+      USE m_juDFT
+      USE m_gf_broyden
+      USE m_gf_potdis
+      USE m_gf_metric
+      USE m_gf_fft
+      USE m_gf_precond
       IMPLICIT NONE
       integer,parameter:: nmz=250,nmzxy=100
+      !the vacuum of a surface is frozen: it is not part of the mixing vector
+      LOGICAL,PARAMETER :: l_vacmix=.FALSE.
       PRIVATE
       PUBLIC gf_mix
       CONTAINS
@@ -27,11 +36,6 @@
 ! are gathered from ld(:).
 !                          Daniel Wortmann, Mon May 27 11:39:02 2002
 !*****************************************************************
-      USE m_gf_types
-      use m_juDFT
-      USE m_gf_broyden
-      USE m_gf_potdis
-      USE m_gf_metric
       IMPLICIT NONE
       TYPE(t_gfmpi),INTENT(IN)     :: gmpi
       TYPE(t_embinp),INTENT(IN)    :: embinp
@@ -97,14 +101,14 @@
      &        atoms(layer)%ntype*(MAXVAL(sphhar(layer)%nlh)+1)              &
      &        *MAXVAL(atoms(layer)%jri)
       ENDDO
-      IF (embinp%l_surface) len=len+nmz+2*nmz*stars(1)%ng2-1
+      IF (l_vacmix) len=len+nmz+2*nmz*stars(1)%ng2-1
       len = len*jspins
 
       ALLOCATE (sm_old(len),sm(len),fsm(len),metric(len))
 
       !<-- construct the large mixing vector
       CALL priv_makevector(fileid,layers,gmpi,gfmix,ld,sphhar,atoms,stars,   &
-     &     cell,sym,jspins,dataend,datastart,sm,fsm,embinp%l_surface)
+     &     cell,sym,jspins,dataend,datastart,sm,fsm,l_vacmix)
       sm_old=sm
 
       !<-- mixing
@@ -114,16 +118,16 @@
          ! magnetization spin factor is not applied separately)
          sm = sm + gfmix%alpha*fsm
       ELSE
-         CALL gf_broyden("gf_broyd",embinp%l_potmix,embinp%l_surface,gmpi,   &
+         CALL gf_broyden("gf_broyd",embinp%l_potmix,l_vacmix,gmpi,   &
      &        gfmix%imix,gfmix%maxiter,gfmix%alpha,fsm,stars,atoms,sphhar,   &
      &        cell,sym,jspins,nl,sm)
       END IF
 
       CALL priv_decomposevector(fileid,layers,gmpi,sphhar,atoms,stars,sym,   &
-     &     embinp,jspins,sm,embinp%l_surface)
+     &     embinp,jspins,sm,l_vacmix)
 
       !<-- distances via the metric
-      metric = gf_apply_metric(embinp%l_surface,embinp%l_potmix,gmpi,stars,  &
+      metric = gf_apply_metric(l_vacmix,embinp%l_potmix,gmpi,stars,  &
      &     atoms,cell,sphhar,sym,jspins,nl,fsm)
       WRITE(oUnit,*) "Distance for all layers:"
       DO layer=1,nl
@@ -136,7 +140,7 @@
 
       !<-- stepsize
       sm=sm-sm_old
-      metric = gf_apply_metric(embinp%l_surface,embinp%l_potmix,gmpi,stars,  &
+      metric = gf_apply_metric(l_vacmix,embinp%l_potmix,gmpi,stars,  &
      &     atoms,cell,sphhar,sym,jspins,nl,sm)
       WRITE(oUnit,*) "Stepsize for all layers:"
       DO layer=1,nl
@@ -156,10 +160,6 @@
 !-----------------------------------------------
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      USE m_gf_fft
-      USE m_gf_iodop
-      use m_gf_precond
       IMPLICIT NONE
       INTEGER,INTENT(IN)        :: fileid
       TYPE(t_layers),INTENT(IN) :: layers
@@ -269,10 +269,6 @@
 !-----------------------------------------------
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      USE m_gf_fft
-      USE m_gf_iodop
-      use m_juDFT
       IMPLICIT NONE
       INTEGER,INTENT(IN)        :: fileid
       TYPE(t_layers),INTENT(IN) :: layers

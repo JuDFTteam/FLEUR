@@ -7,6 +7,14 @@ MODULE m_gf_intcoul
       use m_juDFT
 	  USE m_gf_types
 	  USE m_constants
+     USE m_gf_iodop
+     USE m_gf_plot
+     USE m_gf_math
+     USE m_gf_fft_singleton
+     USE m_hdf_tools
+     USE hdf5
+     USE m_gf_io2dmat
+     USE m_gf_energies
       IMPLICIT NONE
       PRIVATE
       REAL,PARAMETER:: CORRECT_CUTOFF=0.5 ! cutoff determine how many g_|| to fix
@@ -24,12 +32,12 @@ MODULE m_gf_intcoul
          INTEGER,ALLOCATABLE :: gz_max(:)
       END TYPE
       LOGICAL,SAVE :: l_fix  !is the vacuum fixed?
+      LOGICAL,SAVE :: l_have_field = .FALSE.
+      REAL,SAVE    :: field_saved = 0.0
       public gf_makeintcoulpot
       CONTAINS
       SUBROUTINE gf_makeintcoulpot(jspins,layers,stars,fmpi,gfinp             &
      &     ,potential,vac_pot,atoms,cell,sym)
-      USE m_gf_iodop
-      USE m_gf_plot
       IMPLICIT NONE
       integer,intent(in)           :: jspins
       TYPE(t_layers),INTENT(IN)    :: layers
@@ -168,9 +176,6 @@ MODULE m_gf_intcoul
 
 
      SUBROUTINE priv_correct_boundary(lay,stars,left,right,n2,l_surface,vac_pot)
-     USE m_gf_math
-     USE m_gf_fft_singleton
-     use m_juDFT
      IMPLICIT NONE
      TYPE(t_chargelayer),INTENT(INOUT)::lay(:)
      TYPE(t_stars),INTENT(IN)         ::stars
@@ -183,6 +188,10 @@ MODULE m_gf_intcoul
 	 COMPLEX :: c(2,2),dc(2,2),v(2),dv(2)
 	 COMPLEX,ALLOCATABLE:: corr(:,:,:),rs(:),a(:),mat(:,:)
      logical pr
+     REAL    :: gp
+     !surface: the potential decays into the vacuum, V' = -|G_par| V at the last plane
+     gp = 0.0
+     IF (l_surface) gp = stars%sk2(n2)
      pr=n2==1
      pr=.true.
 	 n=2*(size(lay)-2)
@@ -227,9 +236,9 @@ MODULE m_gf_intcoul
 	     	if (n==size(lay)-1) then
 	     	    !we only have a single layer
 	     	    if (l_surface.and..not.l_fix) then
-	     	    	mat(row+2,column)=dc(1,2)
-	        		mat(row+2,column+1)=dc(2,2)
-	        		rs(row+2)=rs(row+2)-dv(2)
+	     	    	mat(row+2,column)=dc(1,2)+gp*c(1,2)
+	        		mat(row+2,column+1)=dc(2,2)+gp*c(2,2)
+	        		rs(row+2)=rs(row+2)-dv(2)-gp*v(2)
 	        		cycle
 	        	endif
 	     	    mat(row+1,column)=c(1,2)
@@ -255,9 +264,9 @@ MODULE m_gf_intcoul
 	        mat(row+1,column+1)=-dc(2,1)
 	        rs(row+1)=rs(row+1)+dv(1)
 	        IF (l_surface.and..not.l_fix) THEN
-	        	mat(row+2,column)=dc(1,2)
-	        	mat(row+2,column+1)=dc(2,2)
-	        	rs(row+2)=rs(row+2)-dv(2)
+	        	mat(row+2,column)=dc(1,2)+gp*c(1,2)
+	        	mat(row+2,column+1)=dc(2,2)+gp*c(2,2)
+	        	rs(row+2)=rs(row+2)-dv(2)-gp*v(2)
 	        ELSE
 	        	mat(row+2,column)=c(1,2)
 	        	mat(row+2,column+1)=c(2,2)
@@ -410,12 +419,6 @@ MODULE m_gf_intcoul
 !
 !           (last modified:08-07-09) D. Wortmann
 !-----------------------------------------------
-      USE m_hdf_tools
-      USE hdf5
-      USE m_gf_io2dmat
-      USE m_constants
-      USE m_gf_energies
-      USE m_gf_vacuum_pot
       IMPLICIT NONE
       !Arguments
       INTEGER,INTENT(IN)                :: num_layers,jspins
@@ -426,7 +429,7 @@ MODULE m_gf_intcoul
       LOGICAL,INTENT(IN)                :: l_surface
       !<-- Locals
       INTEGER             :: n,n2,hdferr
-      REAL                :: bias
+      REAL                :: bias, field
       INTEGER(HID_T)      :: fid,gid
       REAL   ,ALLOCATABLE :: b(:,:)
 
@@ -461,17 +464,24 @@ MODULE m_gf_intcoul
          n = gf_bias_layer(bias)
          right(1) = right(1)+bias
       ELSE
-         allocate(right(n2))
-         inquire(file="fix.vacuum",exist=l_fix)
-         call gf_vacuum_coulpot(jspins,efield,stars,right,l_fix)
-
-         if (l_fix) then
-              open(99,file="fix.vacuum")
-              read(99,*) bias
-              close(99)
-              right(1)=right(1)+bias
-          endif
-
+         !frozen vacuum beyond the last layer: no field, the decay of the
+         !G_par/=0 components is the Robin condition in priv_correct_boundary
+         IF (ABS(efield)>1.0E-10) CALL juDFT_error("The charge mode with vacuum needs efield=0", &
+                                                   calledby="gf_intcoul")
+         !read once: gf_pot.hdf is rewritten without the vacuum group
+         IF (.NOT. l_have_field) THEN
+            IF (.NOT. gf_iodop_readvacfield(2, field_saved)) &
+               CALL juDFT_error("gf_pot.hdf has no Coulomb field of the vacuum", &
+                                hint="run gfprep again", calledby="gf_intcoul")
+            l_have_field = .TRUE.
+         END IF
+         field = field_saved
+         ALLOCATE(right(n2))
+         right = 0.0
+         !planar Coulomb field of the frozen vacuum charge at the last plane
+         right(1) = field
+         pos_r = 0.0
+         l_fix = .FALSE.
       ENDIF
       END SUBROUTINE
 
@@ -483,13 +493,6 @@ MODULE m_gf_intcoul
 !
 !           (last modified:08-07-10) D. Wortmann
 !-----------------------------------------------
-      USE m_gf_types
-      USE m_hdf_tools
-      USE hdf5
-      USE m_gf_io2dmat
-      USE m_constants
-      USE m_gf_iodop
-      use m_juDFT
       IMPLICIT NONE
       !<--Arguments
       TYPE(t_chargelayer ),INTENT(INOUT) :: lay(:)
@@ -603,7 +606,6 @@ MODULE m_gf_intcoul
       END SUBROUTINE
 
       SUBROUTINE priv_make_boundary_charge(layer,leftlayer,rightlayer,n2)
-      USE m_gf_fft_singleton
       IMPLICIT NONE
       TYPE(t_chargelayer),INTENT(INOUT)::layer
       TYPE(t_chargelayer),INTENT(IN)   ::leftlayer
@@ -658,7 +660,6 @@ MODULE m_gf_intcoul
 	  END SUBROUTINE
 
 	  SUBROUTINE priv_join_charges(layer,leftlayer,rightlayer,stars,cell)
-	  USE m_gf_fft_singleton
 	  IMPLICIT NONE
 	  TYPE(t_chargelayer),INTENT(INOUT) :: layer
 	  TYPE(t_chargelayer),INTENT(IN)    :: leftlayer
@@ -794,7 +795,6 @@ MODULE m_gf_intcoul
       END FUNCTION
 
       SUBROUTINE priv_make_potential(lay,stars,n2)
-	  USE m_gf_fft_singleton
       IMPLICIT NONE
       TYPE(t_chargelayer),INTENT(INOUT):: lay
       TYPE(t_stars),INTENT(IN)         :: stars
@@ -894,7 +894,6 @@ MODULE m_gf_intcoul
 
 
      SUBROUTINE priv_correction_potentials(lay,stars,n2,corr,c,dc)
-     USE m_gf_fft_singleton
      IMPLICIT NONE
      TYPE(t_chargelayer),INTENT(IN)       ::lay
      TYPE(t_stars),INTENT(IN)             ::stars
@@ -983,7 +982,6 @@ MODULE m_gf_intcoul
 
      END SUBROUTINE
      SUBROUTINE priv_correction_potentials_OLD(lay,stars,n2,corr,c,dc)
-     USE m_gf_fft_singleton
      IMPLICIT NONE
      TYPE(t_chargelayer),INTENT(IN)       ::lay
      TYPE(t_stars),INTENT(IN)             ::stars
@@ -1102,7 +1100,6 @@ MODULE m_gf_intcoul
      END SUBROUTINE
 
 	SUBROUTINE priv_print_data(lay,pdata,n2)
-	USE m_gf_fft_singleton
 	IMPLICIT NONE
 	TYPE(t_chargelayer),INTENT(IN):: lay(:)
 	COMPLEX,INTENT(INOUT)            :: pdata(:,:,:)
