@@ -75,6 +75,7 @@ CONTAINS
     COMPLEX phase
     INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin,ipot,nbuf,ierr,loclen
     INTEGER mat_start,mat_end
+    INTEGER gShift(2)
     LOGICAL tail, l_dfpt, l_dvz
     !     ..
     !     .. Local Arrays ..
@@ -317,14 +318,16 @@ CONTAINS
          ENDDO
          !$OMP END PARALLEL DO
        ELSE
+         ! folding vector between the bases of kvacq and kvac, relative to the star center q
+         gShift = NINT(bkptq(1:2) - bkpt(1:2) - stars%center(1:2))
          !$OMP PARALLEL DO DEFAULT(none) &
-         !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,v1,jk,bkpt,bkptq) &
+         !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,v1,jk,bkpt,bkptq,gShift) &
          !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,nv2q,kvac,kvacq,vacuum,u,uq,tail,fac,np1,ivac,ipot,ud,udq,l_dfpt) &
          !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
           DO  ik = 1,nv2q(jspin1)
             !--->     determine the warping component of the potential
-            i1 = fac*(kvacq(1,ik,jspin1) - kvac(1,jk,jspin2))
-            i2 = fac*(kvacq(2,ik,jspin1) - kvac(2,jk,jspin2))
+            i1 = fac*(kvacq(1,ik,jspin1) - kvac(1,jk,jspin2) + gShift(1))
+            i2 = fac*(kvacq(2,ik,jspin1) - kvac(2,jk,jspin2) + gShift(2))
             i3 = 0
             ind3 = stars%ig(i1,i2,i3)
             IF (ind3.EQ.0) CYCLE

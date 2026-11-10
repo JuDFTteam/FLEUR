@@ -16,6 +16,7 @@ MODULE m_mix
    use m_juDFT
    use m_constants
    use m_cdn_io
+   use m_dfpt_cdn_io, only: writeDfptDensity
    use m_stmix
    use m_broyden
    use m_qfix
@@ -53,7 +54,7 @@ contains
   SUBROUTINE mix_charge( field,   fmpi,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
-         dfpt_tag, inTau, outTau)
+         dfpt_tag, inTau, outTau, dfpt_qvec)
 
     implicit none
 
@@ -81,7 +82,8 @@ contains
 
     
     type(t_potden), OPTIONAL , intent(inout) :: coreDen
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: dfpt_tag
+    REAL,             OPTIONAL, INTENT(IN) :: dfpt_qvec(3)
     ! MetaGGA kinetic energy densities: mixed with the coefficients of the density (passive)
     type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau
 
@@ -132,7 +134,7 @@ contains
     IF (.NOT.l_dfpt) THEN
       CALL mixing_history_open(fmpi,input%maxiter)
     ELSE
-      CALL mixing_history_open(fmpi,input%maxiter,dfpt_tag)
+      CALL mixing_history_open(fmpi,input%maxiter,dfpt_history_basename(dfpt_tag))
     END IF
 
     CALL timestop("read history")
@@ -295,13 +297,7 @@ contains
                1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,b_constr=nococonv%b_con)
           CALL writeCoreDensity(input,atoms,outDen%mtCore,inDen%tec,inDen%qint)
        ELSE
-          INQUIRE(file=trim(dfpt_tag)//"_old.hdf",exist=l_exist)
-          IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
-          INQUIRE(file=trim(dfpt_tag)//".hdf", exist=l_exist)
-          IF (l_exist) CALL system("mv "//trim(dfpt_tag)//".hdf "//trim(dfpt_tag)//"_old.hdf")
-          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
-               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag)
-          IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
+          CALL writeDfptDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,archiveType,dfpt_tag,dfpt_qvec,results%last_distance,results%ef,inDen)
        END IF
     END IF
 

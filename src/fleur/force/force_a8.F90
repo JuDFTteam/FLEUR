@@ -20,7 +20,7 @@ MODULE m_forcea8
    PRIVATE
    PUBLIC :: force_a8
 CONTAINS
-   SUBROUTINE force_a8(input,atoms,sym,sphhar,jsp,vr,rho,force,fmpi,results)
+   SUBROUTINE force_a8(input,atoms,sym,sphhar,jsp,vr_in,rho,force,fmpi,results)
       !--------------------------------------------------------------------------
       ! Pulay 1st term force contribution à la Rici et al. 
       ! 
@@ -39,18 +39,19 @@ CONTAINS
 
       INTEGER, INTENT(IN) :: jsp 
 
-      REAL, INTENT(IN)    :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+      REAL, INTENT(IN)    :: vr_in(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
       REAL, INTENT(IN)    :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
 
       ! Local scalars
       COMPLEX, PARAMETER :: czero=CMPLX(0.0,0.0)
       COMPLEX aaa, bbb, ccc, ddd, eee, fff
-      REAL    a8_1, a8_2, qval, rr, truerho, truev, xi
-      INTEGER i, ir, j, l, l1, l2, lh1, lh2, m1, m2, mem1, mem2, n, nd, na, m
+      REAL    a8_1, a8_2, qval, rr, truerho, truev, xi, s34, s38
+      INTEGER i, ir, j, l, l1, l2, lh, lh1, lh2, m1, m2, mem, mem1, mem2, n, nd, na, m
 
       ! Local arrays
-      COMPLEX forc_a8(3), gv(3), f_sum(3)
+      COMPLEX forc_a8(3), gv(3), f_sum(3), grd1(3,-1:1)
       REAL    rhoaux(atoms%jmtd), rhodif(atoms%jmtd)
+      REAL, ALLOCATABLE :: vr(:,:,:)
 
       ! Statement functions
       REAL    alpha, beta, delta, epslon, gamma, phi 
@@ -66,6 +67,27 @@ CONTAINS
       phi(l,m) = l*SQRT(REAL((l-m+1)* (l+m+1))/REAL((2*l+1)* (2*l+3)))
 
       CALL timestart("force_a8")
+
+      ! Nuclear potential (r*V = -Z) removed from the numerical part; its contribution is
+      ! added below in integrated-by-parts form, with the same quadrature as the
+      ! singular term of A3, so that both cancel at self-consistency
+      vr = vr_in
+      DO n = 1, atoms%ntype
+         vr(:atoms%jri(n),0,n) = vr(:atoms%jri(n),0,n) + atoms%zatom(n)
+      END DO
+
+      ! Gradient components in terms of Ylms, as in force_a3
+      s34 = SQRT(3.0/(4.0*pi_const))
+      s38 = SQRT(3.0/(8.0*pi_const))
+      grd1(1,0) = czero
+      grd1(2,0) = czero
+      grd1(3,0) = CMPLX(s34,0.0)
+      grd1(1,-1) = CMPLX(s38,0.0)
+      grd1(2,-1) = CMPLX(0.0,-s38)
+      grd1(3,-1) = czero
+      grd1(1,1) = CMPLX(-s38,0.0)
+      grd1(2,1) = CMPLX(0.0,-s38)
+      grd1(3,1) = czero
 
       WRITE  (oUnit,*)
  
@@ -243,6 +265,21 @@ CONTAINS
                END DO ! lh2 (0:sphhar%nlh(nd))
             END DO ! lh1 (0:sphhar%nlh(nd))
 
+            ! Nuclear part: -(4pi/3) Z [int rho1 dr + R rho1(R)]
+            DO lh = 1, sphhar%nlh(nd)
+               IF (sphhar%llh(lh,nd).GT.1) EXIT
+               gv(:) = czero
+               DO mem = 1, sphhar%nmem(lh,nd)
+                  gv(:) = gv(:) + sphhar%clnu(mem,lh,nd)*grd1(:,sphhar%mlh(mem,lh,nd))
+               END DO
+               DO ir = 1, atoms%jri(n)
+                  rhoaux(ir) = rho(ir,lh,n,jsp)/atoms%rmsh(ir,n)**2
+               END DO
+               CALL intgr3(rhoaux,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),a8_1)
+               forc_a8(:) = forc_a8(:) - 4.0*pi_const/3.0*atoms%zatom(n)* &
+                                         (a8_1 + rho(atoms%jri(n),lh,n,jsp)/atoms%rmt(n))*gv(:)
+            END DO
+
             ! Add onto existing forces.
 
             DO i = 1, 3
@@ -302,6 +339,16 @@ CONTAINS
 8050        FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060        FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
          END DO
+         IF (ANY(ABS(force%f_a21_soc)>0.0)) THEN
+            DO n=1,atoms%ntype
+               IF (atoms%l_geo(n)) THEN
+                  WRITE  (oUnit,FMT=8070) n
+                  WRITE  (oUnit,FMT=8080) (force%f_a21_soc(i,n),i=1,3)
+               END IF
+8070           FORMAT (' FORCES: EQUATION A21 (SOC) FOR ATOM TYPE',i4)
+8080           FORMAT (' FX_A21SOC=',2f10.6,' FY_A21SOC=',2f10.6,' FZ_A21SOC=',2f10.6)
+            END DO
+         END IF
       ELSE
          WRITE (oUnit,*) "If this was a serial calculation, the A21 force component would be written out here. In parallel it holds no meaning."
       END IF

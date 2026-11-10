@@ -6,6 +6,21 @@
 #                               it compiles types_mpimat.F90 but links no ScaLAPACK.
 #A macro belongs in exactly one of the two lists, never in both.
 
+#FLEUR_LIBRARIES holds plain linker flags only: it is passed to try_compile
+#and to the configure scripts of external builds, which cannot resolve CMake
+#targets (try_compile then fails silently). Libraries built along with FLEUR
+#set a FLEUR_COMPILE_<lib> flag and are linked in Files_and_Targets.txt.
+function(fleur_check_libraries variable access value)
+   if (access STREQUAL "MODIFIED_ACCESS")
+      foreach(library IN LISTS value)
+         if (TARGET "${library}")
+            message(FATAL_ERROR "CMake target '${library}' added to ${variable}; link it to the fleur target instead")
+         endif()
+      endforeach()
+   endif()
+endfunction()
+variable_watch(FLEUR_LIBRARIES fleur_check_libraries)
+
 include("cmake/tests/test_GIT.cmake")
 include("cmake/tests/test_linker.cmake")
 include("cmake/tests/test_OpenMP.cmake")

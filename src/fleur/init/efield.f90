@@ -46,7 +46,7 @@
 !     ..
 !     .. Local Scalars ..
       REAL, parameter :: eps = 1.0e-7
-      REAL  qn,qe,bmu
+      REAL  qn,qe,bmu,qsheet
       INTEGER n,iwd,nst,nc
 !     ..
 !     ..
@@ -81,6 +81,9 @@
       WRITE (oUnit, '(3x,a,f12.5)') 'total nuclear charge      =', qn
 
       CALL read_efield (efield, stars%mx1, stars%mx2, vacuum%nvac, cell%area)
+      efield%qexcess = qe - qn
+      qsheet = SUM(efield%sig_b(1:vacuum%nvac))
+      IF (vacuum%nvac == 1) qsheet = 2.0*efield%sig_b(1)
 
       ! Sign convention of electric field: E>0 repels electrons,
       ! consistent with conventional choice that current is
@@ -94,8 +97,8 @@
       CALL print_efield (oUnit,efield, cell%area, vacuum%nvac, cell%amat,vacuum%dvac)
 
       IF (.NOT. efield%dirichlet&
-     &    .AND. ABS (SUM (efield%sig_b) + 2*efield%sigma - (qe-qn)) > eps) THEN
-        IF (ABS (SUM (efield%sig_b) - (qe-qn)) < eps) THEN
+     &    .AND. ABS (qsheet + 2*efield%sigma - efield%qexcess) > eps) THEN
+        IF (ABS (qsheet - efield%qexcess) < eps) THEN
           CALL juDFT_error&
      &          ("E field: top+bottom+film charge does not add up to "&
      &           //"zero.",&
@@ -110,12 +113,17 @@
      &        ,calledby ="efield")
       ENDIF
 
-      IF (ABS (efield%sigma) > 0.49 .OR. ANY (ABS (efield%sig_b) > 0.49)) THEN
+      IF (input%film .AND. (ABS (efield%sigma) > 0.49 .OR. ANY (ABS (efield%sig_b) > 0.49))) THEN
         WRITE (oUnit,*) 'If you really want to calculate an e-field this'
         WRITE (oUnit,*) 'big, uncomment STOP in efield.f !'
         CALL juDFT_error("E-field too big or No. of e- not correct"&
      &       ,calledby ="efield")
       ENDIF
+
+      IF (input%film .AND. efield%zsigma / vacuum%delz + 1.01 > vacuum%nmz) THEN
+        CALL juDFT_error("E-field charge sheet lies outside the vacuum mesh",&
+     &    calledby="efield")
+      END IF
 
       IF (efield%l_segmented) THEN
         CALL V_seg_EF(&

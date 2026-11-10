@@ -8,6 +8,7 @@
 module m_types_dfpt_scf
 
     use m_judft
+    use m_dfpt_cdn_io, only: dfptDensityArchiveName, storeDfptDensity, clearDfptWorkFile
     use m_types_fleurinput
     use m_eigen
     use m_fermie
@@ -193,7 +194,7 @@ contains
         integer, allocatable :: q_list(:)
         logical :: l_real, l_gamma
         integer :: iArray , iQ , ikpt, iDtype, iDir , iJob, jobNum
-        character(len=20) :: dfpt_tag
+        character(len=64) :: dfpt_tag
 
         
 
@@ -280,8 +281,7 @@ contains
                 end if
             end if 
 
-            dfpt_tag = ''
-            write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+            dfpt_tag = dfptDensityArchiveName(sternheimerJob%kind_name(), q_list(iQ), iDtype, iDir)
 
             if (fmpi%irank==0) then 
                 write(*,*) 'Starting calculation for:'
@@ -328,7 +328,13 @@ contains
             call this%postprocessing_scf(sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                 dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
 
-            if (fmpi%irank == 0 .and. dfpt%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
+            if (fmpi%irank == 0) then
+                if (.not. dfpt%l_rm_qhdf) then
+                    call storeDfptDensity(starsq, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%noco, dfpt_tag, qpts%bk(:,q_list(iQ)))
+                    if (l_minusq) call storeDfptDensity(starsmq, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%noco, trim(dfpt_tag)//'m', -qpts%bk(:,q_list(iQ)))
+                end if
+                call clearDfptWorkFile()
+            end if
             
             if (sternheimerjob%needs_postprocessing(iJob)) call this%postprocessing_qpoint(fi,fmpi,dfpt,qpts,iQ,q_list)
         end do ! iJob 

@@ -41,6 +41,7 @@ module m_types_sternheimerJob
         contains 
 
         procedure :: init => init_sternheimerJob
+        procedure :: kind_name
 
     end type t_sternheimerJob
 
@@ -235,5 +236,17 @@ module m_types_sternheimerJob
         end do 
 
     end subroutine init_sternheimerJob 
+
+    function kind_name(this) result(name)
+        !! Name of the perturbation kind, used to group the density perturbations in dfpt_cdn.hdf.
+
+        class(t_sternheimerJob), intent(in) :: this
+        character(len=6)                    :: name
+
+        name = 'phonon'
+        if (this%l_efield) name = 'efield'
+        if (this%l_bfield) name = 'bfield'
+        if (this%l_BEC) name = 'bec'
+    end function kind_name
 
 end module m_types_sternheimerJob

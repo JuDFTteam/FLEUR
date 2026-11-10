@@ -1,5 +1,5 @@
 image:
-  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC_23102026
   entrypoint: ["/usr/bin/bash -i -c"]
 
 build-nvhpc-cpu:
@@ -14,7 +14,7 @@ build-nvhpc-cpu:
   script:
     - set +e;source compiler-select nvhpc-26.5;set -e
     - cd $CI_PROJECT_DIR
-    - ./configure.sh  -c nvidia -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a"
+    - ./configure.sh  -c nvidia -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/     
@@ -50,7 +50,7 @@ build-nvhpc-gpu:
   script:
     - set +e;source compiler-select nvhpc-26.5;set -e
     - cd $CI_PROJECT_DIR
-    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a"
+    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/

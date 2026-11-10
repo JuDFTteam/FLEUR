@@ -14,6 +14,7 @@ module m_types_phonon
     use m_dfpt_generate_gradient
     use m_dfpt_dynmat
     use m_dfpt_dynmat_eig
+    use m_dfpt_dynmat_io
     use m_types_dfpt
     use m_types_enpara
     use m_types_fleurinput
@@ -254,7 +255,9 @@ module m_types_phonon
 
         real, allocatable    :: eigenVals(:)
         complex, allocatable :: eigenFreqs(:), eigenVecs(:,:),dynMatNac(:,:)
+        complex, allocatable :: dynMatGamma(:,:), dynMatQ(:,:)
         logical :: l_gamma
+        real    :: weight
 
         l_gamma = (norm2(qpts%bk(:,q_list(iQ))) .lt. 1e-8)
 
@@ -267,13 +270,33 @@ module m_types_phonon
                 dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:)
             end if 
 
+            dynMatQ = dyn_mat(iQ,:,:)
+            call hermitize_scale_dynmat(fi%atoms, dynMatQ)
+            if (dfpt%l_sumrule_scf) then
+                if (l_gamma) then
+                    dynMatGamma = dynMatQ
+                else
+                    allocate(dynMatGamma(3*fi%atoms%nat,3*fi%atoms%nat))
+                    call read_dynmat_gamma("dynmat.hdf", dynMatGamma)
+                end if
+                call apply_sumrule(dynMatQ, dynMatGamma)
+            end if
+
             call timestart("Dynmat diagonalization")
-            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), dfpt%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",dfpt%l_sumrule_scf,l_writeOutput=.true.)
+            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), dynMatQ, eigenVals, eigenVecs, .true.)
             call timestop("Dynmat diagonalization")
 
             call timestart("Frequency calculation")
-            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts%bk(:,q_list(iQ)),l_writeOutput=.true.)
+            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs, qpts%bk(:,q_list(iQ)), l_writeOutput=.true.)
             call timestop("Frequency calculation")
+
+            call timestart("dynMat IO")
+            weight = 0.0
+            if (allocated(qpts%wtkpt)) weight = qpts%wtkpt(q_list(iQ))
+            call init_dynmat_file("dynmat.hdf", fi%atoms, fi%cell, qpts, l_truncate=.false.)
+            if (dfpt%l_sumrule_scf .and. l_gamma) call write_dynmat_gamma("dynmat.hdf", dynMatGamma)
+            call write_dynmat_q("dynmat.hdf", q_list(iQ), qpts%bk(:,q_list(iQ)), weight, eigenVals, eigenFreqs, dynMat=dynMatQ, eigVecs=eigenVecs)
+            call timestop("dynMat IO")
         end if 
 
     end subroutine postprocessing_qpoint_phonon

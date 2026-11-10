@@ -1,5 +1,5 @@
 pages:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran_23102026
   stage: deploy
   needs: 
     - gfortran-coverage
@@ -29,7 +29,8 @@ intel-maqao:
     - ulimit -s unlimited
     - which compiler-select
     - set +e; source compiler-select intel-oneapi-2024; set -e
-    - ./configure.sh -c intel -hdf5 false
+    - ./configure.sh -c intel -hdf5 false $FLEUR_CI_FEATURE_OPTIONS
+    - ./packaging/CI/check-configured-features.sh build
     - cd build
     - make -j 12
     - cp $CI_PROJECT_DIR/testing/performance/inputfiles/Noco/inp.xml .
@@ -47,7 +48,7 @@ intel-maqao:
   
 
 fortitude:
-  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford_23102026
   stage: html
   needs: []
   script:
@@ -63,7 +64,7 @@ fortitude:
 
 
 ford:
-  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford_23102026
   stage: html
   needs: []  
   script:
@@ -79,7 +80,7 @@ ford:
 
 
 gfortran-coverage:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran_23102026
   extends: .test-fleur
   stage: html
   needs: []
@@ -87,10 +88,12 @@ gfortran-coverage:
   variables:
     BUILD_FOLDER: "."
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
+    FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier TRUE -includedir /opt/fleur-deps/mpi/include -libdir /opt/fleur-deps/mpi/lib"
   before_script:
       - cd $CI_PROJECT_DIR
       - pip install --break-system-packages lcov_cobertura
-      - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -l coverage -flags --coverage 
+      - FLEUR_INCLUDEDIR="/usr/include /usr/include/hdf5/openmpi" FLEUR_LIBRARIES="-L/usr/lib/x86_64-linux-gnu/hdf5/openmpi;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -l coverage -flags --coverage $FLEUR_CI_FEATURE_OPTIONS
+      - ./packaging/CI/check-configured-features.sh build.coverage
       - cd build.coverage
       - make -j 4
       - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture --initial -d CMakeFiles -o baseline.info
@@ -114,5 +117,3 @@ gfortran-coverage:
   rules:
       - if: $CI_TASKS =~ /doc/    
       - if: $CI_TASKS =~ /all/    
-
-

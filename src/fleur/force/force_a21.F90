@@ -19,7 +19,7 @@ MODULE m_forcea21
    USE m_types_sym
    implicit none
    PRIVATE
-   PUBLIC :: force_a21
+   PUBLIC :: force_a21, force_a21_symmetrize
 CONTAINS
    SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,rf,tlmplm,&
                         vtot,abc,aveccof,bveccof,cveccof,f_a21,results,itype)
@@ -71,12 +71,10 @@ CONTAINS
       COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
       COMPLEX dtd, dtu, utd, utu
       INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m
-      INTEGER natrun, is, isinv, j, irinv, it, lmplmd
+      INTEGER natrun, lmplmd
 
       REAL, ALLOCATABLE :: a21(:,:)
       COMPLEX forc_a21(3)
-      REAL starsum(3), gvint(3)
-      REAL vec(3), vecsum(3)
 
       CALL timestart("force_a21")
 
@@ -87,8 +85,6 @@ CONTAINS
       n = itype
          natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
-            forc_a21(:) = czero
-
             DO natrun = natom,natom + atoms%neq(n) - 1
                a21(:,natrun) = zero
             END DO
@@ -145,70 +141,7 @@ CONTAINS
                CALL force_a21_U(atoms,n,jsp,we,ne,rf,vTot%mmpMat(:,:,:,jsp),abc,aveccof,bveccof,cveccof,a21)
             END IF
 
-            DO natrun = natom,natom + atoms%neq(n) - 1
-               !  to complete summation over stars of k now sum
-               !  over all operations which leave (k+G)*R(natrun)*taual(natrun)
-               !  invariant. We sum over ALL these operations and not only
-               !  the ones needed for the actual star of k. Should be
-               !  ok if we divide properly by the number of operations
-               !  First, we find operation S where RS=T. T -like R- leaves
-               !  the above scalar product invariant (if S=1 then R=T).
-               !  R is the operation which generates position of equivalent atom
-               !  out of position of representative
-               !  S=R^(-1) T
-               !  number of ops which leave (k+G)*op*taual invariant: invarind
-               !  index of inverse operation of R: irinv
-               !  index of operation T: invarop
-               !  now, we calculate index of operation S: is
-               !
-               !  note, that vector in expression A17,A20 + A21 is a
-               !  reciprocal lattice vector! other transformation rules
-               !
-               !  transform recip vector g-g' into internal coordinates
-
-               vec(:) = a21(:,natrun)
-
-               gvint=MATMUL(cell%bmat,vec)/tpi_const
-               vecsum(:) = zero
-
-               !-gb2002
-               !            irinv = invtab(ngopr(natrun))
-               !            DO it = 1,invarind(natrun)
-               !               is = multab(irinv,invarop(natrun,it))
-               !c  note, actually we need the inverse of S but -in principle
-               !c  because {S} is a group and we sum over all S- S should also
-               !c  work; to be lucid we take the inverse:
-               !                isinv = invtab(is)
-               !!               isinv = is
-               ! Rotation is alreadt done in to_pulay, here we work only in the
-               ! coordinate system of the representative atom (natom):
-
-               DO it = 1,sym%invarind(natom)
-                  is =sym%invarop(natom,it)
-                  isinv = sym%invtab(is)
-                     !-gb 2002
-                     !  now we have the wanted index of operation with which we have
-                     !  to rotate gv. Note gv is given in cart. coordinates but
-                     !  mrot acts on internal ones
-                     DO i = 1,3
-                        vec(i) = zero
-                        DO j = 1,3
-                           
-                              vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
-                           
-                     END DO
-                  END DO
-                  DO i = 1,3
-                     vecsum(i) = vecsum(i) + vec(i)
-                  END DO
-               END DO ! end operator loop
-
-               ! Transform from internal to cart. coordinates
-               starsum=MATMUL(cell%amat,vecsum)
-               DO i = 1,3
-                  forc_a21(i) = forc_a21(i) + starsum(i)/sym%invarind(natrun)
-               END DO
-            END DO ! natrun
+            CALL force_a21_symmetrize(atoms,sym,cell,n,a21,forc_a21)
 
             ! Add onto existing forces.
 
@@ -235,4 +168,86 @@ CONTAINS
       CALL timestop("force_a21")
 
    END SUBROUTINE force_a21
+
+   SUBROUTINE force_a21_symmetrize(atoms,sym,cell,n,a21,forc)
+      !! Sum the per-atom A21-type vectors of type n (cartesian, frame of the
+      !! representative atom) over the operations leaving the atom invariant.
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      TYPE(t_sym),   INTENT(IN)  :: sym
+      TYPE(t_cell),  INTENT(IN)  :: cell
+      INTEGER,       INTENT(IN)  :: n
+      REAL,          INTENT(IN)  :: a21(:,:)
+      COMPLEX,       INTENT(OUT) :: forc(3)
+
+      REAL, PARAMETER :: zero=0.0
+      INTEGER :: i, j, it, is, isinv, natom, natrun
+      REAL    :: vec(3), vecsum(3), gvint(3), starsum(3)
+
+      natom = atoms%firstAtom(n)
+      forc(:) = CMPLX(0.0,0.0)
+      DO natrun = natom,natom + atoms%neq(n) - 1
+         !  to complete summation over stars of k now sum
+         !  over all operations which leave (k+G)*R(natrun)*taual(natrun)
+         !  invariant. We sum over ALL these operations and not only
+         !  the ones needed for the actual star of k. Should be
+         !  ok if we divide properly by the number of operations
+         !  First, we find operation S where RS=T. T -like R- leaves
+         !  the above scalar product invariant (if S=1 then R=T).
+         !  R is the operation which generates position of equivalent atom
+         !  out of position of representative
+         !  S=R^(-1) T
+         !  number of ops which leave (k+G)*op*taual invariant: invarind
+         !  index of inverse operation of R: irinv
+         !  index of operation T: invarop
+         !  now, we calculate index of operation S: is
+         !
+         !  note, that vector in expression A17,A20 + A21 is a
+         !  reciprocal lattice vector! other transformation rules
+         !
+         !  transform recip vector g-g' into internal coordinates
+
+         vec(:) = a21(:,natrun)
+
+         gvint=MATMUL(cell%bmat,vec)/tpi_const
+         vecsum(:) = zero
+
+         !-gb2002
+         !            irinv = invtab(ngopr(natrun))
+         !            DO it = 1,invarind(natrun)
+         !               is = multab(irinv,invarop(natrun,it))
+         !c  note, actually we need the inverse of S but -in principle
+         !c  because {S} is a group and we sum over all S- S should also
+         !c  work; to be lucid we take the inverse:
+         !                isinv = invtab(is)
+         !!               isinv = is
+         ! Rotation is alreadt done in to_pulay, here we work only in the
+         ! coordinate system of the representative atom (natom):
+
+         DO it = 1,sym%invarind(natom)
+            is =sym%invarop(natom,it)
+            isinv = sym%invtab(is)
+               !-gb 2002
+               !  now we have the wanted index of operation with which we have
+               !  to rotate gv. Note gv is given in cart. coordinates but
+               !  mrot acts on internal ones
+               DO i = 1,3
+                  vec(i) = zero
+                  DO j = 1,3
+                     
+                        vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
+                     
+               END DO
+            END DO
+            DO i = 1,3
+               vecsum(i) = vecsum(i) + vec(i)
+            END DO
+         END DO ! end operator loop
+
+         ! Transform from internal to cart. coordinates
+         starsum=MATMUL(cell%amat,vecsum)
+         DO i = 1,3
+            forc(i) = forc(i) + starsum(i)/sym%invarind(natrun)
+         END DO
+      END DO ! natrun
+   END SUBROUTINE force_a21_symmetrize
 END MODULE m_forcea21

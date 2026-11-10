@@ -1759,7 +1759,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,b_constr)
+                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,b_constr,qvec)
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: den
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -1774,14 +1774,15 @@ MODULE m_cdnpot_io_hdf
       LOGICAL, INTENT (IN)         :: l_qfix
 
       REAL,OPTIONAL,INTENT(IN)             :: b_constr(:,:)
+      REAL,OPTIONAL,INTENT(IN)     :: qvec(3) ! q-vector of a DFPT density perturbation
       INTEGER                      :: i, iVac
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz,nvac,od_nq2,nmzxy,n_u,n_opc
       INTEGER                      :: n_v, n_vPairs
       INTEGER                      :: hdfError, fileFormatVersion
       LOGICAL                      :: l_film,l_exist,l_delete,l_spinoffd_ldau
-      INTEGER(HID_T)               :: archiveID, groupID, generalGroupID
-      CHARACTER(LEN=30)            :: groupName, densityTypeName
+      INTEGER(HID_T)               :: archiveID, groupID, generalGroupID, lcplID
+      CHARACTER(LEN=64)            :: groupName, densityTypeName
       INTEGER(HSIZE_T)             :: dims(7)
       INTEGER                      :: dimsInt(7)
       INTEGER                      :: starsIndexTemp, latharmsIndexTemp
@@ -1925,6 +1926,7 @@ MODULE m_cdnpot_io_hdf
          IF (distance.GE.-1e-10) THEN
             CALL io_write_attreal0(archiveID,'distance',distance)
          END IF
+         IF (PRESENT(qvec)) CALL io_write_attreal1(archiveID,'qvec',qvec)
 
          IF(n_u.GT.0) THEN
             IF(mmpmatDistance.GE.-1e-10) THEN
@@ -1948,6 +1950,24 @@ MODULE m_cdnpot_io_hdf
             CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
             CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,:input%jspins))
             CALL h5dclose_f(frSetID, hdfError)
+
+            IF (ALLOCATED(den%mtIm).AND.io_dataexists(groupID,'frIm')) THEN
+               CALL h5dopen_f(groupID, 'frIm', frImSetID, hdfError)
+               CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,0:,:,:input%jspins))
+               CALL h5dclose_f(frImSetID, hdfError)
+            END IF
+
+            IF ((densityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.(densityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
+               dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
+               CALL h5dopen_f(groupID, 'froff', frOffSetID, hdfError)
+               CALL io_write_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,3:4))
+               CALL h5dclose_f(frOffSetID, hdfError)
+               IF (ALLOCATED(den%mtIm).AND.io_dataexists(groupID,'froffIm')) THEN
+                  CALL h5dopen_f(groupID, 'froffIm', frOffImSetID, hdfError)
+                  CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,0:,:,3:4))
+                  CALL h5dclose_f(frOffImSetID, hdfError)
+               END IF
+            END IF
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
             CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
@@ -2145,7 +2165,11 @@ MODULE m_cdnpot_io_hdf
 
          CALL h5gclose_f(archiveID, hdfError)
       ELSE
-         CALL h5gcreate_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
+         ! missing parent groups of nested archive names are created as well
+         CALL h5pcreate_f(H5P_LINK_CREATE_F, lcplID, hdfError)
+         CALL h5pset_create_inter_group_f(lcplID, 1, hdfError)
+         CALL h5gcreate_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError, lcpl_id=lcplID)
+         CALL h5pclose_f(lcplID, hdfError)
 
          CALL io_write_attint0(archiveID,'previousDensityIndex',previousDensityIndex)
          CALL io_write_attint0(archiveID,'starsIndex',starsIndex)
@@ -2157,6 +2181,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'date',date)
          CALL io_write_attint0(archiveID,'time',time)
          CALL io_write_attreal0(archiveID,'distance',distance)
+         IF (PRESENT(qvec)) CALL io_write_attreal1(archiveID,'qvec',qvec)
 
          IF(n_u.GT.0) THEN
             IF(mmpmatDistance.GE.-1e-10) THEN
@@ -2608,7 +2633,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL               :: l_nIJ_llp_mmpDimEquals
       INTEGER(HID_T)        :: archiveID, groupID, groupBID, generalGroupID
       INTEGER               :: hdfError, fileFormatVersion
-      CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
+      CHARACTER(LEN=64)     :: groupName, groupBName, densityTypeName
       INTEGER               :: dimsInt(7)
       INTEGER               :: jmtdOut, ntypeOut, nmzdOut, nmzxydOut, nlhdOut, ng3Out, ng2Out
       INTEGER               :: nmzOut, nvacOut, od_nq2Out, nmzxyOut, jspinsOut
@@ -3310,7 +3335,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL              :: l_exist
       INTEGER(HID_T)       :: archiveID, groupID
       INTEGER              :: hdfError
-      CHARACTER(LEN=30)    :: groupName, densityTypeName
+      CHARACTER(LEN=64)    :: groupName, densityTypeName
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -3693,20 +3718,38 @@ MODULE m_cdnpot_io_hdf
       CALL closeCDNPOT_HDF(fileID)
    END FUNCTION
 
-   LOGICAL FUNCTION isDensityEntryPresentHDF(fileID,archiveName,densityType)
+   LOGICAL FUNCTION isDensityEntryPresentHDF(fileID,archiveName,densityType,qvec)
+      !! Checks whether archiveName holds a density of densityType; if qvec is given, the stored q-vector must match it.
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER , INTENT(IN)         :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
+      REAL, OPTIONAL, INTENT(IN)   :: qvec(3)
 
-      INTEGER                      :: localDensityType
-      CHARACTER(LEN=30)            :: groupName, densityTypeName
+      INTEGER                      :: localDensityType, hdfError
+      INTEGER(HID_T)               :: archiveID
+      CHARACTER(LEN=64)            :: groupName, densityTypeName
       LOGICAL                      :: l_exist
+      REAL                         :: qvecStored(3)
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
          isDensityEntryPresentHDF = .FALSE.
          RETURN
+      END IF
+
+      IF (PRESENT(qvec)) THEN
+         CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
+         l_exist = io_attexists(archiveID,'qvec')
+         IF (l_exist) THEN
+            CALL io_read_attreal1(archiveID,'qvec',qvecStored)
+            l_exist = ALL(ABS(qvecStored-qvec) < 1e-8)
+         END IF
+         CALL h5gclose_f(archiveID, hdfError)
+         IF(.NOT.l_exist) THEN
+            isDensityEntryPresentHDF = .FALSE.
+            RETURN
+         END IF
       END IF
 
       localDensityType = densityType

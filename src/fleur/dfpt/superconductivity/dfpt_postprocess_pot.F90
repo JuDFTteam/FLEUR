@@ -14,8 +14,10 @@ module m_dfpt_postprocess_pot
 
     USE m_constants
     USE m_cdn_io
+    USE m_dfpt_cdn_io, ONLY: dfptDensityArchiveName, readDfptDensity
     USE m_make_stars
     USE m_dfpt_dynmat_eig
+    USE m_dfpt_dynmat_io
     USE m_eigen
     USE m_dfpt_vgen
     USE m_dfpt_elph_mat
@@ -40,7 +42,7 @@ module m_dfpt_postprocess_pot
     
     implicit none
     PRIVATE
-    PUBLIC :: dfpt_postprocess_elph, read_dynmats
+    PUBLIC :: dfpt_postprocess_elph
 
 
 contains 
@@ -89,14 +91,12 @@ contains
 
         integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
         integer :: bandWindow(2)
-        logical :: l_dummy , l_exist
         complex :: pref 
         complex, allocatable :: dynMats(:,:,:) 
         complex, allocatable :: gmatCart(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQ)
         integer, allocatable :: q_list(:)
 
-        character(len=20) :: dfpt_tag
-        character(len=100)  :: filename
+        character(len=64) :: dfpt_tag
 
 #ifdef CPP_MPI 
         integer :: ierr
@@ -147,7 +147,7 @@ contains
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
-                call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
+                call read_dynmat_q("dynmat.hdf", iQ, dynMats(:,:,iQ))
                 call timestop("dynMat IO")
             end if 
 
@@ -156,7 +156,7 @@ contains
                 do iDir = 1 , 3
                     call timestart("Dirloop")
                     
-                    write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+                    dfpt_tag = dfptDensityArchiveName(sternheimerJob%kind_name(), q_list(iQ), iDtype, iDir)
                     
                     iPerturb = iDir+3*(iDtype-1)
 
@@ -175,12 +175,8 @@ contains
                         call timestart("den1 IO")
                         ! We write out the density response in the sternheimer iteration 
                         ! read in the densities
-                        filename = trim(dfpt_tag)
-                        inquire(file=trim(filename)//".hdf",EXIST=l_exist)
-                        if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                    fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
-                                                    dummy_results%ef, dummy_results%last_distance, l_dummy, den1,  &
-                                                    inFilename=trim(filename))
+                        call readDfptDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, &
+                                             dfpt_tag, fi%dfpt%qvec%bk(:,iQ), dummy_results%ef, dummy_results%last_distance, den1)
                         call timestop("den1 IO")
                         
                         ! add the gradient to the density that we store
@@ -249,6 +245,7 @@ contains
         end do
         call timestop("elph symmetry unfolding")
 
+        
         ! Perform Wannier interpolation
         if (fi%wannierlib%l_wannierize) then
             call timestart("Wannier Interpolation elph")
@@ -258,49 +255,6 @@ contains
         end if
 
     end subroutine dfpt_postprocess_elph
-
-
-    subroutine read_dynmats(natoms,iQ,dynMat)
-
-        integer, intent(in) :: natoms
-        integer, intent(in)  :: iQ
-        complex, intent(out) :: dynMat(:,:) 
-
-        integer :: iread 
-        character(len=100) :: trash 
-        real,allocatable    :: numbers(:,:)
-
-        allocate(numbers(3*natoms,6*natoms))
-        numbers = 0.0
-        if (iQ<=9) then
-            open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
-        else if (iQ<=99) then  
-            open( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-        else if (iQ<=999) then
-            open( 3001, file="dynMatq=0"//int2str(iQ), status="old")
-        else 
-            open( 3001, file="dynMatq="//int2str(iQ), status="old")
-        end if 
-
-        
-        do iread = 1, 3 + 3*natoms !Loop over dynmat rows
-            if (iread<4) then
-                read( 3001,*) trash
-            else
-                read( 3001,*) numbers(iread-3,:)
-                dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
-            end if
-        end do ! iread
-        close(3001)
-
-
-
-    end subroutine read_dynmats
-
-
-
-
-
 
 
 end module m_dfpt_postprocess_pot

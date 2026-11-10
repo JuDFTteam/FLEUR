@@ -100,7 +100,7 @@ CONTAINS
     
     DO WHILE ( nodeu <= node )
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF ( nodeu.LE.node ) THEN
           e = e + 10.0
           IF (e>1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
@@ -111,7 +111,7 @@ CONTAINS
     
     DO WHILE (nodeu.GT.node)
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF ( nodeu.GT.node ) THEN
           e = e - 10.0
           IF (e<-1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
@@ -122,7 +122,7 @@ CONTAINS
 
     DO WHILE ( (e_up_local-e_lo_local).GT.1.0e-5)
        e  = (e_up_local+e_lo_local) / 2.0
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,us,dus,nodeu,f(:,1),f(:,2))
+       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,atoms%zatom(n),us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.GT.node) THEN
           e_up_local = e
        ELSE
@@ -139,7 +139,7 @@ CONTAINS
 
        DO WHILE (nodeu.GE.node)
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+               atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
           e = e - 10.0       
        END DO
        
@@ -147,7 +147,7 @@ CONTAINS
 
        DO WHILE ( (e_up_local-e_lo_local).GT.1.0e-5)
           e  = (e_up_local+e_lo_local) / 2.0
-          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,us,dus,nodeu,f(:,1),f(:,2))
+          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),c,atoms%zatom(n),us,dus,nodeu,f(:,1),f(:,2))
           IF (nodeu.GE.node) THEN
              e_up_local = e
           ELSE
@@ -231,16 +231,16 @@ CONTAINS
     ! determine upper band edge
     ! Step 1: Coarse search for the band edge
     CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-         atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+         atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
     DO WHILE ( nodeu > node )
        e = e - large_e_step
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
     END DO
     DO WHILE ( nodeu <= node )
        e = e + large_e_step
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
     END DO
     e_up_temp = e
     e_lo_temp = e - large_e_step
@@ -248,7 +248,7 @@ CONTAINS
     DO WHILE ((e_up_temp - e_lo_temp) > 1e-2)
        e = (e_up_temp + e_lo_temp) / 2.0
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu > node) THEN
           e_up_temp = e
        ELSE
@@ -267,7 +267,7 @@ CONTAINS
        DO WHILE ( nodeu >= node )
           e = e - large_e_step
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+               atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        ENDDO
        e_up_temp = e + large_e_step
        e_lo_temp = e
@@ -275,7 +275,7 @@ CONTAINS
        DO WHILE ((e_up_temp - e_lo_temp) > 1e-2)
           e = (e_up_temp + e_lo_temp) / 2.0
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+               atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
           IF (nodeu < node) THEN
              e_lo_temp = e
           ELSE
@@ -292,7 +292,7 @@ CONTAINS
     DO WHILE ( ABS(ldmt-lnd) .GE. 1E-07)
        e = (e_up+e_lo)/2
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        ldmt = dus/us
        IF( ldmt .GT. lnd) THEN
           e_lo = e
@@ -353,7 +353,7 @@ CONTAINS
     nodeu = -1
     DO WHILE ( nodeu.LE.node )
        CALL radsra(e_up,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.LE.node) THEN
           e_up = e_up + 5.0
        END IF
@@ -363,7 +363,7 @@ CONTAINS
 
     DO WHILE ( nodeu.GT.node )
        CALL radsra(e_lo,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
+            atoms%dx(n),atoms%jri(n),c,atoms%zatom(n), us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.GT.node) THEN
           e_lo = e_lo - 50.0
        END IF
@@ -372,7 +372,7 @@ CONTAINS
     e_lo = e_lo - 0.1
     DO WHILE ( (e_up-e_lo).GT.1.0e-10)
        e  = (e_up+e_lo) / 2.0
-       CALL radsra(e,l,vrd,atoms%rmsh(1,n),atoms%dx(n),msh,c,us,dus,nodeu,f(:,1),f(:,2))
+       CALL radsra(e,l,vrd,atoms%rmsh(1,n),atoms%dx(n),msh,c,atoms%zatom(n),us,dus,nodeu,f(:,1),f(:,2))
        IF (nodeu.GT.node) THEN
           e_up = e
        ELSE

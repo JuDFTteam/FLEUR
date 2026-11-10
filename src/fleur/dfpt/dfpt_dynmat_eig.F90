@@ -10,234 +10,123 @@ module m_dfpt_dynmat_eig
   use m_types_atoms
   implicit none
   private
-  public :: diagonalizedynmat, calculatefrequencies
+  public :: diagonalizedynmat, calculatefrequencies, hermitize_scale_dynmat, apply_sumrule
 
   contains
 
-  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule,l_writeOutput)
+  subroutine hermitize_scale_dynmat(atoms, dynMat)
+    !! Hermitizes the dynamical matrix in place and divides it by the square root of the atomic masses.
 
-    implicit none
+    type(t_atoms), intent(in)    :: atoms
+    complex,       intent(inout) :: dynMat(:, :)
 
-    ! Type parameters
-    type(t_atoms),                 intent(in)  :: atoms
-    real,                          intent(in)  :: qvec(3)
+    integer :: ii, jj
+    real    :: atomic_mass_array(118)
 
-    ! Scalar parameters
-    logical,                       intent(in)  :: calcEv
-
-    ! Array parameters
-    complex,                       intent(in)  :: dynMat(:, :)
-    real,             allocatable, intent(out) :: w(:)
-    complex, allocatable, intent(out) :: a(:, :)
-    logical, intent(in) :: l_scalemass
-    character(len=*), intent(in) :: add_tag
-    logical, intent(in) :: l_sumrule
-    logical,intent(in) :: l_writeOutput
-
-    ! Array parameters
-
-    ! Scalar variables
-    ! jobVl : (LAPACK) switch for calculation of left eigenvector
-    ! jobVr : (LAPACK) switch for calculation of right eigenvector
-    ! n     : (LAPACK) order of the matrix a to diagonalize
-    ! ldA   : (LAPACK) leading dimension of the array a
-    ! ldVl  : (LAPACK) leading dimension of the array vL
-    ! ldVr  : (LAPACK) leading dimension of the array vR
-    ! lWork : (LAPACK) dimension of the array work or if equals -1 switch for LAPACK to determine optimal size of work array
-    ! info  : (LAPACK) status of calculation
-    character                                  :: jobz
-    character                                  :: uplo
-    integer                                    :: n
-    integer                                    :: ldA
-    integer                                    :: lWork
-    integer                                    :: info
-    integer                                    :: ii
-    integer                                    :: jj
-    integer                                    :: itype
-    integer                                    :: ieqat
-    integer                                    :: iatom
-    integer, intent(in)                        :: iqpt
-    complex, allocatable                       :: dynMat0(:, :)
-    character(len=100)                         :: trash
-    integer                                    :: iread, iDir
-    real                                       :: numbers(3*atoms%nat,6*atoms%nat)
-
-    ! Array variables
-    ! a       : (LAPACK) matrix to diagonalize
-    ! w       : (LAPACK) computed eigenvalues
-    ! work    : (LAPACK) swap array for LAPACK diagonalization routine
-    ! rwork   : (LAPACK) swap array for LAPACK diagonalization routine
-    real,             allocatable              :: rwork(:)
-    complex, allocatable              :: work(:)
-    character(len=:), allocatable             :: filename
-    character(len=50)                         :: filenameTemp
-    REAL                                      :: atomic_mass_array(118)
-    
-
-    atomic_mass_array = atomicMasses_const  * massInElectronMasses
-
-    ! TODO: This is ridiculous. Remove asap.
-    if (iqpt < 10) then
-      write(filenameTemp, '("dynMatq=000",i1)') iqpt
-    else if (iqpt > 9 .and. iqpt < 100) then
-      write(filenameTemp, '("dynMatq=00",i2)') iqpt
-    else if (iqpt > 99 .and. iqpt < 1000) then
-      write(filenameTemp, '("dynMatq=0",i3)') iqpt
-    else if (iqpt > 999 .and. iqpt < 10000) then
-      write(filenameTemp, '("dynMatq=",i4)') iqpt
-    end if
-    if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
-!    filename = trim(filenameTemp)
-!    write(*, *) filename
-    if (l_writeOutput) open( 109, file=filenameTemp, status='replace', action='write', form='formatted')
-
-    ! Set parameter for LAPACK diagonalization routine
-    if (calcEv ) then
-      jobz = 'V'
-    else
-      jobz = 'N'
-    end if
-
-    ! Evaluate the lower triangle of the Dynamical matrix
-    uplo = 'U'
-
-    ! Dimensions of the Dynamical matrix
-    n = 3 * atoms%nat
-    lda = 3 * atoms%nat
-
-    ! Copy Dynamical matrix into work array as it is destroyed if not calculating eigenvectors
-    allocate( a( lda, n ) )
-    do jj = 1, n
-      do ii = 1, lda
-        a(ii, jj) = (dynMat(ii, jj) + conjg(dynMat(jj, ii)))/2.0
-        IF (l_scalemass) a(ii, jj) = a(ii, jj)/SQRT(atomic_mass_array(atoms%nz(CEILING(jj/3.0)))*atomic_mass_array(atoms%nz(CEILING(ii/3.0))))
+    atomic_mass_array = atomicMasses_const * massInElectronMasses
+    dynMat = (dynMat + conjg(transpose(dynMat)))/2.0
+    do jj = 1, size(dynMat, 2)
+      do ii = 1, size(dynMat, 1)
+        dynMat(ii, jj) = dynMat(ii, jj)/sqrt(atomic_mass_array(atoms%nz(ceiling(jj/3.0)))*atomic_mass_array(atoms%nz(ceiling(ii/3.0))))
       end do
     end do
 
-    IF (l_sumrule) THEN
-      IF (iqpt/=1) THEN
-        ALLOCATE(dynmat0,mold=dynmat)
-        OPEN( 110, file="dynMatq=gamma", status="old")
-        DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows
-          IF (iread<4) THEN
-            READ( 110,*) trash
-            write(*,*) iread, trash
-          ELSE
-            READ( 110,*) numbers(iread-3,:)
-            write(*,*) iread, numbers(iread-3,:)
-            dynmat0(iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
-          END IF
-        END DO ! iread
-        CLOSE(110)
-      ELSE
-        ALLOCATE(dynmat0,mold=dynmat)
-        dynmat0 = a
-        ! Write non-corrected dynMatq for sumrule at q!=gamma
-        OPEN( 111, file="dynMatq=gamma",status="replace",action="write",form="formatted")
-        write(111, '(a,3f9.3)') 'q =', qvec
-        write(111, '(a)')       '==================================='
-        write(111, '(a)')
-        write(111, '(a)') 'Original Dynamical Matrix [mass corrected]'
-        DO ii = 1, lda
-          write(111, '(3(2(es16.8,1x),3x))') dynmat0(ii, :)
-        END DO
-        CLOSE(111)
-      END IF
+  end subroutine hermitize_scale_dynmat
 
-      allocate( w(n))
-      w = 0.
+  subroutine apply_sumrule(dynMat, dynMatGamma)
+    !! Imposes the acoustic sum rule by projecting the three acoustic modes of the Gamma matrix out of dynMat.
 
-      allocate( rwork(3 * n))
-      rwork = 0.
+    complex, intent(inout) :: dynMat(:, :)
+    complex, intent(in)    :: dynMatGamma(:, :)
 
-      lwork = 2 * n
-      allocate(work(lwork))
-      work = 0.
+    integer :: n, lwork, info, ii, jj, iDir
 
-      ! Diagonalize Gamma dynamical matrix
-      call zheev( jobz, uplo, n, dynmat0, lda, w, work, lwork, rwork, info )
+    real,    allocatable :: w(:), rwork(:)
+    complex, allocatable :: work(:), dynMat0(:, :)
 
-      ! w: eigenvalues q=0, a: eigenvectors q=0
-      DO jj = 1, lda
-        DO ii = 1, lda
-          DO iDir = 1, 3
-            a(jj, ii) = a(jj, ii) - w(iDir)*dynmat0(jj,iDir)*conjg(dynmat0(ii,iDir))
-          END DO
-        END DO
-      END DO
-      DEALLOCATE(w, rwork, work)
-      DEALLOCATE(dynmat0)
-    END IF
+    n = size(dynMat, 1)
+    lwork = 2 * n
+    allocate(w(n), rwork(3 * n), work(lwork))
+    w = 0.
+    rwork = 0.
+    work = 0.
+    dynMat0 = dynMatGamma
+
+    call zheev('V', 'U', n, dynMat0, n, w, work, lwork, rwork, info)
+    if (info /= 0) call juDFT_error("Diagonalization of the Gamma dynamical matrix failed.", calledby="apply_sumrule")
+
+    do jj = 1, n
+      do ii = 1, n
+        do iDir = 1, 3
+          dynMat(jj, ii) = dynMat(jj, ii) - w(iDir)*dynMat0(jj, iDir)*conjg(dynMat0(ii, iDir))
+        end do
+      end do
+    end do
+
+  end subroutine apply_sumrule
+
+  subroutine DiagonalizeDynMat(atoms, qvec, dynMat, w, a, l_writeOutput)
+    !! Diagonalizes the dynamical matrix; w are the eigenvalues, a the eigenvectors.
+
+    type(t_atoms),                  intent(in)  :: atoms
+    real,                           intent(in)  :: qvec(3)
+    complex,                        intent(in)  :: dynMat(:, :)
+    real,              allocatable, intent(out) :: w(:)
+    complex,           allocatable, intent(out) :: a(:, :)
+    logical,                        intent(in)  :: l_writeOutput
+
+    integer :: n, lwork, info
+    integer :: ii, itype, ieqat, iatom
+
+    real,    allocatable :: rwork(:)
+    complex, allocatable :: work(:)
+
+    n = size(dynMat, 1)
+    a = dynMat
 
     if (l_writeOutput) then
       write(*, '(a,3f9.3)') 'q =', qvec
       write(*, '(a)')       '==================================='
       write(*, '(a)')
       write(*, '(a)') 'Original Dynamical Matrix [mass corrected]'
-      DO ii = 1, lda
+      do ii = 1, n
         write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
-      END DO
-
-      write(109, '(a,3f9.3)') 'q =', qvec
-      write(109, '(a)')       '==================================='
-      write(109, '(a)')
-      write(109, '(a)') 'Original Dynamical Matrix [mass corrected]'
-      DO ii = 1, lda
-        write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
-      END DO
-    end if 
-
-    allocate( w(n))
-    w = 0.
-
-    allocate( rwork(3 * n))
-    rwork = 0.
+      end do
+    end if
 
     lwork = 2 * n
-    allocate(work(lwork))
+    allocate(w(n), rwork(3 * n), work(lwork))
+    w = 0.
+    rwork = 0.
     work = 0.
+    call zheev('V', 'U', n, a, n, w, work, lwork, rwork, info)
 
-    ! Diagonalize dynamical matrix
-    call zheev( jobz, uplo, n, a, lda, w, work, lwork, rwork, info )
-
-    if ( info < 0 ) then
+    if (info < 0) then
       write(*, *) 'The ', info, '(st/nd/)th argument had an illegal value'
-      CALL juDFT_error("Illegal argument value.",calledby="DiagonalizeDynMat")
-    else if ( info > 0 ) then
-      write(*, *) 'The diagonalization algorithm failed to converge; ', info, ' off-diagonal elements of an intermediate tridiaonal form&
-                                                                                                             & did not converge to zero.'
-      CALL juDFT_error("Diagonalization failed.",calledby="DiagonalizeDynMat")
+      call juDFT_error("Illegal argument value.", calledby="DiagonalizeDynMat")
+    else if (info > 0) then
+      write(*, *) 'The diagonalization algorithm failed to converge; ', info, ' off-diagonal elements of an intermediate tridiagonal form did not converge to zero.'
+      call juDFT_error("Diagonalization failed.", calledby="DiagonalizeDynMat")
     end if
 
-    if (l_writeOutput) write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
-    iatom = 0
-    do itype = 1, atoms%ntype
-      do ieqat = 1, atoms%neq(itype)
-        iatom = iatom + 1
-        if (l_writeOutput) write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        if (l_writeOutput) write(109, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-      end do ! ieqat
-    end do ! itype
-
-    if ( calcEv ) then
-      !todo make the output nicer
-      DO ii = 1, lda
-        if (l_writeOutput) write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
-        if (l_writeOutput) write(*, *)
-        if (l_writeOutput) write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
-        if (l_writeOutput) write(109, *)
-      END DO
-    else
-      a(:, :) = cmplx(0., 0.)
+    if (l_writeOutput) then
+      write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
+      iatom = 0
+      do itype = 1, atoms%ntype
+        do ieqat = 1, atoms%neq(itype)
+          iatom = iatom + 1
+          write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        end do
+      end do
+      do ii = 1, n
+        write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+        write(*, *)
+      end do
     end if
-
-    if (l_writeOutput) close( 109 )
-
-
 
   end subroutine diagonalizeDynMat
 
-  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec ,l_writeOutput)
+  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, qvec ,l_writeOutput)
 
     implicit none
 
@@ -250,7 +139,6 @@ module m_dfpt_dynmat_eig
     ! Array parameter
     real,                       intent(in)  :: eigenVals(:)
     complex,          allocatable, intent(out) :: eigenFreqs(:)
-    character(len=*), intent(in) :: add_tag
     real,             intent(in) :: qvec(3)
     logical,          intent(in) :: l_writeOutput
 
@@ -262,20 +150,7 @@ module m_dfpt_dynmat_eig
     real                                    :: convFact
 
     ! Array variables
-    character(len=50)                         :: filenameTemp
     CHARACTER(LEN=20)                         :: attributes(5)
-    ! TODO: This is ridiculous. Remove asap.
-    if (iqpt < 10) then
-      write(filenameTemp, '("dynMatq=000",i1)') iqpt
-    else if (iqpt > 9 .and. iqpt < 100) then
-      write(filenameTemp, '("dynMatq=00",i2)') iqpt
-    else if (iqpt > 99 .and. iqpt < 1000) then
-      write(filenameTemp, '("dynMatq=0",i3)') iqpt
-    else if (iqpt > 999 .and. iqpt < 10000) then
-      write(filenameTemp, '("dynMatq=",i4)') iqpt
-    end if
-    if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
-    if (l_writeOutput) open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
 
     allocate(eigenFreqs(3*atoms%nat))
     eigenFreqs = 0.
@@ -287,8 +162,6 @@ module m_dfpt_dynmat_eig
     if (l_writeOutput) then
       write(*, *)
       write(*, '(a)') 'Eigenfrequencies in THz'
-      write(109, *)
-      write(109, '(a)') 'Eigenfrequencies in THz'
     end if
     iatom = 0
     do itype = 1, atoms%ntype
@@ -304,7 +177,6 @@ module m_dfpt_dynmat_eig
           end if
         end do ! idir
         if (l_writeOutput) write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        if (l_writeOutput) write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
 
@@ -312,8 +184,6 @@ module m_dfpt_dynmat_eig
     if (l_writeOutput) then
       write(*, *)
       write(*, '(a)') 'Eigenfrequencies in 1/cm'
-      write(109, *)
-      write(109, '(a)') 'Eigenfrequencies in 1/cm'
     end if
     iatom = 0
     do itype = 1, atoms%ntype
@@ -323,10 +193,8 @@ module m_dfpt_dynmat_eig
           eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * 33
         end do ! idir
         if (l_writeOutput) write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        if (l_writeOutput) write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
-    close( 109 )
 
     ! write into out.xml
     CALL openXMLElementNoAttributes('phonon')

@@ -14,6 +14,7 @@ MODULE m_dfpt_sternheimer
    USE m_mixing_history
    USE m_constants
    USE m_cdn_io
+   USE m_dfpt_cdn_io, ONLY: dfptArchiveType, isDfptDensityPresent, readDfptDensity
    USE m_eig66_io
    USE m_inv3
    use m_npy
@@ -74,7 +75,7 @@ CONTAINS
 
       INTEGER,            INTENT(IN)    :: iQ, iDtype, iDir, eig_id, q_eig_id
       LOGICAL,            INTENT(IN)    :: l_real
-      CHARACTER(len=20),  INTENT(IN)    :: dfpt_tag
+      CHARACTER(len=*),   INTENT(IN)    :: dfpt_tag
 
       INTEGER,            INTENT(IN)    :: dfpt_eig_id, dfpt_eig_id2
 
@@ -120,8 +121,6 @@ CONTAINS
 
       ! Initialize the density perturbation; the imaginary MT part rides in denIn1%mtIm
       CALL denIn1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-      INQUIRE(FILE=TRIM(dfpt_tag)//'.hdf',EXIST=l_exist)
-
       IF (l_minusq) THEN
          CALL make_stars(starsmq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, -qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
          starsmq%ufft = stars%ufft
@@ -134,6 +133,11 @@ CONTAINS
       ELSE IF (fi%noco%l_noco) THEN
          archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       END IF
+      archiveType = dfptArchiveType(fi%noco)
+      l_exist = .FALSE.
+      l_existm = .FALSE.
+      IF (fmpi%irank == 0) l_exist = isDfptDensityPresent(archiveType, dfpt_tag, qpts%bk(:,iQ))
+      IF (fmpi%irank == 0 .AND. l_minusq) l_existm = isDfptDensityPresent(archiveType, TRIM(dfpt_tag)//'m', -qpts%bk(:,iQ))
 
       
       IF (fmpi%irank == 0) THEN
@@ -156,7 +160,7 @@ CONTAINS
                                                       inFilename=TRIM(dfpt_tag))
 
       IF (fmpi%irank==0.AND..NOT.l_exist) denIn1%iter = 1
-      ! we store in q*hdf only the z(1) response of the density response. Add the gradient here. 
+      ! dfpt_cdn.hdf holds only the z(1) response of the density; add the gradient here.
       IF (fmpi%irank==0 .AND. l_exist .and. sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
       IF (fmpi%irank==0 .AND. l_exist .and. sternheimerJob%l_IBScorrection) denIn1%mtIm(:,0:,iDtype,:) = denIn1%mtIm(:,0:,iDtype,:) - grRho%mtIm(:,0:,iDtype,:)
 #ifdef CPP_MPI
@@ -413,8 +417,8 @@ CONTAINS
          CALL mix_charge(field2, fmpi, starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, denIn1, denOut1, results1,l_runhia=.false.,sliceplot=fi%sliceplot,&
-                         dfpt_tag=dfpt_tag)
-         IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_tag)
+                         dfpt_tag=dfpt_tag, dfpt_qvec=qpts%bk(:,iQ))
+         IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_history_basename(dfpt_tag))
          CALL timestop("DFPT mixing")
 
          IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)

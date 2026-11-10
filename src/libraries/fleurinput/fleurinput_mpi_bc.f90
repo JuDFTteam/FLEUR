@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_fleurinput_mpi_bc
   USE m_types_xml
+  USE m_constants, ONLY: t_constants
   USE m_types_atoms
   USE m_types_banddos
   USE m_types_cell
@@ -60,7 +61,9 @@ CONTAINS
     INTEGER,INTENT(IN)::mpi_comm
     INTEGER,OPTIONAL,INTENT(IN)::rank
 
+    TYPE(t_constants)::constants
 
+    CALL constants%mpi_bc(mpi_comm,rank)
     CALL cell%mpi_bc(mpi_comm,rank)
     CALL sym%mpi_bc(mpi_comm,rank)
     CALL atoms%mpi_bc(mpi_comm,rank)

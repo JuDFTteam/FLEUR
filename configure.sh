@@ -194,11 +194,12 @@ ${cmake} $CMAKE_OPTIONS $NINJAARG -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee confi
 
 cd -
 
-if [ ! -r $buildname/Makefile ]
+if [ ! -r $buildname/Makefile ] && [ ! -r $buildname/build.ninja ]
 then
     echo -e "${RED}Your configuration failed"
     echo "Perhaps you have to specify compiler options or choose a different compiler."
     echo -e "You might want to call the configure.sh script with -h${NC}"
+    exit 1
 else
     echo "Configuration finished"
     if [ "$make_directly" ]
