@@ -36,7 +36,6 @@ contains
 
       integer :: it_nosym, it
 
-      if (fi%input%film) call juDFT_error("Vacuum desymmetrization is not implemented yet.", calledby="desym_potden")
       if (fi%noco%l_noco) call juDFT_error("noco desymmetrization is not implemented yet.", calledby="desym_potden")
 
       call pd_nosym%init(stars_nosym, fi_nosym%atoms, sphhar_nosym, fi_nosym%vacuum, fi_nosym%noco, fi%input%jspins, pd%potdenType, l_dfpt=allocated(pd%mtIm))
@@ -48,6 +47,7 @@ contains
          pd_nosym%pw_w = cmplx(0.0, 0.0)
          call desym_pw(fi%sym, stars, stars_nosym, pd%pw_w, pd_nosym%pw_w)
       end if
+      if (fi%input%film) call desym_vac(fi, stars, stars_nosym, pd%vac, pd_nosym%vac)
 
       do it_nosym = 1, fi_nosym%atoms%ntype
          it = map%parent_type(it_nosym)
@@ -85,6 +85,37 @@ contains
       end do
 
    end subroutine desym_pw
+
+   subroutine desym_vac(fi, stars, stars_nosym, vac, vac_nosym)
+      !! Expands the 2D star coefficients of both vacua into 2D star coefficients without symmetry.
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_stars),      intent(in)    :: stars, stars_nosym
+      complex,            intent(in)    :: vac(:,:,:,:)
+      complex,            intent(inout) :: vac_nosym(:,:,:,:)
+
+      integer :: is2, iop, is2_nosym, nspin
+      integer :: kr(2,fi%sym%nop2)
+      complex :: ph, ph_nosym
+      complex, allocatable :: vac_both(:,:,:,:)
+
+      ! With nvac = 1 only the upper vacuum is stored; the lower one follows by symmetry
+      vac_both = vac
+      call stars%fill_2nd_vac(fi%vacuum, vac_both)
+
+      nspin = min(size(vac,4), size(vac_nosym,4))
+      do is2 = 1, stars%ng2
+         call spgrot(fi%sym%nop2, fi%sym%symor, fi%sym%mrot(:2,:2,:), fi%sym%tau(:2,:), fi%sym%invtab, stars%kv2(:,is2), kr)
+         do iop = 1, fi%sym%nop2
+            is2_nosym = stars_nosym%i2g(kr(1,iop), kr(2,iop))
+            if (is2_nosym == 0) cycle
+            ph       = stars%r2gphs(kr(1,iop), kr(2,iop))
+            ph_nosym = stars_nosym%r2gphs(kr(1,iop), kr(2,iop))
+            if (abs(ph_nosym) < 1e-10) cycle
+            vac_nosym(:,is2_nosym,:,:nspin) = vac_both(:,is2,:,:nspin) * ph / ph_nosym
+         end do
+      end do
+
+   end subroutine desym_vac
 
    subroutine desym_mt(fi, fi_nosym, sphhar, sphhar_nosym, it_nosym, iop, mt, mt_nosym)
       !! Rotates the lattice-harmonic expansion of the parent type to the representative atom of type it_nosym
@@ -200,13 +231,22 @@ contains
             do ix = 0, ngrid-1
                ip = ip + 1
                points(:,ip) = matmul(fi%cell%amat, [real(ix), real(iy), real(iz)] / real(ngrid))
-               ! getMTSphere writes lattvec_index unconditionally, so it must be passed
-               call getMTSphere(fi%input, fi%cell, fi%atoms, points(:,ip), it, iatom, pt, lv)
-               iflag = merge(1, 2, iatom /= 0)
-               if (iatom == 0) pt = points(:,ip)
+               if (fi%input%film .and. 2*iz >= ngrid) points(:,ip) = points(:,ip) - fi%cell%amat(:,3)
+               if (fi%input%film .and. abs(points(3,ip)) > fi%cell%z1) then
+                  iflag = 0
+                  it = 0
+                  iatom = 0
+                  lv = 0
+                  pt = points(:,ip)
+               else
+                  ! getMTSphere writes lattvec_index unconditionally, so it must be passed
+                  call getMTSphere(fi%input, fi%cell, fi%atoms, points(:,ip), it, iatom, pt, lv)
+                  iflag = merge(1, 2, iatom /= 0)
+                  if (iatom == 0) pt = points(:,ip)
+               end if
                do jsp = 1, fi%input%jspins
                   p = pt
-                  call outcdn(p, it, iatom, 0, iflag, jsp, l_potential, stars, fi%vacuum, sphhar, fi%atoms, fi%sym, fi%cell, pd, vals(ip,jsp), lv)
+                  call outcdn(p, it, iatom, 1, iflag, jsp, l_potential, stars, fi%vacuum, sphhar, fi%atoms, fi%sym, fi%cell, pd, vals(ip,jsp), lv)
                end do
             end do
          end do

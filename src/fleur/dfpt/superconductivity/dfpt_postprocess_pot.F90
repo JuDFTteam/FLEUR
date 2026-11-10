@@ -230,6 +230,7 @@ contains
         if (present(sym_full)) then
             sym_qpts = sym_full
             qpts = fi%dfpt%qvec
+            call dfpt_check_sym_full(fi, sym_qpts)
         else if (l_fullsym) then
             if (fmpi%irank==0) write(*,*) "fullsym_inp.xml found: unfolding el-ph elements onto the full q BZ"
             call dfpt_read_fullsym(fmpi,fi,sym_qpts,qpts)

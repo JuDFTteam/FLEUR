@@ -56,7 +56,6 @@ contains
       call timestart("desym_setup")
 
       if (fi%noco%l_noco .or. fi%noco%l_soc) call juDFT_error("Desymmetrization is not implemented for noco/SOC.", calledby="desym_setup")
-      if (fi%input%film) call juDFT_error("Desymmetrization is not implemented for films yet.", calledby="desym_setup")
       if (fi%atoms%n_u + fi%atoms%n_hia > 0) call juDFT_error("Desymmetrization is not implemented for LDA+U yet.", calledby="desym_setup")
 
       fi_nosym = fi

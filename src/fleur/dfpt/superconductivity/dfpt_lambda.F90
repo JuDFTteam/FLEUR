@@ -55,7 +55,7 @@ module m_dfpt_lambda
 
    private
 
-   public :: dfpt_read_fullsym, dfpt_build_lambda, dfpt_check_lambda, dfpt_unfold_gmat
+   public :: dfpt_read_fullsym, dfpt_check_sym_full, dfpt_build_lambda, dfpt_check_lambda, dfpt_unfold_gmat
 
 contains
 
@@ -82,11 +82,8 @@ contains
       class(t_forcetheo), allocatable :: forcetheo_fullsym
 
       character(len=100) :: inp_pref
-      integer            :: iQ, ik, isym
-      integer            :: mrot(3, 3), invmrot(3, 3)
+      integer            :: iQ
       integer            :: nvd_save, nv2d_save, nbasfcn_save
-      logical            :: l_trs
-      real               :: trans(3), rkpt(3)
 
       inp_pref = adjustl("fullsym_")
 
@@ -130,27 +127,41 @@ contains
          call juDFT_error("fullsym_ input and DFPT input disagree on film geometry.", calledby="dfpt_read_fullsym")
       end if
 
+      call dfpt_check_sym_full(fi, sym_full)
+
+   end subroutine dfpt_read_fullsym
+
+   subroutine dfpt_check_sym_full(fi, sym_full)
+      !! Checks that sym_full can unfold quantities on the k-mesh of fi: film operations
+      !! keep z apart from the plane, and the k-mesh is closed under every operation.
+      type(t_fleurinput), intent(in) :: fi
+      type(t_sym),        intent(in) :: sym_full
+
+      integer :: ik, isym
+      integer :: mrot(3, 3), invmrot(3, 3)
+      logical :: l_trs
+      real    :: trans(3), rkpt(3)
+
       ! The vacuum matching assumes operations that do not mix z with the plane.
       if (fi%input%film) then
          do isym = 1, sym_full%nop
             if (any(sym_full%mrot(3, 1:2, isym) /= 0) .or. any(sym_full%mrot(1:2, 3, isym) /= 0) .or. abs(sym_full%tau(3, isym)) > 1e-9) then
-               call juDFT_error("fullsym_ film operation mixes z with the plane or carries a z translation.", calledby="dfpt_read_fullsym")
+               call juDFT_error("Film symmetry operation mixes z with the plane or carries a z translation.", calledby="dfpt_check_sym_full")
             end if
          end do
       end if
 
-      ! S k must be on the k mesh for every k and every operation.
       do isym = 1, sym_full%nsym
          call sym_full%get_sym_operation_int_coord(isym, mrot, invmrot, trans, l_trs)
          do ik = 1, fi%kpts%nkptf
             rkpt = matmul(transpose(mrot), fi%kpts%bkf(:, ik))
             if (fi%kpts%get_nk(rkpt) < 1) then
-               call juDFT_error("k mesh is not closed under the full symmetry group; regenerate it with the fullsym_ symmetry.", calledby="dfpt_read_fullsym")
+               call juDFT_error("k mesh is not closed under the full symmetry group.", calledby="dfpt_check_sym_full")
             end if
          end do
       end do
 
-   end subroutine dfpt_read_fullsym
+   end subroutine dfpt_check_sym_full
 
    subroutine dfpt_build_lambda(fi, sym_full, fmpi, enpara, vTot, nococonv, stars, eig_id, jsp, bandWindow, lambda, mapped_kpt, eig_win)
       !! Builds \(\Lambda(\boldsymbol{k},\mathcal{S})\) and the index map
