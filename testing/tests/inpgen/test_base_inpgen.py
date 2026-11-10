@@ -73,9 +73,9 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
 
     The two silicon atoms are one species with neq=2, so the count has to pick up
     the atoms of the species and not the species: s and p give (1+3)*2 = 8, and d
-    alone gives 5*2 = 10. numbands follows num_wann when no #nbands is asked for,
-    which is the one-shot projection wannierlib_band_window already returns early
-    on, and #nbands raises the window without touching the projections.
+    alone gives 5*2 = 10. The window is twice that, so the disentanglement has
+    states to choose from, and #nbands replaces it without touching the
+    projections. minBand, maxBand and the numbands cutoff all follow the window.
     """
     folder = './inputfiles/inpgen/Si_no_para/'
 
@@ -85,7 +85,9 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     assert content.count('<wannierproj l=') == 2
     assert '<wannierproj l="0" m="0"/>' in content
     assert '<wannierproj l="1" m="0"/>' in content
-    assert 'numBands="8"' in content
+    assert 'numBands="16"' in content
+    assert 'minBand="1" maxBand="16"' in content
+    assert 'numbands="16"' in content          # the <cutoffs> follow maxBand
     clean_workdir()
 
     res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:d'])
@@ -93,7 +95,7 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
         content = f.read()
     assert content.count('<wannierproj l=') == 1
     assert '<wannierproj l="2" m="0"/>' in content
-    assert 'numBands="10"' in content
+    assert 'numBands="20"' in content
     clean_workdir()
 
     res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:sp#nbands=24'])
@@ -147,7 +149,7 @@ def test_inpgen_wann_projections_reach_every_species(execute_inpgen, clean_workd
     assert species[2].count('<wannierproj l=') == 3
     assert species[3].count('<wannierproj l=') == 2
     assert content.count('<wannierproj l=') == 8
-    assert 'numBands="34"' in content
+    assert 'numBands="68"' in content          # twice the 34 Wannier functions
 
     clean_workdir()
 

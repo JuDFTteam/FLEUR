@@ -266,9 +266,10 @@ CONTAINS
             END DO
             wannNumWann = wannSpinM*wannNumWann
 
-            !numbands defaults to num_wann: a one-shot projection, which
-            !wannierlib_band_window already treats as "no disentanglement".
-            wannNumBands = MERGE(wannNbReq, wannNumWann, wannNbReq > 0)
+            !numbands defaults to twice num_wann, so the disentanglement has
+            !states to choose the subspace from. A window as narrow as num_wann
+            !is a one-shot projection with no freedom left. #nbands overrides it.
+            wannNumBands = MERGE(wannNbReq, 2*wannNumWann, wannNbReq > 0)
             IF (wannNumBands < wannNumWann) CALL juDFT_error( &
                  "-wann: #nbands is smaller than num_wann", calledby="w_inpXML", &
                  hint="Wannier90 needs at least as many bands as Wannier functions.")
