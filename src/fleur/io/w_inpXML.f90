@@ -898,14 +898,12 @@ WRITE (fileNum, 242) fr(1.0)
 
       IF (l_wannOpt) THEN
 446      FORMAT('         <bands numBands="', i0, '" minBand="', i0, '" maxBand="', i0, '"/>')
-         WRITE (fileNum, '(a)') '      <!-- Two edits are needed here once the SCF has converged:'
-         WRITE (fileNum, '(a)') '           set wannierize="T", and set disFrozMax to an absolute'
-         WRITE (fileNum, '(a)') '           energy in Htr measured from the converged Fermi energy,'
-         WRITE (fileNum, '(a)') '           for instance E_F + 0.1837 for 5 eV above it. num_wann is'
-         WRITE (fileNum, '(a)') '           fixed by the <wannierproj> entries of the species, which'
-         WRITE (fileNum, '(a)') '           inpgen does not write. Every operator is listed and every'
-         WRITE (fileNum, '(a)') '           export is off: delete the matrices you do not need and'
-         WRITE (fileNum, '(a)') '           switch on the one consumer you do. -->'
+         WRITE (fileNum, '(a)') '      <!-- Set wannierize="T" once the SCF has converged. disFrozMax is an'
+         WRITE (fileNum, '(a)') '           absolute energy in Htr: E_F + 0.1837 is a frozen window at E_F + 5 eV. -->'
+         IF (.NOT. l_wannProj) THEN
+            WRITE (fileNum, '(a)') '      <!-- num_wann comes from the <wannierproj> of each species, which this'
+            WRITE (fileNum, '(a)') '           form of -wann does not write: use -wann Fe:spd and inpgen does it. -->'
+         END IF
          WRITE (fileNum, '(a)') '      <wannierlib wannierize="F">'
          WRITE (fileNum, 446) wannNumBands, wannMinBand, wannMaxBand
          WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" numIter="3000" convTol="0.00000000001" convWindow="10" mixRatio="0.5"/>'
