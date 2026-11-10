@@ -48,7 +48,7 @@ module m_dfpt_postprocess_pot
 contains 
 
     subroutine dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
-                                  rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real)
+                                  rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real,sym_full)
 
 
         type(t_mpi), intent(in)       :: fmpi
@@ -68,6 +68,7 @@ contains
 
         integer, intent(in) :: eig_id, q_eig_id
         logical, intent(in) :: l_real
+        type(t_sym), intent(in), optional :: sym_full ! symmetry of a desymmetrized input, unfolds fi%dfpt%qvec
 
         type(t_hub1data) :: hub1data
         type(t_stars) :: starsq
@@ -221,12 +222,15 @@ contains
 #endif
 
         ! Symmetry unfolding of the el-ph elements onto the full q Brillouin zone.
-        ! Without fullsym_inp.xml the input mesh and its group are used, where the
+        ! Without sym_full and fullsym_inp.xml the input mesh and its group are used, where the
         ! unfolding degenerates to a copy plus the time-reversal partners.
         inquire(file="fullsym_inp.xml",EXIST=l_fullsym)
 
         call timestart("elph symmetry unfolding")
-        if (l_fullsym) then
+        if (present(sym_full)) then
+            sym_qpts = sym_full
+            qpts = fi%dfpt%qvec
+        else if (l_fullsym) then
             if (fmpi%irank==0) write(*,*) "fullsym_inp.xml found: unfolding el-ph elements onto the full q BZ"
             call dfpt_read_fullsym(fmpi,fi,sym_qpts,qpts)
         else

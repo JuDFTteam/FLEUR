@@ -51,7 +51,7 @@ contains
                            fmpi_nosym, fi_nosym, enpara_nosym, nococonv_nosym, vTot_nosym, map, &
                            eig_id_nosym, results_nosym, maxdev)
       !! Rotates the IBZ eigenvectors of eig_id onto the full k-mesh of the setup without symmetry (eig_id_nosym).
-      !! maxdev is the largest deviation of the MT coefficients of the new eigenvectors from the rotated ones.
+      !! Optional maxdev: largest deviation of the MT coefficients of the new eigenvectors from the rotated ones.
       type(t_fleurinput), intent(in)  :: fi, fi_nosym
       type(t_enpara),     intent(in)  :: enpara, enpara_nosym
       type(t_nococonv),   intent(in)  :: nococonv, nococonv_nosym
@@ -62,7 +62,7 @@ contains
       type(t_desym_map),  intent(in)  :: map
       integer,            intent(out) :: eig_id_nosym
       type(t_results),    intent(out) :: results_nosym
-      real,               intent(out) :: maxdev
+      real, optional,     intent(out) :: maxdev
 
       type(t_hybinp) :: hybinp
       type(t_mpdata) :: mpdata
@@ -72,6 +72,7 @@ contains
       complex, allocatable :: cmt_k(:,:,:), cmt_rot(:,:,:), cmt_nosym(:,:,:), c_phase(:)
       integer, allocatable :: ev_list(:)
       integer :: jsp, ikk, ik, kp, iop, neig, nb, n, maxlmindx
+      real    :: dev
 #ifdef CPP_MPI
       integer :: ierr
 #endif
@@ -90,7 +91,7 @@ contains
       eig_id_nosym = open_eig(fmpi_nosym%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi_nosym%kpts%nkpt, fi%input%jspins, .false., &
                               .true., .false., .false., .false., .false., fmpi_nosym%n_size, filename="eig_nosym")
 
-      maxdev = 0.0
+      dev = 0.0
       do jsp = 1, fi%input%jspins
          call mt_basis(fi, enpara, vTot, fmpi_nosym, jsp, usdus)
          call mt_basis(fi_nosym, enpara_nosym, vTot_nosym, fmpi_nosym, jsp, usdus_nosym)
@@ -132,12 +133,15 @@ contains
 
                call lo_coefficients(fi_nosym, nococonv_nosym, usdus_nosym, lapw_nosym, jsp, nb, cmt_rot, z_nosym)
 
-               allocate(cmt_nosym(nb, maxlmindx, fi%atoms%nat))
-               call mt_coefficients(fi_nosym%input, fi_nosym%atoms, fi_nosym%sym, fi_nosym%cell, fi_nosym%noco, nococonv_nosym, &
-                                    usdus_nosym, lapw_nosym, z_nosym, jsp, nb, cmt_nosym)
-               maxdev = max(maxdev, maxval(abs(cmt_nosym - cmt_rot)))
+               if (present(maxdev)) then
+                  allocate(cmt_nosym(nb, maxlmindx, fi%atoms%nat))
+                  call mt_coefficients(fi_nosym%input, fi_nosym%atoms, fi_nosym%sym, fi_nosym%cell, fi_nosym%noco, nococonv_nosym, &
+                                       usdus_nosym, lapw_nosym, z_nosym, jsp, nb, cmt_nosym)
+                  dev = max(dev, maxval(abs(cmt_nosym - cmt_rot)))
+                  deallocate(cmt_nosym)
+               end if
 
-               deallocate(cmt_k, cmt_rot, cmt_nosym, c_phase)
+               deallocate(cmt_k, cmt_rot, c_phase)
                call zk%free()
                call zk_c%free()
             end if
@@ -148,9 +152,12 @@ contains
          end do
       end do
 
+      if (present(maxdev)) then
 #ifdef CPP_MPI
-      call MPI_ALLREDUCE(MPI_IN_PLACE, maxdev, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi_nosym%mpi_comm, ierr)
+         call MPI_ALLREDUCE(MPI_IN_PLACE, dev, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi_nosym%mpi_comm, ierr)
 #endif
+         maxdev = dev
+      end if
 
       call timestop("desym_eigvec")
 
@@ -181,8 +188,13 @@ contains
       if (allocated(results%force_old)) results_nosym%force_old = results%force_old(:, map%parent_type)
       if (allocated(results_nosym%unfolding_weights)) deallocate(results_nosym%unfolding_weights)
       if (allocated(results_nosym%w_iksRDMFT))        deallocate(results_nosym%w_iksRDMFT)
-      if (allocated(results_nosym%U_mat))             deallocate(results_nosym%U_mat)
-      if (allocated(results_nosym%U_dis))             deallocate(results_nosym%U_dis)
+      ! The Wannier gauge lives on bkf, which is the k order without symmetry
+      if (allocated(results_nosym%U_mat)) then
+         if (size(results_nosym%U_mat, 3) /= fi_nosym%kpts%nkpt) deallocate(results_nosym%U_mat)
+      end if
+      if (allocated(results_nosym%U_dis)) then
+         if (size(results_nosym%U_dis, 3) /= fi_nosym%kpts%nkpt) deallocate(results_nosym%U_dis)
+      end if
 
    end subroutine desym_results
 

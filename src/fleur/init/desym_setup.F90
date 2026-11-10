@@ -139,10 +139,13 @@ contains
          call juDFT_error("LAPW basis dimensions of the desymmetrized setup are smaller than in the symmetric setup.", calledby="desym_setup")
 
       fmpi_nosym = fmpi
-      if (allocated(fmpi_nosym%k_list)) deallocate(fmpi_nosym%k_list)
-      if (allocated(fmpi_nosym%ev_list)) deallocate(fmpi_nosym%ev_list)
-      if (allocated(fmpi_nosym%coulomb_owner)) deallocate(fmpi_nosym%coulomb_owner)
-      call setupMPI(fi_nosym%kpts%nkpt, fi_nosym%input%neig, nbasfcn, fmpi_nosym, fi_nosym%input%l_real, fi_nosym%noco%l_noco)
+      ! A full k-list in the symmetric input keeps its order, so its k-point distribution can be reused
+      if (fi%kpts%nkptf /= fi%kpts%nkpt) then
+         if (allocated(fmpi_nosym%k_list)) deallocate(fmpi_nosym%k_list)
+         if (allocated(fmpi_nosym%ev_list)) deallocate(fmpi_nosym%ev_list)
+         if (allocated(fmpi_nosym%coulomb_owner)) deallocate(fmpi_nosym%coulomb_owner)
+         call setupMPI(fi_nosym%kpts%nkpt, fi_nosym%input%neig, nbasfcn, fmpi_nosym, fi_nosym%input%l_real, fi_nosym%noco%l_noco)
+      end if
 
       if (fmpi%irank == 0) then
          write(oUnit, '(a)') 'Desymmetrized setup:'

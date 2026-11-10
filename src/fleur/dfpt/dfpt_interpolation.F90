@@ -32,6 +32,7 @@ module m_dfpt_interpolation
     use m_types_misc
     use m_types_sphhar
     use m_types_stars
+    use m_types_sym
     use m_types_xcpot
 
     implicit none 
@@ -40,13 +41,15 @@ module m_dfpt_interpolation
 
 contains 
 
-    subroutine dfpt_interpolation(fi,fmpi,nococonv,results)
-
+    subroutine dfpt_interpolation(fi,fmpi,nococonv,results,sym_full)
+        !! Fourier interpolation of the dynamical matrices of the irreducible q-mesh.
+        !! With sym_full the mesh fi%dfpt%qvec is unfolded with sym_full, otherwise symmetry and mesh are read from fullsym_inp.xml.
 
         type(t_fleurinput), intent(in) :: fi 
         type(t_mpi), intent(in)        :: fmpi
         type(t_nococonv), intent(in)   :: nococonv 
         type(t_results), intent(in)    :: results
+        type(t_sym), intent(in), optional :: sym_full
 
         ! Full symmetrized type variables:
         type(t_mpi)        :: fmpi_fullsym
@@ -63,6 +66,7 @@ contains
         class(t_forcetheo), allocatable :: forcetheo_fullsym
 
         type(t_kpts)  :: qpts
+        type(t_sym)   :: sym_q
         integer, allocatable :: q_list(:)
         
         integer :: iQ, iSpecial
@@ -102,29 +106,33 @@ contains
             call juDFT_error("Invalid option for post-procession of dynMatfiles.", calledby="dfpt_interpolation.F90")
         end if 
 
-        ! Read in the dynMats in the IBZ
-        ! We currently rely on a seperate set of files fullsym_* that contain the symmetry
-        ! Maybe we should change this in the future.
-        ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
-        inp_pref = ADJUSTL("fullsym_")
-        fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
-        fmpi_fullsym%mpi_comm = fmpi%mpi_comm
-        ! Skip setupMPI: this fleur_init only re-reads the fullsym_ input set; the
-        ! parallel-solver setup it would otherwise do is never used here and fails
-        ! when the fullsym q-mesh does not factor evenly onto the MPI ranks.
-        ! fleur_init reruns lapw_dim on the fullsym k-set; keep the basis dimensions of the main run
-        nvd_save = lapw_dim_nvd
-        nv2d_save = lapw_dim_nv2d
-        nbasfcn_save = lapw_dim_nbasfcn
-        call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
-                        enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, &
-                        inp_pref, l_skip_setupmpi=.true.)
-        lapw_dim_nvd = nvd_save
-        lapw_dim_nv2d = nv2d_save
-        lapw_dim_nbasfcn = nbasfcn_save
-        qpts = fi_fullsym%kpts
-        ! dyn_mat is in the atom order of fi%atoms
-        call remap_fullsym_atoms(fi%atoms, fi_fullsym%atoms, fi_fullsym%sym)
+        if (present(sym_full)) then
+            sym_q = sym_full
+            qpts = fi%dfpt%qvec
+            if (.not. allocated(qpts%bkf)) call juDFT_error("The q-mesh has no full-BZ expansion.", calledby="dfpt_interpolation")
+        else
+            ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
+            inp_pref = ADJUSTL("fullsym_")
+            fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
+            fmpi_fullsym%mpi_comm = fmpi%mpi_comm
+            ! Skip setupMPI: this fleur_init only re-reads the fullsym_ input set; the
+            ! parallel-solver setup it would otherwise do is never used here and fails
+            ! when the fullsym q-mesh does not factor evenly onto the MPI ranks.
+            ! fleur_init reruns lapw_dim on the fullsym k-set; keep the basis dimensions of the main run
+            nvd_save = lapw_dim_nvd
+            nv2d_save = lapw_dim_nv2d
+            nbasfcn_save = lapw_dim_nbasfcn
+            call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
+                            enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, &
+                            inp_pref, l_skip_setupmpi=.true.)
+            lapw_dim_nvd = nvd_save
+            lapw_dim_nv2d = nv2d_save
+            lapw_dim_nbasfcn = nbasfcn_save
+            qpts = fi_fullsym%kpts
+            sym_q = fi_fullsym%sym
+            ! dyn_mat is in the atom order of fi%atoms
+            call remap_fullsym_atoms(fi%atoms, fi_fullsym%atoms, sym_q)
+        end if
 
 
         IF (fi%dfpt%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%dfpt%qpts_interpol%nkpt,fi%input%jspins))
@@ -153,7 +161,7 @@ contains
             !end if
 
             ! Fourier-interpolate the coarse dynamical matrices onto the fine q-mesh
-            call interpolate_dynmat(fi%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
+            call interpolate_dynmat(fi%atoms, sym_q, fi%cell, qpts, dyn_mat, &
                                     fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp, &
                                     l_bornhuang=fi%dfpt%l_bornhuang)
 
@@ -161,7 +169,7 @@ contains
             l_sumrule = fi%dfpt%l_sumrule_intp .and. .not. fi%dfpt%l_bornhuang
             if (l_sumrule) then
                 ! The Gamma matrix is needed before the first fine q-point
-                call interpolate_dynmat(fi%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
+                call interpolate_dynmat(fi%atoms, sym_q, fi%cell, qpts, dyn_mat, &
                                         fi%dfpt%l_WSinterpol, reshape([0.0, 0.0, 0.0], [3, 1]), dyn_mat_gamma, &
                                         l_bornhuang=fi%dfpt%l_bornhuang)
                 call hermitize_scale_dynmat(fi%atoms, dyn_mat_gamma(:,:,1))

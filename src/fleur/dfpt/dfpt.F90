@@ -35,6 +35,7 @@ MODULE m_dfpt
    USE m_types_sphhar
    USE m_types_stars
    USE m_types_sternheimerjob
+   USE m_types_sym
    USE m_types_xcpot
 #ifdef CPP_MPI
    USE mpi
@@ -45,12 +46,66 @@ MODULE m_dfpt
    PUBLIC :: dfpt
 
 CONTAINS
-   SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+   subroutine dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+      !! DFPT driver. A symmetric ground state is desymmetrized in memory and the DFPT kernel runs on the setup without symmetry.
+      type(t_mpi),        intent(in)    :: fmpi
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_sphhar),     intent(in)    :: sphhar
+      type(t_stars),      intent(in)    :: stars
+      type(t_nococonv),   intent(in)    :: nococonv
+      type(t_enpara),     intent(inout) :: enpara
+      type(t_results),    intent(inout) :: results
+      type(t_hybdat),     intent(inout) :: hybdat
+      type(t_mpdata),     intent(inout) :: mpdata
+      class(t_xcpot),     intent(in)    :: xcpot
+      class(t_forcetheo), intent(inout) :: forcetheo
+      type(t_kpts),       intent(in)    :: qpts
+      type(t_potden),     intent(inout) :: rho
+      type(t_potden),     intent(in)    :: vTot, vxc
+      integer,            intent(in)    :: eig_id
 
-      
+      type(t_mpi)        :: fmpi_nosym
+      type(t_fleurinput) :: fi_nosym
+      type(t_stars)      :: stars_nosym
+      type(t_sphhar)     :: sphhar_nosym
+      type(t_enpara)     :: enpara_nosym
+      type(t_nococonv)   :: nococonv_nosym
+      type(t_desym_map)  :: map
+      type(t_potden)     :: rho_nosym, vTot_nosym, vxc_nosym
+      type(t_results)    :: results_nosym
+      integer :: eig_id_nosym
 
+      if (judft_was_argument("-desym_test")) then
+         call dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, xcpot, hybdat, rho, vTot, eig_id, results)
+         return
+      end if
 
+      if (fmpi%irank == 0) call dfpt_check(fi, xcpot)
+
+      if (fi%sym%nop == 1) then
+         call dfpt_main(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+         return
+      end if
+
+      call timestart("desymmetrization")
+      call desym_setup(fmpi, fi, enpara, nococonv, forcetheo, fmpi_nosym, fi_nosym, stars_nosym, sphhar_nosym, enpara_nosym, nococonv_nosym, map)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, rho, rho_nosym)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, vTot, vTot_nosym)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, vxc, vxc_nosym)
+      call desym_eigvec(fi, enpara, nococonv, vTot, eig_id, results, fmpi_nosym, fi_nosym, enpara_nosym, nococonv_nosym, vTot_nosym, &
+                        map, eig_id_nosym, results_nosym)
+      call timestop("desymmetrization")
+
+      call dfpt_main(fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, fi_nosym%kpts, fmpi_nosym, results_nosym, enpara_nosym, &
+                       rho_nosym, vTot_nosym, vxc_nosym, eig_id_nosym, xcpot, hybdat, mpdata, forcetheo, sym_full=fi%sym)
+      call close_eig(eig_id_nosym)
+
+   end subroutine dfpt
+
+   SUBROUTINE dfpt_main(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
+                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo, sym_full)
+      !! DFPT perturbations, interpolation and el-ph postprocessing for a setup without symmetry.
+      !! sym_full: symmetry of the desymmetrized input, used with fi%dfpt%qvec to unfold the q-mesh.
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
       TYPE(t_sphhar),     INTENT(IN)     :: sphhar
@@ -69,6 +124,7 @@ CONTAINS
       TYPE(t_potden),   INTENT(INOUT) :: rho
       TYPE(t_potden),   INTENT(IN)    :: vTot, vxc
       INTEGER,          INTENT(IN)    :: eig_id
+      TYPE(t_sym),      INTENT(IN), OPTIONAL :: sym_full
 
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVext3x3(3,3)
@@ -96,13 +152,9 @@ CONTAINS
       l_minusq = .FALSE.
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
-     
-      if (judft_was_argument("-desym_test")) then
-         call dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, xcpot, hybdat, rho, vTot, eig_id, results)
-         return
-      end if
 
-      if (fmpi%irank==0) call dfpt_check(fi, xcpot)
+      if (fmpi%n_size > 1) call juDFT_error("DFPT needs one MPI rank per k-point.", calledby="dfpt_main", &
+                                            hint="Run with -pe_per_kpt 1 or choose the number of ranks as a divisor of the number of k-points.")
 
       ! q_results saves the eigen-info for k+q, results1 for the perturbed quantities
       CALL q_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
@@ -184,7 +236,7 @@ CONTAINS
          ! Do post processing of converged results 
          ! Interpolate the dynamic matrix with FFT
          call timestart("dfpt interpolation")
-         call dfpt_interpolation(fi,fmpi,nococonv,results)
+         call dfpt_interpolation(fi,fmpi,nococonv,results,sym_full)
          call timestop("dfpt interpolation")
       end if 
 
@@ -192,7 +244,7 @@ CONTAINS
          ! Construct the matrix element from converged potentials
          if (fi%dfpt%l_elph) then 
             call timestart("construction of el-ph matrix elements")
-            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real,sym_full)
             call timestop("construction of el-ph matrix elements")
          end if 
       end if 
@@ -210,7 +262,7 @@ CONTAINS
 
       if (fmpi%irank==0) WRITE (oUnit,*) '------------------------------------------------------'
 
-   END SUBROUTINE dfpt
+   END SUBROUTINE dfpt_main
 
    subroutine dfpt_desym_test(fi, fmpi, sphhar, stars, enpara, nococonv, forcetheo, xcpot, hybdat, rho, vTot, eig_id, results)
       !! Builds the setup without symmetry in memory, desymmetrizes rho, vTot and the eigenvectors and reports their largest deviations.

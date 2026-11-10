@@ -307,6 +307,9 @@ CONTAINS
         ! Full Wannier gauge matrix: disentanglement (U_dis) composed with Wannierization (U_mat).
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
+        if (.not. allocated(results%U_mat)) call juDFT_error("Wannier gauge U_mat not available", calledby="el_ph_wannier")
+        if (num_bands > num_wann .and. .not. allocated(results%U_dis)) call juDFT_error("Wannier gauge U_dis not available", calledby="el_ph_wannier")
+        if (size(results%U_mat, 3) /= fi%kpts%nkptf) call juDFT_error("Wannier gauge U_mat does not match the k-mesh", calledby="el_ph_wannier")
         call timestart("Load Wannier U matrices")
         allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
         if (num_bands > num_wann) then

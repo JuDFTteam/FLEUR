@@ -29,9 +29,6 @@ CONTAINS
         l_libxc = .FALSE.
         l_exist = .FALSE.
 
-        !Symmetry
-        IF (fi%sym%nop.GT.1) CALL judft_error("dfpt uses only unit symmetry. Please redo the calculation without symmetry.",calledby="dfpt_check.F90")
-
         !Coretails
         IF (fi%input%ctail) CALL judft_error("Coretails are not supported. Please consider moving the problematic states to LOs",calledby="dfpt_check.F90")
 
