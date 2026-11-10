@@ -93,13 +93,13 @@ CONTAINS
 
       INTEGER :: archiveType, iter, killcont(6), realiter
       REAL    :: bqpt(3), bmqpt(3)
-      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_metal
+      LOGICAL :: l_cont, l_exist, l_lastIter, strho, onedone, final_SH_it, l_minusq, l_metal
 
 
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
       TYPE(t_potden)  :: denOut1, rho_loc, rho_loc0
-      TYPE(t_potden)   :: denIn1m, denOut1m !, dummy_gr
+      TYPE(t_potden)   :: denIn1m!, denOut1m
 
       l_minusq = PRESENT(starsmq)
       realiter = 0
@@ -127,12 +127,6 @@ CONTAINS
 
          CALL denIn1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
       END IF
-      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-      IF (ANY(fi%noco%l_unrestrictMT)) THEN
-         archiveType = CDN_ARCHIVE_TYPE_FFN_const
-      ELSE IF (fi%noco%l_noco) THEN
-         archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-      END IF
       archiveType = dfptArchiveType(fi%noco)
       l_exist = .FALSE.
       IF (fmpi%irank == 0) l_exist = isDfptDensityPresent(archiveType, dfpt_tag, qpts%bk(:,iQ))
@@ -152,10 +146,8 @@ CONTAINS
       ! Set the iteration counters to 0 and optionally read in the density perturbation
       iter = 0
       l_cont = (iter < fi%input%itmax)
-      IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                      fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
-                                                      results1%ef, results1%last_distance, l_dummy, denIn1,  &
-                                                      inFilename=TRIM(dfpt_tag))
+      IF (fmpi%irank==0.AND.l_exist) CALL readDfptDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, archiveType, &
+                                                          dfpt_tag, qpts%bk(:,iQ), results1%ef, results1%last_distance, denIn1)
 
       IF (fmpi%irank==0.AND..NOT.l_exist) denIn1%iter = 1
       ! dfpt_cdn.hdf holds only the z(1) response of the density; add the gradient here.
