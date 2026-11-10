@@ -112,8 +112,6 @@ CONTAINS
       CALL rho_loc%copyPotDen(rho)
       CALL rho_loc0%copyPotDen(rho)
       CALL rho_loc0%resetPotDen()
-      !CAll dummy_gr%copyPotDen(grRho)
-      !CAll dummy_gr%resetpotden()
       
       banddosdummy = fi%banddos
       ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
@@ -349,16 +347,16 @@ CONTAINS
                           qm_eig_id,dfpt_eigm_id)
          CALL timestop("generation of new charge density (total)")
 
-         IF (l_minusq) THEN
-            CALL timestart("generation of new charge density (total)")
-            CALL denOut1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-            CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%gfinp,fi%hub1inp,&
-                             enpara,fi%cell,fi%noco,nococonv,vTot,results,results1m,&
-                             archiveType,xcpot,denOut1m,-bqpt,iDtype,iDir,l_real,&
-                             q_eig_id,dfpt_eig_id)!,starsq,results1)
-            CALL timestop("generation of new charge density (total)")
-         END IF
+         !IF (l_minusq) THEN
+         !   CALL timestart("generation of new charge density (total)")
+         !   CALL denOut1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
+         !   CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+         !                    fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%gfinp,fi%hub1inp,&
+         !                    enpara,fi%cell,fi%noco,nococonv,vTot,results,results1m,&
+         !                    archiveType,xcpot,denOut1m,-bqpt,iDtype,iDir,l_real,&
+         !                    q_eig_id,dfpt_eig_id)!,starsq,results1)
+         !   CALL timestop("generation of new charge density (total)")
+         !END IF
 
          ! If a starting density perturbation was to be generated, subtract the density
          ! gradient and exit here; no mixing yet!
@@ -464,7 +462,7 @@ CONTAINS
       INTEGER, PARAMETER :: swap(4) = [1, 2, 4, 3] ! 12 <-> 21
       INTEGER :: iStar, iStarM, ns
 
-      ns = SIZE(den_p%pw, 2)! this will be redandant after debugging
+      ns = SIZE(den_p%pw, 2)
       ! IR: go from (G+q) to -(G+q)
       DO iStar = 1, starsmq%ng3
          iStarM = starsq%ig(-starsmq%kv3(1,iStar), -starsmq%kv3(2,iStar), -starsmq%kv3(3,iStar))

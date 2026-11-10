@@ -92,6 +92,9 @@ CONTAINS
       l_minusq = fi%noco%l_soc .OR. judft_was_argument("-dfpt_minusq")
       IF (fi%noco%l_noco) l_minusq = l_minusq .OR. ANY(ABS(SIN(nococonv%alph)*SIN(nococonv%beta)) > 1e-6)
 
+      if (fmpi%irank==0 .and. l_minusq) WRITE (oUnit,*) 'DFPT calculation requires additional minus q solve'
+      if (fmpi%irank==0 .and. l_minusq) WRITE (*,*) 'DFPT calculation requires additional minus q solve'
+
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
      
