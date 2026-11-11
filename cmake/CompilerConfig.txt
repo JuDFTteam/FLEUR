@@ -21,6 +21,7 @@ function(fleur_check_libraries variable access value)
 endfunction()
 variable_watch(FLEUR_LIBRARIES fleur_check_libraries)
 
+include("cmake/tests/test_compiler.cmake")
 include("cmake/tests/test_GIT.cmake")
 include("cmake/tests/test_linker.cmake")
 include("cmake/tests/test_OpenMP.cmake")
