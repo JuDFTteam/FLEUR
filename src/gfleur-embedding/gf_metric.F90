@@ -4,6 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_metric 
+      USE m_Gf_Types
+      USE m_metrz0
+      USE m_gf_stepsanaly, ONLY: gf_gspaceconvolve, gf_initstepsanaly
       IMPLICIT NONE
       integer,parameter:: nmz=250,nmzxy=100
       real,parameter   :: delz=0.1
@@ -18,17 +21,16 @@
                                                                         
       !<-- F: gf_apply_metric(stars,atoms,sphhar,jspins,num_layers,a)   
       FUNCTION gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar     &
-     &     ,sym,jspins,num_layers,a)RESULT(b)                               
-!-----------------------------------------------                        
-!                                                                       
-!             (last modified: 2004-00-00) D. Wortmann                   
-!-----------------------------------------------                        
-      USE m_Gf_Types 
-      use m_metrz0
-      use m_gf_stepsanaly, only: gf_gspaceconvolve, gf_initstepsanaly
-      IMPLICIT NONE 
-      !<-- Arguments                                                    
+     &     ,sym,jspins,num_layers,a,l_noco)RESULT(b)
+!-----------------------------------------------
+!     noco: every layer ends with the off-diagonal interstitial part
+!     (Re, Im)
+!             (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      IMPLICIT NONE
+      !<-- Arguments
       LOGICAL,INTENT(IN)         :: l_potmix,l_surface
+      LOGICAL,INTENT(IN),OPTIONAL:: l_noco
       TYPE(t_gfmpi),INTENT(IN)     :: fmpi 
       TYPE(t_stars),INTENT(IN)   :: stars(:) 
       TYPE(t_atoms),INTENT(IN)   :: atoms(:) 
@@ -42,17 +44,21 @@
       !>                                                                
       !<-- Locals                                                       
       COMPLEX,ALLOCATABLE :: vpw(:),vpw_w(:) 
-      INTEGER             :: imap,layer,js,na,n,l,j 
+      INTEGER             :: imap,layer,js,na,n,l,j,nblock
       REAL                :: dxn,dxn2,dxn4,dvol
       real                :: wght(nmz)
-      !>                                                                
-                                                                        
-      ALLOCATE(vpw(MAXVAL(stars%ng3))) 
-      ALLOCATE(vpw_w(MAXVAL(stars%ng3))) 
-      !<-- apply the metric                                             
-      imap = 0 
-      DO layer = 1,num_layers 
-         DO js = 1,jspins 
+      !>
+
+      nblock = jspins
+      IF (PRESENT(l_noco)) THEN
+         IF (l_noco) nblock = jspins+1
+      ENDIF
+      ALLOCATE(vpw(MAXVAL(stars%ng3)))
+      ALLOCATE(vpw_w(MAXVAL(stars%ng3)))
+      !<-- apply the metric
+      imap = 0
+      DO layer = 1,num_layers
+         DO js = 1,nblock
             !interstitial                                               
             vpw(:stars(layer)%ng3) = CMPLX(a(imap+1:imap+stars(layer    &
      &           )%ng3),a(imap+1+stars(layer)%ng3:imap+2*stars(layer    &
@@ -68,9 +74,15 @@
             b(imap+1:imap+stars(layer)%ng3) = AIMAG(vpw_w(:stars(layer  &
      &           )%ng3))*cell(layer)%omtil
 
-            imap = imap+stars(layer)%ng3 
-            !muffin-tin part                                            
-            na = 1 
+            imap = imap+stars(layer)%ng3
+            !the off-diagonal block has no MT part; weight 2 makes the
+            !metric of the magnetisation independent of its direction
+            IF (js>jspins) THEN
+               b(imap-2*stars(layer)%ng3+1:imap) = 2*b(imap-2*stars(layer)%ng3+1:imap)
+               CYCLE
+            ENDIF
+            !muffin-tin part
+            na = 1
             DO  n = 1,atoms(layer)%ntype 
                dxn = atoms(layer)%neq(n)*atoms(layer)%dx(n)/3.0E0 
                dxn2 = 2.0E0 *dxn 

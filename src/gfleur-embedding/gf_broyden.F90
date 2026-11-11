@@ -6,7 +6,11 @@
 MODULE m_gf_broyden
       USE m_constants, ONLY: oUnit
     use m_juDFT
+    use m_gf_metric
+    use m_gf_types
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: gf_broyden
 !---------------------------------------------------------------        
 !  modified version:                                                    
 !  IO is encapulated here                                               
@@ -25,9 +29,7 @@ MODULE m_gf_broyden
 CONTAINS
     SUBROUTINE gf_broyden(filename,l_potmix,l_surface,fmpi,                      &
         &     imix,maxiter,alpha,fm,stars,atoms,sphhar,cell,sym,jspins     &
-        &     ,num_layers,sm)
-        USE m_gf_metric
-        USE m_gf_types
+        &     ,num_layers,sm,l_noco)
         IMPLICIT NONE
         !     .. Scalar Arguments ..
         LOGICAL,INTENT(IN)       :: l_potmix,l_surface
@@ -43,6 +45,7 @@ CONTAINS
         TYPE(t_sym),INTENT(IN)     :: sym(:)
         TYPE(t_gfmpi),INTENT(IN)     :: fmpi
         INTEGER,INTENT(IN)         :: jspins,num_layers
+        LOGICAL,INTENT(IN),OPTIONAL:: l_noco !noco: off-diagonal block per layer
                                                                         
         !     .. Array Arguments ..
         REAL   ,INTENT(IN)      :: fm(:)
@@ -142,7 +145,7 @@ CONTAINS
                 !     convolute drho(m) with the metric: |fm1> = w|sm1>
                 !
                 fm1 = gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar   &
-                    &          ,sym,jspins,num_layers,sm1)
+                    &          ,sym,jspins,num_layers,sm1,l_noco)
                 !
                 !     calculate the norm of sm1 : <sm1|w|sm1>
                 smnorm = ddot(nmap,sm1,1,fm1,1)
@@ -177,7 +180,7 @@ CONTAINS
                 !     --> multiply fm1 with metric matrix and store in vm:  w |fm1>
                 !
                 vm = gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar   &
-                    &           ,sym,jspins,num_layers,fm1)
+                    &           ,sym,jspins,num_layers,fm1,l_noco)
                                                                         
                 !
                 !     calculate the norm of fm1 and normalize vm it: vm = wfm1 /
@@ -195,7 +198,7 @@ CONTAINS
                 !     calculate vm = alpha*wfm1 -\sum <fm1|w|vi> <fi1|w|vi><vi|
                 !     convolute fm1 with the metrik and store in vm
                 vm = gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar   &
-                    &           ,sym,jspins,num_layers,fm1)
+                    &           ,sym,jspins,num_layers,fm1,l_noco)
                 !
                 DO it = 2,iread
                     READ (59,REC = it-1) (ui(i),i=1,nmap),                   &

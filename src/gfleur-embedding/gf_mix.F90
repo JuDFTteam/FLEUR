@@ -48,6 +48,7 @@
       INTEGER               :: fileid
       INTEGER               :: len,layer,mmap,layer_loop,ierr,ds,dl,i,nl
       REAL                  :: volume,distance,c_layer
+      LOGICAL               :: l_noco
       INTEGER,DIMENSION(layers%num_layers) :: datastart,dataend
       REAL, ALLOCATABLE     :: sm(:),fsm(:),metric(:),sm_old(:)
       !gathered plain-array views for the leaf routines
@@ -94,21 +95,22 @@
       IF (.NOT.ANY((/0,3,5,7/) == gfmix%imix))                              &
      &     CALL juDFT_error('mix: imix =/= 0,3,5,7 ')
 
-      !<-- length of the mixing vector
+      !<-- length of the mixing vector (noco: off-diagonal interstitial part)
+      l_noco = ld(1)%fi%noco%l_noco
       len = 0
       DO layer = 1,nl
-         len = len+2*stars(layer)%ng3 +                                     &
+         len = len+(2*stars(layer)%ng3 +                                    &
      &        atoms(layer)%ntype*(MAXVAL(sphhar(layer)%nlh)+1)              &
-     &        *MAXVAL(atoms(layer)%jri)
+     &        *MAXVAL(atoms(layer)%jri))*jspins
+         IF (l_noco) len = len+2*stars(layer)%ng3
       ENDDO
-      IF (l_vacmix) len=len+nmz+2*nmz*stars(1)%ng2-1
-      len = len*jspins
+      IF (l_vacmix) len=len+(nmz+2*nmz*stars(1)%ng2-1)*jspins
 
       ALLOCATE (sm_old(len),sm(len),fsm(len),metric(len))
 
       !<-- construct the large mixing vector
       CALL priv_makevector(fileid,layers,gmpi,gfmix,ld,sphhar,atoms,stars,   &
-     &     cell,sym,jspins,dataend,datastart,sm,fsm,l_vacmix)
+     &     cell,sym,jspins,dataend,datastart,sm,fsm,l_vacmix,l_noco)
       sm_old=sm
 
       !<-- mixing
@@ -120,15 +122,15 @@
       ELSE
          CALL gf_broyden("gf_broyd",embinp%l_potmix,l_vacmix,gmpi,   &
      &        gfmix%imix,gfmix%maxiter,gfmix%alpha,fsm,stars,atoms,sphhar,   &
-     &        cell,sym,jspins,nl,sm)
+     &        cell,sym,jspins,nl,sm,l_noco)
       END IF
 
       CALL priv_decomposevector(fileid,layers,gmpi,sphhar,atoms,stars,sym,   &
-     &     embinp,jspins,sm,l_vacmix)
+     &     embinp,jspins,sm,l_vacmix,l_noco)
 
       !<-- distances via the metric
       metric = gf_apply_metric(l_vacmix,embinp%l_potmix,gmpi,stars,  &
-     &     atoms,cell,sphhar,sym,jspins,nl,fsm)
+     &     atoms,cell,sphhar,sym,jspins,nl,fsm,l_noco)
       WRITE(oUnit,*) "Distance for all layers:"
       DO layer=1,nl
          WRITE(oUnit,"('Layer:',i5,' distance=',f0.8)") layer,              &
@@ -141,7 +143,7 @@
       !<-- stepsize
       sm=sm-sm_old
       metric = gf_apply_metric(l_vacmix,embinp%l_potmix,gmpi,stars,  &
-     &     atoms,cell,sphhar,sym,jspins,nl,sm)
+     &     atoms,cell,sphhar,sym,jspins,nl,sm,l_noco)
       WRITE(oUnit,*) "Stepsize for all layers:"
       DO layer=1,nl
          WRITE(oUnit,"('Layer:',i5,' step=',f0.8)") layer,                  &
@@ -156,11 +158,13 @@
 
 
       SUBROUTINE priv_makevector(fileid,layers,gmpi,mix,ld,sphhar,atoms,     &
-     &     stars,cell,sym,jspins,dataend,datastart,sout,fsout,l_surface)
+     &     stars,cell,sym,jspins,dataend,datastart,sout,fsout,l_surface,l_noco)
 !-----------------------------------------------
+!     per layer: [pw (Re,Im), MT] for every spin, noco: off-diagonal pw
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
       IMPLICIT NONE
+      LOGICAL,INTENT(IN)        :: l_noco
       INTEGER,INTENT(IN)        :: fileid
       TYPE(t_layers),INTENT(IN) :: layers
       TYPE(t_gfmpi),INTENT(IN)  :: gmpi
@@ -195,13 +199,13 @@
       offset = 0
       DO layer=1,layers%num_layers
          datastart(layer) = offset+1
-         ALLOCATE(vpw(stars(layer)%ng3,jspins,2))
+         ALLOCATE(vpw(stars(layer)%ng3,MERGE(3,jspins,l_noco),2))
          ALLOCATE(rho(MAXVAL(atoms(layer)%jri),0:MAXVAL(sphhar(layer)%nlh),  &
      &        atoms(layer)%ntype,jspins,2))
          CALL gf_loddop(fileid,layer,jspins,atoms(layer),stars(layer),       &
-     &        sphhar(layer),rho(:,:,:,:,1),vpw(:,:,1),old=.true.)
+     &        sphhar(layer),rho(:,:,:,:,1),vpw(:,:,1),ld(layer)%fi%noco,old=.true.)
          CALL gf_loddop(fileid,layer,jspins,atoms(layer),stars(layer),       &
-     &        sphhar(layer),rho(:,:,:,:,2),vpw(:,:,2),old=.false.)
+     &        sphhar(layer),rho(:,:,:,:,2),vpw(:,:,2),ld(layer)%fi%noco,old=.false.)
 
          if (fixed(layer)) then
             rho(:,:,:,:,2)=0.0
@@ -233,6 +237,14 @@
                na = na + atoms(layer)%neq(n)
             END DO
          ENDDO
+         IF (l_noco) THEN
+            sout(offset+1:offset+stars(layer)%ng3) = REAL(vpw(:stars(layer)%ng3,3,1))
+            fsout(offset+1:offset+stars(layer)%ng3) = REAL(vpw(:stars(layer)%ng3,3,2))
+            offset = offset+stars(layer)%ng3
+            sout(offset+1:offset+stars(layer)%ng3) = AIMAG(vpw(:stars(layer)%ng3,3,1))
+            fsout(offset+1:offset+stars(layer)%ng3) = AIMAG(vpw(:stars(layer)%ng3,3,2))
+            offset = offset+stars(layer)%ng3
+         ENDIF
          dataend(layer) = offset
          DEALLOCATE(vpw,rho)
       ENDDO
@@ -265,11 +277,12 @@
 
 
       SUBROUTINE priv_decomposevector(fileid,layers,gmpi,sphhar,atoms,       &
-     &     stars,sym,gfinp,jspins,smix,l_surface)
+     &     stars,sym,gfinp,jspins,smix,l_surface,l_noco)
 !-----------------------------------------------
 !           (last modified: 2004-00-00) D. Wortmann
 !-----------------------------------------------
       IMPLICIT NONE
+      LOGICAL,INTENT(IN)        :: l_noco
       INTEGER,INTENT(IN)        :: fileid
       TYPE(t_layers),INTENT(IN) :: layers
       TYPE(t_gfmpi),INTENT(IN)  :: gmpi
@@ -288,7 +301,7 @@
 
       offset = 0
       DO layer = 1,layers%num_layers
-         ALLOCATE(vpw(stars(layer)%ng3,jspins))
+         ALLOCATE(vpw(stars(layer)%ng3,MERGE(3,jspins,l_noco)))
          ALLOCATE(rho(MAXVAL(atoms(layer)%jri),0:MAXVAL(sphhar(layer)%nlh),  &
      &        atoms(layer)%ntype,jspins))
          DO js = 1,jspins
@@ -307,9 +320,14 @@
                na = na + atoms(layer)%neq(n)
             END DO
          ENDDO
+         IF (l_noco) THEN
+            vpw(:stars(layer)%ng3,3) = CMPLX(smix(offset+1:offset+stars(layer)%ng3), &
+     &           smix(offset+1+stars(layer)%ng3:offset+2*stars(layer)%ng3))
+            offset = offset+2*stars(layer)%ng3
+         ENDIF
          CALL gf_renamepot(fileID,gmpi%iodop_subcom,layer)
          CALL gf_wrtdop(fileid,layer,jspins,gfinp,atoms(layer),stars(layer), &
-     &        sphhar(layer),rho,vpw,.FALSE.,gmpi%self_subcom)
+     &        sphhar(layer),rho,vpw,l_noco,gmpi%self_subcom)
          DEALLOCATE(vpw,rho)
       ENDDO
       if (l_surface) then

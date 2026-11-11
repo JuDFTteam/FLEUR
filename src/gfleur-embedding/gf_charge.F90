@@ -90,7 +90,8 @@
       CALL gf_renamepot(gf_cdnfile,fmpi%iodop_subcom,layer)
       CALL gf_wrtdop(GF_CDNFILE,layer,jspins,                           &
      &     gfinp,atoms,stars,sphhar,                                    &
-     &     rho(:,0:,:,:),pwd(:,:),.FALSE.,fmpi%iodop_subcom)             
+     &     rho(:,0:,:,:),pwd(:,:),noco%l_noco.AND.SIZE(pwd,2)>=3,       &
+     &     fmpi%iodop_subcom)
       !the vacuum beyond the last layer is frozen: no vacuum charge
       !>                                                                
                                                                         

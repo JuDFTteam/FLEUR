@@ -429,15 +429,31 @@ def test_noco_charge_equals_collinear(noco_z):
     assert abs(_neutrality(out_n)[0]) < 3.0
 
 
-@pytest.mark.xfail(reason="the MT density of the local spin frames is not yet rotation invariant "
-                          "(MT d charge 5.64 for x against 5.27 for z)", strict=True)
-def test_noco_charge_rotation_invariance(noco_z, noco_x):
-    """Without SOC the charge does not depend on the direction of the moment."""
-    sc = "&SC iter=1, imix=0, alpha=0.0 /"
-    out_z = noco_z("noco_inv", sc)
-    out_x = noco_x("noco_inv", sc)
-    assert _mt_total(out_x) == pytest.approx(_mt_total(out_z), abs=0.02)
-    assert _neutrality(out_x)[0] == pytest.approx(_neutrality(out_z)[0], abs=0.02)
+@pytest.fixture(scope="module")
+def noco_y(env):
+    return _noco_stack(env, "y")
+
+
+def _mt_valence(out):
+    """valence charge in the MT spheres per iteration"""
+    return [float(x) for x in re.findall(r"total valence charge in MT-spheres:\s*(\S+)", out)]
+
+
+def test_noco_charge_rotation_invariance(noco_z, noco_x, noco_y):
+    """Without SOC the SCF does not depend on the direction of the moment: three Broyden
+    iterations with the moment along x, y and z give the same charges and distances. This
+    covers the rotation of the interstitial xc potential to the global frame and the
+    off-diagonal density in the mixing vector (Re and Im)."""
+    sc = "&SC iter=3, imix=7, alpha=0.02 /"
+    out = {"z": noco_z("noco_inv", sc), "x": noco_x("noco_inv", sc), "y": noco_y("noco_inv", sc)}
+    # the potential regenerated from the gfprep density equals the bulk potential
+    for o in out.values():
+        vint = re.search(r"----> INT:\s*(\S+)\s+(\S+)\s+(\S+)", o)
+        assert max(float(v) for v in vint.groups()) < 1e-4
+    for d in ("x", "y"):
+        assert _mt_valence(out[d]) == pytest.approx(_mt_valence(out["z"]), abs=1e-4)
+        assert _neutrality(out[d]) == pytest.approx(_neutrality(out["z"]), abs=1e-4)
+        assert _distances(out[d]) == pytest.approx(_distances(out["z"]), rel=1e-4)
 
 
 @pytest.mark.skipif(not os.environ.get("GFLEUR_MPI"), reason="set GFLEUR_BINARY=<gfleur_MPI> and GFLEUR_MPI='mpirun -np 2'")

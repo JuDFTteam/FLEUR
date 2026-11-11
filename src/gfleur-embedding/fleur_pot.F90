@@ -11,6 +11,7 @@
       use m_vmt_xc
       use m_constants, only: POTDEN_TYPE_POTTOT, POTDEN_TYPE_DEN, POTDEN_TYPE_POTCOUL
       use m_vmts
+      use m_rotate_int_den_tofrom_local, only: rotate_int_den_to_local, rotate_int_den_from_local
       IMPLICIT NONE
       private
       public :: fleur_xcpot, fleur_vmts
@@ -44,7 +45,8 @@
       COMPLEX,INTENT(INOUT)        :: vpw(:,:)
       !>
       !<-- Locals
-      TYPE(t_potden) :: den,vTot,vx,vxc,exc,EnergyDen
+      TYPE(t_potden) :: den,vTot,vx,vxc,exc,EnergyDen,denRot
+      TYPE(t_input)  :: inp_int
       !>
 
       IF (ld%xcpot%exc_is_metagga()) CALL juDFT_error(                   &
@@ -86,6 +88,18 @@
       !the GF step functions are applied later)
       CALL vis_xc(ld%stars,ld%fi%sym,ld%fi%cell,den,ld%xcpot,            &
      &            ld%fi%input,ld%fi%noco,EnergyDen,vTot,vx,exc,vxc)
+      !noco: vis_xc returns the potential in the local frame of the
+      !magnetisation; rotate it back to the 2x2 potential of the global frame
+      !(the layer has no vacuum of its own: film=F skips the vacuum part)
+      IF (ld%fi%noco%l_noco) THEN
+         inp_int = ld%fi%input
+         inp_int%film = .FALSE.
+         denRot = den
+         CALL rotate_int_den_to_local(ld%fi%sym,ld%stars,ld%fi%atoms,       &
+     &        ld%sphhar,ld%fi%vacuum,ld%fi%cell,inp_int,ld%fi%noco,denRot)
+         CALL rotate_int_den_from_local(ld%stars,ld%fi%atoms,             &
+     &        ld%fi%vacuum,ld%fi%sym,inp_int,denRot,vTot)
+      ENDIF
 
       !muffin tin spheres region (adds to vTot%mt)
       CALL vmt_xc(fmpi,ld%sphhar,ld%fi%atoms,den,ld%xcpot,ld%fi%input,   &
