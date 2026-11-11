@@ -14,6 +14,7 @@
 !>
 !>    hoppings(R) = diag( H_up(R), H_down(R) ) + Htr * SOC(R)
 !>    position(R) = diag( A_up(R), A_down(R) )
+!>    bmn(R), cmn(R), fmn(R) = the same diagonal stack, with no extra term
 !>
 !>  in the order [up x num_wann, down x num_wann], which is the one the diagonal of
 !>  S_z(R=0) shows and the one the spin indices of rssocmat.1 follow.
@@ -60,7 +61,6 @@ CONTAINS
       !> broken run and says so below.
       INQUIRE (file=wannierlib_export_file('WF1_hr.dat'), exist=l_h)
       INQUIRE (file=wannierlib_export_file('WF1_r.dat'), exist=l_a)
-      IF (.NOT. (l_h .OR. l_a)) RETURN
 
       !> --- H(R). The channel-one file already carries the orbitrans name.
       IF (l_h) THEN
@@ -98,7 +98,61 @@ CONTAINS
          WRITE (oUnit, '(a,i0,a,i0,a)') 'wannierlib: assembled position as ', nw2, 'x', nw2, &
             ' from the two spin channels'
       END IF
+
+      !> --- B(R), C(R) and F(R), the three the modern theory of orbital magnetisation
+      !> reads. Same diagonal stack and no extra term.
+      !>
+      !> F = <0n|r_a r_b|Rm> is purely spatial and the two channels are orthogonal
+      !> spinors, so its up-down block vanishes by algebra: the stack is the whole
+      !> operator.
+      !>
+      !> B = <0n|H (r-R)|Rm> and C = <0n|r_a H r_b|Rm> carry an H, and in a collinear
+      !> run that H is the channel's own, without the spin-orbit term -- which is only
+      !> known after the channel loop, and is why the Hamiltonian is folded here rather
+      !> than rendered that way. So their up-down block stays empty. Measured on bcc Fe
+      !> against the spinorial route, that block holds 0.41 % of the norm of B and
+      !> 0.56 % of C, against 0.37 % for H itself. Filling it asks for B and C built
+      !> from the full Hamiltonian, which belongs in the matrix-element layer and not
+      !> in this consumer.
+      !>
+      !> Channel two keeps the layout its name promises: WF2_bmn.dat still carries the
+      !> Wannier90 header, WF2_cmn.dat and WF2_fmn.dat never had one. Getting that wrong
+      !> aborts in the reader rather than passing silently.
+      CALL orbitrans_stack_one('WF1_bmn.dat', 'WF2_bmn.dat', 'bmn', num_wann, 3, .TRUE.)
+      CALL orbitrans_stack_one('WF1_cmn.dat', 'WF2_cmn.dat', 'cmn', num_wann, 9, .FALSE.)
+      CALL orbitrans_stack_one('WF1_fmn.dat', 'WF2_fmn.dat', 'fmn', num_wann, 9, .FALSE.)
    END SUBROUTINE orbitrans_assemble_2n
+
+   !> Stack one per-channel operator into the 2N file its consumer reads, and do nothing
+   !> when the run did not render it: <operatorsRs> decides the list, not this flag.
+   SUBROUTINE orbitrans_stack_one(ch1, ch2, label, nw, ncomp, l_header2)
+      CHARACTER(LEN=*), INTENT(IN) :: ch1, ch2, label
+      INTEGER, INTENT(IN) :: nw, ncomp
+      LOGICAL, INTENT(IN) :: l_header2   !< channel two still carries the Wannier90 header
+
+      COMPLEX, ALLOCATABLE :: oup(:, :, :, :), odn(:, :, :, :), o2n(:, :, :, :)
+      INTEGER, ALLOCATABLE :: rv(:, :), rv2(:, :)
+      INTEGER :: nrpts, nrpts2
+      LOGICAL :: l_have
+      CHARACTER(LEN=24) :: fmt
+
+      INQUIRE (file=wannierlib_export_file(ch1), exist=l_have)
+      IF (.NOT. l_have) RETURN
+
+      CALL orbitrans_read_op(wannierlib_export_file(ch1), nw, ncomp, .FALSE., .FALSE., &
+                             nrpts, rv, oup)
+      CALL orbitrans_read_op(wannierlib_export_file(ch2), nw, ncomp, l_header2, .FALSE., &
+                             nrpts2, rv2, odn)
+      CALL orbitrans_same_mesh(nrpts, nrpts2, rv, rv2, ch2)
+      CALL orbitrans_stack(oup, odn, nw, nrpts, ncomp, o2n)
+
+      !> Wide enough for the components these carry, and for the digits the renderer
+      !> wrote: the consumer reads them list-directed, so only the values matter.
+      WRITE (fmt, '(a,i0,a)') '(5i5,', 2*ncomp, 'f22.8)'
+      CALL orbitrans_write_op(wannierlib_export_file(ch1), 2*nw, nrpts, ncomp, rv, o2n, fmt)
+      WRITE (oUnit, '(a,i0,a,i0,a)') 'wannierlib: assembled '//TRIM(label)//' as ', 2*nw, &
+         'x', 2*nw, ' from the two spin channels'
+   END SUBROUTINE orbitrans_stack_one
 
    !> One real-space operator file into (nw,nw,nrpts,ncomp), with its R vectors.
    !>
@@ -268,13 +322,18 @@ CONTAINS
 
    !> Write it back in the layout the file came in: R outermost, then column, then row,
    !> and no header, which is what the consumer reads from the first line.
-   SUBROUTINE orbitrans_write_op(fname, nw, nrpts, ncomp, rv, o)
+   SUBROUTINE orbitrans_write_op(fname, nw, nrpts, ncomp, rv, o, fmt)
       CHARACTER(LEN=*), INTENT(IN) :: fname
       INTEGER, INTENT(IN) :: nw, nrpts, ncomp, rv(:, :)
       COMPLEX, INTENT(IN) :: o(:, :, :, :)
+      CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: fmt   !< absent: the six-real layout
 
       INTEGER :: iu, irpt, i, j, c
       REAL :: val(2*ncomp)
+      CHARACTER(LEN=24) :: ffmt
+
+      ffmt = '(5i5,6f12.6)'
+      IF (PRESENT(fmt)) ffmt = fmt
 
       OPEN (newunit=iu, file=TRIM(fname), status='replace')
       DO irpt = 1, nrpts
@@ -284,7 +343,7 @@ CONTAINS
                   val(2*c - 1) = REAL(o(i, j, irpt, c))
                   val(2*c) = AIMAG(o(i, j, irpt, c))
                END DO
-               WRITE (iu, '(5i5,6f12.6)') rv(:, irpt), i, j, val
+               WRITE (iu, TRIM(ffmt)) rv(:, irpt), i, j, val
             END DO
          END DO
       END DO
