@@ -157,9 +157,10 @@ CONTAINS
       character(len=*),INTENT(IN) :: filename,name
       logical,INTENT(IN),OPTIONAL :: l_labels
 
-      character(len=150):: line,raw
-      integer           :: error,n,fid,nlines,nlab,i
+      character(len=150):: line,raw,header
+      integer           :: error,n,fid,nlines,nlab,i,idim,pos
       logical           :: l_lab
+      character(len=2), parameter :: mesh_dims(3) = ['nx','ny','nz']
       character(len=50),allocatable :: lname(:)
       integer,allocatable           :: lidx(:)
 
@@ -172,9 +173,17 @@ CONTAINS
          read(fid,"(a)",iostat=error) line
          IF (error.ne.0) exit
          IF (index(line,"kPointList ")>0) THEN
+            header=line
             line=line(index(line,'name="')+6:)
             line=line(:index(line,'"')-1)
             if (line==trim(name)) THEN
+               ! Mesh dimensions nx, ny, nz of the list, if given
+               do idim = 1, 3
+                  pos = index(header, ' '//mesh_dims(idim)//'="')
+                  if (pos == 0) cycle
+                  raw = header(pos+5:)
+                  this%nkpt3(idim) = evaluateFirstIntOnly(raw(:index(raw,'"')-1))
+               end do
                !Found kpointlist with correct name
                !The count attribute of the kPointList is optional in the schema,
                !so first count the kPoint elements up to the closing tag
