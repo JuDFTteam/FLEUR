@@ -75,7 +75,9 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     the atoms of the species and not the species: s and p give (1+3)*2 = 8, and d
     alone gives 5*2 = 10. The window is twice that, so the disentanglement has
     states to choose from, and #nbands replaces it without touching the
-    projections. minBand, maxBand and the numbands cutoff all follow the window.
+    projections. minBand and maxBand follow the window; the numbands cutoff does
+    not, because that one is what the SCF keeps and the SCF does not need the empty
+    bands the wannierization reads.
     """
     folder = './inputfiles/inpgen/Si_no_para/'
 
@@ -87,7 +89,7 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     assert '<wannierproj l="1" m="0" spin=""/>' in content
     assert 'numBands="16"' in content
     assert 'minBand="1" maxBand="16"' in content
-    assert 'numbands="16"' in content          # the <cutoffs> follow maxBand
+    assert 'numbands="0"' in content           # the <cutoffs> stay out of it
     clean_workdir()
 
     res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:d'])

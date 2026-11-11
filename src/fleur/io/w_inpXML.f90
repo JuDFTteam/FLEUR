@@ -316,8 +316,13 @@ CONTAINS
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
 110   FORMAT('      <cutoffs Kmax="', a, '" Gmax="', a, '" GmaxXC="', a, '" numbands="', i0, '"/>')
       
-      WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), &
-                           MERGE(wannMaxBand, input%gw_neigd, l_wannOpt)
+      !> numbands is what the SCF KEEPS, and the SCF does not need the empty bands the
+      !> wannierization reads: writing maxBand here makes every iteration carry them. On
+      !> bcc Fe that is 22 bands where the SCF picks 13 -- 1.7x the bands, and 1.11x the
+      !> time in H generation and diagonalization, over 30 iterations with everything else
+      !> held equal. It is raised at the wannierization step instead, where it is needed,
+      !> and wannierlib says so by name if it was forgotten.
+      WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
 120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '" sdNocoIR="', l1, '"/>')
@@ -900,7 +905,9 @@ WRITE (fileNum, 242) fr(1.0)
       IF (l_wannOpt) THEN
 446      FORMAT('         <bands numBands="', i0, '" minBand="', i0, '" maxBand="', i0, '"/>')
          WRITE (fileNum, '(a)') '      <!-- Set wannierize="T" once the SCF has converged. disFrozMax is an'
-         WRITE (fileNum, '(a)') '           absolute energy in Htr: E_F + 0.1837 is a frozen window at E_F + 5 eV. -->'
+         WRITE (fileNum, '(a)') '           absolute energy in Htr: E_F + 0.1837 is a frozen window at E_F + 5 eV.'
+         WRITE (fileNum, '(a)') '           Raise numbands in <cutoffs> to maxBand at the same time: the SCF picks'
+         WRITE (fileNum, '(a)') '           what it needs and pays for no more, the wannierization reads these. -->'
          IF (.NOT. l_wannProj) THEN
             WRITE (fileNum, '(a)') '      <!-- num_wann comes from the <wannierproj> of each species, which this'
             WRITE (fileNum, '(a)') '           form of -wann does not write: use -wann Fe:spd and inpgen does it. -->'

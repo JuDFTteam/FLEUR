@@ -51,7 +51,8 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
    USE m_wannierlib_gauge_results, ONLY: wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
-USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
+USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig, &
+                                    wannierlib_check_bands
    USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, &
                                      wannierlib_write_mmn, wannierlib_write_amn
    USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear, &
@@ -175,6 +176,9 @@ CONTAINS
       CALL wannierlib_build_request(this, input, l_wannierlib_spinors, request)
 
       wl = this
+      !> Before the window derivation, which is itself the first thing to index
+      !> results%eig at maxBand, and before anything reads an eigenvector.
+      CALL wannierlib_check_bands(wl, results, kpts, input, l_wannierlib_spinors)
       CALL wannierlib_default_windows(wl, results, kpts, input, l_wannierlib_spinors)
 
       CALL manifold%init(wl%num_bands, wl%num_wann, wl%dis_win_min, wl%dis_win_max, &
