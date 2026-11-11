@@ -83,8 +83,8 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     with open(res['inp.xml']) as f:
         content = f.read()
     assert content.count('<wannierproj l=') == 2
-    assert '<wannierproj l="0" m="0"/>' in content
-    assert '<wannierproj l="1" m="0"/>' in content
+    assert '<wannierproj l="0" m="0" spin=""/>' in content
+    assert '<wannierproj l="1" m="0" spin=""/>' in content
     assert 'numBands="16"' in content
     assert 'minBand="1" maxBand="16"' in content
     assert 'numbands="16"' in content          # the <cutoffs> follow maxBand
@@ -94,7 +94,7 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     with open(res['inp.xml']) as f:
         content = f.read()
     assert content.count('<wannierproj l=') == 1
-    assert '<wannierproj l="2" m="0"/>' in content
+    assert '<wannierproj l="2" m="0" spin=""/>' in content
     assert 'numBands="20"' in content
     clean_workdir()
 

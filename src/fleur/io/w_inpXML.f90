@@ -714,7 +714,7 @@ WRITE (fileNum, 242) fr(1.0)
                WRITE (*, 903) iSpecies, TRIM(speciesName), &
                   TRIM(ADJUSTL(namat_const(nz_w)))
             END IF
-901         FORMAT('         <wannierproj l="', i0, '" m="0"/>')
+901         FORMAT('         <wannierproj l="', i0, '" m="0" spin=""/>')
 902         FORMAT('   species ', i0, '  "', a, '"  ', a, '  atoms ', i0, &
                    '   ', a, ' -> ', i0)
 903         FORMAT('   species ', i0, '  "', a, '"  ', a, &

@@ -496,7 +496,6 @@ CONTAINS
 
     CHARACTER(LEN=200) :: xPathA
     CHARACTER(LEN=200) :: xPathP
-    CHARACTER(LEN=32) :: spin_label
     CHARACTER(LEN=64) :: dom_name
     INTEGER :: idom, jdom, dom_npts
     CHARACTER(LEN=255) :: sbuf
@@ -757,6 +756,12 @@ CONTAINS
           !> copies carry the same (l, j, m_j), and the j-resolved builder ignores the spin
           !> index, so the pair came out as two identical columns and A(k) lost rank.
           !> 0 means "either", which is what makes the expansion split it in two.
+          !> The only place @spin is read. A second, unguarded read used to follow the
+          !> rest of the attributes and overwrite this one by its first character, which
+          !> turned the accepted "1", "+1" and "-1" back into 0 -- a projection asked for
+          !> on one channel came out on both. It also asked for the attribute whether or
+          !> not it was there, and an absent xPath goes through judft_warn, which is fatal
+          !> unless -warn_only: a <wannierproj> written without spin= aborted the run.
           this%proj(ip)%spin = 0
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@spin') == 1) THEN
             sbuf = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
@@ -825,16 +830,6 @@ CONTAINS
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftZ') == 1) THEN
             this%proj(ip)%shift(3) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftZ'))
           END IF
-
-          spin_label = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
-          SELECT CASE (spin_label(1:1))
-          CASE ('u', 'U')
-            this%proj(ip)%spin = 1
-          CASE ('d', 'D')
-            this%proj(ip)%spin = -1
-          CASE DEFAULT
-            this%proj(ip)%spin = 0
-          END SELECT
         END DO
       END DO
     END IF
