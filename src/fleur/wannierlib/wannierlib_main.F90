@@ -57,6 +57,7 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
                                      wannierlib_write_mmn, wannierlib_write_amn
    USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear, &
                                  wgauge_perpmag_collinear
+   USE m_wannierlib_export_orbitrans_2n, ONLY: orbitrans_assemble_2n
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_atoms
@@ -345,6 +346,14 @@ CONTAINS
       !> it. Here and not in the channel loop because that block spans both channels.
       IF (melem%n_channels == 2 .AND. request%has_op_r('exchangeTorque')) &
          CALL wgauge_perpmag_collinear(melem%tx0, kpts, distk, fmpi)
+      !> The 2N Hamiltonian the transport code reads. Here and not in the channel loop,
+      !> although that is where the consumer's other files are laid down: the spin-orbit
+      !> operator that has to go inside it is written just above, after the loop, so while
+      !> the loop runs there is nothing to fold in and the Hamiltonian would go out
+      !> diagonal in spin -- which costs the transverse spin conductivities and says
+      !> nothing about it.
+      IF (melem%n_channels == 2 .AND. this%export%orbitrans .AND. fmpi%irank == 0) &
+         CALL orbitrans_assemble_2n(this%num_wann)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the
