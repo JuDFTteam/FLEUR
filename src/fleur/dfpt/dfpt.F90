@@ -16,6 +16,7 @@ MODULE m_dfpt
    USE m_types_BEC
    USE m_types_bfield
    USE m_dfpt_postprocess_pot
+   USE m_dfpt_dielten_static
    USE m_desymmetrizer
    USE m_outcdn
    USE m_plot
@@ -188,7 +189,12 @@ CONTAINS
             call timestart("construction of el-ph matrix elements")
             call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
             call timestop("construction of el-ph matrix elements")
-         end if 
+         end if
+         if (fi%dfpt%l_dielten_static .and. fmpi%irank==0) then
+            call timestart("static dielectric tensor")
+            call dfpt_dielten_static(fi)
+            call timestop("static dielectric tensor")
+         end if
       end if 
 
 

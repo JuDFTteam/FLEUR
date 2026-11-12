@@ -684,9 +684,9 @@ WRITE (fileNum, 242) fr(1.0)
          WRITE (fileNum, 444) dfpt%l_band, dfpt%l_dos, dfpt%l_sumrule_intp, dfpt%l_bornhuang, dfpt%l_polar, &
                               TRIM(ADJUSTL(kptsSelection(1)))
 
-445      FORMAT('         <postprocess l_elph="', l1,  &
+445      FORMAT('         <postprocess l_elph="', l1, '" l_dielten_static="', l1, &
                 '" l_write_epw="', l1, '" epw_prefix="', a, '"/>')
-         WRITE (fileNum, 445) dfpt%l_elph, dfpt%l_write_epw, TRIM(dfpt%epw_prefix)
+         WRITE (fileNum, 445) dfpt%l_elph, dfpt%l_dielten_static, dfpt%l_write_epw, TRIM(dfpt%epw_prefix)
 
          WRITE (fileNum, '(a)') '      </dfpt>'
       ENDIF

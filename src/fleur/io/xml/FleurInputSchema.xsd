@@ -4259,6 +4259,11 @@
             <xsd:documentation>Calculate electron-phonon coupling.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute name="l_dielten_static" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Calculate the static dielectric tensor from diel_tensor, born_eff_charge and the Gamma dynamical matrix in dynmat.hdf.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="bandWindow" type="BandWindowRestricted" use="optional">
       <xsd:annotation>
          <xsd:documentation>

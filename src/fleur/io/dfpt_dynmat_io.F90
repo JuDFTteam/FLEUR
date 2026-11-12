@@ -97,13 +97,15 @@ contains
 #endif
    end subroutine write_dynmat_q
 
-   subroutine read_dynmat_q(filename, iQ, dynMat, qvec)
-      !! Reads the dynamical matrix of q-point iQ from a dynmat HDF file.
+   subroutine read_dynmat_q(filename, iQ, dynMat, qvec, eigVals, eigVecs)
+      !! Reads the dynamical matrix of q-point iQ from a dynmat HDF file, optionally with its eigenvalues and eigenvectors.
 
-      character(len=*), intent(in)  :: filename
-      integer,          intent(in)  :: iQ
-      complex,          intent(out) :: dynMat(:,:)
-      real, optional,   intent(out) :: qvec(3)
+      character(len=*),  intent(in)  :: filename
+      integer,           intent(in)  :: iQ
+      complex,           intent(out) :: dynMat(:,:)
+      real,    optional, intent(out) :: qvec(3)
+      real,    optional, intent(out) :: eigVals(:)
+      complex, optional, intent(out) :: eigVecs(:,:)
 
 #ifdef CPP_HDF
       integer(HID_T)                :: fid, gid
@@ -119,11 +121,19 @@ contains
       call io_read_var(gid, 'dynmat', buf)
       dynMat = cmplx(buf(1,:,:), buf(2,:,:))
       if (present(qvec)) call io_read_attreal1(gid, 'qvec', qvec)
+      if (present(eigVals)) call io_read_var(gid, 'eigenvalues', eigVals)
+      if (present(eigVecs)) then
+         if (.not. io_dataexists(gid, 'eigenvectors')) call judft_error("No eigenvectors stored for q-point "//int2str(iQ)//" in "//trim(filename), calledby="read_dynmat_q")
+         call io_read_var(gid, 'eigenvectors', buf)
+         eigVecs = cmplx(buf(1,:,:), buf(2,:,:))
+      end if
       call io_gclose(gid)
       call io_hdfclose(fid)
 #else
       dynMat = cmplx(0.0, 0.0)
       if (present(qvec)) qvec = 0.0
+      if (present(eigVals)) eigVals = 0.0
+      if (present(eigVecs)) eigVecs = cmplx(0.0, 0.0)
       call judft_error("DFPT dynmat IO requires FLEUR compiled with HDF5.", calledby="read_dynmat_q")
 #endif
    end subroutine read_dynmat_q

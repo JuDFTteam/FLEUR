@@ -36,6 +36,7 @@ src/fleur/dfpt/dfpt_magsusc.F90
 src/fleur/dfpt/dfpt_born_effcharge.F90
 src/fleur/dfpt/dfpt_potdenLocal.F90
 src/fleur/dfpt/dfpt_NAC.F90
+src/fleur/dfpt/dfpt_dielten_static.F90
 src/fleur/dfpt/types_sternheimerJob.F90
 src/fleur/dfpt/types_dfpt_scf.F90
 src/fleur/dfpt/types_phonon.F90

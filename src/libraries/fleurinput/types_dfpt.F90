@@ -32,6 +32,7 @@ MODULE m_types_dfpt
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       LOGICAL :: l_postprocess = .FALSE. ! Postprocessing of charge density response 
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
+      LOGICAL :: l_dielten_static = .FALSE. ! Static dielectric tensor 
       LOGICAL :: l_sumrule_scf  = .FALSE. ! Apply sumrule for dynmats in scf calculation 
       LOGICAL :: l_sumrule_intp  = .FALSE. ! Apply sumrule for dynmats in interpolation calculation
       LOGICAL :: l_bornhuang  = .FALSE. ! Project the force constants onto the invariance conditions
@@ -94,6 +95,7 @@ CONTAINS
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
       CALL mpi_bc(this%l_postprocess, rank, mpi_comm)
       CALL mpi_bc(this%l_elph, rank, mpi_comm)
+      CALL mpi_bc(this%l_dielten_static, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule_scf, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule_intp, rank, mpi_comm)
       CALL mpi_bc(this%l_bornhuang, rank, mpi_comm)
@@ -377,6 +379,12 @@ CONTAINS
            this%l_elph  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@l_elph'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@l_dielten_static')
+
+         IF (numberNodes == 1) THEN
+           this%l_dielten_static  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@l_dielten_static'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@i_integration')
 
          IF (numberNodes == 1) THEN
@@ -533,7 +541,16 @@ CONTAINS
       if (allocated(this%qvec%bk)) then
         if (this%qvec%nkpt .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_dfpt.F90")
       end if
-    end if 
+    end if
+
+    if (this%l_postprocess .and. this%l_dielten_static) then
+      if (.not. allocated(this%qvec%bk)) call juDFT_error("The static dielectric tensor needs the Gamma point in the phonon q-point list",calledby="types_dfpt.F90")
+      if (.not. any(norm2(this%qvec%bk(:,:this%qvec%nkpt),dim=1) < 1e-8)) &
+        call juDFT_error("The static dielectric tensor needs the Gamma point in the phonon q-point list",calledby="types_dfpt.F90")
+      ! the Gamma dynmat written in the same call would include the NAC
+      if (this%l_scf .and. this%l_phonon .and. this%l_polar) &
+        call juDFT_error("The static dielectric tensor needs the Gamma dynamical matrix without NAC, set l_polar=F",calledby="types_dfpt.F90")
+    end if
 
    END SUBROUTINE precheck_dfpt
 END MODULE m_types_dfpt
