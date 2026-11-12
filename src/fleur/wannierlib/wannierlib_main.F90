@@ -47,7 +47,7 @@ MODULE m_wannierlib_main
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
-   USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans
+   USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans, orbitrans_assemble_2n
    USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
    USE m_wannierlib_gauge_results, ONLY: wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
@@ -57,7 +57,6 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
                                      wannierlib_write_mmn, wannierlib_write_amn
    USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear, &
                                  wgauge_perpmag_collinear
-   USE m_wannierlib_export_orbitrans_2n, ONLY: orbitrans_assemble_2n
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_atoms
