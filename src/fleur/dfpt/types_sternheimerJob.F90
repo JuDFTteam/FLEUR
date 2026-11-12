@@ -54,7 +54,7 @@ module m_types_sternheimerJob
     subroutine init_sternheimerJob(this,fi,l_phonon,l_BEC,l_efield,l_bfield)
 
         
-        class(t_sternheimerJob),intent(inout) :: this
+        class(t_sternheimerJob),intent(out) :: this ! intent(out) resets all components on entry
         type(t_fleurinput),intent(in) :: fi 
         logical,optional,intent(in)   :: l_phonon 
         logical,optional,intent(in)   :: l_BEC 
@@ -66,31 +66,22 @@ module m_types_sternheimerJob
         integer :: q_start, q_stop
         ! we currently work with logicals to circumvent circular dependence
         ! it would be nicer to work with select type(t_dfpt_scf) 
-        logical :: l_ph = .false. 
-        logical :: l_borncharges  = .false. 
-        logical :: l_efield_pert  = .false. 
-        logical :: l_bfield_pert  = .false. 
+        ! no initializers in the declaration, they would imply SAVE
+        logical :: l_ph, l_borncharges, l_efield_pert, l_bfield_pert
 
+        l_ph          = .false.
+        l_borncharges = .false.
+        l_efield_pert = .false.
+        l_bfield_pert = .false.
         if (present(l_phonon)) l_ph = l_phonon
         if (present(l_BEC)) l_borncharges = l_BEC
         if (present(l_efield)) l_efield_pert = l_efield
         if (present(l_bfield)) l_bfield_pert = l_bfield
 
-        if (allocated(this%iJobList)) deallocate(this%iJobList)
-        if (allocated(this%iQList)) deallocate(this%iQList)
-        if (allocated(this%iDirList)) deallocate(this%iDirList)
-        if (allocated(this%iDtypeList)) deallocate(this%iDtypeList)
-        if (allocated(this%needs_postprocessing)) deallocate(this%needs_postprocessing)
-        if (allocated(this%needs_eigen)) deallocate(this%needs_eigen)
+        if (count([l_ph, l_borncharges, l_efield_pert, l_bfield_pert]) /= 1) &
+            call juDFT_error("A Sternheimer job needs exactly one perturbation", calledby="init_sternheimerJob")
 
-
-
-        this%l_phonon      = .false.
-        this%l_efield      = .false.
-        this%l_BEC         = .false.
-        this%l_bfield      = .false.
-
-        if (l_ph) then 
+        if (l_ph) then
             this%l_phonon = .true.
             this%l_IBScorrection = .true. 
 
