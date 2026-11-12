@@ -233,8 +233,10 @@ CONTAINS
          !DEALLOCATE(vcoul%pw_w)
       ELSE
          ! TODO: Write here something for the gradient. It does not need pw(_w)-stuff.
+         
+         IF (noco%l_noco.AND.any(noco%l_unrestrictMT)) CALL get_mt_global_perturbation(atoms,sphhar,sym,denRot,den1Rot,theta1_mt,phi1_mt,noco,vTot,dfptvTot)
       END IF
-      
+      ! THis structure is getting messier and messier, it will be refactored at some point
       CALL dfptvTot%distribute(fmpi%mpi_comm)
 
   END SUBROUTINE dfpt_vgen

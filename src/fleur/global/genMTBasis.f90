@@ -192,7 +192,7 @@ CONTAINS
              IF (largestCoreMainQuantumNumbers(l).GT.0) THEN
                 coreFun = 0.0
                 energy = find_enpara(.TRUE.,l,iType,jspin,largestCoreMainQuantumNumbers(l),atoms,enpara%vr(:,itype,jspin),e_lo,e_up,.TRUE.)
-                CALL radsra(energy,l,enpara%vr(:,itype,jspin),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),c_light(1.0), us,dus,nodeu,coreFun(:,1),coreFun(:,2))
+                CALL radsra(energy,l,enpara%vr(:,itype,jspin),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),c_light(1.0),atoms%zatom(iType), us,dus,nodeu,coreFun(:,1),coreFun(:,2))
                 DO iFunA = 1, nMTBasisFcts
                    productVals = 0.0
                    DO i = 1, atoms%jri(iType)

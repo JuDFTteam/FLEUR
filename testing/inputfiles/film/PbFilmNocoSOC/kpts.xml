@@ -1,0 +1,26 @@
+         <kPointLists>
+            <kPointList name="default4" count="4" nx="4" ny="4" nz="1" type="mesh">
+               <kPoint weight="     4.0000000000000">   1.00/8.00    1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   1.00/8.00    3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   3.00/8.00    1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   3.00/8.00    3.00/8.00    0.00/2.00</kPoint>
+            </kPointList>
+            <kPointList name="default" count="16" nx="4" ny="4" nz="1" type="mesh">
+               <kPoint weight="     4.0000000000000">   1.00/8.00    1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   1.00/8.00    3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   3.00/8.00    1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   3.00/8.00    3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -1.00/8.00    1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -1.00/8.00    3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -3.00/8.00    1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -3.00/8.00    3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   1.00/8.00   -1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   1.00/8.00   -3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   3.00/8.00   -1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">   3.00/8.00   -3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -1.00/8.00   -1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -1.00/8.00   -3.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -3.00/8.00   -1.00/8.00    0.00/2.00</kPoint>
+               <kPoint weight="     4.0000000000000">  -3.00/8.00   -3.00/8.00    0.00/2.00</kPoint>
+            </kPointList>
+         </kPointLists>

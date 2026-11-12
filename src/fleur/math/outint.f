@@ -28,8 +28,9 @@ c     .. Arguments ..
       REAL   ,INTENT(OUT) :: a0(5),b0(5),a(msh),b(msh)
 c     ..
 c     .. local scalars ..
-      REAL astr,atk,aw,bstr,btk,bw,da1,da2,da3,da4,db1,db2,db3,db4,g,gm,
-     +     gp,h3,q11,q22,r,rp12,rp21,test,vt
+      REAL astr,atk,bstr,btk,da1,da2,da3,da4,db1,db2,db3,db4,g,gm,
+     +     gp,h3,q11,q22,r,rp12,rp21
+      REAL a1s,b1s,r21s,r210,r12s,r120,det1
       INTEGER i,k,kim,n
       REAL :: da(5),db(5)
 c     ..
@@ -63,37 +64,27 @@ cta-
       gm = g - s*fkap
       q11 = -gm
       q22 = -gp
-c     25 april,1978
-c     simple self-consistent starting procedure:
+c     first-order Frobenius start, a = astr + a1s*r, b = bstr + b1s*r,
+c     with r*v = -z + v1*r near the nucleus
       astr = sqrt(abs(gp))
       bstr = sqrt(abs(gm))
+      r210 = cis*z
+      r21s = (cis* (e*rnot-vr(1))-r210)/rnot
+      r12s = -r21s - 2*cs
+      r120 = -r210
+      det1 = (1.0-q11)* (1.0-q22) - r120*r210
+      a1s = ((1.0-q22)*r12s*bstr+r120*r21s*astr)/det1
+      b1s = ((1.0-q11)*r21s*astr+r210*r12s*bstr)/det1
       r = rnot
       do 10 i = 1,5
-         a(i) = astr
-         b(i) = bstr
-         rp21 = cis* (e*r-vr(i))
-         rp12 = -rp21 - 2*cs*r
-         a0(i) = h* (q11*astr+rp12*bstr)
-         b0(i) = h* (q22*bstr+rp21*astr)
-         r = r*d
-   10 continue
-      test = 1.e-6
-   20 vt = 0
-      r = rnot
-      r = rnot*d
-      do 30 i = 2,5
-         aw = a(i-1) + .5e0* (a0(i-1)+a0(i))
-         bw = b(i-1) + .5e0* (b0(i-1)+b0(i))
-         vt = vt + abs(aw-a(i))/astr + abs(bw-b(i))/bstr
-         a(i) = 0.5e0* (a(i)+aw)
-         b(i) = 0.5e0* (b(i)+bw)
+         a(i) = astr + a1s*r
+         b(i) = bstr + b1s*r
          rp21 = cis* (e*r-vr(i))
          rp12 = -rp21 - 2*cs*r
          a0(i) = h* (q11*a(i)+rp12*b(i))
          b0(i) = h* (q22*b(i)+rp21*a(i))
          r = r*d
-   30 continue
-      if(vt.gt.test) go to 20
+   10 continue
       r = rnot
       do 40 i = 1,5
          rp21 = cis* (e*r-vr(i))

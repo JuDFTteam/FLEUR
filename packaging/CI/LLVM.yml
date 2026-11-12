@@ -1,5 +1,5 @@
 build-llvm:
-  image: iffregistry.fz-juelich.de/fleur/fleur:LLVM
+  image: iffregistry.fz-juelich.de/fleur/fleur:LLVM_23102026
   stage: build
   artifacts:
      paths:
@@ -17,7 +17,7 @@ build-llvm:
       - if: $CI_TASKS =~ /all/
 
 test-llvm:
-  image: iffregistry.fz-juelich.de/fleur/fleur:LLVM
+  image: iffregistry.fz-juelich.de/fleur/fleur:LLVM_23102026
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.llvm"

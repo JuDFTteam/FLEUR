@@ -39,13 +39,20 @@ CONTAINS
     INTEGER,INTENT(in)           :: jspins
     LOGICAL,INTENT(IN)           :: l_fulllmax
 
-    INTEGER :: n,l,m,lo,s,nb,sns
+    INTEGER :: n,l,m,lo,s,nb,sns,max_nrf
     INTEGER :: boff(0:atoms%lmaxd)
+    INTEGER :: nrf(0:atoms%lmaxd)
 
     IF (ALLOCATED(td%h)) DEALLOCATE(td%h,td%h_loc_nonsph,td%ind,td%nbas,td%lrange,td%e_shift,td%radfun,td%h_sph_extra)
     td%lrange = MERGE(atoms%lmax,atoms%lnonsph,l_fulllmax)
     ALLOCATE(td%nbas(atoms%ntype))
-    ALLOCATE(td%ind(MAXVAL([(atoms%num_radial_functions_per_l(n),n=1,atoms%ntype)]),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype),source=-1)
+    ! Materialize each array result outside the implied-do constructor for NVHPC.
+    max_nrf = 0
+    DO n = 1,atoms%ntype
+       nrf = atoms%num_radial_functions_per_l(n)
+       max_nrf = MAX(max_nrf,MAXVAL(nrf))
+    END DO
+    ALLOCATE(td%ind(max_nrf,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype),source=-1)
     DO n = 1,atoms%ntype
        IF (ANY(atoms%llo(:atoms%nlo(n),n)>td%lrange(n))) &
           CALL judft_error("Local orbital with l larger than the non-spherical cutoff lnonsph",calledby="types_tlmplm")

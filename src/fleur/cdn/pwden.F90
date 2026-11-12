@@ -104,7 +104,7 @@ CONTAINS
       TYPE(t_fftGrid) :: stepFct
       INTEGER nu, iv, ir, istr, i, j
       INTEGER idens, ndens, ispin, iGp, iG, gVec(3), gInd
-      REAL q0, q0_11, q0_22, norm, xk(3)
+      REAL q0, q0_11, q0_22, norm, xk(3), fac
       REAL s, stateRadius, stateFFTRadius, stateFFTExtendedRadius
       COMPLEX x
       REAL, PARAMETER:: tol_3 = 1.0e-3
@@ -191,6 +191,12 @@ CONTAINS
                ALLOCATE(stateBqIndices(lapwq%nv(2)))
                CALL stateq%fillStateIndexArray(lapwq,1,stateqIndices)
                CALL stateBq%fillStateIndexArray(lapwq,2,stateBqIndices)
+               IF (l_minusq) THEN
+                  ALLOCATE(statemqIndices(lapwmq%nv(1)))
+                  ALLOCATE(stateBmqIndices(lapwmq%nv(2)))
+                  CALL statemq%fillStateIndexArray(lapwmq,1,statemqIndices)
+                  CALL stateBmq%fillStateIndexArray(lapwmq,2,stateBmqIndices)
+               END IF
             END IF
          ELSE
             ALLOCATE(stateIndices(lapw%nv(jspin)))
@@ -202,6 +208,12 @@ CONTAINS
                ALLOCATE(stateBqIndices(lapwq%nv(jspin)))
                CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
                CALL stateBq%fillStateIndexArray(lapwq,jspin,stateBqIndices)
+               IF (l_minusq) THEN
+                  ALLOCATE(statemqIndices(lapwmq%nv(jspin)))
+                  ALLOCATE(stateBmqIndices(lapwmq%nv(jspin)))
+                  CALL statemq%fillStateIndexArray(lapwmq,jspin,statemqIndices)
+                  CALL stateBmq%fillStateIndexArray(lapwmq,jspin,stateBmqIndices)
+               END IF
             END IF
          ENDIF
       ELSE
@@ -214,7 +226,6 @@ CONTAINS
          END IF
          CALL chargeDen%init(cell,sym,stateFFTExtendedRadius+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
-         ! TODO: Shouldn't there be a starsq here for DFPT?
          CALL chargeDen%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
             CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)
@@ -268,6 +279,7 @@ CONTAINS
 
       wtf(:ne) = we(:ne)/cell%omtil
       IF (l_dfpt) wtf1(:ne) = we1(:ne)/cell%omtil
+      fac = MERGE(1.0, 2.0, l_minusq) ! K: -q term = image of the +q term
 
       ! LOOP OVER OCCUPIED STATES
       DO nu = 1, ne
@@ -281,6 +293,10 @@ CONTAINS
                IF (l_dfpt) THEN
                   CALL stateq%putComplexStateOnGrid(lapwq, 1, zMat1%data_c(1:lapwq%nv(1),nu))
                   CALL stateBq%putComplexStateOnGrid(lapwq, 2, zMat1%data_c(lapwq%nv(1) + atoms%nlotot+1:lapwq%nv(1) + atoms%nlotot+lapwq%nv(2),nu))
+                  IF (l_minusq) THEN
+                     CALL statemq%putComplexStateOnGrid(lapwmq, 1, zMat1m%data_c(1:lapwmq%nv(1),nu))
+                     CALL stateBmq%putComplexStateOnGrid(lapwmq, 2, zMat1m%data_c(lapwmq%nv(1) + atoms%nlotot+1:lapwmq%nv(1) + atoms%nlotot+lapwmq%nv(2),nu))
+                  END IF
                END IF
             ELSE
                CALL state%putComplexStateOnGrid(lapw, jspin, zMat%data_c(1:lapw%nv(jspin),nu))
@@ -288,6 +304,10 @@ CONTAINS
                IF (l_dfpt) THEN
                   CALL stateq%putComplexStateOnGrid(lapwq, jspin, zMat1%data_c(1:lapwq%nv(1),nu))
                   CALL stateBq%putComplexStateOnGrid(lapwq, jspin, zMat1%data_c(lapwq%nv(1) + atoms%nlotot+1:lapwq%nv(1) + atoms%nlotot+lapwq%nv(jspin),nu))
+                  IF (l_minusq) THEN
+                     CALL statemq%putComplexStateOnGrid(lapwmq, jspin, zMat1m%data_c(1:lapwmq%nv(1),nu))
+                     CALL stateBmq%putComplexStateOnGrid(lapwmq, jspin, zMat1m%data_c(lapwmq%nv(1) + atoms%nlotot+1:lapwmq%nv(1) + atoms%nlotot+lapwmq%nv(jspin),nu))
+                  END IF
                END IF
             END IF
 
@@ -296,6 +316,10 @@ CONTAINS
             IF (l_dfpt) THEN
                CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
                CALL fft_interface(3, stateBq%dimensions(:), stateBq%grid, forw, stateBqIndices)
+               IF (l_minusq) THEN
+                  CALL fft_interface(3, statemq%dimensions(:), statemq%grid, forw, statemqIndices)
+                  CALL fft_interface(3, stateBmq%dimensions(:), stateBmq%grid, forw, stateBmqIndices)
+               END IF
             END IF
 
             ! In the non-collinear case rho becomes a hermitian 2x2
@@ -311,16 +335,22 @@ CONTAINS
             ELSE
                !DFPT NOCO
                DO ir = 0, rhomatGrid(1)%gridLength - 1
-                  !In this order: rho^1_11, rho^1_22, m^1_x/2, m^1_y/2
-                  rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
-                  rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * 2 * CONJG(stateB%grid(ir)) * stateBq%grid(ir)
-                  rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * (CONJG(state%grid(ir))*stateBq%grid(ir) + CONJG(stateB%grid(ir))*stateq%grid(ir))
-                  !rhomatGrid(4)corresponding to my^1 becomes relevant for -q solve
+                  !In this order: rho^1_11, rho^1_22, rho^1_12 (block (2,1)), rho^1_21 (block (1,2))
+                  rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * fac * CONJG(state%grid(ir))*stateq%grid(ir)
+                  rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * fac * CONJG(stateB%grid(ir))*stateBq%grid(ir)
+                  rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * fac * CONJG(stateB%grid(ir))*stateq%grid(ir)
+                  rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * fac * CONJG(state%grid(ir))*stateBq%grid(ir)
+                  IF (l_minusq) THEN
+                     rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * CONJG(statemq%grid(ir))*state%grid(ir)
+                     rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * CONJG(stateBmq%grid(ir))*stateB%grid(ir)
+                     rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * CONJG(stateBmq%grid(ir))*state%grid(ir)
+                     rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * CONJG(statemq%grid(ir))*stateB%grid(ir)
+                  END IF
                   IF (norm2(q_dfpt)<1e-8) THEN
                      rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
                      rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf1(nu) * ABS(stateB%grid(ir))**2
-                     rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf1(nu) * (REAL(state%grid(ir))*REAL(stateB%grid(ir)) + AIMAG(state%grid(ir))*AIMAG(stateB%grid(ir)))
-                     !rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf1(nu) * (REAL(state%grid(ir))*AIMAG(stateB%grid(ir)) - AIMAG(state%grid(ir))*REAL(stateB%grid(ir)))
+                     rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf1(nu) * CONJG(stateB%grid(ir))*state%grid(ir)
+                     rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf1(nu) * CONJG(state%grid(ir))*stateB%grid(ir)
                   END IF
                END DO
             END IF
@@ -482,7 +512,6 @@ CONTAINS
          IF (noco%l_noco) THEN
             CALL rhomatGrid(idens)%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
          ELSE
-            ! TODO: Shouldn't there be a starsq here for DFPT?
             CALL chargeDen%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
             IF (input%l_f) THEN
                CALL ekinGrid%takeFieldFromGrid(stars, ecwk, stateFFTRadius+0.0005)
@@ -532,27 +561,39 @@ CONTAINS
             DO istr = 1, stars%ng3_fft
                den%pw(istr, ispin) = den%pw(istr, ispin) + cwk(istr)
             ENDDO
+         ELSE IF (l_dfpt) THEN
+            ! idens 3: block (2,1) = rho_12, idens 4: block (1,2) = rho_21
+            IF (l_minusq) THEN
+               DO istr = 1, stars%ng3_fft
+                  den%pw(istr, idens) = den%pw(istr, idens) + cwk(istr)
+               ENDDO
+            ELSE
+               ! K: both off-diagonal blocks are averaged into rho_12 and rho_21
+               DO istr = 1, stars%ng3_fft
+                  den%pw(istr, 3:4) = den%pw(istr, 3:4) + 0.5*cwk(istr)
+               ENDDO
+            END IF
          ELSE IF (idens .EQ. 3) THEN
             ! add to off-diag. part of density matrix (only non-collinear)
             DO istr = 1, stars%ng3_fft
                den%pw(istr, 3) = den%pw(istr, 3) + cwk(istr)
             ENDDO
-            IF (l_dfpt) THEN
-               ! add to other off-diag. part of density matrix (only non-collinear)
-               DO istr = 1, stars%ng3_fft
-                  den%pw(istr, 4) = den%pw(istr, 4) + cwk(istr)
-               ENDDO
-            END IF
+            !IF (l_dfpt) THEN
+            !   ! add to other off-diag. part of density matrix (only non-collinear)
+            !   DO istr = 1, stars%ng3_fft
+            !      den%pw(istr, 4) = den%pw(istr, 4) + cwk(istr)
+            !   ENDDO
+            !END IF
          ELSE
             ! add to off-diag. part of density matrix (only non-collinear)
             DO istr = 1, stars%ng3_fft
                den%pw(istr, 3) = den%pw(istr, 3) - ImagUnit*cwk(istr)
             ENDDO
-            IF (l_dfpt) THEN
-               DO istr = 1, stars%ng3_fft
-                  den%pw(istr, 4) = den%pw(istr, 4) + ImagUnit*cwk(istr)
-               ENDDO
-            END IF
+            !IF (l_dfpt) THEN
+            !   DO istr = 1, stars%ng3_fft
+            !      den%pw(istr, 4) = den%pw(istr, 4) + ImagUnit*cwk(istr)
+            !   ENDDO
+            !END IF
          ENDIF
       ENDDO
 

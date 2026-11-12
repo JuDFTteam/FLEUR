@@ -1,5 +1,5 @@
 build-intel:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   stage: build
   artifacts:
      paths:
@@ -17,7 +17,7 @@ build-intel:
       - if: $CI_TASKS =~ /all/    
 
 test-intel:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel"
@@ -28,38 +28,9 @@ test-intel:
       - if: $CI_TASKS =~ /intel/    
       - if: $CI_TASKS =~ /all/    
 
-build-intel-ifx:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
-  stage: build
-  artifacts:
-     paths:
-       - build.intel.ifx
-     expire_in: 12h
-  script:
-    - cd $CI_PROJECT_DIR
-    - FC=ifx ./configure.sh -l intel.ifx -c auto $FLEUR_CI_FEATURE_OPTIONS
-    - ./packaging/CI/check-configured-features.sh build.intel.ifx
-    - cd build.intel.ifx
-    - make -j 2
-  allow_failure: true
-  rules:
-      - if: $CI_TASKS =~ /intel/
-      - if: $CI_TASKS =~ /all/    
-
-test-intel-ifx:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
-  extends: .test-fleur
-  variables:
-    BUILD_FOLDER: "build.intel.ifx"
-  needs: 
-    - build-intel-ifx
-  allow_failure: true
-  rules:
-      - if: $CI_TASKS =~ /intel/    
-      - if: $CI_TASKS =~ /all/    
   
 build-intel-debug:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   stage: build
   artifacts:
      paths:
@@ -77,7 +48,7 @@ build-intel-debug:
       - if: $CI_TASKS =~ /all/    
 
 test-intel-debug:
-  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI_23102026
   extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel.debug"

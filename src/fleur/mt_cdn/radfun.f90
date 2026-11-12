@@ -53,7 +53,7 @@ CONTAINS
     !
     !--->    calculate normalized function at e
     CALL radsra(e,l,vr,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),&
-         c, usdus%us(l,itype,jsp),usdus%dus(l,itype,jsp),nodeu,f(:,1),f(:,2))
+         c,atoms%zatom(itype), usdus%us(l,itype,jsp),usdus%dus(l,itype,jsp),nodeu,f(:,1),f(:,2))
     !
     !--->    calculate orthogonal energy derivative at e
     CALL radsrd(e,l,vr,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),&

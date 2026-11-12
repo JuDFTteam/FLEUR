@@ -39,6 +39,7 @@ MODULE m_cdngen
    USE m_xas_driver, ONLY: xas_run_driver
    USE m_types_moessbauerParams
    USE m_force_sf
+   USE m_spin_sym, ONLY : inplane_spin_sym_factor
    USE m_types_atoms
    USE m_types_banddos
    USE m_types_cdnval
@@ -144,7 +145,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
 
 
    !Local Scalars
-   REAL                  :: fix, qtot, dummy, eFermiPrev
+   REAL                  :: fix, qtot, dummy, eFermiPrev, offdFac
    INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
@@ -220,6 +221,15 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart,dmdos=dmdos, &
                   l_kinEnergyDen=xcpot%is_MetaGGA(), kinEnergyDen=EnergyDen)
    END DO
+   ! With SOC the symmetry operations also rotate the spin: correct the scalar
+   ! star/lattice-harmonic projection of the spin-offdiagonal density
+   IF (noco%l_noco .AND. noco%l_soc) THEN
+      offdFac = inplane_spin_sym_factor(sym, cell)
+      outDen%pw(:, 3) = offdFac*outDen%pw(:, 3)
+      outDen%vac(:, :, :, 3) = offdFac*outDen%vac(:, :, :, 3)
+      IF (SIZE(outDen%mt, 4) == 4) outDen%mt(:, :, :, 3:4) = offdFac*outDen%mt(:, :, :, 3:4)
+      IF (SIZE(outDen%mmpMat, 4) == 3) outDen%mmpMat(:, :, :, 3) = offdFac*outDen%mmpMat(:, :, :, 3)
+   END IF
    ! XAS is a postprocessing calculation under output/xas, like DOS/band output:
    ! it reuses the converged potential, eigenvalues, occupations, and MT basis.
    IF (xas%l_xas) CALL xas_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
