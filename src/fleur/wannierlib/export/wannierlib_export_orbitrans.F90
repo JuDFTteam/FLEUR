@@ -72,6 +72,7 @@ CONTAINS
          CALL orbitrans_check_lattice_rows(atoms, cell)
          CALL orbitrans_write_lattice(cell)
          CALL orbitrans_write_atom_centers(atoms)
+         CALL orbitrans_write_kpts(this)
       END IF
 
       CALL orbitrans_write_wann_centers(bmesh, this%num_wann, channel)
@@ -150,6 +151,62 @@ CONTAINS
       END DO
       CLOSE (iu)
    END SUBROUTINE orbitrans_write_atom_centers
+
+   !> The k path orbitrans resolves on, in the format its own kptgen expects.
+   !>
+   !> kptgen reads `input/kpts` as `N_kpts scale` and then one k per line, and rebuilds
+   !> each one as kpt(1)*b_vecs(1,:) + kpt(2)*b_vecs(2,:) + kpt(3)*b_vecs(3,:) over scale.
+   !> Those are internal coordinates, which is what bk already holds, so the list goes out
+   !> as it stands and scale is 1.
+   !>
+   !> The path is not invented here. It is the <domain> list the run already names, after
+   !> @refinementPoints has subdivided it, and that is the same set wannierlib interpolates
+   !> its own bands on -- so the transport code and FLEUR sample the same k, and N_kpts on
+   !> line 1 cannot disagree with what was interpolated. Choosing a path by lattice instead
+   !> would be a choice made for the caller, and a wrong one still runs to completion.
+   !>
+   !> Without a <domain> there is no path to take and the file is left alone. Only the kres
+   !> drivers read it; a mesh run never opens it.
+   !>
+   !> dom_kset is filled on rank 0 alone, which is the only rank that reaches this.
+   SUBROUTINE orbitrans_write_kpts(this)
+      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+      INTEGER :: iu, ik, idom, ipick
+
+      IF (this%n_domains < 1) THEN
+         WRITE (oUnit, '(a)') 'wannierlib: no '//wannierlib_export_dir()// &
+            '/kpts written -- the run declares no <domain> to take a k path from'
+         RETURN
+      END IF
+
+      !> @suffix may be left off for at most one domain, so a domain without one is the
+      !> distinguished set of the run, and the natural source for the single file orbitrans
+      !> reads. With a suffix on every domain there is no distinguished one and the first
+      !> is taken, which the log names so the choice is never silent.
+      ipick = 1
+      DO idom = 1, this%n_domains
+         IF (LEN_TRIM(this%dom_suffix(idom)) == 0) THEN
+            ipick = idom
+            EXIT
+         END IF
+      END DO
+
+      OPEN (newunit=iu, file=wannierlib_export_dir()//'/kpts', status='replace')
+      WRITE (iu, '(2x,i0,2x,f10.5)') this%dom_kset(ipick)%nkpt, 1.0
+      DO ik = 1, this%dom_kset(ipick)%nkpt
+         WRITE (iu, '(3(2x,f18.12))') this%dom_kset(ipick)%bk(:, ik)
+      END DO
+      CLOSE (iu)
+
+      IF (LEN_TRIM(this%dom_suffix(ipick)) == 0) THEN
+         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
+            '/kpts with ', this%dom_kset(ipick)%nkpt, ' k-points, from the <domain> with no suffix'
+      ELSE
+         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
+            '/kpts with ', this%dom_kset(ipick)%nkpt, ' k-points, from <domain> suffix "'// &
+            TRIM(this%dom_suffix(ipick))//'"'
+      END IF
+   END SUBROUTINE orbitrans_write_kpts
 
    !> Index then centre, one Wannier function per line. The first channel opens the file
    !> and the rest append after it, so the indices run over the whole basis.
