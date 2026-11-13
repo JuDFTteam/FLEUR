@@ -3600,6 +3600,46 @@
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
       <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="precond" type="FleurBool" use="optional"/>
+      <xsd:attribute name="numCgSteps" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many conjugate-gradient steps Wannier90 takes before resetting to steepest descent (its num_cg_steps). Silence leaves Wannier90 on its own default.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="trialStep" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>The trial step of the parabolic line search along the search direction (Wannier90 trial_step). Changing it changes the path taken, so it is one of the handles a sweep varies when two runs start from the same checkpoint and land in different minima.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="fixedStep" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Take a step of this fixed length instead of searching for one (Wannier90 fixed_step, which sets its lfixstep). Mutually exclusive in spirit with trialStep: the line search is switched off.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="guidingCentres" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Use guiding centres to steer the minimisation away from local minima (Wannier90 guiding_centres). The centres are the sites of the trial orbitals, so this needs projections to be defined. See numGuideCycles and numNoGuideIter.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="numGuideCycles" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How often the guiding centres are applied, in iterations (Wannier90 num_guide_cycles). Only meaningful with guidingCentres="T".</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="numNoGuideIter" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many iterations run before the guiding centres start (Wannier90 num_no_guide_iter). Only meaningful with guidingCentres="T".</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="convNoiseAmp" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Amplitude of the random noise Wannier90 adds to the search direction once the spread has converged, to escape a local minimum and carry on (its conv_noise_amp). The noise is an anti-Hermitian matrix added for one iteration; the minimisation then runs again and the new spread is compared with the old one. If they agree the run stops for good, otherwise it is kicked again, up to convNoiseNum times. Note that Wannier90 keeps the last minimum it lands on, not the best one. Setting this without convWindow makes Wannier90 choose convWindow=5 for itself.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="convNoiseNum" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many times the convNoiseAmp kick may be applied (Wannier90 conv_noise_num). Inert without convNoiseAmp.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="fdOrder" type="xsd:positiveInteger" use="optional">
          <xsd:annotation>
             <xsd:documentation>Order of the finite-difference stencil Wannier90 builds the b-shells with (its higher_order_n). The default 1 is the one-shell formula of Marzari and Vanderbilt, whose error in the k derivative is O(b^2); 2 and 3 combine more shells and reduce it to O(b^4) and O(b^6), at the cost of more neighbours per k point and therefore more overlap matrices. It matters for every quantity built as a k derivative - the Berry connection A, and above all C and F, which are second derivatives. Silence leaves Wannier90 on its own default, so an existing input keeps its numbers.</xsd:documentation>

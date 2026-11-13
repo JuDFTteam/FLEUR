@@ -161,6 +161,19 @@ CONTAINS
     !> Wannier90 nothing and leaves it on its own default.
     IF (this%fd_order > 0) CALL w90_set_option(wannierlib_w90main, 'higher_order_n', this%fd_order)
 
+    !> The keywords are Wannier90's own, spelled as its .win reader spells them:
+    !> w90_set_option only appends the pair to a settings store, and what interprets it
+    !> later is the very parser that reads a .win. A name it does not know is an error
+    !> there, not a silent no-op, so a typo stops the run.
+    IF (this%num_cg_steps >= 0)    CALL w90_set_option(wannierlib_w90main, 'num_cg_steps', this%num_cg_steps)
+    IF (this%trial_step > 0.0)     CALL w90_set_option(wannierlib_w90main, 'trial_step', this%trial_step)
+    IF (this%fixed_step > 0.0)     CALL w90_set_option(wannierlib_w90main, 'fixed_step', this%fixed_step)
+    IF (this%guiding_centres)      CALL w90_set_option(wannierlib_w90main, 'guiding_centres', .TRUE.)
+    IF (this%num_guide_cycles >= 0) CALL w90_set_option(wannierlib_w90main, 'num_guide_cycles', this%num_guide_cycles)
+    IF (this%num_no_guide_iter >= 0) CALL w90_set_option(wannierlib_w90main, 'num_no_guide_iter', this%num_no_guide_iter)
+    IF (this%conv_noise_amp > 0.0) CALL w90_set_option(wannierlib_w90main, 'conv_noise_amp', this%conv_noise_amp)
+    IF (this%conv_noise_num >= 0)  CALL w90_set_option(wannierlib_w90main, 'conv_noise_num', this%conv_noise_num)
+
     seedname = 'fleur_wlib_internal'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='set_w90_options')

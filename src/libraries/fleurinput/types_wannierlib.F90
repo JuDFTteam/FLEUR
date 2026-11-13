@@ -192,6 +192,19 @@ MODULE m_types_wannierlib
     !> It changes the descent inside a valley, not the functional, so it cannot move the
     !> minimum.
     LOGICAL :: precond = .FALSE.
+    !> The rest of Wannier90's minimisation controls. Each one is inert unless its
+    !> attribute is present, so silence leaves Wannier90 on its own default and an older
+    !> inp.xml keeps its numbers. None of them is stored in the checkpoint: they are
+    !> rebuilt on every run, which is what lets a sweep vary them between two restarts
+    !> that begin from the same gauge.
+    INTEGER :: num_cg_steps = -1          ! W90 num_cg_steps;      XML @numCgSteps
+    REAL    :: trial_step = -1.0          ! W90 trial_step;        XML @trialStep
+    REAL    :: fixed_step = -1.0          ! W90 fixed_step;        XML @fixedStep
+    LOGICAL :: guiding_centres = .FALSE.  ! W90 guiding_centres;   XML @guidingCentres
+    INTEGER :: num_guide_cycles = -1      ! W90 num_guide_cycles;  XML @numGuideCycles
+    INTEGER :: num_no_guide_iter = -1     ! W90 num_no_guide_iter; XML @numNoGuideIter
+    REAL    :: conv_noise_amp = -1.0      ! W90 conv_noise_amp;    XML @convNoiseAmp
+    INTEGER :: conv_noise_num = -1        ! W90 conv_noise_num;    XML @convNoiseNum
     !> Order of the finite-difference stencil for the k derivatives (W90 higher_order_n);
     !> XML @fdOrder. Zero is our sentinel for "say nothing", so Wannier90 keeps its own
     !> default of 1 -- the single-shell formula with an O(b^2) error. The quantities that
@@ -471,6 +484,14 @@ CONTAINS
     CALL mpi_bc(this%dis_conv_window, rank, mpi_comm)
     CALL mpi_bc(this%conv_window, rank, mpi_comm)
     CALL mpi_bc(this%precond, rank, mpi_comm)
+    CALL mpi_bc(this%num_cg_steps, rank, mpi_comm)
+    CALL mpi_bc(this%trial_step, rank, mpi_comm)
+    CALL mpi_bc(this%fixed_step, rank, mpi_comm)
+    CALL mpi_bc(this%guiding_centres, rank, mpi_comm)
+    CALL mpi_bc(this%num_guide_cycles, rank, mpi_comm)
+    CALL mpi_bc(this%num_no_guide_iter, rank, mpi_comm)
+    CALL mpi_bc(this%conv_noise_amp, rank, mpi_comm)
+    CALL mpi_bc(this%conv_noise_num, rank, mpi_comm)
     CALL mpi_bc(this%fd_order, rank, mpi_comm)
     !> An array of a derived type does not go through the generic mpi_bc, which sizes the
     !> receivers from the message itself. The count travels first, then each record field by
@@ -630,6 +651,24 @@ CONTAINS
       !> leaves Wannier90 on its own default and an older inp.xml keeps its numbers.
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fdOrder') == 1) &
         this%fd_order = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fdOrder'))
+
+      !> Same rule for all of these: read only when present.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numCgSteps') == 1) &
+        this%num_cg_steps = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numCgSteps'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@trialStep') == 1) &
+        this%trial_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@trialStep'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fixedStep') == 1) &
+        this%fixed_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fixedStep'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@guidingCentres') == 1) &
+        this%guiding_centres = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@guidingCentres'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numGuideCycles') == 1) &
+        this%num_guide_cycles = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numGuideCycles'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numNoGuideIter') == 1) &
+        this%num_no_guide_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numNoGuideIter'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convNoiseAmp') == 1) &
+        this%conv_noise_amp = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convNoiseAmp'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convNoiseNum') == 1) &
+        this%conv_noise_num = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convNoiseNum'))
     END IF
 
     ! --- interpolation domain + operator list ---
