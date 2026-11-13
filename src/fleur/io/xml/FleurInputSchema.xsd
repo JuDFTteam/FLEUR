@@ -3720,6 +3720,11 @@
             <xsd:documentation>Writes w90files/ with the &lt;operatorsRs&gt; matrices. Not combinable with orbitrans: the matrices are moved, not copied.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute default="F" name="checkpoint" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes &lt;seedname&gt;.chk, the Wannier90 checkpoint, through Wannier90 itself: the gauge, the disentangled manifold and the overlaps, in their format and not ours. It is what a standalone wannier90.x resumes a minimisation from (restart = wannierise, with a .win of your own that matches), and one of the two files WannierBerri accepts. Written after the projection and again after the minimisation, as wannier90.x does, so an interrupted run still leaves the earlier point.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts. Not available for spinor Wannier functions.</xsd:documentation>

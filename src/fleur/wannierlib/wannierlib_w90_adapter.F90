@@ -19,6 +19,7 @@ MODULE m_wannierlib_w90_adapter
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, w90_create_kmesh, &
                           w90_get_centres, w90_get_spreads
+  USE w90_library_extra, ONLY : write_chkpt
 #endif
   IMPLICIT NONE
 
@@ -260,12 +261,33 @@ CONTAINS
     CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed in wannierlib adapter', calledby='run_w90')
 
+    !> The point a restart resumes the minimisation from, so it is written here rather than
+    !> straight after the disentanglement: this is the state w90_wannierise is about to be
+    !> handed. Every rank calls it -- the writer gathers the distributed matrices itself.
+    IF (this%export%chk) CALL wannierlib_write_chkpt('postdis')
+
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+
+    IF (this%export%chk) CALL wannierlib_write_chkpt('postwann')
 
     call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90
+
+#ifdef CPP_WANNLIB_API
+  !> Ask Wannier90 to write its own checkpoint. The file and its layout are Wannier90's;
+  !> what FLEUR decides is when to ask. 'label' is the position it records -- 'postdis'
+  !> before the minimisation, 'postwann' after -- and both go to the same <seedname>.chk,
+  !> which is how wannier90.x behaves and how its restart reads the position back.
+  SUBROUTINE wannierlib_write_chkpt(label)
+    CHARACTER(LEN=*), INTENT(IN) :: label
+    INTEGER :: ierr
+    CALL write_chkpt(wannierlib_w90main, label, oUnit, oUnit, ierr)
+    IF (ierr /= 0) CALL juDFT_error('write_chkpt failed in wannierlib adapter', &
+                                    calledby='wannierlib_write_chkpt')
+  END SUBROUTINE wannierlib_write_chkpt
+#endif
 
   !> Export the coarse-mesh b-shell / neighbour information that the Wannier90 kmesh setup
   !> produced, as a plain t_wgauge_bmesh. This is the ONE piece of Wannier90 state the

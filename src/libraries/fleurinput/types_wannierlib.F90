@@ -66,6 +66,8 @@ MODULE m_types_wannierlib
     LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
     LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    input/, renamed, + four structural
     LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
+    !> The only artefact here Wannier90 writes itself: FLEUR asks, the format stays theirs.
+    LOGICAL :: chk = .FALSE.     ! <export checkpoint="T"/>:    <seedname>.chk, written by w90
     !> The field keeps the content as its name and the attribute names the consumer, as
     !> w90 does for wannier90.
     LOGICAL :: basis = .FALSE.        ! <export irrep="T"/>:   WF<spin>_basis.hdf
@@ -436,6 +438,7 @@ CONTAINS
     CALL mpi_bc(this%export%w90, rank, mpi_comm)
     CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
     CALL mpi_bc(this%export%juwip, rank, mpi_comm)
+    CALL mpi_bc(this%export%chk, rank, mpi_comm)
     CALL mpi_bc(this%export%plot, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
@@ -693,6 +696,8 @@ CONTAINS
           calledby='read_xml_wannierlib')
         this%export%plot_grid = NINT(gridlist)
       END IF
+      this%export%chk = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@checkpoint'))
       this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@irrep'))
       !> wannierberri="T" is a superset of the two flags above rather than a third artefact:
@@ -703,6 +708,7 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@wannierberri'))) THEN
         this%export%w90 = .TRUE.
         this%export%basis = .TRUE.
+        this%export%chk = .TRUE.
       END IF
     END IF
 
