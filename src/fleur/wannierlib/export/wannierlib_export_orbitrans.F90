@@ -165,23 +165,37 @@ CONTAINS
    !> Those are internal coordinates, which is what bk already holds, so the list goes out
    !> as it stands and scale is 1.
    !>
-   !> The path is not invented here. It is the <domain> list the run already names, after
+   !> The path is not invented here. With a <domain> it is that list, after
    !> @refinementPoints has subdivided it, and that is the same set wannierlib interpolates
    !> its own bands on -- so the transport code and FLEUR sample the same k, and N_kpts on
-   !> line 1 cannot disagree with what was interpolated. Choosing a path by lattice instead
-   !> would be a choice made for the caller, and a wrong one still runs to completion.
+   !> line 1 cannot disagree with what was interpolated. Without one it is the path list
+   !> the input already carries, which the reader took off kpts.xml, so a case built by
+   !> inpgen needs nothing declared. Choosing a path by lattice instead would be a choice
+   !> made for the caller, and a wrong one still runs to completion.
    !>
-   !> Without a <domain> there is no path to take and the file is left alone. Only the kres
+   !> With neither there is no path to take and the file is left alone. Only the kres
    !> drivers read it; a mesh run never opens it.
    !>
-   !> dom_kset is filled on rank 0 alone, which is the only rank that reaches this.
+   !> Both k-sets are filled on rank 0 alone, which is the only rank that reaches this.
    SUBROUTINE orbitrans_write_kpts(this)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-      INTEGER :: iu, ik, idom, ipick
+      INTEGER :: idom, ipick, nk
+      REAL, ALLOCATABLE :: bk(:, :)
+      CHARACTER(LEN=160) :: origin
 
+      !> No <domain>: the reader has already taken the one path list the input carries, so
+      !> the common case -- a case built by inpgen, exported for orbitrans -- needs nothing
+      !> declared. Without even that list there is no path to take and the file is left alone.
       IF (this%n_domains < 1) THEN
-         WRITE (oUnit, '(a)') 'wannierlib: no '//wannierlib_export_dir()// &
-            '/kpts written -- the run declares no <domain> to take a k path from'
+         IF (.NOT. this%l_kpath) THEN
+            WRITE (oUnit, '(a)') 'wannierlib: no '//wannierlib_export_dir()// &
+               '/kpts written -- the run declares no <domain> and kpts.xml carries no type="path" list'
+            RETURN
+         END IF
+         nk = this%kpath_kset%nkpt
+         bk = this%kpath_kset%bk(:, 1:nk)
+         origin = 'the kPointList "'//TRIM(this%kpath_name)//'", the first type="path" list of kpts.xml'
+         CALL orbitrans_put_kpts(nk, bk, origin)
          RETURN
       END IF
 
@@ -197,22 +211,33 @@ CONTAINS
          END IF
       END DO
 
+      nk = this%dom_kset(ipick)%nkpt
+      bk = this%dom_kset(ipick)%bk(:, 1:nk)
+      IF (LEN_TRIM(this%dom_suffix(ipick)) == 0) THEN
+         origin = 'the <domain> with no suffix'
+      ELSE
+         origin = '<domain> suffix "'//TRIM(this%dom_suffix(ipick))//'"'
+      END IF
+      CALL orbitrans_put_kpts(nk, bk, origin)
+   END SUBROUTINE orbitrans_write_kpts
+
+   !> One writer for both sources, so the format cannot drift between them: line 1 is
+   !> `N_kpts scale` and scale is 1 because bk already holds internal coordinates.
+   SUBROUTINE orbitrans_put_kpts(nk, bk, origin)
+      INTEGER, INTENT(IN) :: nk
+      REAL, INTENT(IN) :: bk(:, :)
+      CHARACTER(LEN=*), INTENT(IN) :: origin
+      INTEGER :: iu, ik
+
       OPEN (newunit=iu, file=wannierlib_export_dir()//'/kpts', status='replace')
-      WRITE (iu, '(2x,i0,2x,f10.5)') this%dom_kset(ipick)%nkpt, 1.0
-      DO ik = 1, this%dom_kset(ipick)%nkpt
-         WRITE (iu, '(3(2x,f18.12))') this%dom_kset(ipick)%bk(:, ik)
+      WRITE (iu, '(2x,i0,2x,f10.5)') nk, 1.0
+      DO ik = 1, nk
+         WRITE (iu, '(3(2x,f18.12))') bk(:, ik)
       END DO
       CLOSE (iu)
-
-      IF (LEN_TRIM(this%dom_suffix(ipick)) == 0) THEN
-         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
-            '/kpts with ', this%dom_kset(ipick)%nkpt, ' k-points, from the <domain> with no suffix'
-      ELSE
-         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
-            '/kpts with ', this%dom_kset(ipick)%nkpt, ' k-points, from <domain> suffix "'// &
-            TRIM(this%dom_suffix(ipick))//'"'
-      END IF
-   END SUBROUTINE orbitrans_write_kpts
+      WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//wannierlib_export_dir()// &
+         '/kpts with ', nk, ' k-points, from '//TRIM(origin)
+   END SUBROUTINE orbitrans_put_kpts
 
    !> Index then centre, one Wannier function per line. The first channel opens the file
    !> and the rest append after it, so the indices run over the whole basis.

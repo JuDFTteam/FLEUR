@@ -106,6 +106,13 @@ MODULE m_types_wannierlib
     TYPE(t_kpts), ALLOCATABLE :: dom_kset(:)
     CHARACTER(LEN=64), ALLOCATABLE :: dom_suffix(:)
 
+    !> The path <export orbitrans="T"/> falls back to when the run declares no <domain>.
+    !> Read here rather than in the export so the XML is opened once, and broadcast no more
+    !> than dom_kset is: only rank 0 reaches the writer, and l_kpath stays false elsewhere.
+    LOGICAL :: l_kpath = .FALSE.
+    CHARACTER(LEN=64) :: kpath_name = ''
+    TYPE(t_kpts) :: kpath_kset
+
     !> Minimum distance replica selection (W90 use_ws_distance); XML @useWsDistance on
     !> <interpolation>. Off by default; Wannier90's own default is on, and the difference is
     !> deliberate -- with it off this reproduces every band this code has written so far.
@@ -696,6 +703,26 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@wannierberri'))) THEN
         this%export%w90 = .TRUE.
         this%export%basis = .TRUE.
+      END IF
+    END IF
+
+    !> No <domain>, but somebody downstream still has to be told which k to resolve on.
+    !> Tied to the orbitrans flag and not made general because orbitrans is the only reader
+    !> that opens input/kpts today: a run exporting for anyone else gains no file and pays
+    !> no time, and the day a second consumer wants a path it asks here by name.
+    !>
+    !> The path is not invented. It is the first list the input already carries with
+    !> type="path" -- the one inpgen writes for every case -- so the default names something
+    !> the caller can read off kpts.xml, and a run with no path list keeps today's silence.
+    IF (this%export%orbitrans .AND. this%n_domains < 1) THEN
+      xPathA = '/fleurInput/cell/bzIntegration/kPointLists/kPointList[@type="path"]'
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) > 0) THEN
+        dom_name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'[1]/@name'))
+        IF (LEN_TRIM(dom_name) > 0) THEN
+          CALL read_domain_kset_wannierlib(this%kpath_kset, xml, dom_name, 0)
+          this%kpath_name = dom_name
+          this%l_kpath = .TRUE.
+        END IF
       END IF
     END IF
 
