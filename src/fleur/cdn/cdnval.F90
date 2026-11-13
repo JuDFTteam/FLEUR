@@ -258,6 +258,9 @@ CONTAINS
                                               atoms%msh, vTot%mt(:, 0, :, :), f, g)
          END ASSOCIATE
       END DO
+      ! k-independent muffin-tin Hamiltonian (all atom types and spins) for the A21/A12 force terms
+      IF (input%l_f) CALL local_ham(sphhar, atoms, sym, noco, nococonv, enpara, fmpi, vtot, &
+                                    vtot, den, input, hub1inp, hub1data, tlmplm, alpha_hybrid=0.0, l_forces=.TRUE.)
 
       skip_tt = dot_product(enpara%skiplo(:atoms%ntype, jspin), atoms%neq(:atoms%ntype))
       IF (noco%l_soc .OR. noco%l_noco) skip_tt = 2*skip_tt
@@ -366,8 +369,6 @@ CONTAINS
                   call abc(ispin, abc_itype)%calc_force_abc(input, atoms, sym, cell, lapw, &
                                                         noccbd, radfun(itype), noco, nococonv, ispin, itype, zmat, eig, force)
 
-                  call local_ham(sphhar, atoms, sym, noco, nococonv, enpara, fmpi, vtot, &
-                                 vtot, den, input, hub1inp, hub1data, tlmplm, alpha_hybrid=0.0, l_forces=.TRUE.)
                   CALL addContribsA21A12(force, input, atoms, sym, cell, enpara, &
                         radfun(itype), tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, MERGE(0.5*we, we, l_socForceDn), &
                         results, jsp_start, jspin, nbasfcn, zMat, lapw, &

@@ -1,5 +1,5 @@
 image:
-  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC_23102026
   entrypoint: ["/usr/bin/bash -i -c"]
 
 build-nvhpc-cpu:

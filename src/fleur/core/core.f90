@@ -182,7 +182,7 @@ MODULE m_core
 
                ! nodes for large component : if IFLAG=0 number of nodes is OK
                iflag = 0
-               CALL cnodes(mrad,iflag,s,ec,l,xmj,nqn,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw,node)
+               CALL cnodes(mrad,iflag,s,ec,l,xmj,nqn,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw,node)
                IF (iflag.NE.0) GO TO 20
 
                ! setup of Newton-Raphson algorithm
@@ -254,8 +254,8 @@ MODULE m_core
                varnew(1) = var(1) + dv(1)*dvstep
                IF (abs(dv(1)/var(1)).LT.tolvar) varnew(1) = var(1) * (1.00+sign(dvstep*tolvar,dv(1)))
 
-               CALL coredir(mrad,varnew(1),l,xmj,1,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
-               CALL coredir(mrad,varnew(1),l,xmj,2,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,varnew(1),l,xmj,1,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,varnew(1),l,xmj,2,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
 
                CALL coreerr(errnew,varnew,s,nsol,pow,qow,piw,qiw)
 
@@ -278,8 +278,8 @@ MODULE m_core
                   var(1) = -0.20
                END IF
 
-               CALL coredir(mrad,var(1),l,xmj,1,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
-               CALL coredir(mrad,var(1),l,xmj,2,vv,bb,rc,dx,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,var(1),l,xmj,1,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
+               CALL coredir(mrad,var(1),l,xmj,2,vv,bb,rc,dx,zz,nmatch,nzero,gc,fc,pow,qow,piw,qiw)
 
                CALL coreerr(err,var,s,nsol,pow,qow,piw,qiw)
 

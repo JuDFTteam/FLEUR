@@ -64,6 +64,7 @@ CONTAINS
     CALL print_argument("-trace")
     CALL print_argument("-debugtime")
     CALL print_argument("-all_times")
+    CALL print_argument("-dfpt_minusq")
 #ifdef CPP_HDF
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"HDF density file relevant options:"
@@ -134,6 +135,7 @@ CONTAINS
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")
     CALL new_argument(0,"-debugtime","Write the start/stop of all timers to the console","")
     CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0","")
+    CALL new_argument(0,"-dfpt_minusq","DFPT: force the explicit -q response","")
     !Output
     CALL new_argument(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration","")
     CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","")
