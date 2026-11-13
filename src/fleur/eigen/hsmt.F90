@@ -118,8 +118,9 @@ CONTAINS
                 CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.,smat=smat_tmp)
                 CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
                 CALL timestart("hsmt_distspins")
-                CALL hsmt_distspins(chi,smat_tmp,smat)
-                CALL hsmt_distspins(chi,hmat_tmp,hmat)
+                !Only the upper triangle is set up here and used later
+                CALL hsmt_distspins(chi,smat_tmp,smat,l_upper=(fmpi%n_size==1))
+                CALL hsmt_distspins(chi,hmat_tmp,hmat,l_upper=(fmpi%n_size==1))
                 CALL timestop("hsmt_distspins")
               ELSE !Add off-diagonal contributions to Hamiltonian if needed
                 IF (noco%l_unrestrictMT(n).OR.noco%l_spinoffd_ldau(n).or.noco%l_constrained(n)) THEN
