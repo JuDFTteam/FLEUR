@@ -165,7 +165,7 @@ CONTAINS
     !     ..
     !     ..
     !     .. Local Scalars ..
-    REAL tnn(3),ski(3), fjkiln,gjkiln
+    REAL tnn(3), fjkiln,gjkiln
     INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3,kj_off,kj_vec,jv
     INTEGER NVEC_rem  !remainder
     INTEGER, PARAMETER :: NVEC = 128
@@ -174,9 +174,10 @@ CONTAINS
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd),cross_k(3)
     COMPLEX:: chi(2,2,2,2),isigma(2,2,3)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
-    REAL, ALLOCATABLE :: xlegend(:), dot(:), racc(:,:,:)
+    REAL, ALLOCATABLE :: xlegend(:), racc(:,:,:)
     REAL, ALLOCATABLE :: rki_f(:,:,:), rki_g(:,:,:)
-    COMPLEX, ALLOCATABLE :: cph(:),fct(:),angso(:,:,:)
+    COMPLEX, ALLOCATABLE :: cph(:),fct(:),angso(:,:,:),hacc(:,:,:)
+    COMPLEX, ALLOCATABLE :: ph(:,:) ! exp(iG tau) per basis function and atom
 
     CALL timestart("offdiagonal soc-setup")
 
@@ -192,18 +193,30 @@ CONTAINS
     END DO
     !Set up spinors...
     CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
+
+    ! The phase exp(i(G-G')tau) factorises into ph(G)*conjg(ph(G'))
+    ALLOCATE(ph(lapw%nv(1),atoms%neq(n)))
+    DO nn = 1, atoms%neq(n)
+       tnn = tpi_const*atoms%taual(:,atoms%firstAtom(n)+nn-1)
+       !CPP_OMP PARALLEL DO DEFAULT(shared) PRIVATE(kj)
+       DO kj = 1, lapw%nv(1)
+          ph(kj,nn) = EXP(CMPLX(0.0,DOT_PRODUCT(REAL(lapw%gvec(:,kj,1)),tnn)))
+       END DO
+       !CPP_OMP END PARALLEL DO
+    END DO
+
     !!$acc data copyin(td,td%rsoc,td%rsoc%rso)
     !CPP_OMP PARALLEL DEFAULT(NONE)&
-    !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,fl2p1,fleg1,fleg2,hmat,fmpi,chi,isigma)&
-    !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso)&
-    !CPP_OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
+    !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,fl2p1,fleg1,fleg2,hmat,fmpi,chi,isigma,ph)&
+    !CPP_OMP PRIVATE(kii,ki,kj,plegend,dplegend,l,j1,j2,angso,hacc)&
+    !CPP_OMP PRIVATE(cph,nn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
     !CPP_OMP PRIVATE(kj_off,kj_vec,jv,cross_k,racc,rki_f,rki_g)
     ALLOCATE(cph(NVEC))
     ALLOCATE(xlegend(NVEC))
     ALLOCATE(plegend(NVEC,0:2))
     ALLOCATE(dplegend(NVEC,0:2))
     ALLOCATE(fct(NVEC))
-    ALLOCATE(dot(NVEC))
+    ALLOCATE(hacc(NVEC,2,2))
     ALLOCATE(angso(NVEC,2,2))
     ALLOCATE(racc(NVEC,2,2))
     ALLOCATE(rki_f(atoms%lmax(n),2,2),rki_g(atoms%lmax(n),2,2))
@@ -247,15 +260,9 @@ CONTAINS
        
 
           !--->             set up phase factors
-          cph = 0.0
-          ski = lapw%gvec(:,ki,1)
-          DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
-             tnn = tpi_const*atoms%taual(:,nn)
-             DO jv = 1,NVEC_rem
-                kj = kj_off - 1 + jv
-                dot(jv) = DOT_PRODUCT(ski(1:3)-lapw%gvec(1:3,kj,1),tnn(1:3))
-             END DO
-             cph(:NVEC_rem) = cph(:NVEC_rem) + CMPLX(COS(dot(:NVEC_rem)),SIN(dot(:NVEC_rem)))
+          cph(:NVEC_rem) = ph(ki,1)*CONJG(ph(kj_off:kj_vec,1))
+          DO nn = 2, atoms%neq(n)
+             cph(:NVEC_rem) = cph(:NVEC_rem) + ph(ki,nn)*CONJG(ph(kj_off:kj_vec,nn))
           END DO
 
           !--->       x for legendre polynomials
@@ -288,24 +295,30 @@ CONTAINS
           !--->          end loop over l
           ENDDO
 
-          !--->          update hamiltonian matrix
+          !--->          collect the four spin blocks, then update the hamiltonian matrix once per block
+          hacc(:NVEC_rem,:,:) = 0.0
           DO j2=1,2
              DO j1=1,2
-                fct(:NVEC_rem) = cph(:NVEC_rem)*angso(:NVEC_rem,j1,j2)*racc(:NVEC_rem,j1,j2)
-                hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
-                hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
-                hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
-                hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+                fct(:NVEC_rem) = angso(:NVEC_rem,j1,j2)*racc(:NVEC_rem,j1,j2)
+                hacc(:NVEC_rem,1,1) = hacc(:NVEC_rem,1,1) + chi(1,1,j1,j2)*fct(:NVEC_rem)
+                hacc(:NVEC_rem,1,2) = hacc(:NVEC_rem,1,2) + chi(1,2,j1,j2)*fct(:NVEC_rem)
+                hacc(:NVEC_rem,2,1) = hacc(:NVEC_rem,2,1) + chi(2,1,j1,j2)*fct(:NVEC_rem)
+                hacc(:NVEC_rem,2,2) = hacc(:NVEC_rem,2,2) + chi(2,2,j1,j2)*fct(:NVEC_rem)
              ENDDO
           ENDDO
+          hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + cph(:NVEC_rem)*hacc(:NVEC_rem,1,1)
+          hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + cph(:NVEC_rem)*hacc(:NVEC_rem,1,2)
+          hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + cph(:NVEC_rem)*hacc(:NVEC_rem,2,1)
+          hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + cph(:NVEC_rem)*hacc(:NVEC_rem,2,2)
        ENDDO
     !--->    end loop over ki
     ENDDO
     !CPP_OMP END DO
     !--->       end loop over atom types (ntype)
     DEALLOCATE(xlegend,plegend,dplegend)
-    DEALLOCATE(cph,fct,dot,angso,racc,rki_f,rki_g)
+    DEALLOCATE(cph,fct,hacc,angso,racc,rki_f,rki_g)
     !CPP_OMP END PARALLEL
+    DEALLOCATE(ph)
     !!$acc end data
     CALL timestop("offdiagonal soc-setup")
 
