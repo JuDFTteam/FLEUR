@@ -80,12 +80,16 @@ contains
       INTEGER, ALLOCATABLE :: sparseCoords(:)
       LOGICAL, ALLOCATABLE :: nonzeroArea(:, :)
       type(c_ptr)          :: grid = c_null_ptr
-      logical :: in_openmp = .false.
-      integer :: max_threads = 1, thread_id = 0
+      logical :: in_openmp
+      integer :: max_threads, thread_id
       integer :: n_plans
       integer :: n(3), dist
       integer, parameter :: stride = 1
 
+      ! no initialisation in the declarations: that would make them SAVE and shared between threads
+      in_openmp   = .false.
+      max_threads = 1
+      thread_id   = 0
       !$ thread_id   = omp_get_thread_num()
       !$ max_threads = omp_get_max_threads()
       !$ in_openmp   = omp_in_parallel()
@@ -368,9 +372,10 @@ contains
    subroutine t_fft_free(fft)
       implicit none 
       integer      :: ierr
-      class(t_fft) :: fft 
-      logical :: in_openmp = .false.
+      class(t_fft) :: fft
+      logical :: in_openmp
       integer :: i
+      in_openmp = .false.
       !$ in_openmp   = omp_in_parallel()
 
       if(allocated(fft%afft)) deallocate(fft%afft)
