@@ -84,6 +84,8 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exc => xcpot_get_exc
       PROCEDURE        :: get_fxc_lda => xcpot_get_fxc_lda
       PROCEDURE,NOPASS :: apply_cutoffs
+      PROCEDURE,NOPASS :: apply_gradient_switch
+      PROCEDURE,NOPASS :: apply_tau_floor
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: has_aux_gga => xcpot_has_aux_gga
@@ -133,10 +135,27 @@ CONTAINS
   end subroutine mpi_bc_xcpot_abstract
 
 
-  subroutine apply_cutoffs(density_cutoff,rh,grad)
+  subroutine apply_cutoffs(density_cutoff,rh,grad,l_sigma_cutoff)
     real,intent(INOUT) :: rh(:,:)
     real,INTENT(IN)    :: density_cutoff
     type(t_gradients),INTENT(INOUT),OPTIONAL :: grad
+    logical,INTENT(IN),OPTIONAL :: l_sigma_cutoff
+
+    !Do nothing here, only in libxc case
+  end subroutine
+
+  subroutine apply_gradient_switch(rh,grad,w)
+    real,INTENT(IN)                 :: rh(:,:)
+    type(t_gradients),INTENT(INOUT) :: grad
+    real,ALLOCATABLE,INTENT(OUT)    :: w(:)
+
+    !Do nothing here (w stays unallocated), only in libxc case
+  end subroutine
+
+  subroutine apply_tau_floor(rh,grad,tau)
+    real,INTENT(IN)              :: rh(:,:)
+    type(t_gradients),INTENT(IN) :: grad
+    real,INTENT(INOUT)           :: tau(:,:)
 
     !Do nothing here, only in libxc case
   end subroutine
