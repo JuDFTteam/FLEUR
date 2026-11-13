@@ -3750,7 +3750,20 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="interpolation" type="WannierlibInterpolationType"/>
       </xsd:all>
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>
+      <xsd:attribute default="none" name="restart" type="WannierlibRestartType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Where the gauge comes from. "none" builds it in this run. The other two read it back from &lt;seedname&gt;.chk, which must sit in the working directory under the name this code uses, fleur_wlib_internal.chk, and must come from a run on the same k-mesh: "wannierise" takes that gauge as the starting point and minimises again under the current &lt;wannierization&gt; settings, while "operators" takes it as final and goes straight to the operators. Together with &lt;export checkpoint="T"/&gt; these let a minimisation be repeated, here or in a standalone wannier90.x, without repeating the ab-initio pass.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
+
+   <xsd:simpleType name="WannierlibRestartType">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="none"/>
+         <xsd:enumeration value="wannierise"/>
+         <xsd:enumeration value="operators"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="RelaxationType">
       <xsd:annotation>

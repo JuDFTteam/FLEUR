@@ -82,6 +82,13 @@ MODULE m_types_wannierlib
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
+    !> Derived in read_xml from <wannierlib restart="...">, in the idiom of the flags
+    !> below: the adapter asks these two rather than decoding the keyword at each branch.
+    !>   none        F / T   the run builds the gauge and minimises, as before
+    !>   wannierise  T / T   the gauge comes from the checkpoint, then minimise again
+    !>   operators   T / F   the gauge comes from the checkpoint and is used as it stands
+    LOGICAL :: l_restart_gauge = .FALSE.
+    LOGICAL :: l_restart_minimise = .TRUE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
     ! They gate the coarse-mesh provider calls; the actual dispatch loops over ops(:).
     LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
@@ -408,6 +415,8 @@ CONTAINS
 #endif
 
     CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
+    CALL mpi_bc(this%l_restart_gauge, rank, mpi_comm)
+    CALL mpi_bc(this%l_restart_minimise, rank, mpi_comm)
     CALL mpi_bc(this%l_interpolation, rank, mpi_comm)
     CALL mpi_bc(this%l_ws_distance, rank, mpi_comm)
     CALL mpi_bc(this%l_spin, rank, mpi_comm)
@@ -528,6 +537,26 @@ CONTAINS
     has_wannierize = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannierize') == 1
     IF (has_wannierize) THEN
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
+    END IF
+
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@restart') == 1) THEN
+      sbuf = TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@restart')))
+      SELECT CASE (TRIM(sbuf))
+      CASE ('none')
+        this%l_restart_gauge = .FALSE.
+        this%l_restart_minimise = .TRUE.
+      CASE ('wannierise')
+        this%l_restart_gauge = .TRUE.
+        this%l_restart_minimise = .TRUE.
+      CASE ('operators')
+        this%l_restart_gauge = .TRUE.
+        this%l_restart_minimise = .FALSE.
+      CASE DEFAULT
+        !> Unreachable through the schema, which enumerates the three. It is here because
+        !> a default that silently picks one would turn a typo into a different physics run.
+        CALL juDFT_error('unknown value of <wannierlib restart>: '//TRIM(sbuf), &
+                         calledby='read_xml_wannierlib')
+      END SELECT
     END IF
     ! Operator selection is now the <interpolation>/<operator> list (parsed below),
     ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.

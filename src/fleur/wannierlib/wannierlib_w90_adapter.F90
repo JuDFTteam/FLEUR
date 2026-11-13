@@ -19,7 +19,7 @@ MODULE m_wannierlib_w90_adapter
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, w90_create_kmesh, &
                           w90_get_centres, w90_get_spreads
-  USE w90_library_extra, ONLY : write_chkpt
+  USE w90_library_extra, ONLY : write_chkpt, read_chkpt
 #endif
   IMPLICIT NONE
 
@@ -246,7 +246,9 @@ CONTAINS
     CALL w90_set_u_opt(wannierlib_w90main, u_opt)
     CALL w90_set_u_matrix(wannierlib_w90main, u_matrix)
 
-    IF (this%num_bands > this%num_wann) THEN
+    IF (this%l_restart_gauge) CALL wannierlib_read_chkpt()
+
+    IF (.NOT.this%l_restart_gauge .AND. this%num_bands > this%num_wann) THEN
       !> Optional, and tried first rather than instead: it fills u_opt with a subspace that
       !> holds the same number of states from each spin channel at every k. Wannier90 keeps
       !> the num_wann largest eigenvalues globally, which at an occasional k takes one state
@@ -258,22 +260,54 @@ CONTAINS
       IF (ierr /= 0) CALL juDFT_error('w90_disentangle failed in wannierlib adapter', calledby='run_w90')
     END IF
 
-    CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed in wannierlib adapter', calledby='run_w90')
+    IF (.NOT.this%l_restart_gauge) THEN
+      CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)
+      IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed in wannierlib adapter', calledby='run_w90')
+    END IF
 
     !> The point a restart resumes the minimisation from, so it is written here rather than
     !> straight after the disentanglement: this is the state w90_wannierise is about to be
     !> handed. Every rank calls it -- the writer gathers the distributed matrices itself.
-    IF (this%export%chk) CALL wannierlib_write_chkpt('postdis')
+    IF (this%export%chk .AND. .NOT.this%l_restart_gauge) CALL wannierlib_write_chkpt('postdis')
 
-    CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+    IF (this%l_restart_minimise) THEN
+      CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
+      IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
 
-    IF (this%export%chk) CALL wannierlib_write_chkpt('postwann')
+      !> Only after a minimisation. A restart that did not run one would otherwise rewrite
+      !> the very file it was handed, and a crash mid-write would take the original with it.
+      IF (this%export%chk) CALL wannierlib_write_chkpt('postwann')
+    END IF
 
     call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90
+
+#ifdef CPP_WANNLIB_API
+  !> Takes the gauge back from a Wannier90 checkpoint, straight into the arrays the gauge
+  !> stage reads: w90_set_u_matrix and w90_set_u_opt store pointers, so read_chkpt writes
+  !> through them and nothing has to be copied back.
+  !>
+  !> Nothing is checked here, because the format carries its own check and it is thorough:
+  !> the reader compares the band count, the excluded bands, both lattices, the number of
+  !> k-points, the Monkhorst-Pack grid, the k-point list itself, nntot and num_wann with
+  !> this run, and refuses the file on any of them. What no check on either side can see is
+  !> the density: a checkpoint made on the same mesh but from a different SCF is accepted,
+  !> and its gauge then belongs to states this run never computed.
+  !>
+  !> The label is twenty characters because that is the width Wannier90 writes it at.
+  !> Asking for a longer one reads past the end of the record and ends the run.
+  SUBROUTINE wannierlib_read_chkpt()
+    CHARACTER(LEN=20) :: label
+    INTEGER :: ierr
+
+    CALL read_chkpt(wannierlib_w90main, label, oUnit, oUnit, ierr)
+    IF (ierr /= 0) CALL juDFT_error('read_chkpt failed in wannierlib adapter', &
+                                    calledby='wannierlib_read_chkpt')
+
+    WRITE (oUnit, '(a)') ' wannierlib: gauge read from the checkpoint, stage "'//TRIM(label)//'"'
+  END SUBROUTINE wannierlib_read_chkpt
+#endif
 
 #ifdef CPP_WANNLIB_API
   !> Ask Wannier90 to write its own checkpoint. The file and its layout are Wannier90's;
