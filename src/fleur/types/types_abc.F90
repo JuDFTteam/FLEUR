@@ -239,21 +239,40 @@ CONTAINS
             CALL timestart("fill work array")
             IF (noco%l_noco) THEN
             IF (noco%l_ss) THEN
-               !$acc kernels copyin(zmat,zMat%data_c,ccchi,atoms,lapw,lapw%nv) present(work_c)default(none)
                ! the coefficients of the spin-down basis functions are
                ! stored in the second half of the eigenvector
+#ifdef _OPENACC
+               !$acc kernels copyin(zmat,zMat%data_c,ccchi,atoms,lapw,lapw%nv) present(work_c)default(none)
                kspin = (iintsp - 1)*(lapw%nv(1) + atoms%nlotot)
                work_c(:nvmax, :) = ccchi(iintsp, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, :ne)
                !$acc end kernels
+#else
+               kspin = (iintsp - 1)*(lapw%nv(1) + atoms%nlotot)
+               !$OMP PARALLEL DO default(shared) private(i)
+               DO i = 1, ne
+                  work_c(:nvmax, i) = ccchi(iintsp, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, i)
+               END DO
+               !$OMP END PARALLEL DO
+#endif
             ELSE
                ! perform sum over the two interstitial spin directions
                ! and take into account the spin boundary conditions
                ! (jspin counts the local spin directions inside each MT)
+#ifdef _OPENACC
                !$acc kernels copyin(atoms,zMat,zMat%data_c,ccchi,lapw,lapw%nv) present(work_c) default(none)
                kspin = lapw%nv(1) + atoms%nlotot
                work_c(:nvmax, :) = ccchi(1, jspin)*zMat%data_c(:nvmax, :ne) + &
                                    ccchi(2, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, :ne)
                !$acc end kernels
+#else
+               kspin = lapw%nv(1) + atoms%nlotot
+               !$OMP PARALLEL DO default(shared) private(i)
+               DO i = 1, ne
+                  work_c(:nvmax, i) = ccchi(1, jspin)*zMat%data_c(:nvmax, i) + &
+                                      ccchi(2, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, i)
+               END DO
+               !$OMP END PARALLEL DO
+#endif
             END IF
             ELSE
             IF (zmat%l_real) THEN
@@ -844,21 +863,40 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
       CALL timestart("fill work array")
       IF (noco%l_noco) THEN
       IF (noco%l_ss) THEN
-!$acc kernels copyin(zmat,zMat%data_c,ccchi,atoms,lapw,lapw%nv) present(work_c)default(none)
 ! the coefficients of the spin-down basis functions are
 ! stored in the second half of the eigenvector
+#ifdef _OPENACC
+!$acc kernels copyin(zmat,zMat%data_c,ccchi,atoms,lapw,lapw%nv) present(work_c)default(none)
          kspin = (iintsp - 1)*(lapw%nv(1) + atoms%nlotot)
          work_c(:nvmax, :) = ccchi(iintsp, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, :ne)
 !$acc end kernels
+#else
+         kspin = (iintsp - 1)*(lapw%nv(1) + atoms%nlotot)
+!$OMP PARALLEL DO default(shared) private(i)
+         DO i = 1, ne
+            work_c(:nvmax, i) = ccchi(iintsp, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, i)
+         END DO
+!$OMP END PARALLEL DO
+#endif
       ELSE
 ! perform sum over the two interstitial spin directions
 ! and take into account the spin boundary conditions
 ! (jspin counts the local spin directions inside each MT)
+#ifdef _OPENACC
 !$acc kernels copyin(atoms,zMat,zMat%data_c,ccchi,lapw) present(work_c) default(none)
          kspin = lapw%nv(1) + atoms%nlotot
          work_c(:nvmax, :) = ccchi(1, jspin)*zMat%data_c(:nvmax, :ne) + &
                               ccchi(2, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, :ne)
 !$acc end kernels
+#else
+         kspin = lapw%nv(1) + atoms%nlotot
+!$OMP PARALLEL DO default(shared) private(i)
+         DO i = 1, ne
+            work_c(:nvmax, i) = ccchi(1, jspin)*zMat%data_c(:nvmax, i) + &
+                                ccchi(2, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, i)
+         END DO
+!$OMP END PARALLEL DO
+#endif
       END IF
       ELSE
       IF (zmat%l_real) THEN
