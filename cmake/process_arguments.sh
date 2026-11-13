@@ -39,6 +39,7 @@ do
     -warn_only) CLI_WARN_ONLY=1;;
     -d) debug=1;;
     -amd) CLI_PATCH_INTEL=1;;
+    -native) CLI_NATIVE_ARCH=1;;
     -spack) conf_spack=1;;
     -*) error="Unknown argument";;
     *)  break;;	# terminate while loop
@@ -81,6 +82,8 @@ General options:
   -cmake #      : cmake executable to use
   -cmake_opts # : additional options for cmake can be specified here directly
   -amd          : apply some patches to the Intel MKL to run on AMD (very experiemental)
+  -native       : optimize for the CPU of the build machine (gfortran: -march=native), the binary
+                  might not run on other CPUs
   -ninja        : use Ninja bild system instead of GNU make
 
 Command line options to disable recommended libraries:

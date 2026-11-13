@@ -38,6 +38,7 @@ Useful configure flags not shown above:
 - `-make` — run `make` immediately after configure
 - `-debug` — debug build
 - `-gpu <spec>` — GPU support (e.g., `acc:cc80` for OpenACC on Compute Capability 8.0)
+- `-native` — GNU release builds: add `-march=native` (AVX2/FMA/AVX-512 of the build machine; binary not portable)
 - `-elsi`, `-elpa`, `-chase`, `-magma` — optional diagonalization libraries (auto-downloaded if TRUE)
 - `-libxc`, `-wannier` — enable libxc / Wannier interface
 - `-libdir <path>`, `-includedir <path>`, `-link <flag>` — pass custom library paths/flags
