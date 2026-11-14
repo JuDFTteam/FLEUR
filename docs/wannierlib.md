@@ -80,6 +80,8 @@ Only `<bands>` is required; every other sub-block is optional and independent.
     </interpolation>
 
     <export wannier90="T"/>
+
+    <transport axis="z" energyMin="0.097" energyMax="0.317"/>
   </wannierlib>
 </output>
 ```
@@ -254,6 +256,47 @@ default grid it takes a case from twenty seconds to over nine minutes. The grid 
 by the lattice vectors, so the `.vts` carries every point's cartesian coordinate: an image
 dataset (`.vti`), which stores one spacing per cartesian axis, draws a hexagonal or fcc cell
 sheared into a box it does not live in, and the picture looks perfectly fine.
+
+### 2.9 `<transport>` — ballistic conductance along one axis
+
+Hands the wannierised Hamiltonian to Wannier90's own transport module and gets back the
+Landauer conductance of the perfect crystal: how many bands propagate along the chosen
+direction at each energy. The calculation is the one `wannier90.x` does with
+`transport = .true.`, driven here from `inp.xml` and from the matrices the run already
+holds, so nothing is written out and read back.
+
+| attribute | default | meaning |
+|---|---|---|
+| `axis` | — | `x`, `y` or `z`: the cartesian direction the current flows along. Required. |
+| `energyMin` | −3 eV | bottom of the energy window, in Hartree, **absolute** — the same convention as the disentanglement windows. |
+| `energyMax` | +3 eV | top of the window. Given together with `energyMin`; leaving both out keeps Wannier90's default. |
+| `energyStep` | 0.01 eV | spacing of the energy grid. |
+
+Two files come out, both two columns with the energy in eV: `<seed>_qc.dat` is the
+transmission in units of the conductance quantum, `<seed>_dos.dat` the density of states of
+the same Hamiltonian.
+
+**The window default is not useful for a metal.** Wannier90's −3…3 eV is absolute, not
+relative to the Fermi level, so for anything whose `E_F` sits near 10 eV it covers a region
+with no bands and the transmission comes out identically zero. Give the window.
+
+**The axis needs a lattice vector parallel to it.** Wannier90 cuts the Hamiltonian into
+principal layers stacked along the axis, and it builds that stack out of one lattice vector,
+so a primitive bcc or fcc cell — whose vectors all point between axes — aborts with
+`1-D LATTICE VECTOR NOT DEFINED` whichever axis is asked for. A cell with `a3 ∥ z` works.
+
+**The Hamiltonian is not the one `<operatorsRs>` writes.** The transport module builds its
+own `H(R)` from the gauge matrices, with Wannier90's Wigner-Seitz convention; asking for
+`<operator name="hamiltonian"/>` as well gives a second `H(R)` that is ours. They answer
+different questions and neither is a check on the other.
+
+**Only bulk mode is reachable.** Wannier90 also does lead–conductor–lead, which needs a
+device geometry built from separate calculations; nothing here describes one, so the block
+asks for the periodic case and says so by not offering the choice.
+
+The check that costs nothing: a crystal with no scatterer transmits whole channels, so
+`T(E)` is an integer staircase whatever the energy mesh is. A curve that is smooth, or that
+sits at zero everywhere, is a broken run rather than a material with no conductance.
 
 ## 3. Species projections: `<wannierproj .../>`
 

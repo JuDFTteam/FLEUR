@@ -18,7 +18,7 @@ MODULE m_wannierlib_w90_adapter
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, w90_create_kmesh, &
-                          w90_get_centres, w90_get_spreads
+                          w90_get_centres, w90_get_spreads, w90_transport
   USE w90_library_extra, ONLY : write_chkpt, read_chkpt
 #endif
   IMPLICIT NONE
@@ -178,6 +178,49 @@ CONTAINS
     IF (this%conv_noise_amp > 0.0) CALL w90_set_option(wannierlib_w90main, 'conv_noise_amp', this%conv_noise_amp)
     IF (this%conv_noise_num >= 0)  CALL w90_set_option(wannierlib_w90main, 'conv_noise_num', this%conv_noise_num)
 
+    !> <transport>: Wannier90's ballistic conductance. one_dim_axis is NOT optional once the
+    !> stage is on -- w90_input_setopt below refuses the input without it -- so it is set from
+    !> the same block that switches the stage on and cannot be left behind. Only the bulk mode
+    !> is offered: it asks for a periodic direction and nothing else, while lcr wants a
+    !> lead-conductor-lead cell that no case here has, and an option that cannot be exercised
+    !> is a promise the schema cannot keep.
+    IF (this%l_transport) THEN
+       CALL w90_set_option(wannierlib_w90main, 'transport', .TRUE.)
+       CALL w90_set_option(wannierlib_w90main, 'transport_mode', 'bulk')
+       SELECT CASE (this%tran_axis)
+       CASE (1)
+          CALL w90_set_option(wannierlib_w90main, 'one_dim_axis', 'x')
+       CASE (2)
+          CALL w90_set_option(wannierlib_w90main, 'one_dim_axis', 'y')
+       CASE (3)
+          CALL w90_set_option(wannierlib_w90main, 'one_dim_axis', 'z')
+       CASE DEFAULT
+          CALL juDFT_error('wannierlib: <transport> needs axis="x", "y" or "z"', &
+                           calledby='set_w90_options')
+       END SELECT
+       !> The transport stage translates the Wannier centres into one cell before it cuts
+       !> the principal layers, and by default it takes the centre of that cell from the
+       !> ATOMIC POSITIONS. Wannier90 never gets them from us and cannot: atoms_frac is a
+       !> .win BLOCK, and w90_set_option has no overload for an array of strings -- only a
+       !> scalar one -- so there is no call that would deliver them. Its own interface
+       !> carries a commented-out w90_set_option_b1d, so the gap is known upstream.
+       !>
+       !> With no atoms the average is a sum of nothing over a count of nothing, and
+       !> hamiltonian.F90 divides by atom_data%num_atoms to get NaN centres and a
+       !> transmission that is identically zero -- a curve that looks computed and is not.
+       !> Naming the centre explicitly is Wannier90's own way out: its reader sets
+       !> automatic_translation = .FALSE. as soon as the keyword appears, and the atomic
+       !> average is never reached. Half a cell puts the centres in [0,1), the home cell.
+       CALL w90_set_option(wannierlib_w90main, 'translation_centre_frac', [0.5, 0.5, 0.5])
+       !> Hartree here and eV there, like every other energy that crosses this boundary.
+       IF (this%tran_win_min /= this%tran_win_max) THEN
+          CALL w90_set_option(wannierlib_w90main, 'tran_win_min', hartree_to_ev_const*this%tran_win_min)
+          CALL w90_set_option(wannierlib_w90main, 'tran_win_max', hartree_to_ev_const*this%tran_win_max)
+       END IF
+       IF (this%tran_energy_step > 0.0) &
+          CALL w90_set_option(wannierlib_w90main, 'tran_energy_step', hartree_to_ev_const*this%tran_energy_step)
+    END IF
+
     seedname = 'fleur_wlib_internal'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='set_w90_options')
@@ -294,6 +337,20 @@ CONTAINS
       !> Only after a minimisation. A restart that did not run one would otherwise rewrite
       !> the very file it was handed, and a crash mid-write would take the original with it.
       IF (this%export%chk) CALL wannierlib_write_chkpt('postwann')
+    END IF
+
+    !> Transport last, because it reads the gauge: tran_main builds its own real-space
+    !> Hamiltonian from u_matrix, u_matrix_opt and eigval, which are exactly what the calls
+    !> above have already set, so nothing further is handed to it. That H(R) is Wannier90's
+    !> own, with its own Wigner-Seitz convention, and is NOT the one <operatorsRs> writes --
+    !> two objects of the same name that must not be read into each other.
+    !>
+    !> Every rank calls it although tran_main is serial: w90_transport runs it on rank 0 and
+    !> then synchronises the error state across the communicator, so a rank that skipped the
+    !> call would leave that synchronisation half done.
+    IF (this%l_transport) THEN
+      CALL w90_transport(wannierlib_w90main, oUnit, oUnit, ierr)
+      IF (ierr /= 0) CALL juDFT_error('w90_transport failed in wannierlib adapter', calledby='run_w90')
     END IF
 
     call timestop('run_w90')

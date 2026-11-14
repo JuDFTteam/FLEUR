@@ -175,6 +175,16 @@ MODULE m_types_wannierlib
     !> sentinel neither of the two could be asked for.
     INTEGER :: dis_num_iter = -1
     INTEGER :: num_iter = -1     ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
+    !> <transport>: Wannier90's ballistic conductance stage. The element's presence is the
+    !> switch, so there is no separate flag to fall out of step with it. The axis is held as
+    !> 1/2/3 rather than a character because every other field here is numeric and a scalar
+    !> string would be the only one of its kind crossing mpi_bc; 0 means the input named no
+    !> axis, which the adapter refuses rather than guessing.
+    LOGICAL :: l_transport = .FALSE.
+    INTEGER :: tran_axis = 0            ! 1=x, 2=y, 3=z; W90 one_dim_axis
+    REAL    :: tran_win_min = 0.0       ! Hartree, absolute; min == max means "not given"
+    REAL    :: tran_win_max = 0.0
+    REAL    :: tran_energy_step = 0.0   ! Hartree; 0 means "not given"
     !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
     !> Off by default, as in Wannier90. The criterion is meaningful here because the
     !> projections are the atomic ones this code builds, which a reader of an arbitrary
@@ -480,6 +490,11 @@ CONTAINS
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%export%bmesh, rank, mpi_comm)
+    CALL mpi_bc(this%l_transport, rank, mpi_comm)
+    CALL mpi_bc(this%tran_axis, rank, mpi_comm)
+    CALL mpi_bc(this%tran_win_min, rank, mpi_comm)
+    CALL mpi_bc(this%tran_win_max, rank, mpi_comm)
+    CALL mpi_bc(this%tran_energy_step, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_k, rank, mpi_comm)
     CALL mpi_bc(this%op_k_name, rank, mpi_comm)
@@ -687,6 +702,41 @@ CONTAINS
         this%conv_noise_amp = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convNoiseAmp'))
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convNoiseNum') == 1) &
         this%conv_noise_num = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convNoiseNum'))
+    END IF
+
+    ! --- transport (Landauer); the element being there is what switches it on ---
+    xPathA = '/fleurInput/output/wannierlib/transport'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      this%l_transport = .TRUE.
+      !> The schema restricts this to x, y or z, so the default arm cannot be reached from a
+      !> validated input. It is left to fall through to 0 all the same, and the adapter says
+      !> so: an axis that never arrived must not become a silent guess at the direction.
+      SELECT CASE (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@axis'))))
+      CASE ('x')
+        this%tran_axis = 1
+      CASE ('y')
+        this%tran_axis = 2
+      CASE ('z')
+        this%tran_axis = 3
+      END SELECT
+      !> Both ends of the window, or neither. With exactly one given the other keeps its
+      !> default of zero, the pair is still unequal, and it is passed on as a window running
+      !> from eight electron volts down to nothing: Wannier90 takes the floor of a negative
+      !> number of steps, never enters its energy loop, and writes two files holding their
+      !> header and no data while reporting success. Equal ends already mean "say nothing",
+      !> so only the half-given pair has to be refused.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMin') /= &
+          xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMax')) &
+        CALL juDFT_error('wannierlib: <transport> needs energyMin and energyMax together', &
+                         calledby='read_xml_wannierlib')
+      !> Same convention as the disentanglement windows: absent means equal, equal means
+      !> "say nothing", and silence leaves Wannier90 on its own range.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMin') == 1) &
+        this%tran_win_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyMin'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMax') == 1) &
+        this%tran_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyMax'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyStep') == 1) &
+        this%tran_energy_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyStep'))
     END IF
 
     ! --- interpolation domain + operator list ---
