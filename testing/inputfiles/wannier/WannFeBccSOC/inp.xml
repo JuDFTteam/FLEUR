@@ -61,7 +61,7 @@
       <wannierlib wannierize="T">
         <bands numBands="12" minBand="9" maxBand="20"/>
         <disentanglement disWinMin="-0.1" disWinMax="0.7" disFrozMin="-0.1" disFrozMax="0.7" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
-        <wannierization numIter="3000" convTol="0.00001"/>
+        <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
         <operatorsRs>
           <operator name="hamiltonian"/>
           <operator name="spin"/>

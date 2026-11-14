@@ -90,7 +90,7 @@
       <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
       <wannierlib wannierize="T">
          <bands numBands="11" minBand="7" maxBand="17"/>
-         <wannierization numIter="3000" convTol="0.00001" precond="T"/>
+         <wannierization numIter="3000" convTol="0.00000001" convWindow="3" precond="T"/>
          <operatorsRs>
             <operator name="hamiltonian"/>
             <operator name="orbital"/>
