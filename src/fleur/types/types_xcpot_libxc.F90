@@ -41,7 +41,7 @@ MODULE m_types_xcpot_libxc
    use M_mpi_bc_tool
    IMPLICIT NONE
    private
-   public :: apply_vac_cutoffs, apply_cutoffs, apply_gradient_switch, apply_tau_floor, xcpot_init, xcpot_vx_is_lda, xcpot_vc_is_lda, xcpot_exc_is_lda, &
+   public :: apply_vac_cutoffs, apply_cutoffs, apply_tau_floor, xcpot_init, xcpot_vx_is_lda, xcpot_vc_is_lda, xcpot_exc_is_lda, &
       xcpot_vc_is_gga, xcpot_vx_is_gga, xcpot_vx_is_metagga, xcpot_exc_is_gga, xcpot_exc_is_metagga, xcpot_is_hybrid, &
       xcpot_get_exchange_weight, xcpot_get_vxc, xcpot_get_exc, xcpot_get_fxc_lda, xcpot_get_fxc_gga, &
       xcpot_alloc_gradients, mpi_bc_xcpot_libxc
@@ -89,13 +89,9 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: create_from_aux => xcpot_create_from_aux
       PROCEDURE        :: free => xcpot_free
       PROCEDURE,NOPASS :: apply_cutoffs
-      PROCEDURE,NOPASS :: apply_gradient_switch
       PROCEDURE,NOPASS :: apply_tau_floor
       PROCEDURE,NOPASS :: apply_vac_cutoffs
    END TYPE t_xcpot_libxc
-
-   ! Density range of the smooth switch that turns off the gradient terms in the interstitial
-   REAL, PARAMETER :: grad_switch_rho_off = 1.0e-4, grad_switch_rho_on = 1.0e-3
    PUBLIC t_xcpot_libxc
 CONTAINS
   subroutine apply_vac_cutoffs(rh,grad,l_cut)
@@ -157,35 +153,6 @@ CONTAINS
     ENDDO
 
   end subroutine
-
-  subroutine apply_gradient_switch(rh,grad,w)
-    !! Smoothly switches off the gradient terms at low total density: w = 0 for
-    !! rho <= grad_switch_rho_off, w = 1 for rho >= grad_switch_rho_on, sin^2 ramp in log(rho).
-    !! grad rho and its Laplacian are scaled by w, sigma by w^2; the caller scales vsigma by w.
-    !! A common weight for all spins keeps |grad rho_up . grad rho_dn| <= |grad rho_up||grad rho_dn|.
-    real,INTENT(IN)                 :: rh(:,:)  !points,spin
-    type(t_gradients),INTENT(INOUT) :: grad
-    real,ALLOCATABLE,INTENT(OUT)    :: w(:)     !points
-
-    integer :: i
-    real    :: rhotot
-
-    ALLOCATE(w(size(rh,1)))
-    DO i=1,size(rh,1)
-      rhotot = sum(rh(i,:))
-      if (rhotot <= grad_switch_rho_off) then
-        w(i) = 0.0
-      else if (rhotot >= grad_switch_rho_on) then
-        w(i) = 1.0
-      else
-        w(i) = sin(0.5*pi_const*log(rhotot/grad_switch_rho_off)/log(grad_switch_rho_on/grad_switch_rho_off))**2
-      end if
-      if (w(i) == 1.0) cycle
-      if (allocated(grad%sigma)) grad%sigma(:,i) = grad%sigma(:,i)*w(i)**2
-      if (allocated(grad%gr)) grad%gr(:,i,:) = grad%gr(:,i,:)*w(i)
-      if (allocated(grad%laplace)) grad%laplace(i,:) = grad%laplace(i,:)*w(i)
-    ENDDO
-  end subroutine apply_gradient_switch
 
   subroutine apply_tau_floor(rh,grad,tau)
     !! Raises the kinetic energy density to the von Weizsaecker value where tau < tau_W.

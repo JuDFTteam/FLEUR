@@ -84,7 +84,6 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exc => xcpot_get_exc
       PROCEDURE        :: get_fxc_lda => xcpot_get_fxc_lda
       PROCEDURE,NOPASS :: apply_cutoffs
-      PROCEDURE,NOPASS :: apply_gradient_switch
       PROCEDURE,NOPASS :: apply_tau_floor
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
@@ -142,14 +141,6 @@ CONTAINS
     logical,INTENT(IN),OPTIONAL :: l_sigma_cutoff
 
     !Do nothing here, only in libxc case
-  end subroutine
-
-  subroutine apply_gradient_switch(rh,grad,w)
-    real,INTENT(IN)                 :: rh(:,:)
-    type(t_gradients),INTENT(INOUT) :: grad
-    real,ALLOCATABLE,INTENT(OUT)    :: w(:)
-
-    !Do nothing here (w stays unallocated), only in libxc case
   end subroutine
 
   subroutine apply_tau_floor(rh,grad,tau)

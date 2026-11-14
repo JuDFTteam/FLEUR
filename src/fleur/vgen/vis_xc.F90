@@ -64,7 +64,6 @@ CONTAINS
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
       REAL, ALLOCATABLE :: v_tau(:,:), ked_rs(:,:)
-      REAL, ALLOCATABLE :: grad_switch(:)
       INTEGER           :: jspin, i, js
       LOGICAL           :: perform_MetaGGA, l_libxc
 
@@ -91,10 +90,9 @@ CONTAINS
       ALLOCATE(v_x,mold=rho)
 
       call timestart("apply_cutoffs")
-      ! Low densities are handled by the smooth switch of the gradient terms instead of an
-      ! absolute cutoff on sigma, which cuts through physical gradients in low-density metals.
+      ! No cutoff on sigma: it cuts through physical gradients in low-density metals, and the
+      ! collinear gradient term (libxc_postprocess_gga_pw) stays bounded at low density without it.
       CALL xcpot%apply_cutoffs(1.E-6,rho,grad,l_sigma_cutoff=.FALSE.)
-      IF (xcpot%needs_grad()) CALL xcpot%apply_gradient_switch(rho,grad,grad_switch)
       IF (perform_MetaGGA) CALL xcpot%apply_tau_floor(rho,grad,ked_rs)
       call timestop("apply_cutoffs")
 
@@ -119,19 +117,12 @@ CONTAINS
       call timestop("get_vxc")
 #endif
       
-      ! complete the gradient switch before vsigma enters the FFT-based gradient terms
-      IF (ALLOCATED(grad_switch)) THEN
-         DO i = 1, SIZE(grad_switch)
-            grad%vsigma(:,i) = grad%vsigma(:,i)*grad_switch(i)
-         END DO
-      END IF
-
       SELECT TYPE(xcpot)
       TYPE IS (t_xcpot_libxc)
          l_libxc=.TRUE.
          IF (xcpot%needs_grad()) THEN
-            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
-            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_x,grad)
+            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,noco%l_noco,v_xc,grad)
+            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,noco%l_noco,v_x,grad)
          END IF
       END SELECT
 

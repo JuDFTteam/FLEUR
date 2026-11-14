@@ -24,7 +24,7 @@ MODULE m_pw_tofrom_grid
    REAL            :: gmax
    REAL            :: gmaxz
 
-   PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
+   PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid, grid_divergence
 CONTAINS
   SUBROUTINE init_pw_grid(stars,sym,cell,xcpot)
     IMPLICIT NONE
@@ -441,6 +441,38 @@ CONTAINS
        ENDIF
     END DO
   END SUBROUTINE pw_from_grid
+
+  SUBROUTINE grid_divergence(cell,h,div)
+    !! Divergence of a vector field on the xc FFT grid. Each Cartesian component is transformed
+    !! with a plain FFT; the components are not lattice-symmetric scalars, so no star projection.
+    IMPLICIT NONE
+    TYPE(t_cell),INTENT(IN) :: cell
+    REAL,INTENT(IN)         :: h(:,:)    !(points,3)
+    REAL,INTENT(OUT)        :: div(:)    !(points)
+
+    INTEGER :: k, idx, d(3), ig(3)
+    REAL    :: g(3)
+
+    d = fftgrid%dimensions
+    div = 0.0
+    DO k = 1, 3
+       fftgrid%grid = CMPLX(h(:,k),0.0)
+       CALL fftgrid%perform_fft(forward=.TRUE.)
+       DO idx = 0, fftgrid%gridLength-1
+          ig = [MODULO(idx,d(1)), MODULO(idx/d(1),d(2)), idx/(d(1)*d(2))]
+          ig = MERGE(ig-d, ig, 2*ig > d)
+          ! Nyquist components of even grids have no real derivative
+          IF (ANY(2*ABS(ig) == d)) THEN
+             fftgrid%grid(idx) = CMPLX(0.0,0.0)
+             CYCLE
+          END IF
+          g = MATMUL(REAL(ig), cell%bmat)
+          fftgrid%grid(idx) = fftgrid%grid(idx)*CMPLX(0.0,-g(k))/fftgrid%gridLength
+       END DO
+       CALL fftgrid%perform_fft(forward=.FALSE.)
+       div = div + REAL(fftgrid%grid)
+    END DO
+  END SUBROUTINE grid_divergence
 
   SUBROUTINE finish_pw_grid()
     IMPLICIT NONE
