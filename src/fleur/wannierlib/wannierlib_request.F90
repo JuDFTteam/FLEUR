@@ -19,7 +19,7 @@ MODULE m_wannierlib_request
    USE m_types_input
    USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
    USE m_types_melem_request, ONLY: t_melem_request
-   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, &
+   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, WANNIERLIB_OPK, &
                                     melem_exposed_find, melem_exposed_names
    IMPLICIT NONE
    PRIVATE
@@ -33,10 +33,10 @@ CONTAINS
       TYPE(t_melem_request), INTENT(OUT) :: request
 
       !> The catalogue entry each requested name needs built, one per name.
-      CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:), op_r_needs(:)
+      CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:), op_r_needs(:), op_k_needs(:)
       INTEGER :: iop, krow
 
-      !> The two lists are resolved against the exposure tables HERE, because those tables
+      !> The three lists are resolved against the exposure tables HERE, because those tables
       !> say how the wannierization spells things and that is not a fact about the layer
       !> being asked. What it receives is the catalogue entry each name needs built. A name
       !> no table carries stops the run with the accepted names, rather than leaving an
@@ -56,10 +56,19 @@ CONTAINS
             hint=melem_exposed_names(WANNIERLIB_OPR), calledby='wannierlib_main')
          op_r_needs(iop) = WANNIERLIB_OPR(krow)%operator
       END DO
+      ALLOCATE (op_k_needs(SIZE(this%op_k_name)))
+      DO iop = 1, SIZE(this%op_k_name)
+         krow = melem_exposed_find(this%op_k_name(iop), WANNIERLIB_OPK)
+         IF (krow == 0) CALL juDFT_error('wannierlib: "'//TRIM(this%op_k_name(iop))// &
+            '" has no Bloch-basis form', hint=melem_exposed_names(WANNIERLIB_OPK), &
+            calledby='wannierlib_build_request')
+         op_k_needs(iop) = WANNIERLIB_OPK(krow)%operator
+      END DO
 
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
                         this%op_r_name, this%ops%name, &
-                        op_r_needs, op_needs, this%l_ws_distance)
+                        op_r_needs, op_needs, this%l_ws_distance, &
+                        this%l_operators_k, this%op_k_name, op_k_needs)
       !> On a film the three regions are all covered now: the pair overlap, the spin
       !> operator and the momentum each have their vacuum half, so nothing is refused by
       !> geometry any more. What each of the two needed, and why one without the other

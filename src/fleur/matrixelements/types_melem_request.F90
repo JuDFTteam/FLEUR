@@ -27,6 +27,14 @@ MODULE m_types_melem_request
       LOGICAL :: l_operators_r = .FALSE.
       INTEGER :: n_op_r = 0
       CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
+
+      !> Bloch-basis export. A third list and not a flag on the one above, because the two
+      !> are independently useful: a run can want O(R) and not these, or want these and no
+      !> gauge at all, which is the case that costs nothing and was not reachable before.
+      LOGICAL :: l_operators_k = .FALSE.
+      INTEGER :: n_op_k = 0
+      CHARACTER(LEN=20), ALLOCATABLE :: op_k_name(:)
+      CHARACTER(LEN=20), ALLOCATABLE :: op_k_needs(:)
       !> Band interpolation: the names to project onto the interpolated bands.
       INTEGER :: n_ops = 0
       CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)
@@ -44,6 +52,7 @@ MODULE m_types_melem_request
    CONTAINS
       PROCEDURE :: init     => melem_request_init
       PROCEDURE :: has_op_r => melem_request_has_op_r
+      PROCEDURE :: has_op_k => melem_request_has_op_k
       PROCEDURE :: has_op   => melem_request_has_op
       PROCEDURE :: needs_op => melem_request_needs_op
    END TYPE t_melem_request
@@ -54,7 +63,7 @@ CONTAINS
 
    SUBROUTINE melem_request_init(this, l_spin, l_orbmom, l_socop, l_operators_r, &
                                  op_r_name, op_name, op_r_needs, op_needs, &
-                                 l_ws_distance)
+                                 l_ws_distance, l_operators_k, op_k_name, op_k_needs)
       CLASS(t_melem_request), INTENT(OUT) :: this
       LOGICAL,          INTENT(IN) :: l_spin, l_orbmom, l_socop, l_operators_r
       CHARACTER(LEN=*), INTENT(IN) :: op_r_name(:)   !> the O(R) list, possibly empty
@@ -62,6 +71,20 @@ CONTAINS
       CHARACTER(LEN=*), INTENT(IN) :: op_r_needs(:)  !> catalogue entry per O(R) name
       CHARACTER(LEN=*), INTENT(IN) :: op_needs(:)    !> catalogue entry per interpolated name
       LOGICAL,          INTENT(IN) :: l_ws_distance
+      !> Optional so a caller with no Bloch export says nothing, rather than having to
+      !> build two empty arrays in order to pass them.
+      LOGICAL,          INTENT(IN), OPTIONAL :: l_operators_k
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: op_k_name(:)
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: op_k_needs(:)
+
+      ALLOCATE(this%op_k_name(0), this%op_k_needs(0))
+      IF (PRESENT(l_operators_k)) this%l_operators_k = l_operators_k
+      IF (PRESENT(op_k_name))     this%op_k_name     = op_k_name
+      IF (PRESENT(op_k_needs))    this%op_k_needs    = op_k_needs
+      this%n_op_k = SIZE(this%op_k_name)
+      IF (SIZE(this%op_k_needs) /= SIZE(this%op_k_name)) &
+         CALL juDFT_error("t_melem_request: every Bloch name needs its catalogue entry", &
+                          calledby="melem_request_init")
 
       this%l_spin   = l_spin
       this%l_orbmom = l_orbmom
@@ -94,6 +117,16 @@ CONTAINS
       melem_request_has_op_r = melem_op_known(name, this%op_r_name)
    END FUNCTION melem_request_has_op_r
 
+   !> Whether the BLOCH list asked for this operator.
+   LOGICAL FUNCTION melem_request_has_op_k(this, name)
+      CLASS(t_melem_request), INTENT(IN) :: this
+      CHARACTER(LEN=*),       INTENT(IN) :: name
+      melem_request_has_op_k = .FALSE.
+      IF (.NOT.this%l_operators_k)        RETURN
+      IF (.NOT.ALLOCATED(this%op_k_name)) RETURN
+      melem_request_has_op_k = melem_op_known(name, this%op_k_name)
+   END FUNCTION melem_request_has_op_k
+
    !> Whether the INTERPOLATION list asked for this operator. The three summary flags
    !> cannot answer it: both lists set them, so l_spin is true for a real-space export as
    !> much as for an interpolated one -- and the two are not producible in the same spin
@@ -122,6 +155,9 @@ CONTAINS
       IF (l_needed .OR. l_interp_only) RETURN
       IF (this%l_operators_r .AND. ALLOCATED(this%op_r_needs)) &
          l_needed = melem_op_known(opname, this%op_r_needs)
+      IF (l_needed) RETURN
+      IF (this%l_operators_k .AND. ALLOCATED(this%op_k_needs)) &
+         l_needed = melem_op_known(opname, this%op_k_needs)
    END FUNCTION melem_request_needs_op
 
    !> Whether a name appears in one of the lists above.

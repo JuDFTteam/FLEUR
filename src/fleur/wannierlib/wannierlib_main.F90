@@ -44,6 +44,7 @@ MODULE m_wannierlib_main
   USE m_wannierlib_cf, ONLY: wannierlib_uiu, wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
+   USE m_wannierlib_export_ks, ONLY: wannierlib_export_ks
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
@@ -131,6 +132,9 @@ CONTAINS
       !> matrices from before any gauge exists.
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
+      !> A bmesh of its own for the Bloch export: the shared one is filled after the
+      !> gauge exists and carries the centres, and this runs before either.
+      TYPE(t_wgauge_bmesh) :: bmesh_k
       TYPE(t_wgauge_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
@@ -259,6 +263,20 @@ CONTAINS
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
+
+         !> The operators in the Bloch basis, before run_w90 has a gauge to offer. It
+         !> goes here and not beside the O(R) export because that is the whole point: a
+         !> consumer that builds its own Wannier functions needs these and not a gauge,
+         !> and asking for them must not oblige the run to produce one.
+         IF (request%l_operators_k) THEN
+            CALL wannierlib_get_bmesh(this, kpts, bmesh_k)
+            CALL wannierlib_export_ks(request%has_op_k('spin'), request%has_op_k('orbital'), &
+                                      request%has_op_k('spinOrbit'), &
+                                      request%has_op_k('exchangeTorque'), &
+                                      melem%s0, melem%l0, melem%soc4, melem%t0, melem%x0, &
+                                      melem%n_channels, atoms%nat, bmesh_k%wb, bmesh_k%bk, &
+                                      distk, kpts%nkptf, wl%num_bands, jspin, fmpi)
+         END IF
 
          CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
 

@@ -21,6 +21,7 @@ MODULE m_wannierlib_hdf_util
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wr_r1, wr_r2, wr_r3, wr_r4, wr_i1, wr_i2, wr_i3, wl_hdf_create, wl_hdf_root
+   PUBLIC :: wl_ds5_open, wl_ds5_slab, wl_ds_close
 CONTAINS
 
    !> Make WF<jspin>_<what>.hdf and return it open. A stale file is removed rather than
@@ -50,6 +51,36 @@ CONTAINS
       CALL io_write_attint0(gid, 'version', version)
       CALL io_write_attint0(gid, 'nkpt', nkpt)
    END SUBROUTINE wl_hdf_root
+
+   !> A rank-5 dataset filled one slab at a time. The arrays this serves are an operator
+   !> over every band pair, component and k-point at once, and they do not fit beside the
+   !> buffer they are gathered through, so the caller opens the dataset, writes a component
+   !> per call and closes it, instead of handing over a whole array.
+   SUBROUTINE wl_ds5_open(gid, name, n, did)
+      INTEGER(HID_T),   INTENT(IN)  :: gid
+      CHARACTER(LEN=*), INTENT(IN)  :: name
+      INTEGER,          INTENT(IN)  :: n(5)
+      INTEGER(HID_T),   INTENT(OUT) :: did
+      INTEGER(HID_T) :: sid
+      INTEGER :: e
+      CALL h5screate_simple_f(5, INT(n, HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
+      CALL h5sclose_f(sid, e)
+   END SUBROUTINE wl_ds5_open
+
+   SUBROUTINE wl_ds5_slab(did, name, start, cnt, dat)
+      INTEGER(HID_T),   INTENT(IN) :: did
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER,          INTENT(IN) :: start(5), cnt(5)
+      REAL,             INTENT(IN) :: dat(:, :, :, :, :)
+      CALL io_write_real5(did, start, cnt, name, dat)
+   END SUBROUTINE wl_ds5_slab
+
+   SUBROUTINE wl_ds_close(did)
+      INTEGER(HID_T), INTENT(IN) :: did
+      INTEGER :: e
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wl_ds_close
 
    SUBROUTINE wr_r2(gid, name, n, dat)
       INTEGER(HID_T), INTENT(IN) :: gid

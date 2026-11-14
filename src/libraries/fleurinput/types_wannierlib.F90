@@ -7,7 +7,8 @@
 ! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
 MODULE m_types_wannierlib
-  USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, melem_exposed_find
+  USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, WANNIERLIB_OPK, &
+                                  melem_exposed_find
   USE m_types_kpts
   USE m_juDFT
   USE m_types_atoms
@@ -96,6 +97,7 @@ MODULE m_types_wannierlib
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="spinOrbit"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operatorsRs> block (real-space O(R) export) is present
+    LOGICAL :: l_operators_k = .FALSE.     ! an <operatorsKs> block (Bloch basis, no gauge) is present
     !> The <export> block: one boolean per artefact, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own
     !> matrices to someone outside -- and differ only in who reads them. What <operatorsRs>
@@ -145,6 +147,11 @@ MODULE m_types_wannierlib
     !> One name per <operator> of <operatorsRs>. A list of names is all this is, so it
     !> stays a list of names rather than a record with one field in it.
     CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
+
+    ! --- operatorsKs table: one entry per <operatorsKs>/<operator name=".."> child.
+    !     Kept apart from the list above for the same reason the request keeps them
+    !     apart: neither one implies the other. ---
+    CHARACTER(LEN=20), ALLOCATABLE :: op_k_name(:)
 
     INTEGER :: num_wann = 0
     INTEGER :: num_bands = 0
@@ -465,6 +472,8 @@ CONTAINS
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
+    CALL mpi_bc(this%l_operators_k, rank, mpi_comm)
+    CALL mpi_bc(this%op_k_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
     CALL mpi_bc(this%min_band, rank, mpi_comm)
@@ -541,7 +550,7 @@ CONTAINS
     CHARACTER(LEN=255) :: sbuf
     INTEGER :: numberNodes, ios
     INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal, iRow
-    INTEGER :: nOpsRead = 0, nOprRead = 0
+    INTEGER :: nOpsRead = 0, nOprRead = 0, nOpkRead = 0
     LOGICAL :: has_wannierize
     CHARACTER(LEN=20) :: species_name
     TYPE(t_kpts) :: kpts_temp
@@ -799,6 +808,28 @@ CONTAINS
         END IF
       END IF
     END IF
+
+    ! --- operatorsKs: the operator matrices in the BLOCH basis, written straight out of
+    !     the coarse pass. No gauge is applied and none is needed, so this is the one
+    !     operator export a run can ask for without paying for a wannierisation. ---
+    xPathA = '/fleurInput/output/wannierlib/operatorsKs'
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
+      this%l_operators_k = .TRUE.
+      nOpkRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
+    END IF
+    ALLOCATE(this%op_k_name(nOpkRead))
+    DO iProj = 1, nOpkRead
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operatorsKs/operator[', iProj, ']'
+      this%op_k_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
+      iRow = melem_exposed_find(this%op_k_name(iProj), WANNIERLIB_OPK)
+      IF (iRow > 0) THEN
+        SELECT CASE (TRIM(WANNIERLIB_OPK(iRow)%operator))
+        CASE ('spin');      this%l_spin = .TRUE.
+        CASE ('orbital');   this%l_orbmom = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
+        END SELECT
+      END IF
+    END DO
 
     ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).
     !     Groups <operator name=".."> children written to standalone-format files. ---

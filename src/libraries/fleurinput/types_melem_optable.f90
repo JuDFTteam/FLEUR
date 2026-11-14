@@ -99,6 +99,17 @@ MODULE m_types_melem_optable
       !> Cartesian components.
       t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.)]
 
+   !> <operatorsKs>/<operator name="..">. The same matrices in the BLOCH basis, written
+   !> before any gauge exists. Only the four that ARE a matrix at a single k are here: the
+   !> Hamiltonian in this basis is the eigenvalue list, and the position operator is a
+   !> finite difference over the b-shells rather than a matrix, which is why the shells
+   !> travel in the same file instead of being exposed as an operator.
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPK(4) = [ &
+      t_melem_exposed('spin',           'spin',           3, '', '', .FALSE.), &
+      t_melem_exposed('orbital',        'orbital',        3, '', '', .FALSE.), &
+      t_melem_exposed('spinOrbit',      'spinOrbit',      4, '', '', .FALSE.), &
+      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.)]
+
    PUBLIC :: melem_exposed_find, melem_exposed_names
 
 CONTAINS

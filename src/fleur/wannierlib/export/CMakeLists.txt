@@ -6,4 +6,5 @@ src/fleur/wannierlib/export/wannierlib_plot.F90
 src/fleur/wannierlib/export/wannierlib_cf.F90
 src/fleur/wannierlib/export/wannierlib_hdf_util.F90
 src/fleur/wannierlib/export/wannierlib_export_basis.F90
+src/fleur/wannierlib/export/wannierlib_export_ks.F90
 )

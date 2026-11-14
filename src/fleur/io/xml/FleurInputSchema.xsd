@@ -3710,6 +3710,31 @@
       </xsd:sequence>
    </xsd:complexType>
 
+   <xsd:complexType name="WannierlibOperatorsKType">
+      <xsd:annotation>
+         <xsd:documentation>The operator matrices in the Bloch basis, O(k), written as the coarse pass built them and before any gauge exists. Together with the finite-difference b-shells that travel in the same file, this is what a consumer that builds its own Wannier functions needs, and it costs no wannierisation.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="operator" type="WannierlibOperatorKType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="WannierlibOperatorKType">
+      <xsd:attribute name="name" type="WannierlibOperatorKEnum" use="required"/>
+   </xsd:complexType>
+
+   <xsd:simpleType name="WannierlibOperatorKEnum">
+      <xsd:annotation>
+         <xsd:documentation>Only the four operators that are a matrix at a single k. The Hamiltonian in this basis is the eigenvalue list and the position operator is a finite difference over the b-shells, so neither is nameable here; asking for one fails validation rather than at run time.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="spin"/>
+         <xsd:enumeration value="orbital"/>
+         <xsd:enumeration value="spinOrbit"/>
+         <xsd:enumeration value="exchangeTorque"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
    <xsd:complexType name="WannierlibInterpolationType">
       <xsd:annotation>
          <xsd:documentation>Wannier interpolation: the output domains to interpolate on and the operators to interpolate. Declare one &lt;domain&gt; per set of k-points; each writes its own suffixed set of bands_wann_*.dat files.</xsd:documentation>
@@ -3786,6 +3811,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="disentanglement" type="WannierlibDisentanglementType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannierization" type="WannierlibWannierizationType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="operatorsRs" type="WannierlibOperatorsRType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="operatorsKs" type="WannierlibOperatorsKType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="export" type="WannierlibExportType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="interpolation" type="WannierlibInterpolationType"/>
       </xsd:all>
