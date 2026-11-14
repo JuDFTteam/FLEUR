@@ -37,6 +37,12 @@ import re
 import pytest
 
 BASE = "./inputfiles/wannier/WannFeBccNoIter"
+#> Silicon rather than iron for the disentangled half: eight k-points and eight bands
+#> against four Wannier functions, which is the cheapest case in the house with a frozen
+#> window genuinely narrower than the outer one. A case whose two windows coincide runs
+#> zero disentanglement iterations whatever is asked of it, and would pass this test
+#> without testing anything.
+BASE_DIS = "./inputfiles/wannier/WannSiDiamondNoIter"
 
 #> The line is printed to six and eight decimals, so it can be compared at the
 #> precision of the printing and no finer. Anything that moves the gauge is O(1e-2).
@@ -51,6 +57,11 @@ STATE = re.compile(
 #> An iteration row: "      0     0.860E+01   0.0000000000    8.5970102960   0.00  <-- CONV".
 #> The border and header lines carry the same <-- CONV tag, hence the leading integer.
 ITER_ROW = re.compile(r"^\s*(\d+)\s+[-\d.E+]+\s+[-\d.E+]+\s+[-\d.E+]+.*<-- CONV", re.M)
+#> The same, for the disentanglement: its table is tagged <-- DIS and is counted
+#> separately because a disentangled run prints a Sum of centres and spreads line on
+#> every one of its iterations, not only in the two State blocks. Counting lines rather
+#> than tags is how that output gets misread.
+DIS_ROW = re.compile(r"^\s*(\d+)\s+[-\d.E+]+\s+[-\d.E+]+\s+[-\d.E+]+.*<-- DIS", re.M)
 
 
 @pytest.mark.wannierlib
@@ -96,3 +107,52 @@ def test_num_iter_zero_keeps_the_projection_gauge(execute_fleur):
             f"spin channel {ch}: the spread moved from {s_ini:.8f} to {s_fin:.8f} "
             f"although no minimisation was asked for, so the projection gauge was "
             f"not kept")
+
+
+@pytest.mark.wannierlib
+@pytest.mark.bulk
+def test_dis_num_iter_zero_keeps_the_projection_subspace(execute_fleur):
+    """<disentanglement numIter="0"> must be expressible, and must reach Wannier90.
+
+    The schema used to type this attribute as positiveInteger, so zero could not even be
+    written down. That was stricter than the library it drives: Wannier90 rejects
+    dis_num_iter < 0, not zero, and its loop runs from 1, so zero simply does not
+    execute while dis_project and dis_proj_froz -- the steps that actually build the
+    subspace out of the projections and the frozen window -- run before the loop and
+    always. Zero therefore names a real object: the projection subspace, unoptimised.
+
+    This case asks for zero on both counts, so neither Omega_I nor the spread is
+    minimised and the run is the pure projection answer from end to end.
+    """
+    res = execute_fleur(BASE_DIS, rm_files=["."], mpi_procs=2)
+    assert "out" in res, "the run wrote no out file; there is nothing to read"
+    out = open(res["out"]).read()
+
+    #> If the two windows coincided there would be nothing to disentangle and the count
+    #> below would be zero for a reason that has nothing to do with numIter.
+    assert "Frozen states" in out or "<-- DIS" in out, (
+        "this run shows no sign of a disentanglement stage at all, so a count of zero "
+        "iterations says nothing")
+
+    dis = [int(n) for n in DIS_ROW.findall(out)]
+    assert not dis, (
+        f'<disentanglement numIter="0"> was asked for and Wannier90 ran '
+        f"{len(dis)} iterations, up to {max(dis)}. The zero did not reach it")
+
+    #> The wannierise count is zero here too, so the same signature as the other test
+    #> has to hold: what comes out is what went in.
+    iters = [int(n) for n in ITER_ROW.findall(out)]
+    assert iters and max(iters) == 0, (
+        f"the wannierise stage ran up to iteration {max(iters) if iters else None} "
+        f'although numIter="0" was asked for')
+
+    estados = STATE.findall(out)
+    assert len(estados) >= 2 and len(estados) % 2 == 0, (
+        f"found {len(estados)} State blocks; the run did not get as far as wannierising")
+    for ch, (ini, fin) in enumerate(zip(estados[::2], estados[1::2]), start=1):
+        assert (ini[0], fin[0]) == ("Initial", "Final"), (
+            f"block {ch}: came out as {ini[0]}/{fin[0]}, not the pair this expects")
+        s_ini, s_fin = float(ini[2]), float(fin[2])
+        assert abs(s_fin - s_ini) < TOL * max(1.0, abs(s_ini)), (
+            f"block {ch}: the spread moved from {s_ini:.8f} to {s_fin:.8f} although "
+            f"nothing was asked to be minimised")

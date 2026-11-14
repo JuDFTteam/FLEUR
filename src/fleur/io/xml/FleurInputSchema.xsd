@@ -3583,7 +3583,11 @@
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="disFrozMax" type="FleurDouble" use="required"/>
-      <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="numIter" type="xsd:nonNegativeInteger" use="required">
+         <xsd:annotation>
+            <xsd:documentation>Iterations of the Omega_I minimisation. numIter="0" is legal and means: take the subspace the projections define, constrained to the frozen window, and leave it unoptimised. Wannier90 accepts it -- its own guard rejects dis_num_iter &lt; 0, not 0 -- and its iteration loop runs from 1, so it simply does not execute, while the projection and frozen-window steps that construct the subspace run before the loop and always. Omega_I is then the invariant of that subspace rather than its minimum over subspaces.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
       <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>

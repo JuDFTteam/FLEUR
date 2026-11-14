@@ -168,11 +168,11 @@ MODULE m_types_wannierlib
     REAL :: dis_win_max = 0.0
     REAL :: dis_froz_min = 0.0
     REAL :: dis_froz_max = 0.0
-    !> -1 and not 0 for "the input did not say", because for the wannierise count ZERO IS
-    !> A VALUE: the schema types <wannierization numIter> as nonNegativeInteger precisely so
-    !> that 0 is legal and means do not minimise, keep the projection gauge, while
-    !> <disentanglement numIter> is a positiveInteger where 0 is not. With 0 as the sentinel
-    !> the one case the schema documents is the one case that cannot be asked for.
+    !> -1 and not 0 for "the input did not say", because for both counts ZERO IS A VALUE:
+    !> the schema types each numIter as nonNegativeInteger, and 0 means do not minimise --
+    !> for the wannierise count keep the gauge the projections give, for the disentanglement
+    !> keep the subspace the projections and the frozen window define. With 0 as the
+    !> sentinel neither of the two could be asked for.
     INTEGER :: dis_num_iter = -1
     INTEGER :: num_iter = -1     ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
     !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
