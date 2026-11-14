@@ -120,8 +120,12 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'gamma_only', gamma_only)
     CALL w90_set_option(wannierlib_w90main, 'spinors', spinors)
     CALL w90_set_option(wannierlib_w90main, 'dump_inputs', .FALSE.)
-    IF (this%dis_num_iter > 0) CALL w90_set_option(wannierlib_w90main, 'dis_num_iter', this%dis_num_iter)  ! disentanglement (XML numIter)
-    IF (this%num_iter > 0)     CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
+    !> >= 0 and not > 0: num_iter = 0 is a value the schema documents -- no minimisation,
+    !> the projection gauge kept -- and the sentinel for silence is -1. Guarding on > 0 let
+    !> a requested 0 fall through to Wannier90's own default of 100 iterations, so an input
+    !> asking for no minimisation quietly got a hundred steps of it.
+    IF (this%dis_num_iter >= 0) CALL w90_set_option(wannierlib_w90main, 'dis_num_iter', this%dis_num_iter)  ! disentanglement (XML numIter)
+    IF (this%num_iter >= 0)     CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
     !> How many neighbour shells w90 may try before it gives up on the B1 condition. Its own
     !> default is 36, which is not enough for a film: the mesh is dense in plane and a single
     !> point in z, so shell after shell is rejected by the SVD test and 36 runs out at
