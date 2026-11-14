@@ -18,6 +18,11 @@ error. This one closes the loop through a second, already-trusted writer:
 with V read back out of the Wannier90 checkpoint the same run wrote. Measured
 residual on this case is ~7e-9, which is the precision rspauli.1 is printed with.
 
+The same case also asks for <export bmesh="T"/>. Nothing else writes that file, so
+there is no second writer to join it to; what stands in for one is its layout, pinned
+shape by shape, and the two identities the shells have to obey for a finite difference
+over them to be a centred derivative.
+
 NOT RUN BY CI, and it needs no marker of its own to stay out: the test venv installs
 neither numpy nor h5py, so the importorskip below turns it into a skip there before
 anything is executed. It is a cross-check of two writers against each other, not a
@@ -103,6 +108,67 @@ def _read_operator_k(group, np):
     return np.swapaxes(block[..., 0] + 1j * block[..., 1], -1, -2)
 
 
+def _check_bmesh(path, np, h5py):
+    """WF<n>_bmesh.hdf, on its own terms: the layout and the two shell identities.
+
+    THE LAYOUT IS THE POINT. Nothing else writes this file, so there is no second
+    writer to join it to and the shapes are the contract. HDF reverses the dimension
+    order, so every array is read back to front relative to the Fortran that wrote it:
+    nnlist goes out (nk, nntot) and arrives (nntot, nk), gkpb goes out (3, nk, nntot)
+    and arrives (nntot, nk, 3), bk goes out (3, nntot, nk) and arrives (nk, nntot, 3).
+    They are pinned one by one below, because a reader that guesses wrong gets arrays
+    of a plausible shape and silently pairs the wrong b with the wrong k.
+
+    THE IDENTITIES. sum_b w_b b_a b_c = delta_ac is what makes a finite difference over
+    the shells a derivative, and sum_b w_b b = 0 is what makes it centred. Both hold in
+    the units the file is written in and in no other, so between them they catch a unit,
+    a weight or a convention moving. Both are checked at EVERY k and not just the first:
+    Wannier90 chooses the shells per k-point and bk carries a k index for that reason.
+
+    WHAT IS NOT CHECKED, and why. Not that neighbour index b names the same b vector for
+    every k -- it does not. On the 2x2x2 mesh this case uses, +b and -b land on the same
+    stored point, so which one a given slot holds is Wannier90's business and bk varies
+    over k by an amount the size of a shell. Tying nnlist and gkpb to bk needs the
+    reciprocal lattice, which this file does not carry and a consumer has anyway.
+    """
+    with h5py.File(path, "r") as handle:
+        nntot = int(np.asarray(handle["nntot"])[0])
+        wb = np.asarray(handle["wb"])
+        bk = np.asarray(handle["bk"])
+        nnlist = np.asarray(handle["nnlist"])
+        gkpb = np.asarray(handle["gkpb"])
+        bkf = np.asarray(handle["kpts"])
+
+    nk = bkf.shape[0]
+    for name, got, want in (("wb", wb.shape, (nntot,)),
+                            ("bk", bk.shape, (nk, nntot, 3)),
+                            ("nnlist", nnlist.shape, (nntot, nk)),
+                            ("gkpb", gkpb.shape, (nntot, nk, 3)),
+                            ("kpts", bkf.shape, (nk, 3))):
+        assert got == want, (
+            f"{name} came back {got} and the layout says {want} for {nk} k-points and "
+            f"{nntot} neighbours; the index order of the export moved")
+
+    completeness = np.abs(np.einsum("b,kbi,kbj->kij", wb, bk, bk) - np.eye(3)[None]).max()
+    assert completeness < 1e-8, (
+        f"the exported b-shells do not satisfy sum_b w_b b_a b_c = delta_ac "
+        f"(off by {completeness:.3e}); the weights or the units moved")
+
+    centred = np.abs(np.einsum("b,kba->ka", wb, bk)).max()
+    assert centred < 1e-8, (
+        f"the shells are not centred, sum_b w_b b = {centred:.3e}; the difference they "
+        f"define is first order in b and not a derivative")
+
+    #> 1-based, Fortran's own. An out-of-range entry would index silently in python.
+    assert nnlist.min() >= 1 and nnlist.max() <= nk, (
+        f"nnlist runs {nnlist.min()}..{nnlist.max()} and must index the {nk} stored "
+        f"k-points, 1-based")
+    assert np.abs(gkpb).max() > 0, (
+        "every gkpb is zero, so no neighbour leaves the zone. On a full-zone mesh some "
+        "must, and a gkpb that is always zero is the signature of the field never being "
+        "filled rather than of a mesh that does not need it")
+
+
 @pytest.mark.wannierlib
 @pytest.mark.bulk
 @pytest.mark.soc
@@ -119,11 +185,13 @@ def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
     #> the exporter is the identity and a mis-ordered k map would never show.
     res = execute_fleur(BASE, rm_files=["."], mpi_procs=2)
 
-    for name in ("WF1_operators_ks.hdf", "fleur_wlib_internal.chk",
+    for name in ("WF1_operators_ks.hdf", "WF1_bmesh.hdf", "fleur_wlib_internal.chk",
                  "rspauli.1", "anglmomrs.1"):
         assert name in res, (
-            f"{name} was not written. This case asks for <operatorsKs>, <operatorsRs> "
-            f"and a checkpoint, and the cross-check needs all three")
+            f"{name} was not written. This case asks for <operatorsKs>, <operatorsRs>, "
+            f"a b-mesh and a checkpoint, and the cross-check needs all of them")
+
+    _check_bmesh(res["WF1_bmesh.hdf"], np, h5py)
 
     num_bands, num_wann, num_kpts, gauge = _read_checkpoint(res["fleur_wlib_internal.chk"], np)
 
@@ -140,17 +208,6 @@ def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
         assert (nb_file, nk_file) == (num_bands, num_kpts), (
             f"the export says {nb_file} bands and {nk_file} k-points, the checkpoint "
             f"says {num_bands} and {num_kpts}")
-
-        #> The b-shell completeness relation, sum_b w_b b_a b_b = delta_ab. It is the one
-        #> statement about the shells that is true in the right units and convention and
-        #> false in any other, and the shells travel in this file precisely because no
-        #> reader can rebuild them.
-        wb = np.asarray(handle["bmesh_wb"])
-        bk = np.asarray(handle["bmesh_bk"])
-        completeness = np.abs(np.einsum("b,bi,bj->ij", wb, bk[0], bk[0]) - np.eye(3)).max()
-        assert completeness < 1e-8, (
-            f"the exported b-shells do not satisfy sum_b w_b b_a b_b = delta_ab "
-            f"(off by {completeness:.3e}); the weights or the units moved")
 
         for dataset, real_space in (("spin", "rspauli.1"), ("orbital", "anglmomrs.1")):
             bloch = _read_operator_k(handle[dataset], np)

@@ -14,15 +14,13 @@
 !> step after the eigenvectors and commit to nothing: the row index is FLEUR's own band
 !> index, the last index is the full-zone k list, and what to do next is the reader's.
 !>
-!> WHAT TRAVELS WITH THEM. The finite-difference b-shells, because they are the one piece
-!> of the Wannier90 setup a reader cannot rebuild from inp.xml and the one that is already
-!> fixed here: the shell search runs inside init_w90, so wb and bk exist before the first
-!> iteration of anything. Without them no derivative in k can be taken at all.
-!>
-!> WHAT DOES NOT. No centres -- they are a property of a gauge, and the point of this file
-!> is that there is not one yet. No Hamiltonian, which in this basis is the eigenvalue list
-!> that out.xml and the .eig already carry. No position operator, which at a single k is
-!> not a matrix but a finite difference over the shells above.
+!> WHAT DOES NOT TRAVEL WITH THEM. No centres -- they are a property of a gauge, and the
+!> point of this file is that there is not one yet. No Hamiltonian, which in this basis is
+!> the eigenvalue list that out.xml and the .eig already carry. No position operator, which
+!> at a single k is not a matrix but a finite difference over the b-shells. And not the
+!> shells themselves: they are a property of the wannierisation and not of this request --
+!> a run can ask for them and no operators -- so <export bmesh="T"/> publishes them once,
+!> in their own file. Taking a derivative in k needs both.
 !>
 !> LAYOUT. One rank-5 dataset per operator, (2, nb, nb, ncomp, nkpt) in Fortran order, real
 !> part then imaginary. It is written one component at a time: the whole array and the
@@ -49,7 +47,7 @@ CONTAINS
    !> over the ranks by k and have to be gathered -- but only rank 0 holds the file open.
    SUBROUTINE wannierlib_export_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                    s0, l0, soc4, t0, x0, n_channels, nat, &
-                                   wb, bk, distk, nkptf, nb, jspin, fmpi)
+                                   distk, nkptf, nb, jspin, fmpi)
 #ifdef CPP_HDF
       USE hdf5
       USE m_wannierlib_hdf_util
@@ -61,8 +59,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE, INTENT(IN) :: t0(:, :, :, :)          !< (nb,nb,3,nk_loc)
       COMPLEX, ALLOCATABLE, INTENT(IN) :: x0(:, :, :)             !< (nb,nb,nk_loc)
       INTEGER,              INTENT(IN) :: n_channels, nat
-      REAL,    ALLOCATABLE, INTENT(IN) :: wb(:)                   !< (nntot) shell weights
-      REAL,    ALLOCATABLE, INTENT(IN) :: bk(:, :, :)             !< the b vectors themselves
       INTEGER,              INTENT(IN) :: distk(:)                !< (nkptf) owning rank of each k
       INTEGER,              INTENT(IN) :: nkptf, nb, jspin
       TYPE(t_mpi),          INTENT(IN) :: fmpi
@@ -103,8 +99,6 @@ CONTAINS
          CALL wl_hdf_create('operators_ks', jspin, fid, filename)
          CALL wl_hdf_root(fid, 1, nkptf, gid)
          CALL wr_i1(gid, 'dims', [4], [nb, nkptf, nat, n_channels])
-         IF (ALLOCATED(wb)) CALL wr_r1(gid, 'bmesh_wb', [SIZE(wb)], wb)
-         IF (ALLOCATED(bk)) CALL wr_r3(gid, 'bmesh_bk', SHAPE(bk), bk)
       END IF
 
       did = -1

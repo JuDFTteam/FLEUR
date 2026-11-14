@@ -45,6 +45,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wannierlib_export_ks, ONLY: wannierlib_export_ks
+   USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
@@ -264,17 +265,25 @@ CONTAINS
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
 
+         !> The b-mesh, filled on a copy of its own. The shared one gets its weights only
+         !> after run_w90, because the same call also fills the Wannier centres and those
+         !> need a gauge; the topology and the shells do not, and both are settled here.
+         IF (this%export%bmesh .OR. request%l_operators_k) THEN
+            CALL bmesh_k%set_neighbours(nntot_w90, nnkp, gkpb, kdiff)
+            CALL wannierlib_get_bmesh(this, kpts, bmesh_k)
+         END IF
+         IF (this%export%bmesh) CALL wannierlib_export_bmesh(bmesh_k, kpts, jspin, fmpi)
+
          !> The operators in the Bloch basis, before run_w90 has a gauge to offer. It
          !> goes here and not beside the O(R) export because that is the whole point: a
          !> consumer that builds its own Wannier functions needs these and not a gauge,
          !> and asking for them must not oblige the run to produce one.
          IF (request%l_operators_k) THEN
-            CALL wannierlib_get_bmesh(this, kpts, bmesh_k)
             CALL wannierlib_export_ks(request%has_op_k('spin'), request%has_op_k('orbital'), &
                                       request%has_op_k('spinOrbit'), &
                                       request%has_op_k('exchangeTorque'), &
                                       melem%s0, melem%l0, melem%soc4, melem%t0, melem%x0, &
-                                      melem%n_channels, atoms%nat, bmesh_k%wb, bmesh_k%bk, &
+                                      melem%n_channels, atoms%nat, &
                                       distk, kpts%nkptf, wl%num_bands, jspin, fmpi)
          END IF
 

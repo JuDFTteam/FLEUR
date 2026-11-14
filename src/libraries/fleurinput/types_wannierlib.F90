@@ -65,6 +65,9 @@ MODULE m_types_wannierlib
   TYPE t_wannierlib_export
     SEQUENCE
     LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
+    !> Not a consumer but a fact about the run: the b-shells and the neighbour topology,
+    !> fixed before any gauge exists and shared by everything built from them.
+    LOGICAL :: bmesh = .FALSE.   ! <export bmesh="T"/>:          WF<spin>_bmesh.hdf
     LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    input/, renamed, + four structural
     LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
     !> The only artefact here Wannier90 writes itself: FLEUR asks, the format stays theirs.
@@ -471,6 +474,7 @@ CONTAINS
     CALL mpi_bc(this%export%plot, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
+    CALL mpi_bc(this%export%bmesh, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_k, rank, mpi_comm)
     CALL mpi_bc(this%op_k_name, rank, mpi_comm)
@@ -777,6 +781,8 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@checkpoint'))
       this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@irrep'))
+      this%export%bmesh = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@bmesh'))
       !> wannierberri="T" is a superset of the two flags above rather than a third artefact:
       !> that wannierization consumes the .amn/.mmn/.eig and takes its symmetry table from
       !> what irrep reads out of the interstitial, so one flag asks for everything the route

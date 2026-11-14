@@ -3775,6 +3775,11 @@
             <xsd:documentation>Writes WF&lt;spin&gt;_basis.hdf, the interstitial plane waves and coefficients irrep reads. Needs a full-zone mesh and HDF5.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute default="F" name="bmesh" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes WF&lt;spin&gt;_bmesh.hdf: the finite-difference b-shells and the neighbour topology -- which stored k-point is k+b, and the reciprocal lattice vector that brings it back into the zone. A property of the wannierisation rather than of any one consumer, settled before the gauge exists, and the one piece of the Wannier90 setup a reader cannot rebuild from inp.xml. Needed to take any derivative in k.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute default="F" name="orbitrans" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Writes input/, the directory orbitrans opens, with the &lt;operatorsRs&gt; matrices renamed and the four structural files.</xsd:documentation>
