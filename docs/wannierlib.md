@@ -150,6 +150,15 @@ are then the trial orbitals themselves, orthonormalised. That is a real choice, 
 degenerate case — the minimisation converges to maximally localised functions whatever it
 starts from, so the initial projections only decide the gauge when it is switched off.
 
+`kmeshTol` is the tolerance Wannier90 groups the b-vectors into shells with, and checks the
+completeness relation with. Its own value is `1e-6`. A wannierisation runs on a uniform
+full-zone mesh, so when the shells come out wrong the lattice is the first suspect rather
+than the mesh: a slightly distorted cell splits one shell into several, or misses Eq. (B1),
+and the run stops in `kmesh_get` with nothing left to turn. The mesh itself is checked
+nowhere, so a selected k-list that is not the grid `mp_grid` describes lands here too.
+Loosening this gets past that, and it is not free, because the weights are then solved over
+b-vectors of unequal length.
+
 ### 2.6 `<operatorsRs>` — O(R) for external post-processing
 
 Writes the real-space operator matrices in the Wannier90/FLEUR standalone format. No band

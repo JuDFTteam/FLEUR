@@ -3649,6 +3649,11 @@
             <xsd:documentation>Order of the finite-difference stencil Wannier90 builds the b-shells with (its higher_order_n). The default 1 is the one-shell formula of Marzari and Vanderbilt, whose error in the k derivative is O(b^2); 2 and 3 combine more shells and reduce it to O(b^4) and O(b^6), at the cost of more neighbours per k point and therefore more overlap matrices. It matters for every quantity built as a k derivative - the Berry connection A, and above all C and F, which are second derivatives. Silence leaves Wannier90 on its own default, so an existing input keeps its numbers.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute name="kmeshTol" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How close two b-vectors have to be in length to count as one shell, and how exactly the completeness relation sum_b w_b b_a b_b = delta_ab has to hold - Eq. (B1) of Marzari and Vanderbilt, PRB 56, 12847 (1997). Wannier90's own value is 1e-6 and silence keeps it. A wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the lattice is the first suspect rather than the mesh: a slightly distorted cell splits one shell into several, or misses (B1), and Wannier90 stops in kmesh_get. The mesh itself is not checked anywhere, so a selected k-list that is not the uniform grid mp_grid describes would land in the same place. Loosening this is what gets past that, and it is not free - the weights are then solved over vectors of unequal length, so the finite-difference k derivative is a little worse than it claims to be.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOperatorType">

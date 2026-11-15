@@ -133,6 +133,9 @@ CONTAINS
     !> (wann_wan90prep.F:387), and 200 is what the group uses; passing nothing left the
     !> library mode on w90's default and made it fail where the classic would not.
     CALL w90_set_option(wannierlib_w90main, 'search_shells', WANNIERLIB_SEARCH_SHELLS)
+    !> How close two |b| have to be to count as one shell, and how exactly the completeness
+    !> relation has to hold. Silence leaves Wannier90 on its own 1e-6.
+    IF (this%kmesh_tol >= 0.0) CALL w90_set_option(wannierlib_w90main, 'kmesh_tol', this%kmesh_tol)
     CALL w90_set_option(wannierlib_w90main, 'dis_win_min', hartree_to_ev_const*this%dis_win_min)
     CALL w90_set_option(wannierlib_w90main, 'dis_win_max', hartree_to_ev_const*this%dis_win_max)
     CALL w90_set_option(wannierlib_w90main, 'dis_froz_min', hartree_to_ev_const*this%dis_froz_min)

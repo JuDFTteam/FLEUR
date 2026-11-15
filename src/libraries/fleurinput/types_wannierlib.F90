@@ -236,6 +236,17 @@ MODULE m_types_wannierlib
     !> feel it are the ones defined as k derivatives: A, and above all C and F, which are
     !> second derivatives and therefore carry the error squared.
     INTEGER :: fd_order = 0
+    !> Tolerance Wannier90 groups the b-vectors into shells with, and checks the completeness
+    !> relation sum_b w_b b_a b_b = delta_ab with -- Eq. (B1) of Marzari and Vanderbilt. A
+    !> wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the
+    !> lattice is the first suspect and not the mesh: a slightly distorted cell splits one
+    !> shell into several, or fails (B1), and Wannier90 stops there with nothing left to
+    !> turn. Nothing here checks the mesh, though -- mp_grid is taken from kpts%nkpt3 and the
+    !> k-list from whichever list was selected -- so a shifted list would reach Wannier90 as
+    !> a Monkhorst-Pack grid it is not, and would land in the same place. Negative is the
+    !> sentinel for "say nothing", since zero is a value -- under it no two distances would
+    !> ever count as equal and every shell would hold one vector.
+    REAL :: kmesh_tol = -1.0
 
     LOGICAL :: l_intp = .FALSE.         ! Do interpolation
     REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
@@ -526,6 +537,7 @@ CONTAINS
     CALL mpi_bc(this%conv_noise_amp, rank, mpi_comm)
     CALL mpi_bc(this%conv_noise_num, rank, mpi_comm)
     CALL mpi_bc(this%fd_order, rank, mpi_comm)
+    CALL mpi_bc(this%kmesh_tol, rank, mpi_comm)
     !> An array of a derived type does not go through the generic mpi_bc, which sizes the
     !> receivers from the message itself. The count travels first, then each record field by
     !> field -- the shape t_atoms uses for lda_u.
@@ -684,6 +696,8 @@ CONTAINS
       !> leaves Wannier90 on its own default and an older inp.xml keeps its numbers.
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fdOrder') == 1) &
         this%fd_order = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fdOrder'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@kmeshTol') == 1) &
+        this%kmesh_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kmeshTol'))
 
       !> Same rule for all of these: read only when present.
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numCgSteps') == 1) &
