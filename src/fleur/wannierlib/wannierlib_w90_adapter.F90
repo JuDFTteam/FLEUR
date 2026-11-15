@@ -222,6 +222,12 @@ CONTAINS
        END IF
        IF (this%tran_energy_step > 0.0) &
           CALL w90_set_option(wannierlib_w90main, 'tran_energy_step', hartree_to_ev_const*this%tran_energy_step)
+       !> Hartree and Bohr on this side, electron volts and Angstrom on the other, as for
+       !> the windows above and for the cell itself.
+       IF (this%tran_hr_cutoff >= 0.0) &
+          CALL w90_set_option(wannierlib_w90main, 'hr_cutoff', hartree_to_ev_const*this%tran_hr_cutoff)
+       IF (this%tran_dist_cutoff >= 0.0) &
+          CALL w90_set_option(wannierlib_w90main, 'dist_cutoff', bohr_to_angstrom_const*this%tran_dist_cutoff)
     END IF
 
     seedname = 'fleur_wlib_internal'

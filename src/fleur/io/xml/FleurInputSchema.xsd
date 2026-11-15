@@ -3848,6 +3848,16 @@
             <xsd:documentation>Spacing of the scan, in Hartree. Optional; a step of zero says nothing. The steps of the staircase are where the curve carries its information, so a spacing coarser than the bands are structured will cut corners off it.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute name="hrCutoff" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Hoppings smaller than this are set to zero before the Hamiltonian is cut into principal layers, in Hartree. Together with distCutoff it is what decides how thick a layer is: the largest lattice vector along the axis that still carries a hopping becomes the layer. Wannier90 applies no cutoff by default, and the layer then follows the decay of the Hamiltonian itself. Cutting is an affordability knob and not a tuning one: on AlN either cutoff takes the layer from two cells to one and moves the transmission by more than half.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="distCutoff" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Hoppings reaching further than this are set to zero, in Bohr. Wannier90's default of 1000 Angstrom is no cutoff at all, and it quietly reduces the value to what the supercell can hold, reporting the one it used. Applied before hrCutoff, so a hopping removed here never reaches that test.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOutputType">

@@ -280,6 +280,8 @@ holds, so nothing is written out and read back.
 | `energyMin` | −3 eV | bottom of the energy window, in Hartree, **absolute** — the same convention as the disentanglement windows. |
 | `energyMax` | +3 eV | top of the window. Given together with `energyMin`; leaving both out keeps Wannier90's default. |
 | `energyStep` | 0.01 eV | spacing of the energy grid. |
+| `hrCutoff` | none | hoppings smaller than this, in Hartree, are dropped before the Hamiltonian is cut into layers. |
+| `distCutoff` | no cutoff | hoppings reaching further than this, in Bohr, are dropped. Applied first. |
 
 Two files come out, both two columns with the energy in eV: `<seed>_qc.dat` is the
 transmission in units of the conductance quantum, `<seed>_dos.dat` the density of states of
@@ -302,6 +304,14 @@ different questions and neither is a check on the other.
 **Only bulk mode is reachable.** Wannier90 also does lead–conductor–lead, which needs a
 device geometry built from separate calculations; nothing here describes one, so the block
 asks for the periodic case and says so by not offering the choice.
+
+`hrCutoff` and `distCutoff` decide how thick a principal layer is: the largest lattice
+vector along the axis still carrying a hopping becomes the layer. They are an affordability
+knob and not a tuning one, and they are expensive in accuracy. On AlN the layer is two cells,
+and either cutoff reduces it to one — with that, the transmission summed over the window
+falls from 95.7 to 43.0 (`distCutoff="5.0"`) or to 34.0 (`hrCutoff="0.00367"`). The
+untruncated run is the right answer, and a truncated one can even look tidier: a Hamiltonian
+cut short gives a cleaner staircase at the wrong height.
 
 The check that costs nothing: a crystal with no scatterer transmits whole channels, so
 `T(E)` is an integer staircase whatever the energy mesh is. A curve that is smooth, or that

@@ -185,6 +185,13 @@ MODULE m_types_wannierlib
     REAL    :: tran_win_min = 0.0       ! Hartree, absolute; min == max means "not given"
     REAL    :: tran_win_max = 0.0
     REAL    :: tran_energy_step = 0.0   ! Hartree; 0 means "not given"
+    !> The two cutoffs that decide the principal layer: Wannier90 zeroes every hopping below
+    !> hrCutoff and every one reaching beyond distCutoff, and the largest |R| left along the
+    !> axis is the layer. Negative is the sentinel here too, because zero is a value for
+    !> both: it is Wannier90's own default for hr_cutoff, and for dist_cutoff it would cut
+    !> every hopping there is.
+    REAL    :: tran_hr_cutoff = -1.0    ! Hartree; < 0 means "not given"
+    REAL    :: tran_dist_cutoff = -1.0  ! Bohr;    < 0 means "not given"
     !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
     !> Off by default, as in Wannier90. The criterion is meaningful here because the
     !> projections are the atomic ones this code builds, which a reader of an arbitrary
@@ -506,6 +513,8 @@ CONTAINS
     CALL mpi_bc(this%tran_win_min, rank, mpi_comm)
     CALL mpi_bc(this%tran_win_max, rank, mpi_comm)
     CALL mpi_bc(this%tran_energy_step, rank, mpi_comm)
+    CALL mpi_bc(this%tran_hr_cutoff, rank, mpi_comm)
+    CALL mpi_bc(this%tran_dist_cutoff, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_k, rank, mpi_comm)
     CALL mpi_bc(this%op_k_name, rank, mpi_comm)
@@ -751,6 +760,10 @@ CONTAINS
         this%tran_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyMax'))
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyStep') == 1) &
         this%tran_energy_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyStep'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@hrCutoff') == 1) &
+        this%tran_hr_cutoff = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@hrCutoff'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@distCutoff') == 1) &
+        this%tran_dist_cutoff = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@distCutoff'))
     END IF
 
     ! --- interpolation domain + operator list ---
