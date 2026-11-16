@@ -764,6 +764,7 @@ CONTAINS
       type is (t_xcpot_libxc)
          aux_libxc%l_libxc        = xcpot%l_libxc
          aux_libxc%l_relativistic = xcpot%l_relativistic
+         aux_libxc%gmaxxc         = xcpot%gmaxxc
          CALL aux_libxc%init(xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
                           xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
                           xcpot%jspins, .false.)
