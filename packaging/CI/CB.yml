@@ -66,11 +66,12 @@ perf-gpu:
   variables:
     BENCHER_TESTBED: GPU-iffcluster
     OMP_NUM_THREADS: 16
-    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/cuda/lib64:${LD_LIBRARY_PATH}
+    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk_26.9/Linux_x86_64/26.9/cuda/lib64:${LD_LIBRARY_PATH}
   before_script:
-    - set +e;source compiler-select nvhpc-26.5;set -e
+    - set +e;source compiler-select nvhpc-26.9;set -e
+    - nvfortran --version
     - cd $CI_PROJECT_DIR
-    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.5/Linux_x86_64/26.5/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
+    - ./configure.sh  -c nvidia -gpu acc:cc75 -make -link "/opt/nvidia_hpc_sdk_26.9/Linux_x86_64/26.9/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk_26.9/Linux_x86_64/26.9/compilers/lib/libblas.a" $FLEUR_CI_FEATURE_OPTIONS
     - ./packaging/CI/check-configured-features.sh build
     - cd build
     - make -j 12
