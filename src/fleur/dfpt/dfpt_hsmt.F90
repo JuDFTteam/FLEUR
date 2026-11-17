@@ -110,13 +110,17 @@ CONTAINS
          DO j = 1, nspins
             CALL s1mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
+            !$acc enter data copyin(s1mat_tmp(i,j))
+            !$acc enter data copyin(s1mat_tmp(i,j)%data_r,s1mat_tmp(i,j)%data_c)
+            !$acc enter data copyin(h1mat_tmp(i,j))
+            !$acc enter data copyin(h1mat_tmp(i,j)%data_r,h1mat_tmp(i,j)%data_c)
          END DO
       END DO
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
-      !!$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
-      !!$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
+      !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
+      !$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
       igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults in non-noco case
       DO n = 1, atoms%ntype
          DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco) 
@@ -127,6 +131,7 @@ CONTAINS
             DO ilSpin = ilSpinPr, MERGE(2,iSpin,noco%l_noco)
                CALL timestart("fjgjq coefficients")
                CALL fjgj%calculate(input,atoms,cell,lapw,noco,td%radfun(n),n,ilSpin)
+               !$acc update device(fjgj%fj,fjgj%gj)
                CALL timestop("fjgjq coefficients")
 
                IF (.NOT.noco%l_noco) THEN
@@ -173,21 +178,33 @@ CONTAINS
             END DO
          END DO
       END DO
-      !!$acc end data
+      !$acc end data
+      !$acc end data
 
-      ! TODO: Does this need some ACC magic?
+      ! matrix_pref works on the host
+      DO i = 1, nspins
+         DO j = 1, nspins
+            !$acc exit data copyout(s1mat_tmp(i,j)%data_c) delete(s1mat_tmp(i,j)%data_r)
+            !$acc exit data delete(s1mat_tmp(i,j))
+            !$acc exit data copyout(h1mat_tmp(i,j)%data_c) delete(h1mat_tmp(i,j)%data_r)
+            !$acc exit data delete(h1mat_tmp(i,j))
+         END DO
+      END DO
       IF (sternheimerJob%l_IBScorrection) THEN
          DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
             DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
+               ! hmat/smat are mapped by the caller; matrix_pref adds to them on the host
+               !$acc update self(hmat(igSpinPr,igSpin)%data_c,smat(igSpinPr,igSpin)%data_c) if_present
                CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &
                               & nk, lapwq%nv(igSpinPr), lapw%nv(igSpin), iDtype, iDir, &
                               & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin),killcont(2:3))
+               !$acc update device(hmat(igSpinPr,igSpin)%data_c,smat(igSpinPr,igSpin)%data_c) if_present
                CALL h1mat_tmp(igSpinPr,igSpin)%free()
                CALL s1mat_tmp(igSpinPr,igSpin)%free()
             END DO
          END DO
       END IF
-      IF (noco%l_noco) THEN
+      IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
          !$acc exit data delete(smat_tmp,hmat_tmp)
       END IF
@@ -244,6 +261,7 @@ CONTAINS
          CALL smatq_tmp%init(hmat1q(1,1))
          CALL hmatq_tmp%init(hmat1q(1,1))
          !$acc enter data copyin(smat_tmp,hmat_tmp)create(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
+         !$acc enter data copyin(smatq_tmp,hmatq_tmp)create(smatq_tmp%data_c,smatq_tmp%data_r,hmatq_tmp%data_c,hmatq_tmp%data_r)
       END IF
 
       nspins = MERGE(2, 1, noco%l_noco)
@@ -269,6 +287,18 @@ CONTAINS
                CALL s2mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             END IF
             CALL h2mat_tmp(i, j)%init(s2mat_tmp(i, j))
+            !$acc enter data copyin(s1mat_tmp(i,j))
+            !$acc enter data copyin(s1mat_tmp(i,j)%data_r,s1mat_tmp(i,j)%data_c)
+            !$acc enter data copyin(h1mat_tmp(i,j))
+            !$acc enter data copyin(h1mat_tmp(i,j)%data_r,h1mat_tmp(i,j)%data_c)
+            !$acc enter data copyin(s1qmat_tmp(i,j))
+            !$acc enter data copyin(s1qmat_tmp(i,j)%data_r,s1qmat_tmp(i,j)%data_c)
+            !$acc enter data copyin(h1qmat_tmp(i,j))
+            !$acc enter data copyin(h1qmat_tmp(i,j)%data_r,h1qmat_tmp(i,j)%data_c)
+            !$acc enter data copyin(s2mat_tmp(i,j))
+            !$acc enter data copyin(s2mat_tmp(i,j)%data_r,s2mat_tmp(i,j)%data_c)
+            !$acc enter data copyin(h2mat_tmp(i,j))
+            !$acc enter data copyin(h2mat_tmp(i,j)%data_r,h2mat_tmp(i,j)%data_c)
          END DO
       END DO
 
@@ -285,6 +315,7 @@ CONTAINS
          DO ilSpin = ilSpinPr, MERGE(2,iSpin,noco%l_noco)
             CALL timestart("fjgjq coefficients")
             CALL fjgj%calculate(input,atoms,cell,lapw,noco,td%radfun(iDtype_col),iDtype_col,ilSpin)
+            !$acc update device(fjgj%fj,fjgj%gj)
             CALL timestop("fjgjq coefficients")
             IF (.NOT.noco%l_noco) THEN
                CALL hsmt_sph(iDtype_col,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(iDtype_col,ilSpinPr),td%radfun(iDtype_col),fjgj,s1qmat_tmp(1,1),h1qmat_tmp(1,1),.TRUE.,.TRUE.,lapwq,fjgjq)
@@ -356,7 +387,23 @@ CONTAINS
       !$acc end data
       !$acc end data
 
-      ! TODO: Does this need some ACC magic?
+      ! matrix_pref works on the host
+      DO i = 1, nspins
+         DO j = 1, nspins
+            !$acc exit data copyout(s1mat_tmp(i,j)%data_c) delete(s1mat_tmp(i,j)%data_r)
+            !$acc exit data delete(s1mat_tmp(i,j))
+            !$acc exit data copyout(h1mat_tmp(i,j)%data_c) delete(h1mat_tmp(i,j)%data_r)
+            !$acc exit data delete(h1mat_tmp(i,j))
+            !$acc exit data copyout(s1qmat_tmp(i,j)%data_c) delete(s1qmat_tmp(i,j)%data_r)
+            !$acc exit data delete(s1qmat_tmp(i,j))
+            !$acc exit data copyout(h1qmat_tmp(i,j)%data_c) delete(h1qmat_tmp(i,j)%data_r)
+            !$acc exit data delete(h1qmat_tmp(i,j))
+            !$acc exit data copyout(s2mat_tmp(i,j)%data_c) delete(s2mat_tmp(i,j)%data_r)
+            !$acc exit data delete(s2mat_tmp(i,j))
+            !$acc exit data copyout(h2mat_tmp(i,j)%data_c) delete(h2mat_tmp(i,j)%data_r)
+            !$acc exit data delete(h2mat_tmp(i,j))
+         END DO
+      END DO
       DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
          DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
             CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &
@@ -387,9 +434,11 @@ CONTAINS
             END IF
          END DO
       END DO
-      IF (noco%l_noco) THEN
+      IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
          !$acc exit data delete(smat_tmp,hmat_tmp)
+         !$acc exit data delete(smatq_tmp%data_c,smatq_tmp%data_r,hmatq_tmp%data_c,hmatq_tmp%data_r)
+         !$acc exit data delete(smatq_tmp,hmatq_tmp)
       END IF
       RETURN
    END SUBROUTINE dfpt_dynmat_hsmt

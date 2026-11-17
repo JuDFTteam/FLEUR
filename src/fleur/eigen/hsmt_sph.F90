@@ -77,6 +77,7 @@ CONTAINS
       REAL    :: extra(0:3,0:atoms%lmaxd)
 
       TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       CALL timestart("spherical setup")
       l_extra = PRESENT(h_sph_extra)
@@ -86,8 +87,10 @@ CONTAINS
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
          lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
          lapwPr = lapw
+         fjgjPr = fjgj
       END IF
       !call nvtxStartRange("hsmt_sph",1)
       DO l = 0,atoms%lmaxd
@@ -109,6 +112,7 @@ CONTAINS
       !$acc&   copyin(input%l_useapw)&
       !$acc&   copyin(ddn,bs)&
       !$acc&   present(fjgj)&
+      !$acc&   copyin(fjgjPr,fjgjPr%fj,fjgjPr%gj)&
       !$acc&   present(hmat,smat,hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 
       !$acc parallel default(none)
@@ -153,14 +157,14 @@ CONTAINS
                             & - fleg2(l-1)*plegend(modulo(l-2,3))
                END IF ! l
 
-               fct  = plegend(l3) * fl2p1(l) * ( fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                             & + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*ddnln )
+               fct  = plegend(l3) * fl2p1(l) * ( fjkiln*fjgjPr%fj(ikGPr,l,isp,igSpinPr) &
+                                             & + gjkiln*fjgjPr%gj(ikGPr,l,isp,igSpinPr)*ddnln )
                !IF (.NOT.l_fullj) THEN
                IF (.TRUE.) THEN
-                  fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                                    & + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr) )
+                  fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgjPr%fj(ikGPr,l,isp,igSpinPr) &
+                                                    & + fjkiln*fjgjPr%gj(ikGPr,l,isp,igSpinPr) )
                ELSE
-                  fct2 = plegend(l3)*fl2p1(l) * gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)
+                  fct2 = plegend(l3)*fl2p1(l) * gjkiln*fjgjPr%fj(ikGPr,l,isp,igSpinPr)
                END IF
 
                VecHelpS = VecHelpS + fct
@@ -168,13 +172,13 @@ CONTAINS
 
                IF (l_extra .AND. l > atoms%lnonsph(n)) THEN
                   VecHelpH = VecHelpH + plegend(l3) * fl2p1(l) * ( &
-                             fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)*extra(0,l) + gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)*extra(1,l) &
-                           + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*extra(2,l) + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*extra(3,l) )
+                             fjkiln*fjgjPr%fj(ikGPr,l,isp,igSpinPr)*extra(0,l) + gjkiln*fjgjPr%fj(ikGPr,l,isp,igSpinPr)*extra(1,l) &
+                           + fjkiln*fjgjPr%gj(ikGPr,l,isp,igSpinPr)*extra(2,l) + gjkiln*fjgjPr%gj(ikGPr,l,isp,igSpinPr)*extra(3,l) )
                END IF
 
                IF (input%l_useapw) THEN
-                  VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                                    & + apw_lo2*fjgj%gj(ikGPr,l,isp,igSpinPr) )
+                  VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgjPr%fj(ikGPr,l,isp,igSpinPr) &
+                                                    & + apw_lo2*fjgjPr%gj(ikGPr,l,isp,igSpinPr) )
                END IF ! useapw
             END DO ! l
             !$end acc

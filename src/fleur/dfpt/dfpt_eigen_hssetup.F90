@@ -82,10 +82,10 @@ CONTAINS
       CALL dfpt_hsmt(sternheimerJob, fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, td, tdV1, hmat, smat, nk, killcont(4:6))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
-            !$acc exist data delete(hmat(i,j),smat(i,j))
+            !$acc exit data delete(hmat(i,j),smat(i,j))
          ELSE
             !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
-            !$acc exist data delete(hmat(i,j),smat(i,j))
+            !$acc exit data delete(hmat(i,j),smat(i,j))
          END IF; END DO; END DO
       CALL timestop("MT part")
 
