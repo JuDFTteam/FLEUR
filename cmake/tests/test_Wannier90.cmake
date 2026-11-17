@@ -83,7 +83,9 @@ if (DEFINED CLI_FLEUR_USE_WANNIER)
                  endif()
               endforeach()
               if (NOT TARGET Wannier90_lib)
-                 add_subdirectory(external/wannier90)
+                 # Only Wannier90_lib is needed (linked to fleur); the standalone
+                 # wannier90/postw90 programs are not built.
+                 add_subdirectory(external/wannier90 EXCLUDE_FROM_ALL)
               endif()
               set(CMAKE_LIBRARY_PATH "${_w90_old_library_path}")
               unset(_w90_old_library_path)
