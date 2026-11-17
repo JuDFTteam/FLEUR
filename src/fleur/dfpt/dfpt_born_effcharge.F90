@@ -27,6 +27,7 @@ module m_dfpt_born_effcharge
     USE m_types_sternheimerjob
     USE m_types_xcpot
     USE m_juDFT
+    USE m_dfpt_data_io, only: write_dfpt_bec
     
 
 
@@ -354,26 +355,22 @@ contains
         
         atom_string = 'atom No:'
 
-        open( 111, file="born_eff_charge", status='replace', action='write', form='formatted')
-        write(*,*) '-------------------------' 
-        write(*,*) "Born Effective Charge" 
+        write(*,*) '-------------------------'
+        write(*,*) "Born Effective Charge"
         do iDType = 1, fi%atoms%ntype
             !write(*, '(A,I4,1X,A)', ADVANCE='NO') atom_string, iDType,fi%atoms%speciesName(iDType)
             write(*,'(A,I4,1X,A)') atom_string, iDType,fi%atoms%speciesName(iDType)
-            write(111,'(A,I4,1X,A)') atom_string, iDType,fi%atoms%speciesName(iDType)
             do iDir = 1,3
                 do j = 1,2
-                    write(111,'(es16.8)', ADVANCE='NO') real(born_eff_charge(iDType,iDir,j)) 
-                    write(111, '(A)', ADVANCE='NO') ' ' 
                     write(*,'(es16.8)', ADVANCE='NO') real(born_eff_charge(iDType,iDir,j))
-                    write(*, '(A)', ADVANCE='NO') ' ' 
+                    write(*, '(A)', ADVANCE='NO') ' '
                 end do
-            write(111,'(es16.8)')real(born_eff_charge(iDType,iDir,3))
             write(*,'(es16.8)')real(born_eff_charge(iDType,iDir,3))
             end do
         end do
-        close(111)
-        write(*,*) '-------------------------' 
+        write(*,*) '-------------------------'
+
+        call write_dfpt_bec(fi%atoms, real(born_eff_charge))
 
         !save in out.xml
         CALL openXMLElementNoAttributes('DFPTEfield')

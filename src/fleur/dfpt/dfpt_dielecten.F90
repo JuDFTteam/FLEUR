@@ -19,6 +19,7 @@ module m_dfpt_dielecten
     use m_types_sphhar
     use m_types_stars
     use m_types_sternheimerjob
+    use m_dfpt_data_io, only: write_dfpt_dielten
 
 
     implicit none
@@ -151,7 +152,7 @@ contains
         complex                  :: dielten_iden(3,3) 
         complex                  :: dielecten_inv(3,3)
         real                     :: det,dielecten_r(3,3)
-        CHARACTER(LEN=20)        :: attributes(1)
+        CHARACTER(LEN=20)        :: attributes(2)
 
 
         dielecten_inv(:,:)= 0
@@ -161,27 +162,27 @@ contains
         dielecten(:,:) = cmplx(0.0,0.0)
         call inv3(real(dielecten_inv),dielecten_r,det)
         dielecten = dielecten_r
-        open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
-        write(*,*) '-------------------------' 
-        write(*,*) "High Frequency Dielectric tensor" 
+        write(*,*) '-------------------------'
+        write(*,*) "High Frequency Dielectric tensor"
         do iDir = 1,3
             do j = 1,2
-                write(110,'(2es16.8)', ADVANCE='NO') real(dielecten(iDir,j)) 
-                write(110, '(A)', ADVANCE='NO') ' ' 
                 write(*,'(2es16.8)', ADVANCE='NO') real(dielecten(iDir,j))
-                write(*, '(A)', ADVANCE='NO') ' ' 
+                write(*, '(A)', ADVANCE='NO') ' '
             end do
-            write(110,'(2es16.8)')real(dielecten(iDir,3))
             write(*,'(2es16.8)')real(dielecten(iDir,3))
         end do
-        close(110)
-        write(*,*) '-------------------------' 
+        write(*,*) '-------------------------'
+
+        call write_dfpt_dielten(dielecten_r, fi%dfpt%qlim)
 
         !save in out.xml
         CALL openXMLElementNoAttributes('DFPTEfield')
-        attributes = ''
-        WRITE(attributes(1),'(f15.8)') fi%dfpt%qlim
-        CALL writeXMLElementPoly('dieltensor',(/'qlim'/), attributes,real(dielecten(:,1)))
+        do iDir = 1,3
+            attributes = ''
+            WRITE(attributes(1),'(f15.8)') fi%dfpt%qlim
+            WRITE(attributes(2),'(i0)') iDir
+            CALL writeXMLElementPoly('dieltensor',(/'qlim','iDir'/), attributes,real(dielecten(iDir,:)))
+        end do
         CALL closeXMLElement('DFPTEfield')
 
     end subroutine dfpt_dielecten_final_new

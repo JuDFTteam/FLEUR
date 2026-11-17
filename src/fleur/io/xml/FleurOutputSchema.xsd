@@ -933,6 +933,7 @@
       <xsd:simpleContent>
          <xsd:extension base="DoubleVecType">
             <xsd:attribute name="qlim" type="xsd:double" use="optional"/>
+            <xsd:attribute name="iDir" type="xsd:integer" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>

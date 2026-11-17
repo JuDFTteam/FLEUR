@@ -9,7 +9,7 @@ module m_dfpt_dielten_static
     use m_constants
     use m_xmlOutput
     use m_types_fleurinput
-    use m_dfpt_NAC, only: read_bec, read_dielten
+    use m_dfpt_data_io, only: read_dfpt_bec, read_dfpt_dielten, write_dfpt_dielten_static
     use m_dfpt_dynmat_io, only: read_dynmat_q
 
     implicit none
@@ -20,7 +20,7 @@ contains
 
     subroutine dfpt_dielten_static(fi)
         !! Static dielectric tensor eps0 = eps_inf + 4pi/Omega sum_m p_m p_m^T / omega_m^2 from the Gamma
-        !! eigenpairs in dynmat.hdf (phonon run with l_polar=F), born_eff_charge and diel_tensor.
+        !! eigenpairs in dynmat.hdf (phonon run with l_polar=F) and eps_inf, Z* from dfpt_data.hdf.
         !! p_m(beta) = sum_{kappa,alpha} Z*_kappa(alpha,beta) e_m(kappa alpha) / sqrt(M_kappa)
 
         type(t_fleurinput), intent(in) :: fi
@@ -37,8 +37,8 @@ contains
         nModes = 3*fi%atoms%nat
 
         allocate(borneffcharge(fi%atoms%ntype,3,3))
-        call read_bec(fi, borneffcharge)
-        call read_dielten(fi, dieltenInf)
+        call read_dfpt_bec(fi%atoms, borneffcharge)
+        call read_dfpt_dielten(dieltenInf)
 
         ! Gamma is in the phonon q-point list, checked in precheck_dfpt
         iQ = findloc(norm2(fi%dfpt%qvec%bk(:,:fi%dfpt%qvec%nkpt),dim=1) < 1e-8, .true., dim=1)
@@ -87,13 +87,12 @@ contains
 
         write(*,*) '-------------------------'
         write(*,*) "Static Dielectric tensor"
-        open(110, file="diel_tensor_static", status='replace', action='write', form='formatted')
         do iDir = 1, 3
-            write(110,'(2(es16.8,1x),es16.8)') dieltenStatic(iDir,:)
             write(*,'(2(es16.8,1x),es16.8)') dieltenStatic(iDir,:)
         end do
-        close(110)
         write(*,*) '-------------------------'
+
+        call write_dfpt_dielten_static(dieltenStatic)
 
         CALL openXMLElementNoAttributes('DFPTEfield')
         do iDir = 1, 3

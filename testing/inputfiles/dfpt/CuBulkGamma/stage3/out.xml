@@ -187,7 +187,9 @@
          <sumValenceSingleParticleEnergies value="0.6079888747" units="Htr"/>
          <FermiEnergy value="0.1523174999" units="Htr"/>
          <DFPTEfield>
-            <dieltensor qlim="0.01000000">1.4881189227        0.0000000000        0.0000000000</dieltensor>
+            <dieltensor qlim="0.01000000" iDir="1">1.4881187984        0.0000000000        0.0000000000</dieltensor>
+            <dieltensor qlim="0.01000000" iDir="2">0.0000000000        1.4881189328        0.0000000000</dieltensor>
+            <dieltensor qlim="0.01000000" iDir="3">0.0000000000        0.0000000000        1.3992571291</dieltensor>
          </DFPTEfield>
       </iteration>
    </scfLoop>

@@ -67,6 +67,7 @@
          <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
       </plotting>
       <dfpt l_dfpt="T" l_efield="T" l_phonon="F" l_borneffcharge="F">
+         <phonon eDiffcut="0.0001"/>
          <efield qlim="1/100"/>
       </dfpt>
       <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
