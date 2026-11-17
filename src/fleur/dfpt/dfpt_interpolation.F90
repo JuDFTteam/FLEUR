@@ -122,7 +122,7 @@ contains
         ALLOCATE(q_list(SIZE(qpts%bk,2)))
         q_list = (/(iQ, iQ=1,SIZE(qpts%bk,2), 1)/)
 
-        ALLOCATE(dyn_mat(3*fi%atoms%ntype,3*fi%atoms%ntype,SIZE(q_list)))
+        ALLOCATE(dyn_mat(3*fi%atoms%nat,3*fi%atoms%nat,SIZE(q_list)))
 
         dyn_mat = cmplx(0.0,0.0)
 
@@ -132,19 +132,14 @@ contains
                 call read_dynmat_q("dynmat.hdf", iQ, dyn_mat(:,:,iQ))
             end do
 
-            !subtract Long range part
-            !if (fi%dfpt%l_polar) then
-            !    do iQ = 1, qpts%nkpt
-            !        dyn_mat_NAC_q = cmplx(0.0,0.0)
-            !        call get_NAC_ewald(fi,qpts,stars_fullsym,dyn_mat_NAC_q,qpts%bk(:,iQ),iQ)
-            !        dyn_mat(:,:,iQ) = dyn_mat(:,:,iQ) - dyn_mat_NAC_q
-            !    end do
-            !end if
+            ! Gonze-Lee: only the analytic part is interpolated, the dipole-dipole part is added back at every target q
+            if (fi%dfpt%l_polar) call subtract_NAC(fi, qpts%bk(:,:qpts%nkpt), dyn_mat)
 
             ! Fourier-interpolate the coarse dynamical matrices onto the fine q-mesh
             call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
                                     fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp, &
                                     l_bornhuang=fi%dfpt%l_bornhuang)
+            if (fi%dfpt%l_polar) call add_NAC(fi, fi%dfpt%qpts_interpol%bk, dyn_mat_interp, fi%dfpt%l_band)
 
             ! The projection already imposes the translational rule on the force constants.
             l_sumrule = fi%dfpt%l_sumrule_intp .and. .not. fi%dfpt%l_bornhuang
@@ -153,6 +148,8 @@ contains
                 call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
                                         fi%dfpt%l_WSinterpol, reshape([0.0, 0.0, 0.0], [3, 1]), dyn_mat_gamma, &
                                         l_bornhuang=fi%dfpt%l_bornhuang)
+                ! without a direction, i.e. the analytic Gamma matrix
+                if (fi%dfpt%l_polar) call add_NAC(fi, reshape([0.0, 0.0, 0.0], [3, 1]), dyn_mat_gamma, .false.)
                 call hermitize_scale_dynmat(fi%atoms, dyn_mat_gamma(:,:,1))
             end if
 
@@ -204,7 +201,7 @@ contains
         end if !irank==0 
 
 
-    end subroutine dfpt_interpolation 
+    end subroutine dfpt_interpolation
 
 
 end module m_dfpt_interpolation

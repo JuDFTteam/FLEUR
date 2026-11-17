@@ -8,13 +8,16 @@ module m_dfpt_NAC
     
     USE m_juDFT
     USE m_constants
+    USE m_inv3
+    USE m_dfpt_dynmat_eig, only: hermitize_scale_dynmat
+    USE m_dfpt_data_io, only: read_dfpt_bec, read_dfpt_dielten
+    USE m_types_atoms
     USE m_types_fleurinput
-    USE m_types_kpts
-    USE m_types_stars
 
     implicit none
     PRIVATE
-    PUBLIC :: dfpt_nac, read_bec, read_dielten, get_nac, get_nac_ewald, get_nac_ewald_r, get_gaussian
+    PUBLIC :: dfpt_nac, get_nac_ewald
+    PUBLIC :: subtract_nac, add_nac
 
 contains
 
@@ -30,7 +33,7 @@ contains
 
     allocate(borneffcharge(fi%atoms%ntype,3,3))
 
-    call read_BEC(fi,borneffcharge)
+    call read_dfpt_bec(fi%atoms,borneffcharge)
     print*,"test"
     if (present(qnorm_in)) then
         qnorm_vec = qnorm_in
@@ -47,7 +50,7 @@ contains
     end if
     print*,"qnorm_vec_ext",qnorm_vec_ext
     print*,"qnorm_vec",qnorm_vec
-    call read_dielten(fi,dielten)
+    call read_dfpt_dielten(dielten)
 
     do iDir=1,3
         do iDir1=1,3
@@ -69,246 +72,155 @@ contains
 
     end subroutine dfpt_NAC
 
-    subroutine read_BEC(fi,borneffcharge)
+    subroutine get_NAC_ewald(fi,bec,dielten,qvec,dyn_mat_LR,qdir)
 
-        type(t_fleurinput), intent(in)     :: fi
-        real, allocatable, intent(inout)   :: borneffcharge(:,:,:)
-        integer                            :: iDType,iDir
-        character(len=200)                 :: dummy_line
+        type(t_fleurinput), intent(in)  :: fi
+        real,               intent(in)  :: bec(:,:,:)      ! (ntype, displacement, field), cartesian
+        real,               intent(in)  :: dielten(3,3)
+        real,               intent(in)  :: qvec(3)         ! internal coordinates
+        complex,            intent(out) :: dyn_mat_LR(:,:) ! (3nat, 3nat)
+        real, optional,     intent(in)  :: qdir(3)         ! internal coordinates
 
-        borneffcharge(:,:,:)=0.0
-        open(111, file="born_eff_charge", status='old', action='read', form='formatted')
+        real, parameter :: expo_max = 14.0   ! terms with K.eps.K/4Lambda above this are dropped
 
-        do iDType = 1, fi%atoms%ntype
-            read(111,'(A)') dummy_line
+        real    :: eps(3,3), epsinv(3,3), det, lambda, kmax, K(3), KepsK, gq(3), phas
+        real    :: blk(3*fi%atoms%nat,3*fi%atoms%nat)
+        integer :: nG(3), ix, iy, iz, iAtom, jAtom, ir, jc
 
-            do iDir = 1, 3
-                read(111,*) borneffcharge(iDType, iDir, 1:3)
-            end do
+        eps = (dielten + transpose(dielten))/2.0
+        call inv3(eps,epsinv,det)
+        if (eps(1,1) <= 0.0 .or. eps(1,1)*eps(2,2) - eps(1,2)**2 <= 0.0 .or. det <= 0.0) &
+            call juDFT_error("Dielectric tensor is not positive definite.", calledby="get_NAC_ewald")
+
+        ! Ewald parameter: the shortest |b_i|^2
+        lambda = minval(sum(fi%cell%bmat**2, dim=2))
+        ! smallest eigenvalue of eps >= 1/|eps^-1|_F bounds |K| inside the cutoff
+        kmax = sqrt(4.0*lambda*expo_max*norm2(epsinv))
+        do ix = 1, 3
+            nG(ix) = ceiling(kmax*norm2(fi%cell%amat(:,ix))/tpi_const + abs(qvec(ix))) + 1
         end do
 
-        close(111)
-    
-    end subroutine read_BEC
+        dyn_mat_LR = cmplx(0.0,0.0)
+        do iz = -nG(3), nG(3)
+            do iy = -nG(2), nG(2)
+                do ix = -nG(1), nG(1)
+                    gq = qvec + real([ix,iy,iz])
+                    K = matmul(gq, fi%cell%bmat)
+                    KepsK = dot_product(K, matmul(eps,K))
+                    if (KepsK < 1e-10 .or. KepsK/(4.0*lambda) > expo_max) cycle
 
-    subroutine read_dielten(fi,dielten)
-
-        type(t_fleurinput), intent(in)     :: fi
-        real, intent(inout)   :: dielten(:,:)
-        integer                            :: iDir
-
-        dielten(:,:)=0.0
-        open(110, file="diel_tensor", status='old', action='read', form='formatted')
-
-        do iDir = 1, 3
-            read(110,*) dielten( iDir, 1:3)
-            !print*,dielten( iDir, 1:3)
-        end do
-
-        close(110)
-    
-    end subroutine read_dielten
-
-    subroutine get_NAC(fi,qpts,dyn_mat_q,iQ)
-
-        type(t_fleurinput), intent(in)     :: fi
-        type(t_kpts), intent(in)           :: qpts
-        complex, intent(inout)             :: dyn_mat_q(:,:)
-        integer, intent(in)                :: iQ
-        
-        complex, allocatable               :: dyn_mat_NAC(:,:) 
-        real                               :: qnorm_vec(3)                    
-
-        allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
-
-        dyn_mat_NAC(:,:) = cmplx(0.0,0.0)
-        print*,"sum(dyn_mat_q) 1",sum(dyn_mat_q(:,:))
-
-        print*,"in the routine"
-        print*,"iQ",iQ
-        if (iQ==1) then
-            print*,"qpts%bk(:,iQ+1)",qpts%bk(:,iQ+1)
-            qnorm_vec(:)=qpts%bk(:,iQ+1)/norm2(qpts%bk(:,iQ+1))
-            print*,"qnorm_vec(:)",qnorm_vec(:)
-        else
-            print*,"qpts%bk(:,iQ+1)",qpts%bk(:,iQ-1)
-            qnorm_vec(:)=qpts%bk(:,iQ-1)/norm2(qpts%bk(:,iQ-1))
-            print*,"qnorm_vec(:)",qnorm_vec(:)
-        end if
-        call dfpt_NAC(fi,dyn_mat_NAC,qnorm_vec)
-        !stop
-        !dyn_mat_q(:,:) = cmplx(0.0,0.0)
-        dyn_mat_q = dyn_mat_q +dyn_mat_NAC
-        print*,"dyn_mat_NAC",dyn_mat_NAC
-        print*,"sum(dyn_mat_q)",sum(dyn_mat_q(:,:))
-
-    end subroutine get_NAC
-
-    subroutine get_NAC_ewald(fi,qpts,stars,dyn_mat_NAC,qvec,iQ)
-
-        type(t_fleurinput), intent(in)     :: fi
-        type(t_kpts), intent(in)           :: qpts
-        type(t_stars) , intent(in)         :: stars
-        complex, intent(inout)             :: dyn_mat_NAC(:,:)
-        real, intent(in)                   :: qvec(3)
-        integer, intent(in)                :: iQ
-
-        complex, allocatable               :: dyn_mat_NAC_gq(:,:)
-        complex                            :: grid_phase_sum, tau_phase
-        real                               :: gqvec(3), gauss_fact, phas, phas_tau, tau_diff(3)
-        integer                            :: istar, ft_lim(2,3), iz, iy, ix
-        integer                            :: itype_col, iType_row, iDir_col, iDir_row
-        integer                            :: idx_col, idx_row, star_max
-
-
-
-        !print*,"fi%sym%nop",fi%sym%nop
-        !stop
-        star_max = min(stars%ng3,20)
-        allocate(dyn_mat_NAC_gq(3*fi%atoms%ntype,3*fi%atoms%ntype))
-        dyn_mat_NAC = (0.0,0.0)
-
-        ft_lim(2,:) = qpts%nkpt3(:)/2
-        ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
-
-        do istar = 1, star_max
-            !print*,"istar",istar
-            gqvec = stars%kv3(:,istar) + qvec
-            if (norm2(gqvec) .lt. 1e-8) cycle
-
-            call dfpt_NAC(fi,dyn_mat_NAC_gq,gqvec)
-            call get_gaussian(fi,gqvec,gauss_fact)
-            !print*,"gauss_fact", gauss_fact
-
-            grid_phase_sum = (0.0,0.0)
-            do iz = ft_lim(1,3), ft_lim(2,3)
-                do iy = ft_lim(1,2), ft_lim(2,2)
-                    do ix = ft_lim(1,1), ft_lim(2,1)
-                        phas = tpi_const * (gqvec(1)*real(ix) + gqvec(2)*real(iy) + gqvec(3)*real(iz))
-                        grid_phase_sum = grid_phase_sum + cmplx(cos(phas), sin(phas))
-                    end do
-                end do
-            end do
-
-            do itype_col = 1, fi%atoms%ntype
-                do iType_row = 1, fi%atoms%ntype
-                    tau_diff = fi%atoms%taual(:,itype_col) - fi%atoms%taual(:,iType_row)
-                    phas_tau = tpi_const * dot_product(gqvec, tau_diff)
-                    tau_phase = cmplx(cos(phas_tau), sin(phas_tau))
-
-                    do iDir_col = 1, 3
-                        idx_col = 3 * (itype_col - 1) + iDir_col
-                        do iDir_row = 1, 3
-                            idx_row = 3 * (iType_row - 1) + iDir_row
-                            dyn_mat_NAC(idx_col, idx_row) = dyn_mat_NAC(idx_col, idx_row) + &
-                                dyn_mat_NAC_gq(idx_col, idx_row) * gauss_fact * grid_phase_sum !* tau_phase
+                    call nac_kblock(fi%atoms, bec, eps, K, blk)
+                    blk = blk*exp(-KepsK/(4.0*lambda))
+                    do jAtom = 1, fi%atoms%nat
+                        jc = 3*(jAtom-1)
+                        do iAtom = 1, fi%atoms%nat
+                            ir = 3*(iAtom-1)
+                            phas = tpi_const*dot_product(gq, fi%atoms%taual(:,jAtom) - fi%atoms%taual(:,iAtom))
+                            dyn_mat_LR(ir+1:ir+3,jc+1:jc+3) = dyn_mat_LR(ir+1:ir+3,jc+1:jc+3) &
+                                                            + blk(ir+1:ir+3,jc+1:jc+3)*cmplx(cos(phas),sin(phas))
                         end do
                     end do
                 end do
             end do
         end do
-        !stop
 
-        deallocate(dyn_mat_NAC_gq)
+        if (present(qdir)) then
+            K = matmul(qdir, fi%cell%bmat)
+            if (norm2(K) > 1e-8) then
+                call nac_kblock(fi%atoms, bec, eps, K, blk)
+                dyn_mat_LR = dyn_mat_LR + blk
+            end if
+        end if
+
+        dyn_mat_LR = dyn_mat_LR*fpi_const/fi%cell%omtil
 
     end subroutine get_NAC_ewald
 
-    subroutine get_NAC_ewald_r(fi,qpts,stars,dyn_mat_NAC_r,qvec,iQ)
+    subroutine nac_kblock(atoms,bec,eps,K,blk)
+        !! (K Z_kappa)_alpha (K Z_kappa')_beta / (K eps K) for one cartesian K, as a 3nat x 3nat block.
 
-        type(t_fleurinput), intent(in)     :: fi
-        type(t_kpts), intent(in)           :: qpts
-        type(t_stars), intent(in)          :: stars
-        complex, intent(inout)             :: dyn_mat_NAC_r(:,:,:)
-        real, intent(in)                   :: qvec(3)
-        integer, intent(in)                :: iQ
+        type(t_atoms), intent(in)  :: atoms
+        real,          intent(in)  :: bec(:,:,:), eps(3,3), K(3)
+        real,          intent(out) :: blk(:,:)
 
-        complex, allocatable               :: dyn_mat_NAC_gq(:,:)
-        complex                            :: cell_phase, tau_phase
-        real                               :: gqvec(3), gauss_fact, phas, phas_tau, tau_diff(3)
-        integer                            :: istar, ft_lim(2,3), iz, iy, ix, iGrid
-        integer                            :: itype_col, iType_row, iDir_col, iDir_row
-        integer                            :: idx_col, idx_row, star_max
+        real    :: kz(3,atoms%nat), v(3*atoms%nat)
+        integer :: iAtom
 
+        do iAtom = 1, atoms%nat
+            kz(:,iAtom) = matmul(bec(atoms%itype(iAtom),:,:), K)
+        end do
+        v = reshape(kz, [3*atoms%nat])
+        blk = spread(v, 2, size(v))*spread(v, 1, size(v))/dot_product(K, matmul(eps,K))
 
-        !print*,"fi%sym%nop",fi%sym%nop
-        !stop
-        star_max = min(stars%ng3,20)
-        allocate(dyn_mat_NAC_gq(3*fi%atoms%ntype,3*fi%atoms%ntype))
-        dyn_mat_NAC_r = (0.0,0.0)
+    end subroutine nac_kblock
 
-        ft_lim(2,:) = qpts%nkpt3(:)/2
-        ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
+    subroutine subtract_NAC(fi,qbk,dyn_mat)
+        !! Removes the dipole-dipole part from the stored coarse-mesh dynamical matrices,
+        !! so that only the analytic part is interpolated (Gonze-Lee).
 
-        iGrid = 0
-        do iz = ft_lim(1,3), ft_lim(2,3)
-            do iy = ft_lim(1,2), ft_lim(2,2)
-                do ix = ft_lim(1,1), ft_lim(2,1)
-                    iGrid = iGrid + 1
-                    do istar = 1, star_max
-                        gqvec = stars%kv3(:,istar) + qvec
-                        if (norm2(gqvec) .lt. 1e-8) cycle
+        type(t_fleurinput), intent(in)    :: fi
+        real,               intent(in)    :: qbk(:,:)       ! (3, nq), internal coordinates
+        complex,            intent(inout) :: dyn_mat(:,:,:) ! (3nat, 3nat, nq), mass-scaled
 
-                        call dfpt_NAC(fi,dyn_mat_NAC_gq,gqvec)
-                        call get_gaussian(fi,gqvec,gauss_fact)
-                        !print*,"gauss_fact", gauss_fact
+        real, allocatable :: bec(:,:,:)
+        real              :: dielten(3,3)
+        complex           :: dyn_mat_LR(3*fi%atoms%nat,3*fi%atoms%nat)
+        integer           :: iQ
 
-                        phas = tpi_const * (gqvec(1)*real(ix) + gqvec(2)*real(iy) + gqvec(3)*real(iz))
-                        cell_phase = cmplx(cos(phas), sin(phas))
-
-                        do itype_col = 1, fi%atoms%ntype
-                            do iType_row = 1, fi%atoms%ntype
-                                tau_diff = fi%atoms%taual(:,itype_col) - fi%atoms%taual(:,iType_row)
-                                phas_tau = tpi_const * dot_product(gqvec, tau_diff)
-                                tau_phase = cmplx(cos(phas_tau), sin(phas_tau))
-
-                                do iDir_col = 1, 3
-                                    idx_col = 3 * (itype_col - 1) + iDir_col
-                                    do iDir_row = 1, 3
-                                        idx_row = 3 * (iType_row - 1) + iDir_row
-                                        dyn_mat_NAC_r(iGrid, idx_col, idx_row) = dyn_mat_NAC_r(iGrid, idx_col, idx_row) + &
-                                            dyn_mat_NAC_gq(idx_col, idx_row) * gauss_fact * cell_phase !* tau_phase
-                                    end do
-                                end do
-                            end do
-                        end do
-                    end do
-                    !print*,"sum(dyn_mat_NAC_r(iGrid,:,:))",sum(dyn_mat_NAC_r(iGrid,:,:))
-                end do
-            end do
+        allocate(bec(fi%atoms%ntype,3,3))
+        call read_dfpt_bec(fi%atoms, bec)
+        call read_dfpt_dielten(dielten)
+        do iQ = 1, size(qbk,2)
+            call get_NAC_ewald(fi, bec, dielten, qbk(:,iQ), dyn_mat_LR)
+            call hermitize_scale_dynmat(fi%atoms, dyn_mat_LR)
+            dyn_mat(:,:,iQ) = dyn_mat(:,:,iQ) - dyn_mat_LR
         end do
 
-        deallocate(dyn_mat_NAC_gq)
+    end subroutine subtract_NAC
 
-    end subroutine get_NAC_ewald_r
+    subroutine add_NAC(fi,qbk,dyn_mat,l_path)
+        !! Adds the dipole-dipole part to interpolated dynamical matrices. With l_path, a Gamma
+        !! point gets the LO-TO splitting along the direction of the neighbouring path point.
 
-    subroutine get_gaussian(fi,gqvec,gauss_fact)
+        type(t_fleurinput), intent(in)    :: fi
+        real,               intent(in)    :: qbk(:,:)       ! (3, nq), internal coordinates
+        complex,            intent(inout) :: dyn_mat(:,:,:) ! (3nat, 3nat, nq), not mass-scaled
+        logical,            intent(in)    :: l_path
 
-        type(t_fleurinput), intent(in)     :: fi
-        real, intent(in)                    :: gqvec(3)
-        real, intent(inout)                 :: gauss_fact
+        real, allocatable :: bec(:,:,:)
+        real              :: dielten(3,3), qdir(3)
+        complex           :: dyn_mat_LR(3*fi%atoms%nat,3*fi%atoms%nat)
+        integer           :: iQ
 
-        integer                         :: iDir, iDir1
-        real                            :: tempval_exp, para_ewald, dielten(3,3)
-
-        dielten(:,:) = 0.0
-        tempval_exp = 0.0
-        para_ewald = 0.00000005
-        open(110, file="diel_tensor", status='old', action='read', form='formatted')
-
-        do iDir = 1, 3
-            read(110,*) dielten(iDir, 1:3)
+        allocate(bec(fi%atoms%ntype,3,3))
+        call read_dfpt_bec(fi%atoms, bec)
+        call read_dfpt_dielten(dielten)
+        do iQ = 1, size(qbk,2)
+            if (l_path .and. gamma_direction(qbk, iQ, qdir)) then
+                call get_NAC_ewald(fi, bec, dielten, qbk(:,iQ), dyn_mat_LR, qdir)
+            else
+                call get_NAC_ewald(fi, bec, dielten, qbk(:,iQ), dyn_mat_LR)
+            end if
+            dyn_mat(:,:,iQ) = dyn_mat(:,:,iQ) + dyn_mat_LR
         end do
-        close(110)
 
-        do iDir = 1, 3
-            do iDir1 = 1, 3
-                tempval_exp = tempval_exp + gqvec(iDir) * dielten(iDir, iDir1) * gqvec(iDir1)
-            end do
-        end do
+    end subroutine add_NAC
 
-        tempval_exp = -tempval_exp/(4*para_ewald)
-        gauss_fact = exp(tempval_exp)
+    logical function gamma_direction(bk, iQ, qdir)
+        !! True if path point iQ is a Gamma point; qdir is then the direction
+        !! to the next path point, or to the previous one at the end of the path.
 
-    end subroutine get_gaussian
+        real,    intent(in)  :: bk(:,:)
+        integer, intent(in)  :: iQ
+        real,    intent(out) :: qdir(3)
+
+        qdir = 0.0
+        gamma_direction = .false.
+        if (norm2(bk(:,iQ) - nint(bk(:,iQ))) > 1e-8) return
+        if (iQ < size(bk,2)) qdir = bk(:,iQ+1) - bk(:,iQ)
+        if (norm2(qdir) < 1e-8 .and. iQ > 1) qdir = bk(:,iQ-1) - bk(:,iQ)
+        gamma_direction = norm2(qdir) > 1e-8
+
+    end function gamma_direction
 
 end module

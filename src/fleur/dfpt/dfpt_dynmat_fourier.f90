@@ -364,8 +364,6 @@ CONTAINS
          call timestop("Born-Huang projection")
       end if
 
-      ! TODO: NAC / polar long-range term (currently inactive in dfpt_interpolation)
-
       ! inverse Fourier transform onto every target q-point
       allocate(dyn_mat_interp(dyn_dim,dyn_dim,size(q_target,2)))
       do iq = 1, size(q_target,2)
