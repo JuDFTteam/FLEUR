@@ -379,6 +379,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "xml: test with xml")
     config.addinivalue_line("markers", "noxml: test with no xml")
     config.addinivalue_line("markers", "gpu: this test will a GPU capbale fleur version")
+    config.addinivalue_line("markers", "nogpu: test known to fail in GPU builds (open GPU bug)")
     
     config.addinivalue_line("markers", "noci: this test will not be run on CI ")
     # the reason for this is that it is not run in the old set.

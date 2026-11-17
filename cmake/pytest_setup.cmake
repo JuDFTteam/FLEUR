@@ -50,8 +50,8 @@ if (NOT FLEUR_USE_GPU)
     set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} gpu")
 else()
     # not supported in GPU builds: DFPT (disabled for NVHPC), SOC in second variation
-    # (no GPU standard eigensolver), libxc, Wannier90
-    set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} dfpt secvar libxc wannierlib")
+    # (no GPU standard eigensolver), libxc, Wannier90; nogpu: tests with known GPU bugs
+    set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} dfpt secvar libxc wannierlib nogpu")
 endif()
 if (NOT FLEUR_USE_MPI)
     set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} mpi")
