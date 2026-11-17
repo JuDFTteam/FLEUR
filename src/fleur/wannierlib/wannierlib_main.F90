@@ -285,7 +285,7 @@ CONTAINS
                                       request%has_op_k('exchangeTorque'), &
                                       melem%s0, melem%l0, melem%soc4, melem%t0, melem%x0, &
                                       melem%n_channels, atoms%nat, &
-                                      distk, kpts%nkptf, wl%num_bands, jspin, fmpi)
+                                      distk, kpts%nkptf, wl%num_bands, eig, jspin, fmpi)
             !> Read it back and require it to reproduce what it was written from. The file
             !> is the input of a later run that will no longer have the eigenvectors to
             !> check it against, so this is the only place the question can still be asked.
@@ -294,7 +294,7 @@ CONTAINS
                                          request%has_op_k('exchangeTorque'), &
                                          melem%s0, melem%l0, melem%soc4, melem%t0, &
                                          melem%n_channels, atoms%nat, &
-                                         distk, kpts%nkptf, wl%num_bands, jspin, fmpi)
+                                         distk, kpts%nkptf, wl%num_bands, eig, jspin, fmpi)
          END IF
 
          CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)

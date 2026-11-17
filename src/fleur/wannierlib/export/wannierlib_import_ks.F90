@@ -18,6 +18,14 @@
 !> from a different SCF matches on every count above and its matrices belong to states this
 !> run never computed. That is the same blind spot the Wannier90 checkpoint has.
 !>
+!> THE EIGENVALUES. Layout version 2 adds eigval, the band energies of the manifold over
+!> the whole mesh. They are never consumed as data: a later run has its own from the
+!> diagonalisation it performs anyway, which is why storing them costs 840 kB and saves
+!> nothing. They are a witness. Every other number in this file, and in the Wannier90
+!> checkpoint beside it, is reproduced by a run on the same mesh with a different density,
+!> and neither file can tell -- the eigenvalues are what notices. A caller that hands its
+!> own over gets them compared; one that does not, is not asking the question.
+!>
 !> WHAT IS NOT IN THE FILE. soc0, the sum over the four spin-orbit blocks, is not stored
 !> because it is SUM(soc4, DIM=3) and the blocks are. The cross-spin blocks x0 and tx0 are
 !> not stored either: they only exist in a collinear two-channel run, which the exporter
@@ -40,7 +48,7 @@ CONTAINS
    !> that is wrong with it stops the run.
    SUBROUTINE wannierlib_import_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                    s0, l0, soc4, t0, n_channels, nat, &
-                                   distk, nkptf, nb, jspin, fmpi, l_found)
+                                   distk, nkptf, nb, jspin, fmpi, l_found, eig_now, eig_tol)
 #ifdef CPP_HDF
       USE hdf5
       USE m_wannierlib_hdf_util
@@ -58,12 +66,16 @@ CONTAINS
       INTEGER,              INTENT(IN)  :: nkptf, nb, jspin
       TYPE(t_mpi),          INTENT(IN)  :: fmpi
       LOGICAL,              INTENT(OUT) :: l_found
+      REAL, OPTIONAL,       INTENT(IN)  :: eig_now(:, :)   !< (nb,nkptf) this run's energies
+      REAL, OPTIONAL,       INTENT(IN)  :: eig_tol         !< how far apart they may be
 #ifdef CPP_HDF
       INTEGER(HID_T)    :: fid, gid, did
       CHARACTER(LEN=80) :: filename
       INTEGER           :: hdr(7), dims(4), n5(5)
       INTEGER           :: ic, iat, ich, icomp, ncomp, nkl, e, ierr
       LOGICAL           :: l_root
+      REAL, ALLOCATABLE :: stored(:, :)
+      REAL              :: ediff(1)
 
       l_root = (fmpi%irank == 0)
       fid = -1; gid = -1; did = -1
@@ -89,9 +101,12 @@ CONTAINS
       l_found = (hdr(1) == 1)
       IF (.NOT. l_found) RETURN
 
-      IF (hdr(2) /= 1) CALL juDFT_error("wannierlib: the Bloch-basis operator file has "// &
-                                        "layout version "//i2s(hdr(2))//", not 1", &
-                                        calledby="wannierlib_import_ks")
+      !> Version 2 only adds eigval, so a version 1 file is still readable in full -- what
+      !> it cannot do is answer whether it came from this density.
+      IF (hdr(2) /= 1 .AND. hdr(2) /= 2) &
+         CALL juDFT_error("wannierlib: the Bloch-basis operator file has layout version "// &
+                          i2s(hdr(2))//", and this build knows 1 and 2", &
+                          calledby="wannierlib_import_ks")
       !> The number of k-points is written TWICE, in the root attribute and in the dims
       !> record. Both are checked, separately and under different names, so that the day
       !> they disagree with each other the message can say which of the two it was.
@@ -100,6 +115,58 @@ CONTAINS
       CALL assert_same('bands',     hdr(4), nb)
       CALL assert_same('atoms',     hdr(6), nat)
       CALL assert_same('channels',  hdr(7), n_channels)
+
+      !> The eigenvalue witness. Read and judged on rank 0, which is the only one holding
+      !> the file, and the verdict broadcast: eig_now is replicated, so there is nothing to
+      !> reduce, but every rank still has to abort or none of them can.
+      IF (PRESENT(eig_now)) THEN
+         IF (.NOT. PRESENT(eig_tol)) &
+            CALL juDFT_error("wannierlib: eigenvalues were handed over to compare without "// &
+                             "saying how far apart they may be", calledby="wannierlib_import_ks")
+         IF (hdr(2) < 2) &
+            CALL juDFT_error("wannierlib: this operator file is layout version 1 and has "// &
+                             "no eigenvalues", hint='it cannot be checked against this '// &
+                             'density; export it again to get a version 2 file', &
+                             calledby="wannierlib_import_ks")
+         !> Symmetric with the guard the exporter puts on the way out. Without it, a
+         !> caller handing over a smaller array indexes past its end, and on a good day
+         !> that is a wrong number rather than a crash.
+         IF (SIZE(eig_now, 1) < nb .OR. SIZE(eig_now, 2) < nkptf) &
+            CALL juDFT_error("wannierlib: the band energies offered for comparison are "// &
+                             i2s(SIZE(eig_now, 1))//" by "//i2s(SIZE(eig_now, 2))// &
+                             ", too small for "//i2s(nb)//" bands over "//i2s(nkptf)// &
+                             " k-points", calledby="wannierlib_import_ks")
+         ediff = 0.0
+         IF (l_root) THEN
+            IF (.NOT. wl_ds_exists(gid, 'eigval')) &
+               CALL juDFT_error("wannierlib: a version 2 operator file without eigval", &
+                                calledby="wannierlib_import_ks")
+            ALLOCATE (stored(nb, nkptf))
+            CALL rd_r2(gid, 'eigval', [nb, nkptf], stored)
+            ediff(1) = MAXVAL(ABS(stored - eig_now(:nb, :nkptf)))
+            DEALLOCATE (stored)
+         END IF
+#ifdef CPP_MPI
+         IF (fmpi%isize > 1) CALL MPI_BCAST(ediff, 1, MPI_DOUBLE_PRECISION, 0, &
+                                            fmpi%mpi_comm, ierr)
+#endif
+         IF (l_root) WRITE (oUnit, '(a,es10.2,a,es10.2,a)') &
+            'wannierlib: operators_ks eigenvalues, |stored - this run| ', ediff(1), &
+            ' Htr, allowed ', eig_tol, ' Htr'
+         IF (ediff(1) > eig_tol) &
+            CALL juDFT_error("wannierlib: the operator file was built from a different "// &
+                             "set of band energies", hint='same mesh, another density: '// &
+                             'the SCF moved between the two runs', &
+                             calledby="wannierlib_import_ks")
+      END IF
+
+      !> And said out loud when it is not asked. A version 2 file carries the one number
+      !> that can refuse a file from another density, so a caller that reads such a file
+      !> without offering its own energies is leaving that check on the table -- which is
+      !> worth a line in the log rather than being the quietest thing in the run.
+      IF (.NOT. PRESENT(eig_now) .AND. hdr(2) >= 2 .AND. l_root) &
+         WRITE (oUnit, '(a)') 'wannierlib: operators_ks has eigenvalues and nothing was '// &
+         'offered to compare them against: THE DENSITY WAS NOT CHECKED'
 
       nkl = MAX(1, COUNT(distk == fmpi%irank))
 
@@ -172,9 +239,12 @@ CONTAINS
    !> answers a different question, and the run that reads it next has no way to tell.
    !> Exact is the right demand -- both sides are the same IEEE doubles through the same
    !> slab calls -- so any non-zero residual is a defect and not a tolerance to widen.
+   !> The eigenvalues go through the same demand, with a tolerance of zero: inside one run
+   !> there is nothing for them to differ by, and this is what exercises the comparison a
+   !> later run makes with a tolerance that is not zero.
    SUBROUTINE wannierlib_ks_roundtrip(l_spin, l_orbital, l_spinorbit, l_torque, &
                                       s0, l0, soc4, t0, n_channels, nat, &
-                                      distk, nkptf, nb, jspin, fmpi)
+                                      distk, nkptf, nb, eig, jspin, fmpi)
 #ifdef CPP_MPI
       USE mpi
 #endif
@@ -184,6 +254,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE, INTENT(IN) :: soc4(:, :, :, :)
       COMPLEX, ALLOCATABLE, INTENT(IN) :: t0(:, :, :, :)
       INTEGER,              INTENT(IN) :: n_channels, nat, distk(:), nkptf, nb, jspin
+      REAL,                 INTENT(IN) :: eig(:, :)
       TYPE(t_mpi),          INTENT(IN) :: fmpi
 
       COMPLEX, ALLOCATABLE :: r_s0(:, :, :, :), r_soc4(:, :, :, :), r_t0(:, :, :, :)
@@ -193,7 +264,8 @@ CONTAINS
 
       CALL wannierlib_import_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                 r_s0, r_l0, r_soc4, r_t0, n_channels, nat, &
-                                distk, nkptf, nb, jspin, fmpi, l_found)
+                                distk, nkptf, nb, jspin, fmpi, l_found, &
+                                eig_now=eig, eig_tol=0.0)
       IF (.NOT. l_found) CALL juDFT_error("wannierlib: the file just written is not there", &
                                           calledby="wannierlib_ks_roundtrip")
       !> Asked for and not there on one of the two sides is a defect of its own, and one

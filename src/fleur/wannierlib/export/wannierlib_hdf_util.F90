@@ -24,7 +24,7 @@ MODULE m_wannierlib_hdf_util
    PUBLIC :: wr_r1, wr_r2, wr_r3, wr_r4, wr_i1, wr_i2, wr_i3, wl_hdf_create, wl_hdf_root
    PUBLIC :: wl_ds5_open, wl_ds5_slab, wl_ds_close
    PUBLIC :: wl_hdf_open, wl_hdf_root_read, rd_i1, wl_ds_exists
-   PUBLIC :: wl_ds5_open_read, wl_ds5_read, wl_ds5_dims
+   PUBLIC :: wl_ds5_open_read, wl_ds5_read, wl_ds5_dims, rd_r2
 CONTAINS
 
    !> Make WF<jspin>_<what>.hdf and return it open. A stale file is removed rather than
@@ -244,6 +244,21 @@ CONTAINS
       CALL io_read_integer1(did, (/1/), n(:1), name, dat)
       CALL h5dclose_f(did, e)
    END SUBROUTINE rd_i1
+
+   !> The counterpart of wr_r2, with the same shape in the same order.
+   SUBROUTINE rd_r2(gid, name, n, dat)
+      INTEGER(HID_T),   INTENT(IN)  :: gid
+      CHARACTER(LEN=*), INTENT(IN)  :: name
+      INTEGER,          INTENT(IN)  :: n(:)
+      REAL,             INTENT(OUT) :: dat(:, :)
+      INTEGER(HID_T) :: did
+      INTEGER :: e
+      CALL h5dopen_f(gid, name, did, e)
+      IF (e < 0) CALL juDFT_error('wannierlib: "'//name//'" will not open', &
+                                  calledby="rd_r2")
+      CALL io_read_real2(did, (/1, 1/), n(:2), name, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE rd_r2
 
    SUBROUTINE wl_ds5_open_read(gid, name, did)
       INTEGER(HID_T),   INTENT(IN)  :: gid

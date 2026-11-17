@@ -47,7 +47,7 @@ CONTAINS
    !> over the ranks by k and have to be gathered -- but only rank 0 holds the file open.
    SUBROUTINE wannierlib_export_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                    s0, l0, soc4, t0, x0, n_channels, nat, &
-                                   distk, nkptf, nb, jspin, fmpi)
+                                   distk, nkptf, nb, eig, jspin, fmpi)
 #ifdef CPP_HDF
       USE hdf5
       USE m_wannierlib_hdf_util
@@ -61,6 +61,7 @@ CONTAINS
       INTEGER,              INTENT(IN) :: n_channels, nat
       INTEGER,              INTENT(IN) :: distk(:)                !< (nkptf) owning rank of each k
       INTEGER,              INTENT(IN) :: nkptf, nb, jspin
+      REAL,                 INTENT(IN) :: eig(:, :)              !< (nb,nkptf) the band energies
       TYPE(t_mpi),          INTENT(IN) :: fmpi
 #ifdef CPP_HDF
       INTEGER(HID_T)    :: fid, gid, did
@@ -95,10 +96,21 @@ CONTAINS
                              "than the structure", calledby="wannierlib_export_ks")
       END IF
 
+      IF (SIZE(eig, 1) < nb .OR. SIZE(eig, 2) < nkptf) &
+         CALL juDFT_error("wannierlib: the band energies do not cover the manifold over "// &
+                          "the whole mesh", calledby="wannierlib_export_ks")
+
       IF (l_root) THEN
          CALL wl_hdf_create('operators_ks', jspin, fid, filename)
-         CALL wl_hdf_root(fid, 1, nkptf, gid)
+         CALL wl_hdf_root(fid, 2, nkptf, gid)
          CALL wr_i1(gid, 'dims', [4], [nb, nkptf, nat, n_channels])
+         !> The band energies of the manifold, on the whole mesh. They are not here to be
+         !> consumed: a later run gets them from its own diagonalisation, which it does
+         !> anyway. They are here as a witness. Everything else in this file, and in the
+         !> Wannier90 checkpoint beside it, matches a run on the same mesh whose density
+         !> is a different one, and nothing in either can tell. The eigenvalues can.
+         !> Layout version 2 is this dataset; a version 1 file is the same file without it.
+         CALL wr_r2(gid, 'eigval', [nb, nkptf], eig(:nb, :nkptf))
       END IF
 
       did = -1
