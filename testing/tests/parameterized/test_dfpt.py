@@ -7,6 +7,7 @@ from read_tests import read_tests
 all_tests = read_tests("dfpt")
 
 @pytest.mark.fleur
+@pytest.mark.dfpt
 @pytest.mark.parametrize(("dir","desc","cmdline","mpi_procs"), all_tests)
 def test_dfpt(dir,desc,cmdline,mpi_procs,default_fleur_test):
     """

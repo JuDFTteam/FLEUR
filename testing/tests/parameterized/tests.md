@@ -31,9 +31,9 @@ Testset: Basic
 | +   | Si non-relativistic via warp_factor          | basic/SiNonRel           | fast,bulk             |                    |                 | 2   |
 | +   | Cu with APW+lo, LAPW and APW channels        | basic/CuAPWlo            | bulk                  |                    |                 | 2   |
 | +   | Cu with APW+lo and DFT+U on the APW+lo d     | basic/CuAPWlo_U          | bulk,ldau             |                    |                 | 2   |
-| +   | Fe with APW+lo, SOC 2nd variation            | basic/FeAPWlo_SOC2       | bulk,soc              |                    |                 | 2   |
+| +   | Fe with APW+lo, SOC 2nd variation            | basic/FeAPWlo_SOC2       | bulk,soc,secvar       |                    |                 | 2   |
 | +   | Bulk PTO                                     | basic/PTO                | bulk                  |                    |                 | 2   |
-| +   | Bulk PTO, SOC                                | basic/PTO-SOC            | bulk,soc              |                    |                 | 2   |
+| +   | Bulk PTO, SOC                                | basic/PTO-SOC            | bulk,soc,secvar       |                    |                 | 2   |
 | +   | Bulk Fe, Tetrahedon method                   | basic/Fe_Tetra_noSYM     | bulk                  |                    |                 | 2   |
 |     | LDA+U with AMF double counting and magnetism | basic/NiOldaUAMF         | bulk,ldau             | LDA+U AMF disabled |                 | 2   |
 | +   | LDA+U with LF double counting and magnetism  | basic/NiOldaUFLL         | bulk,ldau             |                    |                 | 2   |
@@ -44,12 +44,12 @@ Testset: Films
 ----------------
 |     | Description                    | directory name       | marks | Remarks                             | CmdLine | MPI |
 | --- | ------------------------------ | -------------------- | ----- | ----------------------------------- | ------- | --- |
-| +   | Fe Monolayer SOC               | film/Fe_1l_SOC       | soc   |                                     |         | 2   |
+| +   | Fe Monolayer SOC               | film/Fe_1l_SOC       | soc,secvar |                                     |         | 2   |
 | +   | Fe Monolayer                   | film/Fe_1l           |       |                                     |         | 2   |
 |     | Fe Monolayer Triangular method | film/Fe_1l_Tria      |       | not reproducible on INTEL compilers |         | 2   |
 | +   | Si Film, plotting              | film/SiFilmPlot      |       |                                     |         | 2   |
 | +   | Si Film, plotting,slicing      | film/SiFilmSlicePlot |       |                                     |         | 2   |
-| +   | Pt 3 layers,soc,inversion      | film/Pt-3            | soc   |                                     |         | 2   |
+| +   | Pt 3 layers,soc,inversion      | film/Pt-3            | soc,secvar |                                     |         | 2   |
 | +   | Film, nonsymmorphic z-glide+inversion | film/FilmGlideInvs |    | Nonsymmorphic 2D group; 2D/3D star phases; vacuum-2 by inversion |     | 1   |
 | +   | Film, nonsymmorphic z-glide+in-plane mirror | film/FilmGlideSort |    | No symmorphic inversion/z-mirror: in-plane ops must be sorted first |     | 1   |
 | +   | Film, hexagonal, in-plane 2-fold axis | film/FilmHex2fold |    | Operation removed by 7c06dc2d9; vacuum-2 by in-plane mirror |     | 1   |
@@ -126,7 +126,7 @@ Testset: Experimental
 ----------
 |     | Description                                    | directory name          | marks         | Remarks                   | CmdLine | MPI |
 | --- | ---------------------------------------------- | ----------------------- | ------------- | ------------------------- | ------- | --- |
-| +   | Test of the orbital polarization correction    | extra/Fe_bcc_OPC        | bulk,soc      |                           |         | 2   | 
+| +   | Test of the orbital polarization correction    | extra/Fe_bcc_OPC        | bulk,soc,secvar |                           |         | 2   | 
 | +   | Sourcefree magnetism and magnetization scaling | extra/Fe_bcc_SF_LDA     | bulk,hdf      |                           |         | 2   |
 | +   | Bulk Cu one iteration                          | extra/CuBulkLibXC       | libxc,bulk    |                           |         | 2   |
 | +   | Bulk Al one iteration, LibXC                   | extra/Al_libxc_PBE      | bulk,libxc    |                           |         | 2   |
@@ -134,7 +134,7 @@ Testset: Experimental
 |     | Test of GW interface 2                         | extra/gw2Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
 |     | TiO2 EELS spectrum                             | extra/TiO2eels          | bulk,eels     | inp.xml too old           |         | 2   |
-| +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |
+| +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver,secvar |                           |         | 2   |
 | +   | Hubbard1 without sym                           | extra/Gd_Hubbard1_noSYM | bulk,edsolver |                           |         | 2   |
 |     | diamond for one k-point with scan              | extra/Diamond_SCAN      | bulk,libxc    | SCAN has to be refactored |         | 2   |
 | +   | diamond, self-consistent SCAN (V_tau in H)     | extra/MetaGGA_SCAN      | bulk,libxc,metagga | exercises the MetaGGA V_tau interstitial+MT Hamiltonian and the tau*V_tau double counting |         | 2   |
@@ -182,14 +182,14 @@ Testset: Wannier
 |     | Description                              | directory name   | marks         | Remarks | CmdLine | MPI |
 | --- | ---------------------------------------- | ---------------- | ------------- | ------- | ------- | --- |
 | +   | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannierlib,bulk  |         |         | 1   |
-| +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc,secvar |         |         | 1   |
 | +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe FM noco, moment along y (alpha!=0)    | wannier/WannFeFMy | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
-| +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |
-| +   | bcc Fe FM collinear+SOC, wannierlib O(R)     | wannier/WannFeBccSOC | wannierlib,bulk,soc |         |         | 1   |
-| +   | fcc Fe AFM collinear+SOC, wannierlib O(R)    | wannier/WannFeAFMColSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc,secvar |         |         | 1   |
+| +   | bcc Fe FM collinear+SOC, wannierlib O(R)     | wannier/WannFeBccSOC | wannierlib,bulk,soc,secvar |         |         | 1   |
+| +   | fcc Fe AFM collinear+SOC, wannierlib O(R)    | wannier/WannFeAFMColSOC | wannierlib,bulk,soc,secvar |         |         | 1   |
 | +   | bcc Fe FM collinear no-SOC, wannierlib O(R)  | wannier/WannFeBcc | wannierlib,bulk |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib O(R)         | wannier/WannFeAFMSOCOps | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe AFM collinear no-SOC, wannierlib O(R) | wannier/WannFeAFMCol | wannierlib,bulk |         |         | 1   |

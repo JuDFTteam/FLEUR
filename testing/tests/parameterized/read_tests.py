@@ -12,6 +12,7 @@ def read_tests(testset):
         "metagga":pytest.mark.metagga,
         "film":pytest.mark.film,
         "soc":pytest.mark.soc,
+        "secvar":pytest.mark.secvar,
         "orbcomp":pytest.mark.orbcomp,
         "mcd":pytest.mark.mcd,
         "ldau":pytest.mark.ldau,

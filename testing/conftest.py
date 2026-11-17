@@ -394,6 +394,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hybrid: testing hybrid functionals")
     config.addinivalue_line("markers", "eigpara: test testing eig para")
     config.addinivalue_line("markers", "soc: tests with soc")
+    config.addinivalue_line("markers", "secvar: SOC in second variation (needs a standard eigenvalue solver)")
     config.addinivalue_line("markers", "ldau: tests with LDA+U")
     config.addinivalue_line("markers", "lo: tests with LOs")
     config.addinivalue_line("markers", "forces: tests with forces")
