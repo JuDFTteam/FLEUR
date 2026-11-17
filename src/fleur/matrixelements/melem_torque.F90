@@ -60,10 +60,16 @@ CONTAINS
    !> The three Cartesian components at one k from the four exchange-field blocks.
    !> The blocks must already be in the <i|O|j> convention and in the global frame,
    !> which is what the provider hands out.
-   SUBROUTINE melem_torque_from_blocks(o_uu, o_dd, o_ud, o_du, axis, t0)
+   SUBROUTINE melem_torque_from_blocks(o_uu, o_dd, o_ud, o_du, axis, t0, h0)
       COMPLEX, INTENT(IN)  :: o_uu(:,:), o_dd(:,:), o_ud(:,:), o_du(:,:)
       REAL,    INTENT(IN)  :: axis(3)     !> m_hat, global frame
       COMPLEX, INTENT(OUT) :: t0(:,:,:)   !> (nb,nb,3) 1=x 2=y 3=z
+      !> The OTHER half of the same object. <sigma B_xc> splits into a part along m_hat
+      !> and a part across it, and the cross product keeps only the second: the first is
+      !> the exchange Hamiltonian, which is what a Kubo torkance needs as a matrix rather
+      !> than as a parameter per atom. Optional because the torque alone was the original
+      !> caller and asking for one does not oblige the other.
+      COMPLEX, OPTIONAL, INTENT(OUT) :: h0(:,:)    !> (nb,nb)  <sigma.m_hat B_xc>
 
       COMPLEX, ALLOCATABLE :: s0(:,:,:)
       INTEGER :: nb
@@ -80,6 +86,15 @@ CONTAINS
       t0(:,:,1) = -(s0(:,:,2)*axis(3) - s0(:,:,3)*axis(2))
       t0(:,:,2) = -(s0(:,:,3)*axis(1) - s0(:,:,1)*axis(3))
       t0(:,:,3) = -(s0(:,:,1)*axis(2) - s0(:,:,2)*axis(1))
+
+      !> s.m_hat. With m_hat = z this is s0(:,:,3), and together with the three torque
+      !> components it accounts for all of s0: |s|^2 = |T|^2 + |h0|^2 whatever m_hat is,
+      !> which is a check with no reference attached.
+      IF (PRESENT(h0)) THEN
+         IF (SIZE(h0,1) /= nb .OR. SIZE(h0,2) /= nb) &
+            CALL judft_bug("melem_torque_from_blocks: h0 has the wrong shape")
+         h0 = s0(:,:,1)*axis(1) + s0(:,:,2)*axis(2) + s0(:,:,3)*axis(3)
+      END IF
 
       DEALLOCATE(s0)
    END SUBROUTINE melem_torque_from_blocks

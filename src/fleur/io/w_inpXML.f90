@@ -928,6 +928,13 @@ WRITE (fileNum, 242) fr(1.0)
          WRITE (fileNum, '(a)') '            <operator name="spinOrbit"/>'
          WRITE (fileNum, '(a)') '            <!-- exchangeTorque needs every site to share one moment direction: a global rotation is fine, a texture is not -->'
          WRITE (fileNum, '(a)') '            <operator name="exchangeTorque"/>'
+         !> Only on the spinor route, because that is where it exists: the projection on
+         !> the moment is taken over a spinor, and offering it in a collinear template
+         !> would put a name in the file that the run then refuses.
+         IF (judft_was_argument("-spinor")) THEN
+            WRITE (fileNum, '(a)') '            <!-- exchangeField is the same exchange field projected ON the moment, which is the exchange Hamiltonian rather than the torque -->'
+            WRITE (fileNum, '(a)') '            <operator name="exchangeField"/>'
+         END IF
          WRITE (fileNum, '(a)') '         </operatorsRs>'
          WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" orbitrans="F" juwip="F" plotWF="F" plotGrid="40 40 40"/>'
          WRITE (fileNum, '(a)') '      </wannierlib>'

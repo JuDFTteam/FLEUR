@@ -106,6 +106,10 @@ CONTAINS
       CASE ('rspauli.1');    name = 'spin'
       CASE ('anglmomrs.1');  name = 'orbital'
       CASE ('rssocmat.1');   name = 'spin_orbit'
+      !> Read by the third exchange source of io_module, next to J_xc_atom and
+      !> J_xc_wann: the same matrix those two build from three numbers per atom or per
+      !> Wannier function. It lands in H_xc_ext_R, so it has to be bare and in eV.
+      CASE ('rshxc.1');      name = 'H_xc'
       CASE ('WF1_hr.dat');   name = 'hoppings'
       CASE ('WF1_r.dat');    name = 'position'
       !> It reads `dum, R(1:3)` from this one and our fifth column, the degeneracy, is
@@ -130,6 +134,12 @@ CONTAINS
    !> Asked of the RESOLVED path and not of the canonical name, because being bare belongs
    !> to those three names rather than to the export flag: the second channel of a
    !> collinear run keeps the name WF2_hr.dat, so it keeps the layout that name promises.
+   !>
+   !> rshxc.1 is here under BOTH its names, which looks like an exception and is the same
+   !> rule: a name promises a layout, and this one is not a Wannier90 file. WF1_hr.dat is,
+   !> so it carries the W90 header when it keeps that name and drops it when it is renamed;
+   !> rshxc.1 has one consumer and one layout, and a W90 header on it would promise a
+   !> format no reader of this file expects.
    FUNCTION wannierlib_export_bare(path) RESULT(bare)
       CHARACTER(LEN=*), INTENT(IN) :: path
       LOGICAL :: bare
@@ -138,7 +148,8 @@ CONTAINS
 
       islash = INDEX(path, '/', back=.TRUE.)
       base = TRIM(path(islash + 1:))
-      bare = (base == 'hoppings') .OR. (base == 'position') .OR. (base == 'bmn')
+      bare = (base == 'hoppings') .OR. (base == 'position') .OR. (base == 'bmn') &
+             .OR. (base == 'H_xc') .OR. (base == 'rshxc.1')
    END FUNCTION wannierlib_export_bare
 
 END MODULE m_wannierlib_export_paths

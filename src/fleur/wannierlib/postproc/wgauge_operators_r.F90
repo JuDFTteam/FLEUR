@@ -71,7 +71,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE wgauge_write_operators_r(this, request, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, t0_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
+                                          s0_loc, l0_loc, soc4_loc, t0_loc, hxc0_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_melem_request), INTENT(IN) :: request
     TYPE(t_cell), INTENT(IN) :: cell
@@ -84,6 +84,10 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :, :), soc4_loc(:, :, :, :)
     !> The exchange torque, three Cartesian components like the spin it is built from.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: t0_loc(:, :, :, :)
+    !> (nb,nb,1,nk_loc) the same exchange field projected ON the moment instead of across
+    !> it: one component, which is why it goes out in the hoppings layout and not the
+    !> Cartesian one.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: hxc0_loc(:, :, :, :)
     !> (nw,nw,3,3,nk_loc) the geometric tensor, already contracted over the pairs of
     !> neighbours and already gauged, because that has to happen where the wavefunctions are.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
@@ -173,6 +177,13 @@ CONTAINS
         ELSE
           CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., wannierlib_export_file('rspauli.1'))
         END IF
+      !> Written in the 'hr' layout, which is the one the transport code reads for the
+      !> Hamiltonian: five integer columns and the complex entry, no Cartesian index --
+      !> there is only one component -- and in eV, because the consumer keeps it
+      !> alongside the hoppings and the two have to be in one unit.
+      CASE ('exchangeField')
+        CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, hxc0_loc, gk_loc, 1, mpi_comm, irank, .FALSE., &
+                                          wannierlib_export_file('rshxc.1'), fmt='hr')
       CASE ('exchangeTorque')
         !> T = -m_hat x <sigma B_xc>, the same three components the spin has and the same
         !> reduce, since the local blocks were already assembled on the coarse mesh.
@@ -215,7 +226,7 @@ CONTAINS
   ! Distributed real-space export of a coarse operator (spin/orbital/soc): each rank builds
   ! ow_loc = V(gk)^dagger o0_loc V(gk) for its k-slice, FT-reduces to O(R), rank 0 writes.
   ! is_soc=.TRUE. -> rssocmat.1 format (R i j jj ii); else rspauli/anglmomrs (R i j comp).
-  SUBROUTINE wgauge_op_rs_distributed(this, cell, kpts, vloc, o0_loc, gk_loc, ncomp, mpi_comm, irank, is_soc, fname)
+  SUBROUTINE wgauge_op_rs_distributed(this, cell, kpts, vloc, o0_loc, gk_loc, ncomp, mpi_comm, irank, is_soc, fname, fmt)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -224,6 +235,10 @@ CONTAINS
     INTEGER, INTENT(IN) :: gk_loc(:), ncomp, mpi_comm, irank
     LOGICAL, INTENT(IN) :: is_soc
     CHARACTER(LEN=*), INTENT(IN) :: fname
+    !> The layout, for an operator whose shape is not the Cartesian one. Absent means
+    !> what every caller before this one got: 'generic', or 'spinor2x2' for the SOC.
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: fmt
+    CHARACTER(LEN=9) :: layout
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), or_(:, :, :, :), o1(:, :, :), tmp(:, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nb, nw, nkl, kl, a, nrpts
@@ -244,8 +259,10 @@ CONTAINS
     END DO
     DEALLOCATE(ow_loc)
     IF (irank == 0) THEN
+      layout = MERGE('spinor2x2', 'generic  ', is_soc)
+      IF (PRESENT(fmt)) layout = fmt
       CALL wgauge_write_realspace(or_, irvec, ndegen, nrpts, nw, ncomp, &
-                                 MERGE('spinor2x2', 'generic  ', is_soc), TRIM(fname), irank)
+                                 TRIM(layout), TRIM(fname), irank)
       WRITE(oUnit, '(a,i0,a)') 'wannierlib: wrote '//TRIM(fname)//' (', nrpts, ' R-vectors, distributed FT)'
     END IF
     IF (ALLOCATED(or_)) DEALLOCATE(or_)

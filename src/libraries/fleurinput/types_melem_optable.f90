@@ -78,7 +78,7 @@ MODULE m_types_melem_optable
 
    !> <operatorsRs>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(10) = [ &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(11) = [ &
       t_melem_exposed('hamiltonian', '',           0, '', '', .FALSE.), &
       t_melem_exposed('position',    '',           0, '', '', .FALSE.), &
       !> Second Berry connection, in the postw90 convention: Eq. (44) WYSV06 on the
@@ -97,7 +97,11 @@ MODULE m_types_melem_optable
       !> Collinearly this writes the cross-spin block, which is the same object the
       !> classic route writes as updown.perpmag. Over spinors it writes the three
       !> Cartesian components.
-      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.)]
+      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.), &
+      !> The part of <sigma B_xc> ALONG the moment, which the torque throws away: one
+      !> matrix and not three components. It names the same provider as the torque, so
+      !> asking for it builds the same exchange-field blocks and nothing more.
+      t_melem_exposed('exchangeField', 'exchangeTorque', 1, '', '', .FALSE.)]
 
    !> <operatorsKs>/<operator name="..">. The same matrices in the BLOCH basis, written
    !> before any gauge exists. Only the four that ARE a matrix at a single k are here: the

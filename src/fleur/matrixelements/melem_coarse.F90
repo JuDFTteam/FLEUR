@@ -67,6 +67,10 @@ MODULE m_melem_coarse
       !> three Cartesian components; collinearly only the cross-spin block, for the same
       !> reason x0 is only that: the combined 2N operator needs both gauges.
       COMPLEX, ALLOCATABLE :: t0(:, :, :, :)      !< (nb,nb,3,nk_loc)
+      !> <sigma.m_hat B_xc>, the half of <sigma B_xc> the torque discards. Kept in the
+      !> four-index shape with one component so the real-space writer takes it with no
+      !> special case.
+      COMPLEX, ALLOCATABLE :: hxc0(:, :, :, :)    !< (nb,nb,1,nk_loc)
       COMPLEX, ALLOCATABLE :: tx0(:, :, :)        !< (nb,nb,nk_loc)
       !> How many independent eigenproblems the states come from: two when jspins=2 without
       !> spinors, one otherwise. It is a fact about the calculation, where the flags it
@@ -171,6 +175,11 @@ CONTAINS
       END IF
       IF (this%l_active .AND. request%needs_op('exchangeTorque')) THEN
          ALLOCATE (this%t0(window%num_bands, window%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
+      !> Asked for by name: exchangeField names exchangeTorque as its provider, so the
+      !> blocks and t0 above are there either way, and this is the only extra array.
+      IF (this%l_active .AND. request%has_op_r('exchangeField')) THEN
+         ALLOCATE (this%hxc0(window%num_bands, window%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
       END IF
       IF (l_ch_torque) THEN
          ALLOCATE (this%tx0(window%num_bands, window%num_bands, nkc_loc), source=cmplx(0.0, 0.0))
@@ -385,9 +394,20 @@ CONTAINS
                   "melem_coarse: the exchange torque needs every site to share a moment "// &
                   "direction", hint="the cross product with Omega_xc is site-local, and "// &
                   "the provider has already summed the sites", calledby="melem_coarse_calc")
-               CALL melem_torque_from_blocks(torqop%mat(1,1)%data_c, torqop%mat(2,2)%data_c, &
-                                             torqop%mat(1,2)%data_c, torqop%mat(2,1)%data_c, &
-                                             taxis, this%t0(:, :, :, il))
+               IF (ALLOCATED(this%hxc0)) THEN
+                  CALL melem_torque_from_blocks(torqop%mat(1,1)%data_c, torqop%mat(2,2)%data_c, &
+                                                torqop%mat(1,2)%data_c, torqop%mat(2,1)%data_c, &
+                                                taxis, this%t0(:, :, :, il), &
+                                                h0=this%hxc0(:, :, 1, il))
+                  !> Hermitian, unlike the torque components: it is the expectation of a
+                  !> Hermitian operator and not a cross product of them.
+                  IF (ikpt == 1) CALL melem_check_matrix(this%hxc0(:, :, :, il), &
+                                                         'exchangeField (assembled)', ikpt)
+               ELSE
+                  CALL melem_torque_from_blocks(torqop%mat(1,1)%data_c, torqop%mat(2,2)%data_c, &
+                                                torqop%mat(1,2)%data_c, torqop%mat(2,1)%data_c, &
+                                                taxis, this%t0(:, :, :, il))
+               END IF
                IF (ikpt == 1) CALL melem_check_matrix(this%t0(:, :, :, il), &
                                                       'exchangeTorque (assembled)', ikpt)
                !> T.m = 0 holds by construction, so this needs no reference to compare
@@ -525,6 +545,7 @@ CONTAINS
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
       IF (ALLOCATED(this%t0)) DEALLOCATE (this%t0)
+      IF (ALLOCATED(this%hxc0)) DEALLOCATE (this%hxc0)
       IF (ALLOCATED(this%tx0)) DEALLOCATE (this%tx0)
       this%n_channels = 1
       !> l_active gates both the allocations above and the calc pass, so leaving it set

@@ -113,6 +113,14 @@ CONTAINS
             hint="ask for it in <operatorsRs>: collinearly this operator is the "// &
                  "up-down Bloch block alone, written to updown.perpmag", &
             calledby="wannierlib_main")
+         !> Not an interpolation restriction like the three above but a plain absence:
+         !> collinearly there is no spinor to take <sigma.m_hat B_xc> over, the same
+         !> reason soc0 is not assembled there either.
+         IF (request%has_op_r('exchangeField')) CALL judft_error( &
+            "the exchange field matrix needs a spinor calculation", &
+            hint="its projection on the moment is taken over a spinor, and two spin "// &
+                 "channels wannierised separately do not form one: use the spinor route", &
+            calledby="wannierlib_main")
       END IF
 
    END SUBROUTINE wannierlib_build_request

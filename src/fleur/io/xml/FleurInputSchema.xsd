@@ -3707,6 +3707,13 @@
               Wannier route calls this job "perpmag" and the Bloch-basis matrices are
               still written to updown.perpmag. Not to be confused with wann_torque. -->
          <xsd:enumeration value="exchangeTorque"/>
+         <!-- exchangeField: the projection of <sigma B_xc> on the moment direction, the
+              half of that matrix the torque's cross product discards. It is the exchange
+              Hamiltonian a Kubo torkance needs, as a full matrix in R, where the transport
+              code otherwise takes three numbers per atom or per Wannier function. Spinors
+              only, and every site has to share a moment direction, as for exchangeTorque.
+              Writes rshxc.1. -->
+         <xsd:enumeration value="exchangeField"/>
       </xsd:restriction>
    </xsd:simpleType>
 
