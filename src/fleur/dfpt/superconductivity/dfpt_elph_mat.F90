@@ -329,7 +329,7 @@ CONTAINS
         do iMode = 1 , 3*fi%atoms%nat
             do ispin = 1 , fi%input%jspins
                 call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,gmatRealspace(iMode,ispin), &
-                                             k_list=k_list,mpi_comm=fmpi%mpi_comm)
+                                             k_list=k_list,mpi_comm=fmpi%mpi_comm,iAtom=(iMode-1)/3+1)
             end do !ispin
         end do !iMode
         call timestop("Forward FT elph-element")

@@ -11,7 +11,7 @@ module m_matrix_interpolation
     use m_juDFT
     use m_constants
     use m_npy
-    use m_dfpt_dynmat_fourier, only: ft_ws_forward, build_ws_ft, ft_fcm_weight_packed
+    use m_dfpt_dynmat_fourier, only: ft_ws_forward, build_ws_ft, ft_fcm_weight_packed, build_ws_shifted
     use m_types_cell
     use m_types_fleurinput
     use m_types_kpts
@@ -143,10 +143,11 @@ contains
 
     end subroutine wannier_matrixq_interpolate
 
-    subroutine wannier_matrixq_forward(fi,matElement,U_mat,kpts_coarse,qpts_coarse,ft,k_list,mpi_comm)
+    subroutine wannier_matrixq_forward(fi,matElement,U_mat,kpts_coarse,qpts_coarse,ft,k_list,mpi_comm,iAtom)
 
         ! Build the real-space Wannier-gauge matWannier and the Wigner-Seitz weights.
         ! With k_list/mpi_comm, matElement holds only the k-points k_list and matWannier is summed over all ranks.
+        ! With iAtom, R_p runs over the union of the per-atom lists and carries the weights of the displaced atom iAtom.
 
         type(t_fleurinput), intent(in)  :: fi
         complex,            intent(in)  :: matElement(:,:,:,:)    ! nu',nu, local kpoints, qpts (nu' at k+q, nu at k)
@@ -156,11 +157,13 @@ contains
         type(t_wann_ft),    intent(out) :: ft
         integer, optional,  intent(in)  :: k_list(:)              ! global k index of each local slot of matElement
         integer, optional,  intent(in)  :: mpi_comm
+        integer, optional,  intent(in)  :: iAtom                  ! atom displaced by this matrix element
 
-        integer :: ikpt, nk_i, iqpt, ikqpt, ix, iy, iz, iGrid, iqR
+        integer :: ikpt, nk_i, iqpt, ikqpt, ix, iy, iz, iGrid, iqR, jAtom
         integer :: boxSize_k, boxSize_q
         integer :: nwann, nk_c, nq_c, nk1, nk2, nk3, nq1, nq2, nq3
         type(t_cell) :: cell
+        real,    allocatable :: shifts(:,:), weightAtom(:,:)
         integer, allocatable :: supercellR_k(:,:), supercellR_q(:,:), kpt_list(:)
         complex, allocatable :: matRot(:,:)                       ! wannier-gauge block for one (k,q)
         complex, allocatable :: matRpK(:,:,:,:)                  ! after q->R_p FT (nwann,nwann, R_p, local k)
@@ -222,7 +225,17 @@ contains
         call cell%calculate_WSweight(supercellR_k,ft%FTweight_k,scaleSupercell=kpts_coarse%nkpt3(:))
         call cell%calculate_WSweight(supercellR_q,ft%FTweight_q,scaleSupercell=qpts_coarse%nkpt3(:))
         call build_ws_ft(ft%bigBox_lim_k, ft%FTweight_k, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_weightNZ)
-        call build_ws_ft(ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ)
+        if (present(iAtom)) then
+            ! bond R_p + tau_a between the Wannier centres (at the origin) and the displaced atom
+            allocate(shifts(3,fi%atoms%nat))
+            do jAtom = 1, fi%atoms%nat
+                shifts(:,jAtom) = matmul(fi%cell%amat, fi%atoms%taual(:,jAtom))
+            end do
+            call build_ws_shifted(fi%cell%amat, qpts_coarse%nkpt3, shifts, ft%ws_q_nNZ, ft%ws_q_Rvecs, weightAtom)
+            ft%ws_q_weightNZ = weightAtom(iAtom,:)
+        else
+            call build_ws_ft(ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ)
+        end if
         call timestop("Wigner-Seitz weights (k and q)")
 
         allocate(matRot(nwann,nwann))

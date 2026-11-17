@@ -21,15 +21,14 @@ module m_dfpt_write_epw
    !!                  so that EPW's rdw/sqrt(amass_a amass_b) (amass in amu_ry)
    !!                  yields eigenvalues omega^2 in Ry^2 (= 4 omega^2_Htr).
    !!   * masses    : amass = m[amu] * amu_ry   (QE internal Rydberg mass unit)
-   !!   * WS lists  : on restart EPW does not read wigner.fmt; it regenerates its WS
-   !!                 lists (wigner_seitzkq, sort=.true.) and reads the data in that
-   !!                 order. Every R-indexed array is therefore written in EPW's order.
+   !!   * WS lists  : EPW reads the WS lists and degeneracies from wigner.fmt on restart
+   !!                 (use_ws = .true.: dims = nwann, dims2 = nat). The phonon list has
+   !!                 one degeneracy per atom pair, the e-ph list one per displaced atom.
+   !!                 Every R-indexed array is written in the order of wigner.fmt.
    !!                 FLEUR interpolates back with e^{-i k.R}, EPW with e^{+i k.R}, so
    !!                 the FLEUR value at R is stored at EPW's vector -R.
-   !!                 wigner.fmt is currently not read by EPW; it is written in EPW's
-   !!                 format and order (use_ws = .false.) for reference.
    !!   * degeneracy: EPW stores integer ndegen and divides by it; FLEUR stores a
-   !!                 real weight = 1/ndegen. So ndegen = nint(1/weight).
+   !!                 real weight = 1/ndegen. So ndegen = nint(1/weight), and 0 for weight 0.
    !!
    !! velocity/position/dipole matrix elements (cvmew/crrw/cdmew) and the Wannier
    !! centers are written as zeros: they are read but unused by isotropic/standard
@@ -38,7 +37,7 @@ module m_dfpt_write_epw
    use m_juDFT
    use m_constants
    use m_matrix_interpolation,  only: t_wann_ft
-   use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_ws_forward, build_ws_ft
+   use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_ws_forward, build_ws_pairs
    use m_dfpt_sumrules,         only: dfpt_born_huang
    use m_sort,                  only: sort
    use m_types_cell
@@ -78,7 +77,7 @@ contains
       complex, allocatable :: hamWannier(:,:,:)   ! (nwann,nwann,nNZ_k)       electron H, real space [Ry]
       complex, allocatable :: fcm(:,:,:)          ! (nmodes,nmodes,nNZ_fcm)   force constants, real space
       integer, allocatable :: Rvecs_fcm(:,:)      ! (3,nNZ_fcm) phonon WS vectors (own q-mesh)
-      real,    allocatable :: weightNZ_fcm(:)     ! (nNZ_fcm)   phonon WS weights (= 1/ndegen)
+      real,    allocatable :: weightPair_fcm(:,:,:)   ! (nat,nat,nNZ_fcm) phonon WS weights (= 1/ndegen)
       integer, allocatable :: ord_k(:), ord_fcm(:), ord_g(:)   ! FLEUR index of EPW's i-th WS vector
       character(len=:), allocatable :: prefix
 
@@ -102,7 +101,7 @@ contains
       call build_ham_wannier(fi, results, U_full, ispin, gmatRealspace(1,ispin), nwann, hamWannier)
 
       ! --- force constants real space (R_q) on the coarse phonon q-mesh ---
-      call build_fcm(fi, dynMats, nmodes, fcm, Rvecs_fcm, weightNZ_fcm, nNZ_fcm, qpts_dyn, sym_dyn)
+      call build_fcm(fi, dynMats, nmodes, fcm, Rvecs_fcm, weightPair_fcm, nNZ_fcm, qpts_dyn, sym_dyn)
 
       call epw_ws_order(gmatRealspace(1,ispin)%ws_k_Rvecs, ord_k)
       call epw_ws_order(Rvecs_fcm, ord_fcm)
@@ -118,7 +117,7 @@ contains
       call write_crystal_fmt(fi, results, nwann, nmodes)
       call write_epwdata_fmt(results, nwann, nmodes, nNZ_k, nNZ_fcm, nNZ_g, nat, hamWannier, fcm, ord_k, ord_fcm)
       call write_vme_dme_fmt(nwann, nNZ_k)
-      call write_wigner_fmt(fi, gmatRealspace(1,ispin), Rvecs_fcm, weightNZ_fcm, nNZ_k, nNZ_fcm, nNZ_g, ord_k, ord_fcm, ord_g)
+      call write_wigner_fmt(fi, gmatRealspace(:,ispin), nwann, Rvecs_fcm, weightPair_fcm, nNZ_k, nNZ_fcm, nNZ_g, ord_k, ord_fcm, ord_g)
       call write_ukk_fmt(fi, prefix)
       call write_epmatwp(fi, gmatRealspace(:,ispin), nwann, nmodes, nNZ_k, nNZ_g, prefix, ord_k, ord_g)
 
@@ -159,9 +158,9 @@ contains
       hamWannier = htr2ry * hamWannier / fi%kpts%nkpt
    end subroutine build_ham_wannier
 
-   subroutine build_fcm(fi, dynMats, nmodes, fcm, Rvecs_fcm, weightNZ_fcm, nNZ_fcm, qpts_dyn, sym_dyn)
+   subroutine build_fcm(fi, dynMats, nmodes, fcm, Rvecs_fcm, weightPair_fcm, nNZ_fcm, qpts_dyn, sym_dyn)
       !! Real-space force constants (fcm) on the coarse PHONON q-mesh, together
-      !! with the phonon Wigner-Seitz list (Rvecs_fcm, ndegen = 1/weightNZ_fcm).
+      !! with the per-atom-pair phonon Wigner-Seitz list (Rvecs_fcm, ndegen = 1/weightPair_fcm).
       !! This mesh is independent of the electron/e-ph (k-mesh) WS lists.
       !!
       !! dynMats lives on qpts_dyn%bk; both the Fourier box (nkpt3) and the
@@ -175,17 +174,14 @@ contains
       integer,              intent(in)  :: nmodes
       complex, allocatable, intent(out) :: fcm(:,:,:)          ! (nmodes,nmodes,nNZ_fcm)
       integer, allocatable, intent(out) :: Rvecs_fcm(:,:)      ! (3,nNZ_fcm) WS vectors (un-negated)
-      real,    allocatable, intent(out) :: weightNZ_fcm(:)     ! (nNZ_fcm)   = 1/ndegen
+      real,    allocatable, intent(out) :: weightPair_fcm(:,:,:) ! (nat,nat,nNZ_fcm) = 1/ndegen
       integer,              intent(out) :: nNZ_fcm
       type(t_kpts),         intent(in)  :: qpts_dyn
       type(t_sym),          intent(in)  :: sym_dyn
 
-      integer :: nq(3), bigBox(2,3), boxSize, ix, iy, iz, iGrid, ia, ja, i0, j0
+      integer :: nq(3), ia, ja, i0, j0
       real    :: fac
-      integer, allocatable :: supercellR(:,:)
-      real,    allocatable :: FTweight(:)
       complex, allocatable :: dyn_mat_q_full(:,:,:)
-      type(t_cell) :: cellLocal
 
       if (size(dynMats, 3) < qpts_dyn%nkpt) then
          call juDFT_error("Fewer dynamical matrices than irreducible q points.", calledby="build_fcm")
@@ -193,25 +189,7 @@ contains
 
       nq = qpts_dyn%nkpt3(:)
 
-      ! Wigner-Seitz weights of the coarse phonon q-mesh supercell
-      ! (mirrors interpolate_dynmat / wannier_matrixq_forward: big box +-2N, always WS).
-      bigBox(2,:) =  2*nq(:)
-      bigBox(1,:) = -2*nq(:)
-      boxSize = (4*nq(1)+1) * (4*nq(2)+1) * (4*nq(3)+1)
-      allocate(supercellR(3,boxSize), FTweight(boxSize))
-      FTweight = 0.0
-      iGrid = 1
-      do iz = bigBox(1,3), bigBox(2,3)
-         do iy = bigBox(1,2), bigBox(2,2)
-            do ix = bigBox(1,1), bigBox(2,1)
-               supercellR(:,iGrid) = [ix,iy,iz]
-               iGrid = iGrid + 1
-            end do
-         end do
-      end do
-      cellLocal = fi%cell
-      call cellLocal%calculate_WSweight(supercellR, FTweight, scaleSupercell=nq)
-      call build_ws_ft(bigBox, FTweight, nNZ_fcm, Rvecs_fcm, weightNZ_fcm)
+      call build_ws_pairs(fi%atoms, fi%cell%amat, nq, nNZ_fcm, Rvecs_fcm, weightPair_fcm)
 
       ! D_norm(R) = (1/Nq) sum_q e^{+i q.R} D(q)   (symmetry-unfolded to the full BZ)
       allocate(fcm(nmodes,nmodes,nNZ_fcm))
@@ -230,7 +208,7 @@ contains
       ! fcm is now proportional to the de-normalized force constants
       if (fi%dfpt%l_bornhuang) then
          call timestart("Born-Huang projection")
-         call dfpt_born_huang(fi%atoms, fi%cell, nq, nNZ_fcm, Rvecs_fcm, weightNZ_fcm, fcm)
+         call dfpt_born_huang(fi%atoms, fi%cell, nq, nNZ_fcm, Rvecs_fcm, weightPair_fcm, fcm)
          call timestop("Born-Huang projection")
       end if
    end subroutine build_fcm
@@ -354,48 +332,64 @@ contains
       close(iud)
    end subroutine write_vme_dme_fmt
 
-   subroutine write_wigner_fmt(fi, ft, Rvecs_fcm, weightNZ_fcm, nNZ_k, nNZ_fcm, nNZ_g, ord_k, ord_fcm, ord_g)
-      !! wigner.fmt -- EPW's epw_write_ws_data (io.f90:669-737), dims=dims2=1 case.
-      !! Lists EPW's WS vectors (negated FLEUR vectors, EPW order) as the data is stored.
+   subroutine write_wigner_fmt(fi, gmatSpin, nwann, Rvecs_fcm, weightPair_fcm, nNZ_k, nNZ_fcm, nNZ_g, ord_k, ord_fcm, ord_g)
+      !! wigner.fmt -- EPW's epw_read_ws_data format with dims = nwann, dims2 = nat (use_ws = .true.).
+      !! Lists EPW's WS vectors (negated FLEUR vectors) in the order the data is stored.
       type(t_fleurinput), intent(in) :: fi
-      type(t_wann_ft),    intent(in) :: ft
-      integer,            intent(in) :: Rvecs_fcm(:,:)     ! (3,nNZ_fcm) phonon WS vectors (un-negated)
-      real,               intent(in) :: weightNZ_fcm(:)    ! (nNZ_fcm)   = 1/ndegen
+      type(t_wann_ft),    intent(in) :: gmatSpin(:)              ! gmatRealspace(:,ispin), size 3*nat
+      integer,            intent(in) :: nwann
+      integer,            intent(in) :: Rvecs_fcm(:,:)           ! (3,nNZ_fcm) phonon WS vectors (un-negated)
+      real,               intent(in) :: weightPair_fcm(:,:,:)    ! (nat,nat,nNZ_fcm) = 1/ndegen
       integer,            intent(in) :: nNZ_k, nNZ_fcm, nNZ_g
       integer,            intent(in) :: ord_k(:), ord_fcm(:), ord_g(:)
 
-      integer :: iu, ir, j, irvec(3)
+      integer :: iu, ir, j, iw, ia, ja, nat, irvec(3)
       real    :: alat
 
       alat = norm2(fi%cell%amat(:,1))
+      nat  = fi%atoms%nat
 
       open(newunit=iu, file="wigner.fmt", status='replace', action='write', form='formatted')
 1     format(1000(I0, :, 1X))
 2     format(3I6, ES26.17E3)
-      write(iu,1) nNZ_k, nNZ_fcm, nNZ_g, 1, 1
-      ! electron block (R_e) -- elph-tensor k-mesh WS list
+      write(iu,1) nNZ_k, nNZ_fcm, nNZ_g, nwann, nat
+      ! electron block (R_e): ndegen_k(ir,iw,iw2), identical for all pairs since all Wannier centres are at the origin
       do ir = 1, nNZ_k
          j = ord_k(ir)
-         irvec = -ft%ws_k_Rvecs(:,j)
-         write(iu,2) irvec, ws_len(fi%cell%amat, ft%ws_k_Rvecs(:,j), alat)
-         write(iu,1) nint(1.0/ft%ws_k_weightNZ(j))
+         irvec = -gmatSpin(1)%ws_k_Rvecs(:,j)
+         write(iu,2) irvec, ws_len(fi%cell%amat, gmatSpin(1)%ws_k_Rvecs(:,j), alat)
+         do iw = 1, nwann
+            write(iu,1) (ndegen(gmatSpin(1)%ws_k_weightNZ(j)), ja = 1, nwann)
+         end do
       end do
-      ! phonon block (R_q) -- force-constant q-mesh WS list
+      ! phonon block (R_q): ndegen_q(ir,na,nb)
       do ir = 1, nNZ_fcm
          j = ord_fcm(ir)
          irvec = -Rvecs_fcm(:,j)
          write(iu,2) irvec, ws_len(fi%cell%amat, Rvecs_fcm(:,j), alat)
-         write(iu,1) nint(1.0/weightNZ_fcm(j))
+         do ia = 1, nat
+            write(iu,1) (ndegen(weightPair_fcm(ia,ja,j)), ja = 1, nat)
+         end do
       end do
-      ! e-ph block (R_g) -- elph-tensor q-mesh WS list (R_p axis of the tensor)
+      ! e-ph block (R_g): ndegen_g(iw,ir,na), weights of the displaced atom na
       do ir = 1, nNZ_g
          j = ord_g(ir)
-         irvec = -ft%ws_q_Rvecs(:,j)
-         write(iu,2) irvec, ws_len(fi%cell%amat, ft%ws_q_Rvecs(:,j), alat)
-         write(iu,1) nint(1.0/ft%ws_q_weightNZ(j))
+         irvec = -gmatSpin(1)%ws_q_Rvecs(:,j)
+         write(iu,2) irvec, ws_len(fi%cell%amat, gmatSpin(1)%ws_q_Rvecs(:,j), alat)
+         do iw = 1, nwann
+            write(iu,1) (ndegen(gmatSpin(3*ia)%ws_q_weightNZ(j)), ia = 1, nat)
+         end do
       end do
       close(iu)
    end subroutine write_wigner_fmt
+
+   integer function ndegen(weight)
+      !! EPW degeneracy of a Wigner-Seitz weight, 0 for a vector outside the cell.
+      real, intent(in) :: weight
+
+      ndegen = 0
+      if (weight > 0.0) ndegen = nint(1.0/weight)
+   end function ndegen
 
    real function ws_len(amat, irvec, alat)
       !! |amat.irvec| / alat  == length of the WS vector in alat units (matches EPW wslen).

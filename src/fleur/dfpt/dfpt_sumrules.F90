@@ -17,7 +17,7 @@ module m_dfpt_sumrules
 
 contains
 
-   subroutine dfpt_born_huang(atoms, cell, nR, nNZ, Rvecs, weightNZ, fcm)
+   subroutine dfpt_born_huang(atoms, cell, nR, nNZ, Rvecs, weightPair, fcm)
       !! Projects the real-space force constants onto the translational, rotational
       !! and Born-Huang invariance conditions. fcm holds the de-normalized force
       !! constants at the lattice vectors Rvecs and is overwritten in place.
@@ -26,7 +26,7 @@ contains
       integer,       intent(in)    :: nR(3)   ! supercell of the coarse q mesh
       integer,       intent(in)    :: nNZ
       integer,       intent(in)    :: Rvecs(:,:)
-      real,          intent(in)    :: weightNZ(:)
+      real,          intent(in)    :: weightPair(:,:,:)   ! (nat,nat,nNZ) Wigner-Seitz weight of each atom pair
       complex,       intent(inout) :: fcm(:,:,0:)
 
       integer, parameter :: maxiter = 200
@@ -74,11 +74,11 @@ contains
          do iAtom = 1, atoms%nat
             do jAtom = 1, atoms%nat
                bondVec = rCart + atomPos(:,jAtom) - atomPos(:,iAtom)
-               mom0(iGrid,jAtom,iAtom)   = mom0(iGrid,jAtom,iAtom)   + weightNZ(iBond)
-               mom1(:,iGrid,jAtom,iAtom) = mom1(:,iGrid,jAtom,iAtom) + weightNZ(iBond)*bondVec
+               mom0(iGrid,jAtom,iAtom)   = mom0(iGrid,jAtom,iAtom)   + weightPair(iAtom,jAtom,iBond)
+               mom1(:,iGrid,jAtom,iAtom) = mom1(:,iGrid,jAtom,iAtom) + weightPair(iAtom,jAtom,iBond)*bondVec
                do iVoigt = 1, 6
                   mom2(iVoigt,iGrid,jAtom,iAtom) = mom2(iVoigt,iGrid,jAtom,iAtom) &
-                                                  + weightNZ(iBond)*bondVec(voigt(1,iVoigt))*bondVec(voigt(2,iVoigt))
+                                                  + weightPair(iAtom,jAtom,iBond)*bondVec(voigt(1,iVoigt))*bondVec(voigt(2,iVoigt))
                end do
             end do
          end do

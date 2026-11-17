@@ -17,7 +17,7 @@ MODULE m_dfpt_dynmat_fourier
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: ft_dyn, ft_ws_forward, build_ws_ft, ft_fcm_weight_packed, rotate_dynmat, ift_dyn, &
-      interpolate_dynmat, remap_fullsym_atoms
+      interpolate_dynmat, remap_fullsym_atoms, build_ws_shifted, build_ws_pairs, ft_fcm_weight_pairs
 CONTAINS
    SUBROUTINE ft_dyn(atoms, qpts, sym, nNZ, Rvecs, amat, dyn_mat_q, dyn_mat_r, dyn_mat_q_full)
       !! Transforms the dynamical matrices for a set of q vectors in the
@@ -137,6 +137,143 @@ CONTAINS
       end do
    end subroutine
 
+   subroutine build_ws_shifted(amat, scaleSupercell, shifts, nNZ, Rvecs, weightNZ)
+      !! Compact list of the lattice vectors Rvecs(:,i) for which R + shifts(:,iShift) (cartesian) lies in the
+      !! Wigner-Seitz cell of the supercell, with weight weightNZ(iShift,i); the data of Rvecs(:,i) is stored at index i-1.
+      real,    intent(in)  :: amat(3,3)
+      integer, intent(in)  :: scaleSupercell(3)
+      real,    intent(in)  :: shifts(:,:)
+      integer, intent(out) :: nNZ
+      integer, allocatable, intent(out) :: Rvecs(:,:)
+      real,    allocatable, intent(out) :: weightNZ(:,:)
+
+      integer, parameter :: imageLim = 3 ! supercell images searched in each direction
+      integer :: bigBoxLim(2,3), boxSize, nShift, nImage, iShift, iGrid, iImage, iMem, i, ix, iy, iz
+      real    :: tol, vecRCart(3), vecShift(3), distanceR, distance
+      logical :: l_inside
+      integer, allocatable :: supercellR(:,:)
+      real,    allocatable :: FTweight(:,:), imageCart(:,:)
+
+      nShift = size(shifts,2)
+      tol    = 1e-6*dot_product(amat(:,1),amat(:,1))
+
+      nImage = (2*imageLim+1)**3
+      allocate(imageCart(3,nImage))
+      iImage = 0
+      do iz = -imageLim, imageLim
+         do iy = -imageLim, imageLim
+            do ix = -imageLim, imageLim
+               iImage = iImage + 1
+               imageCart(:,iImage) = matmul(amat, real([ix,iy,iz]*scaleSupercell))
+            end do
+         end do
+      end do
+
+      bigBoxLim(2,:) =  2*scaleSupercell(:)
+      bigBoxLim(1,:) = -2*scaleSupercell(:)
+      boxSize = product(4*scaleSupercell+1)
+      allocate(supercellR(3,boxSize), FTweight(nShift,boxSize))
+      FTweight = 0.0
+
+      iGrid = 0
+      do iz = bigBoxLim(1,3), bigBoxLim(2,3)
+         do iy = bigBoxLim(1,2), bigBoxLim(2,2)
+            do ix = bigBoxLim(1,1), bigBoxLim(2,1)
+               iGrid = iGrid + 1
+               supercellR(:,iGrid) = [ix,iy,iz]
+               vecRCart = matmul(amat, real([ix,iy,iz]))
+               do iShift = 1, nShift
+                  vecShift = vecRCart + shifts(:,iShift)
+                  distanceR = dot_product(vecShift,vecShift)
+                  l_inside = .true.
+                  iMem = 0
+                  do iImage = 1, nImage
+                     distance = dot_product(vecShift+imageCart(:,iImage), vecShift+imageCart(:,iImage))
+                     if (distance < distanceR - tol) then
+                        l_inside = .false.
+                        exit
+                     end if
+                     if (distance < distanceR + tol) iMem = iMem + 1
+                  end do
+                  if (l_inside) FTweight(iShift,iGrid) = 1.0/iMem
+               end do
+            end do
+         end do
+      end do
+
+      nNZ = count(any(FTweight /= 0.0, dim=1))
+      allocate(Rvecs(3,nNZ), weightNZ(nShift,nNZ))
+      i = 0
+      do iGrid = 1, boxSize
+         if (all(FTweight(:,iGrid) == 0.0)) cycle
+         i = i + 1
+         Rvecs(:,i) = supercellR(:,iGrid)
+         weightNZ(:,i) = FTweight(:,iGrid)
+      end do
+
+      do iShift = 1, nShift
+         if (abs(sum(weightNZ(iShift,:)) - product(scaleSupercell)) > 1e-6) then
+            call juDFT_error("Wigner-Seitz weights do not sum to the supercell size.", calledby="build_ws_shifted")
+         end if
+      end do
+   end subroutine
+
+   subroutine build_ws_pairs(atoms, amat, scaleSupercell, nNZ, Rvecs, weightPair)
+      !! Wigner-Seitz list of the force constants with weightPair(i,j,iR) for the bond R + tau_j - tau_i
+      !! between atom i and atom j, on the union of all atom pairs.
+      type(t_atoms), intent(in)  :: atoms
+      real,          intent(in)  :: amat(3,3)
+      integer,       intent(in)  :: scaleSupercell(3)
+      integer,       intent(out) :: nNZ
+      integer, allocatable, intent(out) :: Rvecs(:,:)
+      real,    allocatable, intent(out) :: weightPair(:,:,:)
+
+      logical, parameter :: l_bondWS = .true. ! .false.: plain lattice Wigner-Seitz weights for every pair
+      integer :: iAtom, jAtom
+      real, allocatable :: shifts(:,:), weightNZ(:,:)
+
+      allocate(shifts(3,atoms%nat**2))
+      shifts = 0.0
+      if (l_bondWS) then
+         do jAtom = 1, atoms%nat
+            do iAtom = 1, atoms%nat
+               shifts(:,iAtom+atoms%nat*(jAtom-1)) = matmul(amat, atoms%taual(:,jAtom) - atoms%taual(:,iAtom))
+            end do
+         end do
+      end if
+      call build_ws_shifted(amat, scaleSupercell, shifts, nNZ, Rvecs, weightNZ)
+      weightPair = reshape(weightNZ, [atoms%nat, atoms%nat, nNZ])
+   end subroutine
+
+   subroutine ft_fcm_weight_pairs(isn,nNZ,Rvecs,weightPair,bqpt,dyn_mat_q,dyn_mat_r)
+      !! Backward FT r -> q (isn = -1) with a separate Wigner-Seitz weight for every 3x3 atom block.
+      integer, intent(in) :: isn
+      integer, intent(in) :: nNZ
+      integer, intent(in) :: Rvecs(:,:)
+      real,    intent(in) :: weightPair(:,:,:)
+      real,    intent(in) :: bqpt(3)
+
+      complex, intent(inout) :: dyn_mat_q(:,:)
+      complex, intent(in)    :: dyn_mat_r(:,:,0:)
+
+      integer :: i, iAtom, jAtom, iAlpha, iBeta
+      real    :: phas
+      complex :: phase_fac
+
+      do i = 1, nNZ
+         phas = isn*tpi_const*(bqpt(1)*Rvecs(1,i)+bqpt(2)*Rvecs(2,i)+bqpt(3)*Rvecs(3,i))
+         phase_fac = cmplx(cos(phas),sin(phas))
+         do jAtom = 1, size(weightPair,2)
+            iBeta = 3*(jAtom-1)
+            do iAtom = 1, size(weightPair,1)
+               if (weightPair(iAtom,jAtom,i) == 0.0) cycle
+               iAlpha = 3*(iAtom-1)
+               dyn_mat_q(iAlpha+1:iAlpha+3,iBeta+1:iBeta+3) = dyn_mat_q(iAlpha+1:iAlpha+3,iBeta+1:iBeta+3) + phase_fac*weightPair(iAtom,jAtom,i)*dyn_mat_r(iAlpha+1:iAlpha+3,iBeta+1:iBeta+3,i-1)
+            end do
+         end do
+      end do
+   end subroutine
+
    SUBROUTINE rotate_dynmat(atoms,sym,isym,invmrot,l_inv,amat,trans,q_full,dyn,dyn_mat_qsym)
       !! Applies a symmetry operation to the dynamical matrix of an IBZ q vector
       !! to find the matrix of its mapped q vector in the full BZ:
@@ -208,7 +345,7 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   SUBROUTINE ift_dyn(atoms,qpts,nNZ,Rvecs,weightNZ,bqpt,dyn_mat_r,dyn_mat_q)
+   SUBROUTINE ift_dyn(atoms,qpts,nNZ,Rvecs,weightPair,bqpt,dyn_mat_r,dyn_mat_q)
       !! Transforms the dynamical matrix on a real space lattice vector grid
       !! (--> mass-normalized FCM) back onto a specific q vector provided as
       !! input (bqpt) by the inverse Fourier Transformation as compared to
@@ -216,7 +353,7 @@ CONTAINS
       type(t_kpts),  intent(in) :: qpts
       integer,       intent(in) :: nNZ
       integer,       intent(in) :: Rvecs(:,:)
-      real,          intent(in) :: weightNZ(:)
+      real,          intent(in) :: weightPair(:,:,:)
       real,          intent(in) :: bqpt(3)
       complex,       intent(in) :: dyn_mat_r(:,:,0:)
       complex, allocatable, intent(out) :: dyn_mat_q(:,:)
@@ -228,7 +365,7 @@ CONTAINS
       allocate(dyn_mat_q(dyn_dim,dyn_dim))
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
-      call ft_fcm_weight_packed(-1,nNZ,Rvecs,weightNZ,bqpt,dyn_mat_q,dyn_mat_r)
+      call ft_fcm_weight_pairs(-1,nNZ,Rvecs,weightPair,bqpt,dyn_mat_q,dyn_mat_r)
 
    END SUBROUTINE
 
@@ -250,15 +387,13 @@ CONTAINS
       complex, allocatable, intent(out) :: dyn_mat_interp(:,:,:) ! (3nat,3nat,nTarget), NOT diagonalized
       logical, optional, intent(in) :: l_bornhuang
 
-      type(t_cell) :: cellLocal
-      integer :: dyn_dim, iq, iDir, iDir2, nx, ny, nz, iGrid, boxSize, iR
-      integer :: ft_lim(2,3), bigBox_lim(2,3)
+      integer :: dyn_dim, iq, iDir, iDir2, iR
+      integer :: ft_lim(2,3)
       real    :: mass_mat(3*atoms%nat, 3*atoms%nat)
-      integer, allocatable :: supercellR(:,:)
       real,    allocatable :: FTweight(:)
       integer :: nNZ                              ! packed nonzero-weight list (built once)
       integer, allocatable :: Rvecs(:,:)
-      real,    allocatable :: weightNZ(:)
+      real,    allocatable :: weightNZ(:), weightPair(:,:,:)
       complex, allocatable :: dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_q(:,:)
       logical :: l_bh
 
@@ -267,40 +402,20 @@ CONTAINS
       l_bh = .false.
       if (present(l_bornhuang)) l_bh = l_bornhuang
 
-      cellLocal = cell
-
-      ! Fourier box limits
-      ft_lim(2,:) =  qpts_coarse%nkpt3(:)/2
-      ft_lim(1,:) = ft_lim(2,:) - qpts_coarse%nkpt3(:) + 1
-
       if (l_WSinterpol) then
-         ! create Wigner-Seitz cell and weights on a bigger fft mesh
-         bigBox_lim(2,:) =   2*qpts_coarse%nkpt3(:)
-         bigBox_lim(1,:) = - 2*qpts_coarse%nkpt3(:)
-         boxSize = (4*qpts_coarse%nkpt3(1)+1) * (4*qpts_coarse%nkpt3(2)+1) * (4*qpts_coarse%nkpt3(3)+1)
-         allocate(FTweight(boxSize))
-         allocate(supercellR(3,boxSize))
-         FTweight = 0.0
-         supercellR = 0
-         iGrid = 1
-         do nz=bigBox_lim(1,3),bigBox_lim(2,3)
-            do ny=bigBox_lim(1,2),bigBox_lim(2,2)
-               do nx=bigBox_lim(1,1),bigBox_lim(2,1)
-                  supercellR(:,iGrid) = (/nx,ny,nz/)
-                  iGrid = iGrid+1
-               end do
-            end do
-         end do
-         call cellLocal%calculate_WSweight(supercellR,FTweight,scaleSupercell=qpts_coarse%nkpt3(:))
+         call build_ws_pairs(atoms, cell%amat, qpts_coarse%nkpt3, nNZ, Rvecs, weightPair)
       else
-         ! simple back-transformation
-         bigBox_lim = ft_lim
-         boxSize = (qpts_coarse%nkpt3(1)) * (qpts_coarse%nkpt3(2)) * (qpts_coarse%nkpt3(3))
-         allocate(FTweight(boxSize))
+         ! simple back-transformation on the plain Fourier box
+         ft_lim(2,:) =  qpts_coarse%nkpt3(:)/2
+         ft_lim(1,:) = ft_lim(2,:) - qpts_coarse%nkpt3(:) + 1
+         allocate(FTweight(product(qpts_coarse%nkpt3)))
          FTweight = 1.0
+         call build_ws_ft(ft_lim, FTweight, nNZ, Rvecs, weightNZ)
+         allocate(weightPair(atoms%nat,atoms%nat,nNZ))
+         do iR = 1, nNZ
+            weightPair(:,:,iR) = weightNZ(iR)
+         end do
       end if
-
-      call build_ws_ft(bigBox_lim, FTweight, nNZ, Rvecs, weightNZ)
 
       ! coarse q dynamical matrices --> real-space (mass-normalized) FCM
       allocate(dyn_mat_r(dyn_dim,dyn_dim,0:nNZ-1))
@@ -320,7 +435,7 @@ CONTAINS
 
       if (l_bh) then
          call timestart("Born-Huang projection")
-         call dfpt_born_huang(atoms, cell, qpts_coarse%nkpt3, nNZ, Rvecs, weightNZ, dyn_mat_r)
+         call dfpt_born_huang(atoms, cell, qpts_coarse%nkpt3, nNZ, Rvecs, weightPair, dyn_mat_r)
          call timestop("Born-Huang projection")
       end if
 
@@ -329,7 +444,7 @@ CONTAINS
       ! inverse Fourier transform onto every target q-point
       allocate(dyn_mat_interp(dyn_dim,dyn_dim,size(q_target,2)))
       do iq = 1, size(q_target,2)
-         call ift_dyn(atoms, qpts_coarse, nNZ, Rvecs, weightNZ, q_target(:,iq), dyn_mat_r, dyn_mat_q)
+         call ift_dyn(atoms, qpts_coarse, nNZ, Rvecs, weightPair, q_target(:,iq), dyn_mat_r, dyn_mat_q)
          dyn_mat_interp(:,:,iq) = dyn_mat_q
          deallocate(dyn_mat_q)
       end do
