@@ -154,3 +154,8 @@ if [ "$CLI_PATCH_INTEL" ]
 then
     echo "set(CLI_PATCH_INTEL 1)"  >>config.cmake
 fi
+
+if [ "$CLI_NATIVE_ARCH" ]
+then
+    echo "set(CLI_NATIVE_ARCH 1)"  >>config.cmake
+fi

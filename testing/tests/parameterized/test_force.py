@@ -29,7 +29,7 @@ def test_H2ORelaxCG(default_fleur_test):
     with open(res_files["relax.xml"]) as f:
         disp = [[float(x) for x in d.split()] for d in re.findall(r"<displace>(.*?)</displace>", f.read())]
 
-    expected = [[0.0, -0.2552066403, 0.0], [0.0002905528, 0.1303774103, 0.0]]
+    expected = [[0.0, -0.2549034380, 0.0], [0.0002905575, 0.1303789841, 0.0]]
     assert len(disp) == len(expected)
     for d, e in zip(disp, expected):
         assert all(math.isfinite(x) for x in d)

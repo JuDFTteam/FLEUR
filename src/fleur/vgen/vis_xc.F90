@@ -90,7 +90,10 @@ CONTAINS
       ALLOCATE(v_x,mold=rho)
 
       call timestart("apply_cutoffs")
-      CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
+      ! No cutoff on sigma: it cuts through physical gradients in low-density metals, and the
+      ! collinear gradient term (libxc_postprocess_gga_pw) stays bounded at low density without it.
+      CALL xcpot%apply_cutoffs(1.E-6,rho,grad,l_sigma_cutoff=.FALSE.)
+      IF (perform_MetaGGA) CALL xcpot%apply_tau_floor(rho,grad,ked_rs)
       call timestop("apply_cutoffs")
 
       ! rho, grad%sigma and ked_rs all live on the same FFT grid here, which makes this
@@ -118,8 +121,8 @@ CONTAINS
       TYPE IS (t_xcpot_libxc)
          l_libxc=.TRUE.
          IF (xcpot%needs_grad()) THEN
-            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
-            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_x,grad)
+            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,noco%l_noco,v_xc,grad)
+            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,noco%l_noco,v_x,grad)
          END IF
       END SELECT
 

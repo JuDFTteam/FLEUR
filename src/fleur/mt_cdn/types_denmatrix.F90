@@ -193,7 +193,7 @@ contains
       end do
    end function hff_dipolar
 
-   subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, l_less_effort,abc, abc1, we1, bqpt, abc1m)
+   subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, l_less_effort,abc, abcpr, abc1, we1, bqpt, abc1m)
     !! Subroutine to construct all non-spherical MT density coefficients (for a
     !! density perturbation) without LOs in one routine. The spin input dictates,
     !! which element is gonna be built.
@@ -239,28 +239,67 @@ contains
       !logical, intent(IN)    :: l_dfpt
 
       type(t_abc), intent(IN)    :: abc  !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}}\)
-      type(t_abc), intent(IN)    :: abc1 !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}\)
+      type(t_abc), intent(IN)    :: abcpr !! \(A_{l,m,\lambda}^{\sigma_{\alpha}',\nu\boldsymbol{k}}\)
+      type(t_abc), optional, intent(IN) :: abc1 !! \(A_{l,m,\lambda}^{\sigma_{\alpha}',\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}\)
 
       type(t_abc), optional, intent(IN) :: abc1m !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{-q},j,\beta~(1)}\)
       real, optional , intent(in)   :: bqpt(3)
       real, optional, intent(in)    :: we1(ne)   !! \(\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}\)
 
-      complex :: coef, cil, cmv
-      complex :: temp(ne)
-      real:: fact
-      integer :: jmem, l, lh, llp, llpmax, lm, lmp, lp, lv, m, mp, mv, na, natom, nn, ns, nt, lphi, lplow, icoef, jcoef, mpp,lpp,lpmin0,lpmax0,lpmin,lo,lop,lpmax
-      integer :: n_l(atoms%nlod)
+      complex :: coef, cil, cmv, beta
+      integer :: jmem, l, lh, lm, lmp, lp, lv, m, mp, mv, ns, nt, lphi, lplow, icoef, jcoef, i, nlm, ncf, nd, irow, icol
       logical :: l_minusq, l_gamma, l_dfpt
+      complex, allocatable :: dm(:, :), dmm(:, :), wa(:, :)
 
       call timestart("rhonmt")
-      l_gamma = .false. 
+      l_gamma = .false.
       l_dfpt = present(bqpt)
       l_minusq = present(abc1m)
-      if (l_dfpt) l_gamma = (norm2(bqpt)<=1e-8) 
+      if (l_dfpt) l_gamma = (norm2(bqpt)<=1e-8)
       this%l_triang = l_less_effort
       ns = sym%ntypsy(atoms%firstAtom(itype))
-      !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
-      !!$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l)
+
+      ! Band sums for all pairs (lm',j),(lm,i), summed over the equivalent atoms:
+      ! dm = abc%cof^H * wa, with wa(nu,(lm,i)) the weighted ket coefficients
+      nlm = size(abc%cof, 2)
+      ncf = size(abc%cof, 3)
+      nd = nlm*ncf
+      allocate (dm(nd, nd), wa(ne, nd))
+      if (l_minusq) allocate (dmm(nd, nd))
+      do nt = 1, atoms%neq(itype)
+         beta = merge(cmplx(0.0, 0.0), cmplx(1.0, 0.0), nt == 1)
+         !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i, lm, icoef)
+         do i = 1, nd
+            lm = mod(i - 1, nlm)
+            icoef = (i - 1)/nlm + 1
+            if (l_dfpt) then
+               wa(:, i) = merge(1.0, 2.0, l_minusq)*we(:)*abc1%cof(:ne, lm, icoef, nt)
+               if (l_gamma) wa(:, i) = wa(:, i) + we1(:)*abcpr%cof(:ne, lm, icoef, nt)
+            else
+               wa(:, i) = we(:)*abcpr%cof(:ne, lm, icoef, nt)
+            end if
+         end do
+         !$OMP END PARALLEL DO
+         call zgemm('C', 'N', nd, nd, ne, cmplx(1.0, 0.0), abc%cof(:, :, :, nt), size(abc%cof, 1), &
+                    wa, ne, beta, dm, nd)
+         if (l_minusq) then
+            !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i, lm, icoef)
+            do i = 1, nd
+               lm = mod(i - 1, nlm)
+               icoef = (i - 1)/nlm + 1
+               wa(:, i) = we(:)*abcpr%cof(:ne, lm, icoef, nt)
+            end do
+            !$OMP END PARALLEL DO
+            call zgemm('C', 'N', nd, nd, ne, cmplx(1.0, 0.0), abc1m%cof(:, :, :, nt), size(abc1m%cof, 1), &
+                       wa, ne, beta, dmm, nd)
+         end if
+      end do
+      deallocate (wa)
+
+      ! gaunt1 sets up its tables on the first call, which must not happen inside the threads
+      call gaunt_init(atoms%lmaxd)
+      !$OMP PARALLEL DO DEFAULT(shared) SCHEDULE(dynamic) &
+      !$OMP PRIVATE(lh, jmem, lv, mv, cmv, l, m, lm, mp, lphi, lplow, lp, cil, lmp, coef, icoef, jcoef, irow, icol)
       do lh = 0, sphhar%nlh(ns)
          do jmem = 1, sphhar%nmem(lh, ns)
             lv = sphhar%llh(lh, ns)
@@ -288,39 +327,26 @@ contains
                      lmp = lp*(lp + 1) + mp
                      if (lmp > lm .and. this%l_triang) cycle m_loop
                      coef = cmv*cil*gaunt1(l, lv, lp, m, mv, mp, atoms%lmaxd)
-                     !IF (ABS(coef) .LT. 1e-12 ) CYCLE
-                     do nt = 1, atoms%neq(itype)
-                        ! uu/du
-                        do icoef = 1, size(abc%cof, 3) !Loop over radial functions/cofs (usually 0=u and 1=\dot u)
-                           temp(:) = coef*we(:)*abc1%cof(:, lm, icoef, nt) ! If not DFPT, this is the base case for rhonmt(21)
-                           if (lmp /= lm .and. this%l_triang) temp(:) = temp(:)*2.0
-                           if (l_dfpt) then
-                              if (.not. l_minusq) temp(:) = temp(:)*2.0
-                              if (l_gamma) temp(:) = temp(:) + coef*we1(:)*abc%cof(:, lm, icoef, nt)
-                           end if
-                           do jcoef = 1, size(abc%cof, 3) !Loop over radial functions/cofs (usually 0=u and 1=\dot u)
-                              this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
-                                                    & + dot_product(abc%cof(:, lmp, jcoef, nt), temp(:))
-                              if (l_minusq) then
-                                 this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
-                                                          & + dot_product(abc1m%cof(:, lmp, jcoef, nt), &
-                                                               & abc%cof(:, lm, icoef, nt))
-                              end if
-                           end do
+                     if (.not. l_dfpt .and. lmp /= lm .and. this%l_triang) coef = 2.0*coef
+                     do icoef = 1, ncf !radial functions/cofs (1=u, 2=\dot u, then LOs)
+                        icol = lm + 1 + (icoef - 1)*nlm
+                        do jcoef = 1, ncf
+                           irow = lmp + 1 + (jcoef - 1)*nlm
+                           this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) + coef*dm(irow, icol)
+                           if (l_minusq) this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
+                                                                           + coef*dmm(irow, icol)
                         end do
-
-                     end do ! nt
-
+                     end do
                   end do!lp
                end do m_loop ! m
             end do ! jmem
          end do ! l
       end do ! lh
-      !!$OMP END PARALLEL DO
+      !$OMP END PARALLEL DO
       call timestop("rhonmt")
    end subroutine rhonmt
 
-   subroutine to_full_density(denmat, ispin, ispinpr, itype, input, sphhar, atoms, noco, sym, radfun, rho, rhoIm, moments)
+   subroutine to_full_density(denmat, ispin, ispinpr, itype, input, sphhar, atoms, noco, sym, radfun, rho, rhoIm, moments, l_minusq)
       !! Current situation:
       !!
       !! This routine calculates density contributions
@@ -344,12 +370,19 @@ contains
 
       real, intent(inout), optional    :: rhoIm(:, 0:,:,:)
       type(t_moments), optional, intent(INOUT) :: moments
+      logical, optional, intent(in)   :: l_minusq
 
-      integer :: lh, l, lp, llp, j, i, ii, spin
+      integer :: lh, l, lp, llp, j, i, ii, spin, isp
       complex :: cs
       integer, parameter:: lcf = 3
+      logical :: l_dfpt, l_mq
 
+      l_dfpt = present(rhoIm)
+      l_mq = .false.
+      if (present(l_minusq)) l_mq = l_minusq
       spin = merge(ispin, 3, ispin == ispinpr)
+      ! explicit -q: block (2,1) is rho_12 (comp 3), block (1,2) is rho_21 (comp 4)
+      isp = merge(3, 4, ispin == 2)
       if (spin == 3 .and. .not. noco%l_mperp) return !no local off-diagonal pert
       do lh = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(itype)))
          do l = 0, atoms%lmax(itype)
@@ -369,9 +402,21 @@ contains
                      end do
                   end do
                   
-                  rho(j, lh, itype, spin) = rho(j, lh, itype, spin) + real(cs)/atoms%neq(itype)
-                  if (spin == 3) rho(j, lh, itype, 4) = rho(j, lh, itype, 4) + aimag(cs)/atoms%neq(itype) !Store imaginary part as 4th spin
-                  if (present(rhoIm)) rhoIm(j, lh, itype, spin) = rhoIm(j, lh, itype, spin) + aimag(cs)/atoms%neq(itype)
+                  if (l_dfpt) then
+                     if (spin == 3 .and. l_mq) then
+                        rho(j, lh, itype, isp) = rho(j, lh, itype, isp) + real(cs)/atoms%neq(itype) ! no factor 2 from rhomat
+                        rhoIm(j, lh, itype, isp) = rhoIm(j, lh, itype, isp) + aimag(cs)/atoms%neq(itype)
+                     else if (spin == 3) then !noco case
+                        rho(j, lh, itype, 3:4) = rho(j, lh, itype, 3:4) + 0.5*real(cs)/atoms%neq(itype) !removes factor 2 from rhomt
+                        rhoIm(j, lh, itype, 3:4) = rhoIm(j, lh, itype, 3:4) + 0.5*aimag(cs)/atoms%neq(itype)
+                     else
+                        rho(j, lh, itype, spin) = rho(j, lh, itype, spin) + real(cs)/atoms%neq(itype)
+                        rhoIm(j, lh, itype, spin) = rhoIm(j, lh, itype, spin) + aimag(cs)/atoms%neq(itype)
+                     end if
+                  else
+                     rho(j, lh, itype, spin) = rho(j, lh, itype, spin) + real(cs)/atoms%neq(itype)
+                     if (spin == 3) rho(j, lh, itype, 4) = rho(j, lh, itype, 4) + aimag(cs)/atoms%neq(itype) !Store imaginary part as 4th spin
+                  end if
                   if ((l <= input%lResMax) .and. (lp <= input%lResMax) .and. ispin == ispinpr .and. present(moments)) &
                    moments%rhoLRes(j, lh, llp, itype, ispin) = moments%rhoLRes(j, lh, llp, itype, ispin) + real(cs)/atoms%neq(itype)
                end do

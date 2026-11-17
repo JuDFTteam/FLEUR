@@ -34,7 +34,8 @@ C     .. Local Scalars ..
       REAL dr,drh,erp,erq,fl1,p0,p1,p1p,q0,q1,q1p,r,rh,rh2,rm,rve,s,
      +     sk1,sk2,sk3,sk4,sl1,sl2,sl3,sl4,t,yn,zn,cin,cin2
       REAL v1,m0,m1,sig,a1,b1,b0,rhs1,rhs2,det
-      INTEGER i,it
+      REAL rs,ps,qs,hs,fs,rr,dp1,dq1,dp2,dq2,dp3,dq3,dp4,dq4
+      INTEGER i,it,k,ns
 C     ..
 C     .. Local Arrays ..
       REAL pp(jri),qp(jri)
@@ -53,8 +54,12 @@ c--->    set up initial conditions
       fl1 = l* (l+1)
       rm = 2.*r0 + cin2* (r0*e-vr(1))
       IF (cin.GT.0. .AND. z.GT.0.5) THEN
-c--->    first-order Frobenius start, r*v = -z + v1*r near the nucleus
+c--->    first-order Frobenius start, r*v = -z + v1*r near the nucleus.
+c--->    For l>0 the series converges only for r < z/(2c^2): it is
+c--->    evaluated at rs well inside and integrated out to r0.
          v1 = (vr(1)+z)/r0
+         rs = r0
+         IF (l.GT.0) rs = MIN(r0,0.002*cin2*z)
          m0 = cin2*z
          m1 = 2. + cin2* (e-v1)
          sig = sqrt(fl1+1.-cin2*z*z)
@@ -64,8 +69,32 @@ c--->    first-order Frobenius start, r*v = -z + v1*r near the nucleus
          det = sig* (sig+2.) - fl1 + m0*z
          a1 = ((sig+2.)*rhs1+m0*rhs2)/det
          b1 = (sig*rhs2+ (fl1/m0-z)*rhs1)/det
-         p(1) = r0**sig* (1.+a1*r0)
-         q(1) = r0**sig* (b0+b1*r0)
+c--->    p and q divided by r**sig (the equations are linear), which
+c--->    avoids underflow at small rs
+         ps = 1. + a1*rs
+         qs = b0 + b1*rs
+         IF (rs.LT.r0) THEN
+c--->       4th order runge-kutta in ln(r), same model potential
+            ns = CEILING(LOG(r0/rs)/0.05)
+            hs = LOG(r0/rs)/ns
+            fs = EXP(-sig*hs)
+            rr = rs
+            DO k = 1,ns
+               CALL derv(rr,ps,qs,dp1,dq1)
+               CALL derv(rr*EXP(0.5*hs),ps+0.5*hs*dp1,qs+0.5*hs*dq1,
+     +                   dp2,dq2)
+               CALL derv(rr*EXP(0.5*hs),ps+0.5*hs*dp2,qs+0.5*hs*dq2,
+     +                   dp3,dq3)
+               CALL derv(rr*EXP(hs),ps+hs*dp3,qs+hs*dq3,dp4,dq4)
+               ps = ps + hs* (dp1+2.*dp2+2.*dp3+dp4)/6.
+               qs = qs + hs* (dq1+2.*dq2+2.*dq3+dq4)/6.
+               ps = ps*fs
+               qs = qs*fs
+               rr = rr*EXP(hs)
+            ENDDO
+         ENDIF
+         p(1) = ps*r0**sig
+         q(1) = qs*r0**sig
       ELSE
 c--->    no nuclear singularity or nonrelativistic: leading-order start
          s = sqrt(fl1+1-cin2*vr(1)*vr(1)) - 1.
@@ -158,6 +187,19 @@ c--->    normalize function
          p(i) = t*p(i)
          q(i) = t*q(i)
       ENDDO
+
+      CONTAINS
+
+      SUBROUTINE derv(rx,px,qx,dpx,dqx)
+c--->    d/d(ln r) of p and q for r*v = -z + v1*r
+      REAL, INTENT (IN)  :: rx,px,qx
+      REAL, INTENT (OUT) :: dpx,dqx
+      REAL rvx,rmx
+      rvx = -z + v1*rx
+      rmx = 2.*rx + cin2* (rx*e-rvx)
+      dpx = rmx*qx + px
+      dqx = (fl1/rmx+rvx-rx*e)*px - qx
+      END SUBROUTINE derv
 
       END SUBROUTINE radsra
       END MODULE m_radsra

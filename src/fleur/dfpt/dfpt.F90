@@ -88,11 +88,13 @@ CONTAINS
       
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
-      ! l_minusq is a hard false at the moment. It can be used to ignore +-q symmetries and
-      ! run the Sternheimer loop etc etc for both +q and -q.
-      ! This was only used for testing but may become relevant again for SOC systems with broken
-      ! inversion symmetry
-      l_minusq = .FALSE.
+      ! set the minus q solve: for either SOC, or NOCO (with m_y^{(1)}-response) or if explicitely stated for current debugging purposes
+      l_minusq = fi%noco%l_soc .OR. judft_was_argument("-dfpt_minusq")
+      IF (fi%noco%l_noco) l_minusq = l_minusq .OR. ANY(ABS(SIN(nococonv%alph)*SIN(nococonv%beta)) > 1e-6)
+
+      if (fmpi%irank==0 .and. l_minusq) WRITE (oUnit,*) 'DFPT calculation requires additional minus q solve'
+      if (fmpi%irank==0 .and. l_minusq) WRITE (*,*) 'DFPT calculation requires additional minus q solve'
+
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
      

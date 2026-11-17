@@ -3274,7 +3274,11 @@
       </xsd:attribute>
       <xsd:attribute default="1.0" name="warp_factor" type="FleurDouble" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Warp factor for potential/density mixing in warped cell calculations.</xsd:documentation>
+            <xsd:documentation>
+               Factor scaling the speed of light used throughout the calculation (valence, local
+               orbitals and core). The default 1.0 is the physical value; a large value such as
+               10000.0 gives the non-relativistic limit.
+            </xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>

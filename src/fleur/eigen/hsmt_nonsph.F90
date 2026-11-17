@@ -60,7 +60,7 @@ CONTAINS
       INTEGER :: ikGPr, ikG
       REAL    :: rchi
       COMPLEX :: cchi
-      LOGICAL :: l_samelapw
+      LOGICAL :: l_samelapw, l_herk
 
       COMPLEX, ALLOCATABLE :: ab1(:,:),ab_select(:,:)
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ab2(:,:), h_loc(:,:), data_c(:,:)
@@ -189,6 +189,12 @@ CONTAINS
             ! ab1 = a^H * t^H
             CALL timestart("select")
 
+            ! The zherk branch below does not use ab_select
+            l_herk = (igSpinPr==igSpin) .AND. (ilSpinPr==ilSpin) .AND. l_samelapw .AND. (fmpi%n_size==1)
+#ifdef _OPENACC
+            l_herk = .FALSE.
+#endif
+            IF (.NOT.l_herk) THEN
             ! Of these ab1 coeffs only a part is needed in case of MPI parallelism
             !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
             IF (fmpi%n_size>1) THEN
@@ -197,6 +203,7 @@ CONTAINS
                ab_select(:, :) = ab1(:, :) !All of ab1 needed
             END IF
             !$acc end kernels
+            END IF
             CALL timestop("select")
 
             IF (igSpinPr==igSpin) THEN

@@ -275,10 +275,11 @@ CONTAINS
       REAL, ALLOCATABLE :: plegend(:,:)
       REAL, ALLOCATABLE :: xlegend(:)
       REAL, ALLOCATABLE :: VecHelpS(:),VecHelpH(:)
-      REAL, ALLOCATABLE :: cph_re(:), cph_im(:)
-      REAL, ALLOCATABLE :: dot(:), fct(:), fct2(:)
+      REAL, ALLOCATABLE :: cph_re(:)
+      REAL, ALLOCATABLE :: fct(:), fct2(:)
 
       COMPLEX, ALLOCATABLE :: cfac(:)
+      COMPLEX, ALLOCATABLE :: ph(:,:), phPr(:,:) ! exp(i(k+G)tau) per basis function and atom
 
       INTEGER, PARAMETER :: NVEC = 128
 
@@ -309,25 +310,43 @@ CONTAINS
 
       ddn = rf%integral(2,2,:,isp,isp)
       bs  = rf%bnd(:,1:2,:,isp)
+      qssAdd   = MERGE(-nococonv%qss/2,+nococonv%qss/2,igSpin  .EQ.1)
+      qssAddPr = MERGE(-nococonv%qss/2,+nococonv%qss/2,igSpinPr.EQ.1)
+
+      ! The phase exp(i(k+G-k'-G')tau) factorises into ph(G)*conjg(phPr(G'))
+      ALLOCATE(ph(lapw%nv(igSpin),atoms%neq(n)),phPr(lapwPr%nv(igSpinPr),atoms%neq(n)))
+      DO nn = 1, atoms%neq(n)
+         tnn(1:3) = tpi_const*atoms%taual(1:3,atoms%firstAtom(n)+nn-1)
+         !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(ikG,ski)
+         DO ikG = 1, lapw%nv(igSpin)
+            ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt + lapw%qphon
+            ph(ikG,nn) = EXP(CMPLX(0.0,DOT_PRODUCT(ski,tnn)))
+         END DO
+         !$OMP END PARALLEL DO
+         !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(ikGPr,ski)
+         DO ikGPr = 1, lapwPr%nv(igSpinPr)
+            ski = lapwPr%gvec(:,ikGPr,igSpinPr) + qssAddPr(:) + lapwPr%bkpt + lapwPr%qphon
+            phPr(ikGPr,nn) = EXP(CMPLX(0.0,DOT_PRODUCT(ski,tnn)))
+         END DO
+         !$OMP END PARALLEL DO
+      END DO
+
       !$OMP     PARALLEL DEFAULT(NONE)&
-      !$OMP     SHARED(lapw,lapwPr,atoms,nococonv,fmpi,input,ddn,bs,smat,hmat)&
+      !$OMP     SHARED(lapw,lapwPr,atoms,fmpi,input,ddn,bs,smat,hmat,ph,phPr)&
       !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,fjgjPr,isp,fl2p1,el,e_shift,chi,set0,l_fullj,l_extra,extra)&
-      !$OMP     PRIVATE(ikG0,ikG,ski,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssAdd,qssAddPr,fct2)&
-      !$OMP     PRIVATE(cph_re,cph_im,cfac,dot,nn,tnn,fjkiln,gjkiln)&
+      !$OMP     PRIVATE(ikG0,ikG,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,fct2)&
+      !$OMP     PRIVATE(cph_re,cfac,nn,fjkiln,gjkiln)&
       !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
       !$OMP     PRIVATE(VecHelpS,VecHelpH,NVEC_rem)
-      ALLOCATE(cph_re(NVEC),cph_im(NVEC),cfac(NVEC))
-      ALLOCATE(dot(NVEC),fct(NVEC),fct2(NVEC))
+      ALLOCATE(cph_re(NVEC),cfac(NVEC))
+      ALLOCATE(fct(NVEC),fct2(NVEC))
       ALLOCATE(plegend(NVEC,0:2))
       ALLOCATE(xlegend(NVEC))
       ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
-      qssAdd   = MERGE(-nococonv%qss/2,+nococonv%qss/2,igSpin  .EQ.1)
-      qssAddPr = MERGE(-nococonv%qss/2,+nococonv%qss/2,igSpinPr.EQ.1)
       !$OMP      DO SCHEDULE(DYNAMIC,1)
       DO ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
          kj_end = MERGE(lapwPr%nv(igSpinPr),min(ikG,lapwPr%nv(igSpinPr)),l_fullj)
          ikG0 = (ikG-1)/fmpi%n_size + 1
-         ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt + lapw%qphon
          DO kj_off = 1, lapwPr%nv(igSpinPr), NVEC
             NVEC_rem = NVEC
             kj_vec = kj_off - 1 + NVEC
@@ -414,21 +433,13 @@ CONTAINS
                END IF ! useapw
             END DO ! l
             ! Set up phase factors
-            cph_re = 0.0
-            cph_im = 0.0
-            DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
-               tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
-               DO jv = 0, NVEC_rem-1
-                  ikGPr = jv + kj_off
-                  dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt - lapwPr%qphon, tnn(1:3))
-               END DO ! ikGPr
-               cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
-               cph_im(:NVEC_REM) = cph_im(:NVEC_REM) + SIN(dot(:NVEC_REM))
-               cfac(:NVEC_REM) = CMPLX(cph_re(:NVEC_REM),cph_im(:NVEC_REM))
-               ! IF (igSpinPr.NE.igSpin) cph_im=-cph_im
+            cfac(:NVEC_REM) = ph(ikG,1)*CONJG(phPr(kj_off:kj_vec,1))
+            DO nn = 2, atoms%neq(n)
+               cfac(:NVEC_REM) = cfac(:NVEC_REM) + ph(ikG,nn)*CONJG(phPr(kj_off:kj_vec,nn))
             END DO ! nn
 
             IF (smat%l_real) THEN
+               cph_re(:NVEC_REM) = REAL(cfac(:NVEC_REM))
                IF (set0) THEN
                   smat%data_r(kj_off:kj_vec,ikG0) = cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
                ELSE
@@ -452,10 +463,11 @@ CONTAINS
       !$OMP     END DO
       DEALLOCATE(plegend)
       DEALLOCATE(VecHelpS,VecHelpH)
-      DEALLOCATE(cph_re,cph_im,cfac)
-      DEALLOCATE(dot,fct,fct2)
+      DEALLOCATE(cph_re,cfac)
+      DEALLOCATE(fct,fct2)
       DEALLOCATE(xlegend)
       !$OMP     END PARALLEL
+      DEALLOCATE(ph,phPr)
       CALL timestop("spherical setup")
       RETURN
    END SUBROUTINE hsmt_sph_cpu
