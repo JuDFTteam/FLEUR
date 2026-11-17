@@ -80,8 +80,10 @@ CONTAINS
          INTEGER:: i,j
 
          INTEGER,PARAMETER :: gpu_mode=1,omp_mode=2,caxpy_mode=3
-         INTEGER :: mode=caxpy_mode
-         
+         INTEGER :: mode
+
+         ! no initialisation in the declaration: that would make mode SAVE and keep gpu_mode for later calls
+         mode=caxpy_mode
          a_c=1.0
          if (present(alpha_c)) a_c=alpha_c
       
