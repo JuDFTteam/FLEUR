@@ -285,7 +285,7 @@ CONTAINS
     !> why a run resuming from one has this and nothing to rebuild it from.
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: mw_chk(:, :, :, :)  ! (nw,nw,nntot,nk_loc)
 
-    INTEGER :: ierr, num_kpts
+    INTEGER :: ierr, num_kpts, ik, ib
     COMPLEX, ALLOCATABLE :: mmn_local(:, :, :, :)
     REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
 
@@ -320,7 +320,34 @@ CONTAINS
     CALL w90_set_u_opt(wannierlib_w90main, u_opt)
     CALL w90_set_u_matrix(wannierlib_w90main, u_matrix)
 
-    IF (this%l_restart_gauge) CALL wannierlib_read_chkpt()
+    IF (this%l_restart_gauge) THEN
+      CALL wannierlib_read_chkpt()
+
+      !> A checkpoint carries u_matrix_opt only when it was written with a disentanglement
+      !> -- that is what its have_disentangled record decides. With num_bands == num_wann
+      !> there is no subspace to choose, so Wannier90 writes none, and the call that would
+      !> otherwise build one, w90_project_overlap below, does not run on a restart. Left
+      !> alone, u_opt stays empty and every rotation through it comes out zero: the gauge
+      !> is read, the overlaps are read, and the operators are built from nothing.
+      !>
+      !> The identity is what u_opt means in that case and not a repair of one: the
+      !> optimal subspace is the whole window. Setting it here reaches Wannier90's own
+      !> copy as well, since w90_set_u_opt above took this array rather than a copy of it.
+      IF (this%num_bands == this%num_wann) THEN
+        u_opt = CMPLX(0.0, 0.0)
+        DO ik = 1, num_kpts
+          DO ib = 1, this%num_wann
+            u_opt(ib, ib, ik) = CMPLX(1.0, 0.0)
+          END DO
+        END DO
+      ELSE IF (MAXVAL(ABS(u_opt)) == 0.0) THEN
+        !> num_bands above num_wann and still nothing: the file was written without the
+        !> subspace it needs, and going on would build operators out of zeros.
+        CALL juDFT_error('wannierlib: the checkpoint carries no subspace for a disentangled window', &
+                         hint='num_bands is larger than num_wann, so the file should hold '// &
+                              'u_matrix_opt', calledby='run_w90')
+      END IF
+    END IF
 
     IF (.NOT.this%l_restart_gauge .AND. this%num_bands > this%num_wann) THEN
       !> Optional, and tried first rather than instead: it fills u_opt with a subspace that
