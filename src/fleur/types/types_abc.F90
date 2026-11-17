@@ -603,6 +603,8 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
             END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
+            ! work_c and abCoeffs were filled on the device; the force part below runs on the host
+            !$acc update self(abCoeffs,work_c)
             ! rows 1..nA: A for all lm; rows nA+1..abSize: B of the LAPW channels (boff)
             nA = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
             nB = abSize - nA
