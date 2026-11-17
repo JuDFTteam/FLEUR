@@ -40,12 +40,40 @@ MODULE m_wannierlib_import_ks
    USE m_types_mpi, ONLY: t_mpi
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wannierlib_import_ks, wannierlib_ks_roundtrip
+   PUBLIC :: wannierlib_import_ks, wannierlib_ks_roundtrip, wannierlib_ks_present
 CONTAINS
 
    !> Fill the coarse slices from the file. l_found comes back .FALSE. when there is no
    !> file at all, which is a question for the caller and not an error here; anything else
    !> that is wrong with it stops the run.
+   !> Whether there is a file to read, asked before the arguments of a read exist.
+   !> Rank 0 looks and tells the others, the same way the reader itself does, so every
+   !> rank takes the same branch even if one of them sees the directory differently.
+   SUBROUTINE wannierlib_ks_present(jspin, fmpi, l_present)
+#ifdef CPP_HDF
+      USE m_wannierlib_hdf_util, ONLY: wl_hdf_exists
+#endif
+#ifdef CPP_MPI
+      USE mpi
+#endif
+      INTEGER,     INTENT(IN)  :: jspin
+      TYPE(t_mpi), INTENT(IN)  :: fmpi
+      LOGICAL,     INTENT(OUT) :: l_present
+      INTEGER :: flag(1), ierr
+
+      l_present = .FALSE.
+#ifdef CPP_HDF
+      flag = 0
+      IF (fmpi%irank == 0) THEN
+         IF (wl_hdf_exists('operators_ks', jspin)) flag = 1
+      END IF
+#ifdef CPP_MPI
+      IF (fmpi%isize > 1) CALL MPI_BCAST(flag, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+#endif
+      l_present = (flag(1) == 1)
+#endif
+   END SUBROUTINE wannierlib_ks_present
+
    SUBROUTINE wannierlib_import_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                    s0, l0, soc4, t0, n_channels, nat, &
                                    distk, nkptf, nb, jspin, fmpi, l_found, eig_now, eig_tol)

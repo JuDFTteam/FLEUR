@@ -45,7 +45,8 @@ MODULE m_wannierlib_main
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wannierlib_export_ks, ONLY: wannierlib_export_ks
-   USE m_wannierlib_import_ks, ONLY: wannierlib_ks_roundtrip
+   USE m_wannierlib_import_ks, ONLY: wannierlib_ks_roundtrip, wannierlib_import_ks, &
+                                     wannierlib_ks_present
    USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
@@ -117,6 +118,8 @@ CONTAINS
       INTEGER, INTENT(IN) :: eig_id
 
       INTEGER :: nntot_w90, jspin
+      LOGICAL :: l_ks_found, l_ks_file
+      REAL    :: soc_resid
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: mmn_full(:, :, :, :)
@@ -183,6 +186,11 @@ CONTAINS
       ! no operator is requested.
       CALL wannierlib_build_request(this, input, l_wannierlib_spinors, request)
 
+      !> Checked here, on the request alone and before this module reads an eigenvector
+      !> or wannierises anything. Measured on Pt, 54 Wannier functions over 100 k: the
+      !> refusal lands at 18 s of a run that otherwise takes 102 s.
+      CALL wl_restart_refuse(this, request, input, l_wannierlib_spinors)
+
       wl = this
       !> Before the window derivation, which is itself the first thing to index
       !> results%eig at maxBand, and before anything reads an eigenvector.
@@ -199,8 +207,46 @@ CONTAINS
       CALL wannierlib_export_dir_set(this, fmpi%irank)
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
-      CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
-                      stars, enpara, fmpi, vtot, eig_id, distk, vacuum=vacuum, sphhar=sphhar)
+
+      !> WHICH ROUTE THE OPERATORS TAKE, decided here and once. Reading them from the
+      !> file is an optimisation, not a new requirement: a restart whose first run never
+      !> wrote one does exactly what it did before, so no input that works today stops
+      !> working. The saving is only claimed when the file is actually there.
+      l_ks_file = .FALSE.
+      IF (this%l_restart_gauge .AND. (request%has_op_r('spin') .OR. &
+          request%has_op_r('orbital') .OR. request%has_op_r('spinOrbit') .OR. &
+          request%has_op_r('exchangeTorque'))) &
+         CALL wannierlib_ks_present(1, fmpi, l_ks_file)
+      IF (fmpi%irank == 0 .AND. this%l_restart_gauge) THEN
+         IF (l_ks_file) THEN
+            WRITE (oUnit, '(a)') 'wannierlib: restart, the Bloch operators come from their file'
+         ELSE
+            WRITE (oUnit, '(a)') 'wannierlib: restart, no operator file: the Bloch operators '// &
+                                 'are rebuilt from the eigenvectors as without a restart'
+         END IF
+      END IF
+
+      !> init still runs either way: the shapes it allocates are what the import fills,
+      !> and n_channels and l_active are set there (melem_coarse.F90:107,:108) rather than
+      !> in calc. calc is the part the file lets a restart avoid -- it is what reads the
+      !> eigenvectors.
+      IF (.NOT. l_ks_file) THEN
+         CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
+                         stars, enpara, fmpi, vtot, eig_id, distk, vacuum=vacuum, sphhar=sphhar)
+
+         !> soc0 is the sum over the four spin-orbit blocks, and it is NOT in the operator
+         !> file, so a restart has to rebuild it from soc4 -- which is only correct while
+         !> the two are assembled as melem_coarse.F90:474-482 assembles them. Checked here,
+         !> where both exist, so that a change there breaks this loudly instead of leaving
+         !> a resumed run with a silently empty spinOrbit.
+         IF (ALLOCATED(melem%soc0) .AND. ALLOCATED(melem%soc4)) THEN
+            soc_resid = MAXVAL(ABS(melem%soc0(:, :, 1, :) - SUM(melem%soc4, DIM=3)))
+            IF (soc_resid > 1.0E-12) CALL juDFT_error( &
+               "wannierlib: soc0 is no longer the sum over the soc4 blocks", &
+               hint='a resumed run rebuilds soc0 from soc4 and would now be wrong: see '// &
+                    'melem_coarse.F90 and wannierlib_main', calledby="wannierlib_main")
+         END IF
+      END IF
 
       !> wl, not this: wannierlib_main takes the input object as INTENT(IN), so the windows
       !> the derivation fills in live only in the copy. Handing w90 the original passes it
@@ -226,6 +272,29 @@ CONTAINS
          mmn = conjg(mmn)
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
+
+         !> A restart takes the Bloch-basis operators from the file instead of building
+         !> them, which is what skipping melem%calc above buys. Here and not earlier: the
+         !> file is named per spin channel, and the band energies this run has just made
+         !> are the witness that the file was written from this density.
+         IF (l_ks_file) THEN
+            CALL wannierlib_import_ks(request%has_op_r('spin'), request%has_op_r('orbital'), &
+                                      request%has_op_r('spinOrbit'), &
+                                      request%has_op_r('exchangeTorque'), &
+                                      melem%s0, melem%l0, melem%soc4, melem%t0, &
+                                      melem%n_channels, atoms%nat, &
+                                      distk, kpts%nkptf, wl%num_bands, jspin, fmpi, &
+                                      l_ks_found, eig_now=eig, eig_tol=1.0E-9)
+            !> The probe said the file was there, so its disappearance between then and
+            !> now is not a missing file -- it is the run losing the ground under it.
+            IF (.NOT. l_ks_found) CALL juDFT_error( &
+               "wannierlib: the operator file was there and is not readable now", &
+               hint='it was found before the k loop and could not be read inside it', &
+               calledby="wannierlib_main")
+            !> Rebuilt, not read: see the check beside melem%calc above.
+            IF (ALLOCATED(melem%soc0) .AND. ALLOCATED(melem%soc4)) &
+               melem%soc0(:, :, 1, :) = SUM(melem%soc4, DIM=3)
+         END IF
 
          !> The three files Wannier90 was handed, so a standalone wannier90.x can repeat the
          !> run: .amn, .mmn and .eig. They are written together and after create_eig because
@@ -281,7 +350,7 @@ CONTAINS
          !> goes here and not beside the O(R) export because that is the whole point: a
          !> consumer that builds its own Wannier functions needs these and not a gauge,
          !> and asking for them must not oblige the run to produce one.
-         IF (request%l_operators_k) THEN
+         IF (request%l_operators_k .AND. .NOT. l_ks_file) THEN
             CALL wannierlib_export_ks(request%has_op_k('spin'), request%has_op_k('orbital'), &
                                       request%has_op_k('spinOrbit'), &
                                       request%has_op_k('exchangeTorque'), &
@@ -432,6 +501,53 @@ CONTAINS
    !> Both spellings name the same point, so bk takes bkf's, once, before the first basis
    !> is built. Where they are not the same point there is nothing to choose between and
    !> the library says so rather than pairing them wrongly.
+   !> WHAT A RESUMED RUN CANNOT BUILD. Resuming takes the gauge from a Wannier90
+   !> checkpoint, and the checkpoint carries the num_wann corner of the overlaps in the
+   !> Wannier gauge -- not the Bloch overlaps over the whole band window. Two of the
+   !> operators need more than that corner, and neither needs it in a way that a corner
+   !> can be stretched to cover:
+   !>
+   !>   bmn       weights the band side with the eigenvalues BEFORE the contraction
+   !>             (wgauge_coeff_b.F90: Vk(i,:) = eig(i,k)*Vk(i,:)), so what it needs is
+   !>             V^dagger E M V and not V^dagger M V. The corner is the unweighted
+   !>             product and no rotation of it puts the energies back inside.
+   !>   fmn, cmn  read the wave functions themselves, which a resumed run does not have.
+   !>
+   !> position and positionPw90 do use only the corner, so they are not refused here.
+   !> A refusal rather than a silent zero: either of these built from an empty overlap
+   !> buffer is a file full of numbers that look like operators and are not.
+   SUBROUTINE wl_restart_refuse(this, request, input, l_spinors)
+      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+      TYPE(t_melem_request),         INTENT(IN) :: request
+      TYPE(t_input),                 INTENT(IN) :: input
+      LOGICAL,                       INTENT(IN) :: l_spinors
+
+      IF (.NOT. this%l_restart_gauge) RETURN
+
+      !> The collinear two-channel route. melem_coarse.F90:107 makes n_channels 2 exactly
+      !> here, and its x0 and tx0 are allocated by melem%init (:169, :176) and filled by
+      !> melem%calc (:367, :399). Skip calc and they are present and zero, which is worse
+      !> than absent: wgauge_rspauli_collinear and wgauge_perpmag_collinear would write a
+      !> file of zeros and report nothing. The operator file carries neither -- tx0 is not
+      !> exported at all, and the x0 branch of the exporter is unreachable.
+      IF (input%jspins == 2 .AND. .NOT. l_spinors) CALL juDFT_error( &
+         "wannierlib: a collinear two-channel run cannot be restarted", &
+         hint='its spin cross-block and exchange torque are not in the operator file, '// &
+              'and skipping their calculation would leave them zero: run it without '// &
+              'restart, or use the spinor route', calledby="wl_restart_refuse")
+
+      IF (request%has_op_r('bmn')) CALL juDFT_error( &
+         "wannierlib: bmn cannot be built on a restart", &
+         hint='it weights the bands with their energies inside the overlap contraction, '// &
+              'which needs the Bloch overlaps the checkpoint does not carry: run it '// &
+              'without restart, or drop bmn from <operatorsRs>', calledby="wl_restart_refuse")
+
+      IF (request%has_op_r('fmn') .OR. request%has_op_r('cmn')) CALL juDFT_error( &
+         "wannierlib: fmn and cmn cannot be built on a restart", &
+         hint='they read the wave functions, and a restart has no eigenvectors: run them '// &
+              'without restart, or drop them from <operatorsRs>', calledby="wl_restart_refuse")
+   END SUBROUTINE wl_restart_refuse
+
    SUBROUTINE wl_align_kpts(kpts)
       TYPE(t_kpts), INTENT(INOUT) :: kpts
       INTEGER :: ik, nk

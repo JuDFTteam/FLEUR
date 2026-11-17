@@ -23,7 +23,7 @@ MODULE m_wannierlib_hdf_util
    PRIVATE
    PUBLIC :: wr_r1, wr_r2, wr_r3, wr_r4, wr_i1, wr_i2, wr_i3, wl_hdf_create, wl_hdf_root
    PUBLIC :: wl_ds5_open, wl_ds5_slab, wl_ds_close
-   PUBLIC :: wl_hdf_open, wl_hdf_root_read, rd_i1, wl_ds_exists
+   PUBLIC :: wl_hdf_name, wl_hdf_exists, wl_hdf_open, wl_hdf_root_read, rd_i1, wl_ds_exists
    PUBLIC :: wl_ds5_open_read, wl_ds5_read, wl_ds5_dims, rd_r2
 CONTAINS
 
@@ -193,6 +193,23 @@ CONTAINS
 
    !> Open WF<jspin>_<what>.hdf for reading. A missing file is NOT an error here: the
    !> caller may know how to produce what it holds, and only it can decide.
+   !> The one place the file name is spelled. A caller that has to decide what to do
+   !> before it holds the arguments a read needs still has to ask about the same file,
+   !> and two spellings of one convention drift apart without anything noticing.
+   FUNCTION wl_hdf_name(what, jspin) RESULT(filename)
+      CHARACTER(LEN=*), INTENT(IN) :: what
+      INTEGER,          INTENT(IN) :: jspin
+      CHARACTER(LEN=80) :: filename
+      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_'//TRIM(what)//'.hdf'
+   END FUNCTION wl_hdf_name
+
+   !> Is it there? Nothing is opened, so this answers before a read could.
+   LOGICAL FUNCTION wl_hdf_exists(what, jspin)
+      CHARACTER(LEN=*), INTENT(IN) :: what
+      INTEGER,          INTENT(IN) :: jspin
+      INQUIRE (file=TRIM(wl_hdf_name(what, jspin)), exist=wl_hdf_exists)
+   END FUNCTION wl_hdf_exists
+
    SUBROUTINE wl_hdf_open(what, jspin, fid, filename, l_found)
       CHARACTER(LEN=*), INTENT(IN) :: what
       INTEGER, INTENT(IN) :: jspin
@@ -201,7 +218,7 @@ CONTAINS
       LOGICAL, INTENT(OUT) :: l_found
       INTEGER :: e
       fid = -1
-      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_'//TRIM(what)//'.hdf'
+      filename = wl_hdf_name(what, jspin)
       INQUIRE (file=TRIM(filename), exist=l_found)
       IF (.NOT. l_found) RETURN
       CALL h5fopen_f(TRIM(filename), H5F_ACC_RDONLY_F, fid, e)
