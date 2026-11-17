@@ -83,14 +83,16 @@ contains
       end do
    end function parallel_solver_available
 
-   subroutine select_solver(parallel, gpu, single_precision, diag_solver, diag_transform)
+   subroutine select_solver(parallel, gpu, single_precision, diag_solver, diag_transform, standard)
       logical, intent(IN)           :: parallel
       logical, intent(in), optional  :: single_precision, gpu
       class(t_solver), INTENT(OUT), allocatable  :: diag_solver, diag_transform
+      !> the default solver has to solve standard eigenvalue problems
+      logical, intent(in), optional  :: standard
 
-      logical :: use_single_precision, use_gpu, generalized, fit
+      logical :: use_single_precision, use_gpu, generalized, fit, l_standard
       character(len=30):: diag_name, trans_name
-      integer :: i
+      integer :: i, ipass
 
       use_single_precision = .false.
       if (present(single_precision)) use_single_precision = single_precision
@@ -99,6 +101,8 @@ contains
       use_gpu = .true.
 #endif
       if (present(gpu)) use_gpu = gpu
+      l_standard = .false.
+      if (present(standard)) l_standard = standard
 
       diag_name = trim(juDFT_string_for_argument("-diag"))
       if (len_trim(diag_name) .gt. 0) then
@@ -117,19 +121,24 @@ contains
          !select solver from name
          allocate (diag_solver, source=select_by_name(diag_name))
       else
-         !defaults
-         do i = first_real_solver, num_solvers
-            call assign_solver(i, diag_solver)
-            fit = diag_solver%available
-            !Check if solver fits the requirements
-            if (use_gpu) fit = fit .and. diag_solver%gpu
-            if (parallel) then
-               fit = fit .and. diag_solver%parallel
-            else
-               fit = fit .and. diag_solver%serial
-            end if
-            if (use_single_precision) fit = fit .and. diag_solver%single_precision
-            if (fit) exit
+         !defaults; without a fitting GPU solver a second pass takes a host solver
+         do ipass = 1, 2
+            do i = first_real_solver, num_solvers
+               call assign_solver(i, diag_solver)
+               fit = diag_solver%available
+               !Check if solver fits the requirements
+               if (use_gpu) fit = fit .and. diag_solver%gpu
+               if (parallel) then
+                  fit = fit .and. diag_solver%parallel
+               else
+                  fit = fit .and. diag_solver%serial
+               end if
+               if (use_single_precision) fit = fit .and. diag_solver%single_precision
+               if (l_standard) fit = fit .and. diag_solver%standard
+               if (fit) exit
+            end do
+            if (fit .or. .not. use_gpu) exit
+            use_gpu = .false.
          end do
          if (.not. fit) call judft_error("No default solver found.")
       end if

@@ -97,7 +97,7 @@ contains
          parallel = .false.
       end select
 
-      call select_solver(parallel,diag_solver=solver,diag_transform=transform)
+      call select_solver(parallel,diag_solver=solver,diag_transform=transform,standard=.true.)
       if (solver%standard) THEN
          call timestart("Diagonalization")
          call solver%solve_std(hmat, ne, eig, ev)
