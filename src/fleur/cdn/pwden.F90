@@ -11,7 +11,10 @@ MODULE m_pwden
    USE m_pwint
    USE m_juDFT
    USE m_types_fftGrid
+   USE m_types_fft
+   USE m_selecFFT
    USE m_fft_interface
+   !$ USE omp_lib
    USE m_types_atoms
    USE m_types_banddos
    USE m_types_cell
@@ -62,8 +65,6 @@ CONTAINS
       !
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-!DEC$ NOOPTIMIZE
-
       IMPLICIT NONE
 
       TYPE(t_lapw), INTENT(IN)       :: lapw
@@ -106,7 +107,6 @@ CONTAINS
       INTEGER idens, ndens, ispin, iGp, iG, gVec(3), gInd
       REAL q0, q0_11, q0_22, norm, xk(3), fac
       REAL s, stateRadius, stateFFTRadius, stateFFTExtendedRadius
-      COMPLEX x
       REAL, PARAMETER:: tol_3 = 1.0e-3
       LOGICAL forw, l_dfpt, l_minusq
 
@@ -119,8 +119,15 @@ CONTAINS
       INTEGER, ALLOCATABLE :: stateBmqIndices(:)
       INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne), wtf1(ne)
-      COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3), z0(lapw%nv(jspin))
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
+
+      ! per-thread objects of the loop over states
+      TYPE(t_fft) :: fftBack, fftForw
+      INTEGER :: nthr, fftBackend, glen
+      LOGICAL :: l_obj, l_omp, l_gamma, l_stateCharge
+      REAL, ALLOCATABLE    :: accR(:,:), ekR(:)
+      COMPLEX, ALLOCATABLE :: accC(:,:), cwkS(:), starCharges(:), tempState(:)
+      COMPLEX, ALLOCATABLE :: pwintStars(:), pwintAllStars(:)
 
       ! subroutines
       REAL dznrm2, dnrm2
@@ -165,17 +172,9 @@ CONTAINS
 
       ALLOCATE (cwk(stars%ng3), ecwk(stars%ng3))
 
+      ! Grids for the summed densities. All grids have the same dimensions, so they also provide
+      ! the index arrays; the grids for the single states are set up per thread further below.
       IF (noco%l_noco) THEN
-         CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
-         CALL stateB%init(cell,sym,stateFFTExtendedRadius+0.001)
-         IF (l_dfpt) THEN
-            CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
-            CALL stateBq%init(cell,sym,stateFFTExtendedRadius+0.001)
-            IF (l_minusq) THEN
-               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
-               CALL stateBmq%init(cell,sym,stateFFTExtendedRadius+0.001)
-            END IF
-         END IF
          DO i = 1, 4
             CALL rhomatGrid(i)%init(cell,sym,stateFFTExtendedRadius+0.001)
             rhomatGrid(i)%grid(:) = CMPLX(0.0,0.0)
@@ -184,64 +183,58 @@ CONTAINS
          IF (noco%l_ss) THEN
             ALLOCATE(stateIndices(lapw%nv(1)))
             ALLOCATE(stateBIndices(lapw%nv(2)))
-            CALL state%fillStateIndexArray(lapw,1,stateIndices)
-            CALL stateB%fillStateIndexArray(lapw,2,stateBIndices)
+            CALL rhomatGrid(1)%fillStateIndexArray(lapw,1,stateIndices)
+            CALL rhomatGrid(1)%fillStateIndexArray(lapw,2,stateBIndices)
             IF (l_dfpt) THEN
                ALLOCATE(stateqIndices(lapwq%nv(1)))
                ALLOCATE(stateBqIndices(lapwq%nv(2)))
-               CALL stateq%fillStateIndexArray(lapwq,1,stateqIndices)
-               CALL stateBq%fillStateIndexArray(lapwq,2,stateBqIndices)
+               CALL rhomatGrid(1)%fillStateIndexArray(lapwq,1,stateqIndices)
+               CALL rhomatGrid(1)%fillStateIndexArray(lapwq,2,stateBqIndices)
                IF (l_minusq) THEN
                   ALLOCATE(statemqIndices(lapwmq%nv(1)))
                   ALLOCATE(stateBmqIndices(lapwmq%nv(2)))
-                  CALL statemq%fillStateIndexArray(lapwmq,1,statemqIndices)
-                  CALL stateBmq%fillStateIndexArray(lapwmq,2,stateBmqIndices)
+                  CALL rhomatGrid(1)%fillStateIndexArray(lapwmq,1,statemqIndices)
+                  CALL rhomatGrid(1)%fillStateIndexArray(lapwmq,2,stateBmqIndices)
                END IF
             END IF
          ELSE
             ALLOCATE(stateIndices(lapw%nv(jspin)))
             ALLOCATE(stateBIndices(lapw%nv(jspin)))
-            CALL state%fillStateIndexArray(lapw,jspin,stateIndices)
-            CALL stateB%fillStateIndexArray(lapw,jspin,stateBIndices)
+            CALL rhomatGrid(1)%fillStateIndexArray(lapw,jspin,stateIndices)
+            CALL rhomatGrid(1)%fillStateIndexArray(lapw,jspin,stateBIndices)
             IF (l_dfpt) THEN
                ALLOCATE(stateqIndices(lapwq%nv(jspin)))
                ALLOCATE(stateBqIndices(lapwq%nv(jspin)))
-               CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
-               CALL stateBq%fillStateIndexArray(lapwq,jspin,stateBqIndices)
+               CALL rhomatGrid(1)%fillStateIndexArray(lapwq,jspin,stateqIndices)
+               CALL rhomatGrid(1)%fillStateIndexArray(lapwq,jspin,stateBqIndices)
                IF (l_minusq) THEN
                   ALLOCATE(statemqIndices(lapwmq%nv(jspin)))
                   ALLOCATE(stateBmqIndices(lapwmq%nv(jspin)))
-                  CALL statemq%fillStateIndexArray(lapwmq,jspin,statemqIndices)
-                  CALL stateBmq%fillStateIndexArray(lapwmq,jspin,stateBmqIndices)
+                  CALL rhomatGrid(1)%fillStateIndexArray(lapwmq,jspin,statemqIndices)
+                  CALL rhomatGrid(1)%fillStateIndexArray(lapwmq,jspin,stateBmqIndices)
                END IF
             END IF
          ENDIF
+         glen = rhomatGrid(1)%gridLength
       ELSE
-         CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
-         IF (l_dfpt) THEN
-            CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
-            IF (l_minusq) THEN
-               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
-            END IF
-         END IF
          CALL chargeDen%init(cell,sym,stateFFTExtendedRadius+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
          CALL chargeDen%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
-            CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)
             CALL ekinGrid%init(cell,sym,stateFFTExtendedRadius+0.001)
             ekinGrid%grid(:) = CMPLX(0.0,0.0)
          END IF
          ALLOCATE(stateIndices(lapw%nv(jspin)))
-         CALL state%fillStateIndexArray(lapw,jspin,stateIndices)
+         CALL chargeDen%fillStateIndexArray(lapw,jspin,stateIndices)
          IF (l_dfpt) THEN
             ALLOCATE(stateqIndices(lapwq%nv(jspin)))
-            CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
+            CALL chargeDen%fillStateIndexArray(lapwq,jspin,stateqIndices)
             IF (l_minusq) THEN
                ALLOCATE(statemqIndices(lapwmq%nv(jspin)))
-               CALL statemq%fillStateIndexArray(lapwmq,jspin,statemqIndices)
+               CALL chargeDen%fillStateIndexArray(lapwmq,jspin,statemqIndices)
             END IF
          END IF
+         glen = chargeDen%gridLength
       ENDIF
 
       IF (.NOT.l_dfpt) THEN
@@ -280,10 +273,87 @@ CONTAINS
       wtf(:ne) = we(:ne)/cell%omtil
       IF (l_dfpt) wtf1(:ne) = we1(:ne)/cell%omtil
       fac = MERGE(1.0, 2.0, l_minusq) ! K: -q term = image of the +q term
+      l_gamma = .FALSE.
+      IF (l_dfpt) l_gamma = norm2(q_dfpt)<1e-8
+      ndens = MERGE(4, 1, noco%l_noco)
+
+      ! The charge of each state in the interstitial needs the step function integrals of the stars,
+      ! which do not depend on the state
+      l_stateCharge = banddos%dos .OR. banddos%vacdos .OR. input%cdinf .OR. banddos%band
+      IF (l_stateCharge .AND. noco%l_noco) THEN
+         ALLOCATE(pwintStars(stars%ng3_fft))
+         DO istr = 1, stars%ng3_fft
+            CALL pwint(stars, atoms, sym, cell, istr, pwintStars(istr))
+         END DO
+      END IF
+      IF (l_stateCharge .AND. .NOT.noco%l_noco .AND. noco%l_soc .AND. input%jspins.EQ.2) THEN
+         ALLOCATE(pwintAllStars(stars%ng3))
+         pwintAllStars = CMPLX(0.0,0.0)
+         CALL pwint_all(stars,atoms,sym ,cell,1,stars%ng3,pwintAllStars)
+      END IF
+
+      ! The states are distributed over the OpenMP threads. Each thread has its own state grids,
+      ! FFT plans and density accumulators, which are summed up at the end. This needs a thread-safe
+      ! FFT: with the built-in FFT the loop runs on one thread, with SpFFT (plans depend on the
+      ! index sets) and on GPUs the FFTs are done by fft_interface as before.
+      l_obj = .FALSE.
+      l_omp = .FALSE.
+#ifndef _OPENACC
+      fftBackend = selecFFT(.TRUE.)
+      l_obj = fftBackend /= spFFT_const
+      l_omp = (fftBackend == fftw_const) .OR. (fftBackend == mklFFT_const)
+#endif
+      nthr = 1
+      !$ IF (l_omp) nthr = MAX(1, MIN(omp_get_max_threads(), ne))
+
+#ifndef _OPENACC
+      !$OMP PARALLEL NUM_THREADS(nthr) DEFAULT(shared) &
+      !$OMP PRIVATE(nu,ir,istr,iv,i,j,s,xk,forw,state,stateB,stateq,stateBq,statemq,stateBmq,stateDeriv) &
+      !$OMP PRIVATE(fftBack,fftForw,accR,accC,ekR,cwkS,starCharges,tempState)
+#endif
+      IF (noco%l_noco) THEN
+         CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
+         CALL stateB%init(cell,sym,stateFFTExtendedRadius+0.001)
+         IF (l_dfpt) THEN
+            CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            CALL stateBq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            IF (l_minusq) THEN
+               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
+               CALL stateBmq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            END IF
+         END IF
+      ELSE
+         CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
+         IF (l_dfpt) THEN
+            CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            IF (l_minusq) CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
+         END IF
+         IF (input%l_f) THEN
+            CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)
+            ALLOCATE(ekR(0:glen-1), tempState(lapw%nv(jspin)))
+            ekR = 0.0
+         END IF
+      END IF
+      ! Densities of the SCF case are real, the DFPT ones complex
+      IF (l_dfpt) THEN
+         ALLOCATE(accC(0:glen-1,ndens))
+         accC = CMPLX(0.0,0.0)
+      ELSE
+         ALLOCATE(accR(0:glen-1,ndens))
+         accR = 0.0
+      END IF
+      IF (l_stateCharge) ALLOCATE(cwkS(stars%ng3), starCharges(stars%ng3))
+      IF (l_obj) THEN
+         CALL fftBack%init(state%dimensions, .FALSE., stateIndices)
+         CALL fftForw%init(state%dimensions, .TRUE., fieldSphereIndices)
+      END IF
 
       ! LOOP OVER OCCUPIED STATES
+#ifndef _OPENACC
+      !$OMP DO SCHEDULE(dynamic)
+#endif
       DO nu = 1, ne
-         
+
          ! Do inverse FFT of state and add related charge density to overall charge density on real-space mesh.
          IF (noco%l_noco) THEN
             forw = .FALSE.
@@ -311,46 +381,46 @@ CONTAINS
                END IF
             END IF
 
-            CALL fft_interface(3, state%dimensions(:), state%grid, forw, stateIndices)
-            CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw, stateBIndices)
+            CALL priv_fft(fftBack, l_obj, state, forw, stateIndices)
+            CALL priv_fft(fftBack, l_obj, stateB, forw, stateBIndices)
             IF (l_dfpt) THEN
-               CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
-               CALL fft_interface(3, stateBq%dimensions(:), stateBq%grid, forw, stateBqIndices)
+               CALL priv_fft(fftBack, l_obj, stateq, forw, stateqIndices)
+               CALL priv_fft(fftBack, l_obj, stateBq, forw, stateBqIndices)
                IF (l_minusq) THEN
-                  CALL fft_interface(3, statemq%dimensions(:), statemq%grid, forw, statemqIndices)
-                  CALL fft_interface(3, stateBmq%dimensions(:), stateBmq%grid, forw, stateBmqIndices)
+                  CALL priv_fft(fftBack, l_obj, statemq, forw, statemqIndices)
+                  CALL priv_fft(fftBack, l_obj, stateBmq, forw, stateBmqIndices)
                END IF
             END IF
 
             ! In the non-collinear case rho becomes a hermitian 2x2
             ! matrix (rhomatGrid).
             IF (.NOT.l_dfpt) THEN
-            DO ir = 0, rhomatGrid(1)%gridLength - 1
+            DO ir = 0, glen - 1
                !In this order: rho_11, rho_22, m_x/2, m_y/2
-               rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
-               rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * ABS(stateB%grid(ir))**2
-               rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * (REAL(state%grid(ir))*REAL(stateB%grid(ir)) + AIMAG(state%grid(ir))*AIMAG(stateB%grid(ir)))
-               rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * (REAL(state%grid(ir))*AIMAG(stateB%grid(ir)) - AIMAG(state%grid(ir))*REAL(stateB%grid(ir)))
+               accR(ir,1) = accR(ir,1) + wtf(nu) * (REAL(state%grid(ir))**2 + AIMAG(state%grid(ir))**2)
+               accR(ir,2) = accR(ir,2) + wtf(nu) * (REAL(stateB%grid(ir))**2 + AIMAG(stateB%grid(ir))**2)
+               accR(ir,3) = accR(ir,3) + wtf(nu) * (REAL(state%grid(ir))*REAL(stateB%grid(ir)) + AIMAG(state%grid(ir))*AIMAG(stateB%grid(ir)))
+               accR(ir,4) = accR(ir,4) + wtf(nu) * (REAL(state%grid(ir))*AIMAG(stateB%grid(ir)) - AIMAG(state%grid(ir))*REAL(stateB%grid(ir)))
             END DO
             ELSE
                !DFPT NOCO
-               DO ir = 0, rhomatGrid(1)%gridLength - 1
+               DO ir = 0, glen - 1
                   !In this order: rho^1_11, rho^1_22, rho^1_12 (block (2,1)), rho^1_21 (block (1,2))
-                  rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * fac * CONJG(state%grid(ir))*stateq%grid(ir)
-                  rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * fac * CONJG(stateB%grid(ir))*stateBq%grid(ir)
-                  rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * fac * CONJG(stateB%grid(ir))*stateq%grid(ir)
-                  rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * fac * CONJG(state%grid(ir))*stateBq%grid(ir)
+                  accC(ir,1) = accC(ir,1) + wtf(nu) * fac * CONJG(state%grid(ir))*stateq%grid(ir)
+                  accC(ir,2) = accC(ir,2) + wtf(nu) * fac * CONJG(stateB%grid(ir))*stateBq%grid(ir)
+                  accC(ir,3) = accC(ir,3) + wtf(nu) * fac * CONJG(stateB%grid(ir))*stateq%grid(ir)
+                  accC(ir,4) = accC(ir,4) + wtf(nu) * fac * CONJG(state%grid(ir))*stateBq%grid(ir)
                   IF (l_minusq) THEN
-                     rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * CONJG(statemq%grid(ir))*state%grid(ir)
-                     rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * CONJG(stateBmq%grid(ir))*stateB%grid(ir)
-                     rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * CONJG(stateBmq%grid(ir))*state%grid(ir)
-                     rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * CONJG(statemq%grid(ir))*stateB%grid(ir)
+                     accC(ir,1) = accC(ir,1) + wtf(nu) * CONJG(statemq%grid(ir))*state%grid(ir)
+                     accC(ir,2) = accC(ir,2) + wtf(nu) * CONJG(stateBmq%grid(ir))*stateB%grid(ir)
+                     accC(ir,3) = accC(ir,3) + wtf(nu) * CONJG(stateBmq%grid(ir))*state%grid(ir)
+                     accC(ir,4) = accC(ir,4) + wtf(nu) * CONJG(statemq%grid(ir))*stateB%grid(ir)
                   END IF
-                  IF (norm2(q_dfpt)<1e-8) THEN
-                     rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
-                     rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf1(nu) * ABS(stateB%grid(ir))**2
-                     rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf1(nu) * CONJG(stateB%grid(ir))*state%grid(ir)
-                     rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf1(nu) * CONJG(state%grid(ir))*stateB%grid(ir)
+                  IF (l_gamma) THEN
+                     accC(ir,1) = accC(ir,1) + wtf1(nu) * ABS(state%grid(ir))**2
+                     accC(ir,2) = accC(ir,2) + wtf1(nu) * ABS(stateB%grid(ir))**2
+                     accC(ir,3) = accC(ir,3) + wtf1(nu) * CONJG(stateB%grid(ir))*state%grid(ir)
+                     accC(ir,4) = accC(ir,4) + wtf1(nu) * CONJG(state%grid(ir))*stateB%grid(ir)
                   END IF
                END DO
             END IF
@@ -361,34 +431,32 @@ CONTAINS
             ! total charge does not need to be one in each spin-
             ! channel. Thus it has to be calculated explicitly, if
             ! it is needed.
-            IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
+            IF (l_stateCharge) THEN
                DO ir = 0, state%gridLength - 1
                   state%grid(ir) = ABS(state%grid(ir))**2
                   stateB%grid(ir) = ABS(stateB%grid(ir))**2
                END DO
 
                forw = .TRUE.
-               CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
-               CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw, fieldSphereIndices)
+               CALL priv_fft(fftForw, l_obj, state, forw, fieldSphereIndices)
+               CALL priv_fft(fftForw, l_obj, stateB, forw, fieldSphereIndices)
 
-               CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
+               CALL state%takeFieldFromGrid(stars, cwkS, stateFFTRadius+0.0005)
                DO istr = 1, stars%ng3
-                  cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
+                  cwkS(istr) = REAL(stars%nstr(istr))*cwkS(istr)
                END DO
                DO istr = 1, stars%ng3_fft
-                  CALL pwint(stars, atoms, sym,   cell, istr, x)
-                  dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
-                  dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+                  dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwkS(istr)*pwintStars(istr))/cell%omtil
+                  dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwkS(istr)*pwintStars(istr))/cell%omtil
                ENDDO
 
-               CALL stateB%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
+               CALL stateB%takeFieldFromGrid(stars, cwkS, stateFFTRadius+0.0005)
                DO istr = 1, stars%ng3
-                  cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
+                  cwkS(istr) = REAL(stars%nstr(istr))*cwkS(istr)
                END DO
                DO istr = 1, stars%ng3_fft
-                  CALL pwint(stars, atoms, sym,   cell, istr, x)
-                  dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
-                  dos%qTot(ev_list(nu), ikpt, input%jspins) = dos%qTot(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
+                  dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwkS(istr)*pwintStars(istr))/cell%omtil
+                  dos%qTot(ev_list(nu), ikpt, input%jspins) = dos%qTot(ev_list(nu), ikpt, input%jspins) + REAL(cwkS(istr)*pwintStars(istr))/cell%omtil
                ENDDO
             ENDIF
 
@@ -406,38 +474,36 @@ CONTAINS
             ! For zmat%l_real this should be turned into a real to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
             !$acc data copy(state%grid)
-            CALL fft_interface(3, state%dimensions(:), state%grid, forw, stateIndices)
+            CALL priv_fft(fftBack, l_obj, state, forw, stateIndices)
             !$acc end data
             IF (l_dfpt) THEN
-               CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
+               CALL priv_fft(fftBack, l_obj, stateq, forw, stateqIndices)
                IF (l_minusq) THEN
-                  CALL fft_interface(3, statemq%dimensions(:), statemq%grid, forw, statemqIndices)
+                  CALL priv_fft(fftBack, l_obj, statemq, forw, statemqIndices)
                END IF
             END IF
             IF (.NOT.l_dfpt) THEN
-               DO ir = 0, chargeDen%gridLength - 1
-                  chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
+               DO ir = 0, glen - 1
+                  accR(ir,1) = accR(ir,1) + wtf(nu) * (REAL(state%grid(ir))**2 + AIMAG(state%grid(ir))**2)
                END DO
             ELSE
                IF (.NOT.l_minusq) THEN
-                  DO ir = 0, chargeDen%gridLength - 1
-                     chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
-                     !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(CONJG(state%grid(ir)) * stateq%grid(ir))
-                     IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  DO ir = 0, glen - 1
+                     accC(ir,1) = accC(ir,1) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
+                     IF (l_gamma) accC(ir,1) = accC(ir,1) + wtf1(nu) * ABS(state%grid(ir))**2
                   END DO
                ELSE
-                  DO ir = 0, chargeDen%gridLength - 1
-                     chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * (CONJG(statemq%grid(ir)) * state%grid(ir) &
-                                                                        + CONJG(state%grid(ir)) * stateq%grid(ir))
-                     !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(CONJG(state%grid(ir)) * stateq%grid(ir))
-                     IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  DO ir = 0, glen - 1
+                     accC(ir,1) = accC(ir,1) + wtf(nu) * (CONJG(statemq%grid(ir)) * state%grid(ir) &
+                                                        + CONJG(state%grid(ir)) * stateq%grid(ir))
+                     IF (l_gamma) accC(ir,1) = accC(ir,1) + wtf1(nu) * ABS(state%grid(ir))**2
                   END DO
                END IF
             END IF
 
             IF (input%l_f) THEN
-               DO ir = 0, ekinGrid%gridLength - 1
-                  ekinGrid%grid(ir) = ekinGrid%grid(ir) - wtf(nu) * eig(nu) * ABS(state%grid(ir))**2
+               DO ir = 0, glen - 1
+                  ekR(ir) = ekR(ir) - wtf(nu) * eig(nu) * (REAL(state%grid(ir))**2 + AIMAG(state%grid(ir))**2)
                END DO
 
                DO j = 1, 3
@@ -454,34 +520,62 @@ CONTAINS
                      END IF
                   END DO
                   CALL stateDeriv%putComplexStateOnGrid(lapw, jSpin, tempState)
-                  CALL fft_interface(3, stateDeriv%dimensions(:), stateDeriv%grid, forw, stateIndices)
-                  DO ir = 0, ekinGrid%gridLength - 1
-                     ekinGrid%grid(ir) = ekinGrid%grid(ir) + wtf(nu) * 0.5 * ABS(stateDeriv%grid(ir))**2
+                  CALL priv_fft(fftBack, l_obj, stateDeriv, forw, stateIndices)
+                  DO ir = 0, glen - 1
+                     ekR(ir) = ekR(ir) + wtf(nu) * 0.5 * (REAL(stateDeriv%grid(ir))**2 + AIMAG(stateDeriv%grid(ir))**2)
                   END DO
                END DO
             END IF
 
             IF (noco%l_soc.AND.input%jspins.EQ.2) THEN
-               IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
+               IF (l_stateCharge) THEN
                   DO ir = 0, state%gridLength - 1
                      state%grid(ir) = conjg(state%grid(ir)) * stepFct%grid(ir) * state%grid(ir)
                   END DO
 
                   forw = .TRUE.
-                  CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
+                  CALL priv_fft(fftForw, l_obj, state, forw, fieldSphereIndices)
 
-                  cwk = CMPLX(0.0,0.0)
-                  CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
-                  starCharges = CMPLX(0.0,0.0)
-                  CALL pwint_all(stars,atoms,sym ,cell,1,stars%ng3,starCharges)
-                  starCharges(:) = starCharges(:) * cwk(:) * stars%nstr(:) / cell%omtil
+                  cwkS = CMPLX(0.0,0.0)
+                  CALL state%takeFieldFromGrid(stars, cwkS, stateFFTRadius+0.0005)
+                  starCharges(:) = pwintAllStars(:) * cwkS(:) * stars%nstr(:) / cell%omtil
                   dos%qis(ev_list(nu), ikpt, jSpin) = dos%qis(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
                   dos%qTot(ev_list(nu), ikpt, jSpin) = dos%qTot(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
                END IF
             END IF
          END IF
       END DO
-      
+#ifndef _OPENACC
+      !$OMP END DO
+#endif
+
+      ! Sum up the densities of all threads
+      !$OMP CRITICAL (pwden_sum)
+      IF (noco%l_noco) THEN
+         DO i = 1, 4
+            IF (l_dfpt) THEN
+               rhomatGrid(i)%grid(:) = rhomatGrid(i)%grid(:) + accC(:,i)
+            ELSE
+               rhomatGrid(i)%grid(:) = rhomatGrid(i)%grid(:) + accR(:,i)
+            END IF
+         END DO
+      ELSE
+         IF (l_dfpt) THEN
+            chargeDen%grid(:) = chargeDen%grid(:) + accC(:,1)
+         ELSE
+            chargeDen%grid(:) = chargeDen%grid(:) + accR(:,1)
+         END IF
+         IF (input%l_f) ekinGrid%grid(:) = ekinGrid%grid(:) + ekR(:)
+      END IF
+      !$OMP END CRITICAL (pwden_sum)
+      IF (l_obj) THEN
+         CALL fftBack%free()
+         CALL fftForw%free()
+      END IF
+#ifndef _OPENACC
+      !$OMP END PARALLEL
+#endif
+
       ! END OUTER LOOP OVER STATES NU
 
       ! Perform FFT transform of charge density to reciprocal space.
@@ -602,4 +696,20 @@ CONTAINS
       CALL timestop("pwden")
 
    END SUBROUTINE pwden
+
+   SUBROUTINE priv_fft(fft, l_obj, fftGrid, forw, indices)
+      !! FFT of a grid with a prepared plan (l_obj) or via fft_interface
+      TYPE(t_fft),     INTENT(INOUT) :: fft
+      LOGICAL,         INTENT(IN)    :: l_obj, forw
+      TYPE(t_fftGrid), INTENT(INOUT) :: fftGrid
+      INTEGER,         INTENT(IN)    :: indices(:)
+
+      IF (l_obj) THEN
+         CALL timestart("FFT_interface")
+         CALL fft%exec(fftGrid%grid)
+         CALL timestop("FFT_interface")
+      ELSE
+         CALL fft_interface(3, fftGrid%dimensions(:), fftGrid%grid, forw, indices)
+      END IF
+   END SUBROUTINE priv_fft
 END MODULE m_pwden
