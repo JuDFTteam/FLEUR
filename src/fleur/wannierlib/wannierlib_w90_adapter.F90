@@ -269,7 +269,7 @@ CONTAINS
   !>    u_opt     the disentanglement matrix (the projections after w90 has processed them)
   !> The full Wannier gauge is V(k) = u_opt(k) . u_matrix(k). Evaluating operators in that gauge
   !> is NOT this module's job: the adapter only translates to and from the library.
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, u_matrix, u_opt, mw_chk)
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, jspin, n_channels, u_matrix, u_opt, mw_chk)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -277,6 +277,9 @@ CONTAINS
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
     INTEGER, INTENT(IN) :: irank
+    !> Which channel this call is wannierising, and how many there are. Only the checkpoint
+    !> name depends on them, and only when there are two.
+    INTEGER, INTENT(IN) :: jspin, n_channels
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_matrix(:, :, :)   ! (nw,nw,nk) MLWF gauge
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_opt(:, :, :)      ! (nb,nw,nk) disentangled projections
     !> The overlaps as Wannier90 leaves them: the num_wann corner of the buffer it was
@@ -286,6 +289,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: mw_chk(:, :, :, :)  ! (nw,nw,nntot,nk_loc)
 
     INTEGER :: ierr, num_kpts, ik, ib
+    CHARACTER(LEN=32) :: seedname
     COMPLEX, ALLOCATABLE :: mmn_local(:, :, :, :)
     REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
 
@@ -295,6 +299,25 @@ CONTAINS
     IF (.NOT.this%l_wannierize) RETURN
     DEALLOCATE(u_matrix, u_opt, mw_chk)
     num_kpts = SIZE(amn, 3)
+
+    !> One checkpoint per spin channel. Collinearly the two channels are two separate
+    !> wannierisations with two gauges, and both used to write the one name the seedname
+    !> carries, so the second silently overwrote the first and a restart had nothing of
+    !> the first channel to read. The name is set here, before any checkpoint is read or
+    !> written, because set_w90_options runs once for the whole calculation.
+    !>
+    !> A single channel keeps the bare name, so every checkpoint written before this is
+    !> still found: the suffix appears only where it was impossible to restart anyway.
+    IF (n_channels > 1) THEN
+      WRITE (seedname, '(a,i0)') 'fleur_wlib_internal.', jspin
+      !> Assigned, not set through w90_input_setopt: that call PROCESSES the option store
+      !> and empties it on the way out ("must be empty here; emptied by w90_input_setopt
+      !> call", library_interface.F90:458), so a second call fails. The field is the one
+      !> both checkpoint routines take to build the file name -- write_chkpt passes
+      !> common_data%seedname at library_extra.F90:393 and read_chkpt at :453 -- so this
+      !> is the whole of what has to change, and it changes nothing else about w90's state.
+      wannierlib_w90main%seedname = seedname
+    END IF
 
 #ifndef CPP_WANNLIB_API
     CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &

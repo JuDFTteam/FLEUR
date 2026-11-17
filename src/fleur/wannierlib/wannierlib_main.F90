@@ -189,7 +189,7 @@ CONTAINS
       !> Checked here, on the request alone and before this module reads an eigenvector
       !> or wannierises anything. Measured on Pt, 54 Wannier functions over 100 k: the
       !> refusal lands at 18 s of a run that otherwise takes 102 s.
-      CALL wl_restart_refuse(this, request, input, l_wannierlib_spinors)
+      CALL wl_restart_refuse(this, request, input, l_wannierlib_spinors, fmpi)
 
       wl = this
       !> Before the window derivation, which is itself the first thing to index
@@ -368,7 +368,8 @@ CONTAINS
                                          distk, kpts%nkptf, wl%num_bands, eig, jspin, fmpi)
          END IF
 
-         CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt, mw_chk)
+         CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, jspin, melem%n_channels, &
+                      u_matrix, u_opt, mw_chk)
 
          !> Wannier90 rotated its own copy of the overlaps all the way to the final
          !> gauge, and the operator side is about to build the same quantity from the
@@ -516,11 +517,14 @@ CONTAINS
    !> position and positionPw90 do use only the corner, so they are not refused here.
    !> A refusal rather than a silent zero: either of these built from an empty overlap
    !> buffer is a file full of numbers that look like operators and are not.
-   SUBROUTINE wl_restart_refuse(this, request, input, l_spinors)
+   SUBROUTINE wl_restart_refuse(this, request, input, l_spinors, fmpi)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_melem_request),         INTENT(IN) :: request
       TYPE(t_input),                 INTENT(IN) :: input
       LOGICAL,                       INTENT(IN) :: l_spinors
+      TYPE(t_mpi),                   INTENT(IN) :: fmpi
+
+      LOGICAL :: l_ks
 
       IF (.NOT. this%l_restart_gauge) RETURN
 
@@ -530,11 +534,19 @@ CONTAINS
       !> than absent: wgauge_rspauli_collinear and wgauge_perpmag_collinear would write a
       !> file of zeros and report nothing. The operator file carries neither -- tx0 is not
       !> exported at all, and the x0 branch of the exporter is unreachable.
-      IF (input%jspins == 2 .AND. .NOT. l_spinors) CALL juDFT_error( &
-         "wannierlib: a collinear two-channel run cannot be restarted", &
-         hint='its spin cross-block and exchange torque are not in the operator file, '// &
-              'and skipping their calculation would leave them zero: run it without '// &
-              'restart, or use the spinor route', calledby="wl_restart_refuse")
+      !>
+      !> That objection is to reading the operators from the file, and not to reloading a
+      !> gauge: with no such file melem%calc runs exactly as it does without a restart, so
+      !> continuing a minimisation from a checkpoint is sound here. So the refusal asks
+      !> whether the file is there, rather than refusing the route that never needed it.
+      IF (input%jspins == 2 .AND. .NOT. l_spinors) THEN
+         CALL wannierlib_ks_present(1, fmpi, l_ks)
+         IF (l_ks) CALL juDFT_error( &
+            "wannierlib: a collinear restart cannot take its operators from the file", &
+            hint='it carries neither the spin cross-block nor the collinear exchange '// &
+                 'torque, and skipping their calculation would leave them zero: move the '// &
+                 'operator file aside, or use the spinor route', calledby="wl_restart_refuse")
+      END IF
 
       IF (request%has_op_r('bmn')) CALL juDFT_error( &
          "wannierlib: bmn cannot be built on a restart", &
