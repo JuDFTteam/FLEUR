@@ -95,9 +95,11 @@ contains
                                       CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
                                       s, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig_tmp, work_d, lwork_d, devinfo(1))
             !$ACC END HOST_DATA
+            !$acc update self(devinfo)
             !$ACC END DATA
             !$ACC END DATA
-            if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnZhegvdx failed')
+            if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnDsygvdx failed')
+            if (devinfo(1) /= 0) call judft_error("cusolverDnDsygvdx failed", no=devinfo(1))
             ne = ne_found
             call zmat%alloc(hmat%l_real, hmat%matsize1, ne_found)
             zmat%data_r = h(:, :ne_found)
@@ -124,6 +126,7 @@ contains
                write (*, *) devinfo
                call judft_error('cusolverDnZhegvdx failed')
             end if
+            if (devinfo(1) /= 0) call judft_error("cusolverDnZhegvdx failed", no=devinfo(1))
             !$ACC END DATA
             !$ACC END DATA
             ne = ne_found

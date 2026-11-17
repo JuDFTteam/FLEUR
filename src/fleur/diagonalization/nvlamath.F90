@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -69,7 +69,8 @@ contains
       abstol = 2*dlamch('S')
       if (hmat%l_real) then
          allocate (iwork(5*hmat%matsize1), ifail(hmat%matsize1))
-         !$acc data create(iwork,ifail,eigTemp,zmat%data_r)
+         ! H and S are on the host when the solver is called
+         !$acc data copyin(hmat%data_r,smat%data_r) create(iwork,ifail,eigTemp,zmat%data_r,dumrwork)
          !$acc host_data use_device(hmat%data_r,smat%data_r,eigTemp,zmat%data_r,dumrwork,iwork,ifail)
          call dsygvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_r, size(hmat%data_r, 1), smat%data_r, size(smat%data_r, 1), &
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), dumrwork, -1, iwork, ifail, info)
@@ -89,7 +90,8 @@ contains
       else
 
          allocate (rwork(7*hmat%matsize1), iwork(5*hmat%matsize1), ifail(hmat%matsize1))
-         !$acc data create(iwork,ifail,eigTemp,zmat%data_c,rwork)
+         ! H and S are on the host when the solver is called
+         !$acc data copyin(hmat%data_c,smat%data_c) create(iwork,ifail,eigTemp,zmat%data_c,rwork,dumwork)
          !Do a workspace query
          !$acc host_data use_device(hmat%data_c,smat%data_c,eigTemp,zmat%data_c,dumwork,rwork,iwork,ifail)
 
