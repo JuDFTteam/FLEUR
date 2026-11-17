@@ -6,6 +6,7 @@
 MODULE m_wannierlib_w90_adapter
   USE m_constants, ONLY : oUnit, namat_const, hartree_to_ev_const, bohr_to_angstrom_const
   USE m_juDFT
+  USE m_judft_string, ONLY : int2str
   USE m_xmlOutput
   USE m_types_atoms
   USE m_types_cell
@@ -39,6 +40,12 @@ MODULE m_wannierlib_w90_adapter
   !> is nothing next to what a run of that size already holds. Wannier90 sets no upper bound
   !> of its own; it dimensions its arrays from this value.
   INTEGER, PARAMETER :: WANNIERLIB_SEARCH_SHELLS = 1000
+
+  !> How far apart two window energies may be and still be the same window. It is not a
+  !> physical tolerance: both numbers come out of the same parser reading the same inp.xml
+  !> text, so they agree bit for bit unless that text changed, and this is margin for the
+  !> last one of them. Anything anyone actually edits moves a bound by millihartree.
+  REAL, PARAMETER :: WANNIERLIB_CHKINFO_ETOL = 1.0e-10
   PRIVATE
   PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90
 #ifdef CPP_WANNLIB_API
@@ -269,7 +276,8 @@ CONTAINS
   !>    u_opt     the disentanglement matrix (the projections after w90 has processed them)
   !> The full Wannier gauge is V(k) = u_opt(k) . u_matrix(k). Evaluating operators in that gauge
   !> is NOT this module's job: the adapter only translates to and from the library.
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, jspin, n_channels, u_matrix, u_opt, mw_chk)
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, jspin, n_channels, l_spinors, &
+                     u_matrix, u_opt, mw_chk)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -280,6 +288,9 @@ CONTAINS
     !> Which channel this call is wannierising, and how many there are. Only the checkpoint
     !> name depends on them, and only when there are two.
     INTEGER, INTENT(IN) :: jspin, n_channels
+    !> Spinor route or not. Recorded in the witness beside the checkpoint, because it is the
+    !> one thing about a gauge that Wannier90's own checks cannot see.
+    LOGICAL, INTENT(IN) :: l_spinors
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_matrix(:, :, :)   ! (nw,nw,nk) MLWF gauge
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_opt(:, :, :)      ! (nb,nw,nk) disentangled projections
     !> The overlaps as Wannier90 leaves them: the num_wann corner of the buffer it was
@@ -290,6 +301,7 @@ CONTAINS
 
     INTEGER :: ierr, num_kpts, ik, ib
     CHARACTER(LEN=32) :: seedname
+    CHARACTER(LEN=9) :: route
     COMPLEX, ALLOCATABLE :: mmn_local(:, :, :, :)
     REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
 
@@ -319,6 +331,18 @@ CONTAINS
       wannierlib_w90main%seedname = seedname
     END IF
 
+    !> Which of the three routes built this gauge. A spinor run and a non-magnetic one are
+    !> both a single channel and both write the bare checkpoint name, so the only things
+    !> telling their files apart are num_bands and num_wann -- which is a coincidence of the
+    !> cases people run, not a check. Written down here, where both deciders are in scope.
+    IF (l_spinors) THEN
+      route = 'spinor'
+    ELSE IF (n_channels > 1) THEN
+      route = 'collinear'
+    ELSE
+      route = 'scalar'
+    END IF
+
 #ifndef CPP_WANNLIB_API
     CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &
                      calledby='run_w90')
@@ -344,7 +368,7 @@ CONTAINS
     CALL w90_set_u_matrix(wannierlib_w90main, u_matrix)
 
     IF (this%l_restart_gauge) THEN
-      CALL wannierlib_read_chkpt()
+      CALL wannierlib_read_chkpt(this, route)
 
       !> A checkpoint carries u_matrix_opt only when it was written with a disentanglement
       !> -- that is what its have_disentangled record decides. With num_bands == num_wann
@@ -392,7 +416,7 @@ CONTAINS
     !> The point a restart resumes the minimisation from, so it is written here rather than
     !> straight after the disentanglement: this is the state w90_wannierise is about to be
     !> handed. Every rank calls it -- the writer gathers the distributed matrices itself.
-    IF (this%export%chk .AND. .NOT.this%l_restart_gauge) CALL wannierlib_write_chkpt('postdis')
+    IF (this%export%chk .AND. .NOT.this%l_restart_gauge) CALL wannierlib_write_chkpt('postdis', this, route, irank)
 
     IF (this%l_restart_minimise) THEN
       CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
@@ -400,7 +424,7 @@ CONTAINS
 
       !> Only after a minimisation. A restart that did not run one would otherwise rewrite
       !> the very file it was handed, and a crash mid-write would take the original with it.
-      IF (this%export%chk) CALL wannierlib_write_chkpt('postwann')
+      IF (this%export%chk) CALL wannierlib_write_chkpt('postwann', this, route, irank)
     END IF
 
     !> Transport last, because it reads the gauge: tran_main builds its own real-space
@@ -434,18 +458,24 @@ CONTAINS
   !> stage reads: w90_set_u_matrix and w90_set_u_opt store pointers, so read_chkpt writes
   !> through them and nothing has to be copied back.
   !>
-  !> Nothing is checked here, because the format carries its own check and it is thorough:
-  !> the reader compares the band count, the excluded bands, both lattices, the number of
-  !> k-points, the Monkhorst-Pack grid, the k-point list itself, nntot and num_wann with
-  !> this run, and refuses the file on any of them. What no check on either side can see is
-  !> the density: a checkpoint made on the same mesh but from a different SCF is accepted,
-  !> and its gauge then belongs to states this run never computed.
+  !> The format carries its own check and it is thorough: the reader compares the band
+  !> count, the excluded bands, both lattices, the number of k-points, the Monkhorst-Pack
+  !> grid, the k-point list itself, nntot and num_wann with this run, and refuses the file
+  !> on any of them. So the witness is consulted first, for the things that list leaves out
+  !> -- see wl_chkinfo_check -- and the density, which neither side can see at all: a
+  !> checkpoint made on the same mesh but from a different SCF is accepted here, and its
+  !> gauge then belongs to states this run never computed.
   !>
   !> The label is twenty characters because that is the width Wannier90 writes it at.
   !> Asking for a longer one reads past the end of the record and ends the run.
-  SUBROUTINE wannierlib_read_chkpt()
+  SUBROUTINE wannierlib_read_chkpt(this, route)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    CHARACTER(LEN=*), INTENT(IN) :: route
     CHARACTER(LEN=20) :: label
     INTEGER :: ierr
+
+    !> Before the file is opened, so a refusal costs nothing and says why.
+    CALL wl_chkinfo_check(this, route)
 
     CALL read_chkpt(wannierlib_w90main, label, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('read_chkpt failed in wannierlib adapter', &
@@ -460,13 +490,203 @@ CONTAINS
   !> what FLEUR decides is when to ask. 'label' is the position it records -- 'postdis'
   !> before the minimisation, 'postwann' after -- and both go to the same <seedname>.chk,
   !> which is how wannier90.x behaves and how its restart reads the position back.
-  SUBROUTINE wannierlib_write_chkpt(label)
+  SUBROUTINE wannierlib_write_chkpt(label, this, route, irank)
     CHARACTER(LEN=*), INTENT(IN) :: label
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    CHARACTER(LEN=*), INTENT(IN) :: route
+    INTEGER, INTENT(IN) :: irank
     INTEGER :: ierr
     CALL write_chkpt(wannierlib_w90main, label, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('write_chkpt failed in wannierlib adapter', &
                                     calledby='wannierlib_write_chkpt')
+
+    !> Written here rather than by the caller, so that a checkpoint cannot be produced
+    !> without its witness: both of the two call sites get one by construction. Writing it
+    !> twice over costs nothing, because the contents do not depend on the stage.
+    CALL wl_chkinfo_write(this, route, irank)
   END SUBROUTINE wannierlib_write_chkpt
+#endif
+
+#ifdef CPP_WANNLIB_API
+  !> The name of the witness: the checkpoint's own stem with another extension, so the two
+  !> travel together and the per-channel suffix the seedname already carries is inherited
+  !> for free. Not '.window', which would sit one letter away from Wannier90's '.win' input.
+  FUNCTION wl_chkinfo_file() RESULT(f)
+    CHARACTER(LEN=:), ALLOCATABLE :: f
+    f = TRIM(wannierlib_w90main%seedname)//'.chkinfo'
+  END FUNCTION wl_chkinfo_file
+
+  !> What a Wannier90 checkpoint cannot carry, written beside it.
+  !>
+  !> The .chk holds lwindow, which is the CONSEQUENCE of the energy bounds, and imposes it
+  !> when it is loaded -- the bounds themselves are not in the file. So three edits survive
+  !> all ten of Wannier90's checks and do not do what they look like they do: disWinMin and
+  !> disWinMax have no effect at all, disFrozMin and disFrozMax are ignored by a minimisation
+  !> that does not redo the disentanglement, and minBand with maxBand shifted together leave
+  !> numBands unchanged and hand the run a gauge belonging to other bands. This file is what
+  !> lets the next run refuse rather than ignore in silence.
+  SUBROUTINE wl_chkinfo_write(this, route, irank)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    CHARACTER(LEN=*), INTENT(IN) :: route
+    INTEGER, INTENT(IN) :: irank
+    INTEGER :: iu, io
+
+    !> Rank zero alone. Every rank calls the checkpoint writer, because that one gathers the
+    !> distributed matrices itself, so without this guard every rank opens the same path for
+    !> replacement at the same moment.
+    IF (irank /= 0) RETURN
+
+    OPEN (NEWUNIT=iu, FILE=wl_chkinfo_file(), FORM='formatted', STATUS='replace', IOSTAT=io)
+    IF (io /= 0) CALL juDFT_error('wannierlib: cannot write '//wl_chkinfo_file(), &
+                                  calledby='wl_chkinfo_write')
+    WRITE (iu, '(a)')         '# wannierlib: what the checkpoint beside this file cannot carry.'
+    WRITE (iu, '(a)')         '# Read back when that checkpoint is read. Energies in Hartree.'
+    WRITE (iu, '(a,i0)')      'version    ', 1
+    WRITE (iu, '(a,a)')       'route      ', TRIM(route)
+    WRITE (iu, '(a,i0)')      'numBands   ', this%num_bands
+    WRITE (iu, '(a,i0)')      'minBand    ', this%min_band
+    WRITE (iu, '(a,i0)')      'maxBand    ', this%max_band
+    WRITE (iu, '(a,i0)')      'numWann    ', this%num_wann
+    WRITE (iu, '(a,es22.14)') 'disWinMin  ', this%dis_win_min
+    WRITE (iu, '(a,es22.14)') 'disWinMax  ', this%dis_win_max
+    WRITE (iu, '(a,es22.14)') 'disFrozMin ', this%dis_froz_min
+    WRITE (iu, '(a,es22.14)') 'disFrozMax ', this%dis_froz_max
+    CLOSE (iu)
+  END SUBROUTINE wl_chkinfo_write
+
+  !> Judge the witness. Every rank reads it and reaches its own verdict, rather than rank
+  !> zero deciding and broadcasting: the verdict is a function of a few hundred bytes, so
+  !> all ranks reach the same one and abort together, whereas a verdict taken on rank zero
+  !> alone would need a broadcast and without one leaves the others in the next collective.
+  SUBROUTINE wl_chkinfo_check(this, route)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    CHARACTER(LEN=*), INTENT(IN) :: route
+    INTEGER :: iu, io, ver, i_f
+    REAL :: r_f
+    CHARACTER(LEN=32) :: a_f
+    LOGICAL :: l_there
+
+    INQUIRE (FILE=wl_chkinfo_file(), EXIST=l_there)
+    !> A checkpoint from before this file existed. Its gauge is still usable and all ten of
+    !> Wannier90's checks still run on it, so the run goes on -- but the one thing those
+    !> checks cannot see is now going unchecked, and that is worth a line rather than being
+    !> the quietest part of the run.
+    IF (.NOT. l_there) THEN
+      WRITE (oUnit, '(a)') ' wannierlib: no '//wl_chkinfo_file()//' beside the checkpoint: '// &
+                           'THE WINDOW AND THE BAND INDICES WERE NOT CHECKED'
+      RETURN
+    END IF
+
+    OPEN (NEWUNIT=iu, FILE=wl_chkinfo_file(), FORM='formatted', STATUS='old', IOSTAT=io)
+    IF (io /= 0) CALL juDFT_error('wannierlib: cannot read '//wl_chkinfo_file(), &
+                                  calledby='wl_chkinfo_check')
+    READ (iu, '(a)', IOSTAT=io)      ! the two comment lines
+    READ (iu, '(a)', IOSTAT=io)
+
+    CALL rd_i('version', ver)
+    IF (ver /= 1) CALL juDFT_error('wannierlib: '//wl_chkinfo_file()//' is layout version '// &
+                                   int2str(ver)//' and this build reads version 1', &
+                                   hint='delete it to go on without the check, or write '// &
+                                        'the checkpoint again', calledby='wl_chkinfo_check')
+
+    CALL rd_a('route', a_f);      CALL same_a('route',      a_f, route)
+    CALL rd_i('numBands', i_f);   CALL same_i('numBands',   i_f, this%num_bands)
+    CALL rd_i('minBand', i_f);    CALL same_i('minBand',    i_f, this%min_band)
+    CALL rd_i('maxBand', i_f);    CALL same_i('maxBand',    i_f, this%max_band)
+    CALL rd_i('numWann', i_f);    CALL same_i('numWann',    i_f, this%num_wann)
+    CALL rd_r('disWinMin', r_f);  CALL same_r('disWinMin',  r_f, this%dis_win_min)
+    CALL rd_r('disWinMax', r_f);  CALL same_r('disWinMax',  r_f, this%dis_win_max)
+    CALL rd_r('disFrozMin', r_f); CALL same_r('disFrozMin', r_f, this%dis_froz_min)
+    CALL rd_r('disFrozMax', r_f); CALL same_r('disFrozMax', r_f, this%dis_froz_max)
+    CLOSE (iu)
+
+    WRITE (oUnit, '(a)') ' wannierlib: the window, the band indices and the route agree '// &
+                         'with the checkpoint'
+
+  CONTAINS
+
+    !> Each read states which key it expects, so a file written by something else, or cut
+    !> short, is refused where it goes wrong instead of being read as the next field.
+    SUBROUTINE rd_key(want, line)
+      CHARACTER(LEN=*), INTENT(IN) :: want
+      CHARACTER(LEN=*), INTENT(OUT) :: line
+      INTEGER :: jo
+      READ (iu, '(a)', IOSTAT=jo) line
+      IF (jo /= 0 .OR. INDEX(ADJUSTL(line), want) /= 1) CALL juDFT_error( &
+        'wannierlib: '//wl_chkinfo_file()//' has no '//want//' where one is due', &
+        hint='it was written by another version of this code, or truncated: delete it to '// &
+             'go on without the check, or write the checkpoint again', &
+        calledby='wl_chkinfo_check')
+      line = ADJUSTL(line)
+      line = line(LEN(want) + 1:)
+    END SUBROUTINE rd_key
+
+    SUBROUTINE rd_i(want, val)
+      CHARACTER(LEN=*), INTENT(IN) :: want
+      INTEGER, INTENT(OUT) :: val
+      CHARACTER(LEN=200) :: line
+      CALL rd_key(want, line)
+      READ (line, *) val
+    END SUBROUTINE rd_i
+
+    SUBROUTINE rd_r(want, val)
+      CHARACTER(LEN=*), INTENT(IN) :: want
+      REAL, INTENT(OUT) :: val
+      CHARACTER(LEN=200) :: line
+      CALL rd_key(want, line)
+      READ (line, *) val
+    END SUBROUTINE rd_r
+
+    SUBROUTINE rd_a(want, val)
+      CHARACTER(LEN=*), INTENT(IN) :: want
+      CHARACTER(LEN=*), INTENT(OUT) :: val
+      CHARACTER(LEN=200) :: line
+      CALL rd_key(want, line)
+      val = TRIM(ADJUSTL(line))
+    END SUBROUTINE rd_a
+
+    !> The two values always go in the message. One that says only that something does not
+    !> match sends the reader back to the file to work out what.
+    SUBROUTINE same_i(what, in_file, in_run)
+      CHARACTER(LEN=*), INTENT(IN) :: what
+      INTEGER, INTENT(IN) :: in_file, in_run
+      IF (in_file == in_run) RETURN
+      CALL juDFT_error('wannierlib: the checkpoint was written with '//what//' = '// &
+                       int2str(in_file)//', this run has '//int2str(in_run), &
+                       hint=wl_chkinfo_hint(), calledby='wl_chkinfo_check')
+    END SUBROUTINE same_i
+
+    SUBROUTINE same_a(what, in_file, in_run)
+      CHARACTER(LEN=*), INTENT(IN) :: what, in_file, in_run
+      IF (TRIM(in_file) == TRIM(in_run)) RETURN
+      CALL juDFT_error('wannierlib: the checkpoint was written on the '//TRIM(in_file)// &
+                       ' route and this is the '//TRIM(in_run)//' one', &
+                       hint=wl_chkinfo_hint(), calledby='wl_chkinfo_check')
+    END SUBROUTINE same_a
+
+    SUBROUTINE same_r(what, in_file, in_run)
+      CHARACTER(LEN=*), INTENT(IN) :: what
+      REAL, INTENT(IN) :: in_file, in_run
+      CHARACTER(LEN=200) :: msg
+      IF (ABS(in_file - in_run) <= WANNIERLIB_CHKINFO_ETOL) RETURN
+      WRITE (msg, '(a,a,es20.12,a,es20.12,a)') 'wannierlib: the checkpoint was written with ', &
+        what//' = ', in_file, ' Htr, this run has ', in_run, ' Htr'
+      CALL juDFT_error(TRIM(msg), hint=wl_chkinfo_hint(), calledby='wl_chkinfo_check')
+    END SUBROUTINE same_r
+
+    !> One hint for all of them, because the reason is the same every time: the gauge in the
+    !> file was built for those bands inside that window, and a restart reuses it rather
+    !> than rebuilding it. The minimisation settings are deliberately not in the witness --
+    !> numIter, convTol, convWindow and precond stay free, which is the whole point of
+    !> resuming.
+    FUNCTION wl_chkinfo_hint() RESULT(h)
+      CHARACTER(LEN=:), ALLOCATABLE :: h
+      h = 'a restart reuses the gauge in the checkpoint and cannot rebuild it for another '// &
+          'window or another set of bands: put the value back, or drop restart= and '// &
+          'wannierise from the start'
+    END FUNCTION wl_chkinfo_hint
+
+  END SUBROUTINE wl_chkinfo_check
 #endif
 
   !> Export the coarse-mesh b-shell / neighbour information that the Wannier90 kmesh setup

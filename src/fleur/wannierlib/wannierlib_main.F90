@@ -369,7 +369,7 @@ CONTAINS
          END IF
 
          CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, jspin, melem%n_channels, &
-                      u_matrix, u_opt, mw_chk)
+                      l_wannierlib_spinors, u_matrix, u_opt, mw_chk)
 
          !> Wannier90 rotated its own copy of the overlaps all the way to the final
          !> gauge, and the operator side is about to build the same quantity from the
