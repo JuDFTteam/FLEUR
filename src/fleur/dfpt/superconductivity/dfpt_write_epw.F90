@@ -26,7 +26,9 @@ module m_dfpt_write_epw
    !!                 one degeneracy per atom pair, the e-ph list one per displaced atom.
    !!                 Every R-indexed array is written in the order of wigner.fmt.
    !!                 FLEUR interpolates back with e^{-i k.R}, EPW with e^{+i k.R}, so
-   !!                 the FLEUR value at R is stored at EPW's vector -R.
+   !!                 the FLEUR value at R is stored at EPW's vector -R. Exception: FLEUR's
+   !!                 dynMat is D(q)^*, so the force constants are stored conjugated at +R
+   !!                 and EPW builds D(q) in the convention of g(k,q).
    !!   * degeneracy: EPW stores integer ndegen and divides by it; FLEUR stores a
    !!                 real weight = 1/ndegen. So ndegen = nint(1/weight), and 0 for weight 0.
    !!
@@ -104,7 +106,7 @@ contains
       call build_fcm(fi, dynMats, nmodes, fcm, Rvecs_fcm, weightPair_fcm, nNZ_fcm, qpts_dyn, sym_dyn)
 
       call epw_ws_order(gmatRealspace(1,ispin)%ws_k_Rvecs, ord_k)
-      call epw_ws_order(Rvecs_fcm, ord_fcm)
+      call epw_ws_order(-Rvecs_fcm, ord_fcm)
       call epw_ws_order(gmatRealspace(1,ispin)%ws_q_Rvecs, ord_g)
 
       write (oUnit,'(/,a)') "Writing EPW (epwread) restart files:"
@@ -300,7 +302,7 @@ contains
       do imode = 1, nmodes
          do jmode = 1, nmodes
             do iRfcm = 1, nNZ_fcm
-               write(iu,*) fcm(imode, jmode, ord_fcm(iRfcm))
+               write(iu,*) conjg(fcm(imode, jmode, ord_fcm(iRfcm)))
             end do
          end do
       end do
@@ -365,7 +367,7 @@ contains
       ! phonon block (R_q): ndegen_q(ir,na,nb)
       do ir = 1, nNZ_fcm
          j = ord_fcm(ir)
-         irvec = -Rvecs_fcm(:,j)
+         irvec = Rvecs_fcm(:,j)
          write(iu,2) irvec, ws_len(fi%cell%amat, Rvecs_fcm(:,j), alat)
          do ia = 1, nat
             write(iu,1) (ndegen(weightPair_fcm(ia,ja,j)), ja = 1, nat)
