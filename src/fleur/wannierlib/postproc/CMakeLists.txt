@@ -7,6 +7,7 @@ src/fleur/wannierlib/postproc/wgauge_io.F90
 src/fleur/wannierlib/postproc/wgauge_bands_io.F90
 src/fleur/wannierlib/postproc/wgauge_hamk.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_a.F90
+src/fleur/wannierlib/postproc/wgauge_check_mw.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_tensor.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_b.F90
 src/fleur/wannierlib/postproc/wgauge_operators_r.F90

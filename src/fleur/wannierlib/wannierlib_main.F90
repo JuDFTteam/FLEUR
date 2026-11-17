@@ -49,6 +49,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
+   USE m_wgauge_check_mw, ONLY: wgauge_check_mw
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans, orbitrans_assemble_2n
    USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
@@ -128,6 +129,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
       COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), u_opt(:, :, :)   ! Wannier gauge factors from w90
+      COMPLEX, ALLOCATABLE :: mw_chk(:, :, :, :)  ! the overlaps as Wannier90 leaves them
       !> The gauge of each spin channel, kept across the channel loop: the combined 2N spin
       !> operator needs BOTH, while u_matrix and u_opt are released at the end of every
       !> iteration. It lives here rather than in the coarse object, which holds the Bloch
@@ -297,7 +299,17 @@ CONTAINS
                                          distk, kpts%nkptf, wl%num_bands, eig, jspin, fmpi)
          END IF
 
-         CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
+         CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt, mw_chk)
+
+         !> Wannier90 rotated its own copy of the overlaps all the way to the final
+         !> gauge, and the operator side is about to build the same quantity from the
+         !> Bloch overlaps it still has. Two routes to one matrix, so they are compared
+         !> while both exist -- which is also what licenses a later run to take the
+         !> Wannier90 side out of a checkpoint and have no Bloch overlaps at all.
+         !> The tolerance is relative and the module header carries the measurement it
+         !> comes from. A checkpoint written by another build can fail here: that is the
+         !> check refusing a file whose gauge and overlaps do not belong together.
+         CALL wgauge_check_mw(mmn, distk, u_opt, u_matrix, bmesh, mw_chk, fmpi, 1.0E-6)
 
          !> The gauge goes to results before anything else touches it, so whoever
          !> interpolates with it downstream gets the factors this run produced.
@@ -358,6 +370,7 @@ CONTAINS
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
+         IF (ALLOCATED(mw_chk)) DEALLOCATE (mw_chk)
          IF (ALLOCATED(u_matrix)) DEALLOCATE (u_matrix)
          IF (ALLOCATED(u_opt)) DEALLOCATE (u_opt)
          IF (ALLOCATED(f0_loc)) DEALLOCATE (f0_loc)

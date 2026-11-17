@@ -269,7 +269,7 @@ CONTAINS
   !>    u_opt     the disentanglement matrix (the projections after w90 has processed them)
   !> The full Wannier gauge is V(k) = u_opt(k) . u_matrix(k). Evaluating operators in that gauge
   !> is NOT this module's job: the adapter only translates to and from the library.
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, u_matrix, u_opt)
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, u_matrix, u_opt, mw_chk)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -279,6 +279,11 @@ CONTAINS
     INTEGER, INTENT(IN) :: irank
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_matrix(:, :, :)   ! (nw,nw,nk) MLWF gauge
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_opt(:, :, :)      ! (nb,nw,nk) disentangled projections
+    !> The overlaps as Wannier90 leaves them: the num_wann corner of the buffer it was
+    !> given, which by then holds V^dagger(k) M V(k_b) in the final gauge and not the
+    !> Bloch overlaps that went in. It is the same block the checkpoint carries, which is
+    !> why a run resuming from one has this and nothing to rebuild it from.
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: mw_chk(:, :, :, :)  ! (nw,nw,nntot,nk_loc)
 
     INTEGER :: ierr, num_kpts
     COMPLEX, ALLOCATABLE :: mmn_local(:, :, :, :)
@@ -286,9 +291,9 @@ CONTAINS
 
     ! allocate the INTENT(OUT) results before any early return, so a caller can never pass
     ! unallocated arrays on to the matrix-element layer
-    ALLOCATE(u_matrix(0, 0, 0), u_opt(0, 0, 0))
+    ALLOCATE(u_matrix(0, 0, 0), u_opt(0, 0, 0), mw_chk(0, 0, 0, 0))
     IF (.NOT.this%l_wannierize) RETURN
-    DEALLOCATE(u_matrix, u_opt)
+    DEALLOCATE(u_matrix, u_opt, mw_chk)
     num_kpts = SIZE(amn, 3)
 
 #ifndef CPP_WANNLIB_API
@@ -361,6 +366,14 @@ CONTAINS
       CALL w90_transport(wannierlib_w90main, oUnit, oUnit, ierr)
       IF (ierr /= 0) CALL juDFT_error('w90_transport failed in wannierlib adapter', calledby='run_w90')
     END IF
+
+    !> Taken here and not beside the checkpoint write, because what the caller is owed is
+    !> what Wannier90 ended with: every stage above rotates this buffer, and a copy made
+    !> earlier would be the gauge of a stage that has since been superseded.
+    ALLOCATE(mw_chk(this%num_wann, this%num_wann, SIZE(mmn_local, 3), SIZE(mmn_local, 4)), stat=ierr)
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating the overlap handback', &
+                                    calledby='run_w90')
+    mw_chk = mmn_local(:this%num_wann, :this%num_wann, :, :)
 
     call timestop('run_w90')
 #endif
