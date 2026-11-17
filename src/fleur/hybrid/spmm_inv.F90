@@ -226,6 +226,8 @@ contains
             call timestop("ibasm+1 -> dgemm")
 
             ! films: vacuum part, outside the MT+IR corner of mtir
+            ! the vacuum helpers read mat_in on the host
+            !$acc update self(mat_in) if(fi%input%film)
             call spmm_vac_r(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, mat_in, mat_out)
             call apply_mtir_vac_r(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, ibasm, indx1, mat_in, mat_out)
 

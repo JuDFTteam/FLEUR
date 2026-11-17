@@ -265,6 +265,8 @@ contains
          call timestop("ibasm+1->nbasm: zgemm")
 
          ! films: vacuum part, outside the MT+IR corner of mtir
+         ! mat_in was reordered on the device; the vacuum helpers read it on the host
+         !$acc update self(mat_in) if(fi%input%film)
          call spmm_vac_c(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, conjg_mtir, mat_in, mat_out)
          call apply_mtir_vac_c(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, ibasm, indx1, conjg_mtir, mat_in, mat_out)
 

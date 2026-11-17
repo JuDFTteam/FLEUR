@@ -162,6 +162,8 @@ CONTAINS
       IF (.NOT. ALLOCATED(mpdata%num_zbasfn_vac)) RETURN
 
       CALL timestart("spmm MT/IR-VAC")
+      ! host routine; mat_in must be current on the host (caller)
+      !$acc update self(mat_out) if_present
       CALL vac_mtir_pairs(fi, mpdata, hybdat, ikpt, vcols, vrows, npair)
       n_vec = SIZE(mat_in, 2)
 
@@ -185,6 +187,7 @@ CONTAINS
             END IF
          END DO
       END DO
+      !$acc update device(mat_out) if_present
       CALL timestop("spmm MT/IR-VAC")
    END SUBROUTINE apply_mtir_vac_c
 
@@ -205,6 +208,8 @@ CONTAINS
       IF (.NOT. ALLOCATED(mpdata%num_zbasfn_vac)) RETURN
 
       CALL timestart("spmm MT/IR-VAC")
+      ! host routine; mat_in must be current on the host (caller)
+      !$acc update self(mat_out) if_present
       CALL vac_mtir_pairs(fi, mpdata, hybdat, ikpt, vcols, vrows, npair)
       n_vec = SIZE(mat_in, 2)
 
@@ -219,6 +224,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      !$acc update device(mat_out) if_present
       CALL timestop("spmm MT/IR-VAC")
    END SUBROUTINE apply_mtir_vac_r
 
@@ -298,6 +304,8 @@ CONTAINS
       !$acc end data
 
       CALL timestop("spmm_vac_r")
+      ! the G=0 cross terms run on the host; mat_in must be current on the host (caller)
+      !$acc update self(mat_out) if_present
       block
          COMPLEX, ALLOCATABLE :: cin(:, :), cout(:, :)
          ALLOCATE (cin(SIZE(mat_in, 1), SIZE(mat_in, 2)), source=CMPLX(mat_in, 0.0))
@@ -305,6 +313,7 @@ CONTAINS
          CALL apply_vac_g0_cross(fi, mpdata, hybdat, ikpt, cin, cout)
          mat_out = mat_out + REAL(cout)
       end block
+      !$acc update device(mat_out) if_present
    END SUBROUTINE spmm_vac_r
 
    SUBROUTINE spmm_vac_c(fi, mpdata, hybdat, coul, ikpt, conjg_mtir, mat_in, mat_out)
@@ -387,7 +396,10 @@ CONTAINS
       !$acc end data
 
       CALL timestop("spmm_vac_c")
+      ! the G=0 cross terms run on the host; mat_in must be current on the host (caller)
+      !$acc update self(mat_out) if_present
       CALL apply_vac_g0_cross(fi, mpdata, hybdat, ikpt, mat_in, mat_out)
+      !$acc update device(mat_out) if_present
    END SUBROUTINE spmm_vac_c
 
 END MODULE m_spmm_vac
