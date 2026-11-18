@@ -74,7 +74,6 @@ def test_FeBccNocoDM(default_fleur_test, grep_number):
 @pytest.mark.soc
 @pytest.mark.spinspiral
 @pytest.mark.forcetheorem
-@pytest.mark.nogpu
 def test_FePt_film_DMI(default_fleur_test):
     """
     DMI force theorem for an Fe/Pt film with q along x. H_so is odd in q and in the rotation axis and

@@ -31,7 +31,8 @@ MODULE m_abcof
    use m_types_usdus
    implicit none
    PRIVATE
-   PUBLIC :: abcof, abcof_new
+   PUBLIC :: abcof, abcof_new, l_abcof_debug
+   LOGICAL :: l_abcof_debug = .FALSE. ! DMI-DEBUG
 CONTAINS
 
   ! The subroutine abcof calculates the A, B, and C coefficients for the
@@ -98,6 +99,8 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
     COMPLEX, ALLOCATABLE :: abTemp(:,:)
     COMPLEX, ALLOCATABLE :: helpMat_force(:,:)
+    COMPLEX, ALLOCATABLE :: dbg_w(:,:), dbg_t(:,:) ! DMI-DEBUG
+    INTEGER :: dbg_ks ! DMI-DEBUG
 
 
     CALL timestart("abcof")
@@ -277,7 +280,29 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              CALL zgemm_acc("T","T",ne,nab,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$acc update self(abTemp)
-             !stop "DEBUG"
+             IF (l_abcof_debug) THEN ! DMI-DEBUG
+                !$acc update self(work_c,abCoeffs)
+                ALLOCATE(dbg_w(nvmax,ne),dbg_t(ne,nab))
+                IF (noco%l_ss) THEN
+                   dbg_ks = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
+                   dbg_w = ccchi(iintsp,jspin)*zMat%data_c(dbg_ks+1:dbg_ks+nvmax,:ne)
+                ELSE IF (noco%l_noco) THEN
+                   dbg_ks = lapw%nv(1)+atoms%nlotot
+                   dbg_w = ccchi(1,jspin)*zMat%data_c(:nvmax,:ne) + ccchi(2,jspin)*zMat%data_c(dbg_ks+1:dbg_ks+nvmax,:ne)
+                ELSE IF (zmat%l_real) THEN
+                   dbg_w = zMat%data_r(:nvmax,:ne)
+                ELSE
+                   dbg_w = zMat%data_c(:nvmax,:ne)
+                END IF
+                dbg_t = MATMUL(TRANSPOSE(dbg_w), TRANSPOSE(abCoeffs(:nab,:nvmax)))
+                WRITE(*,'(a,6i6)') 'DMI-DEBUG abcof iAtom,iintsp,jspin,ne,nvmax,nab:', iAtom, iintsp, jspin, ne, nvmax, nab
+                WRITE(*,'(a,i8,i8,2i6)') 'DMI-DEBUG   shapes zMat, abCoeffs:', SIZE(zMat%data_c,1), SIZE(zMat%data_c,2), SIZE(abCoeffs,1), SIZE(abCoeffs,2)
+                WRITE(*,'(a,4es12.4)') 'DMI-DEBUG   max|work_c|,|abCoeffs|,|abTemp|,|zMat|:', MAXVAL(ABS(work_c(:nvmax,:ne))), &
+                   MAXVAL(ABS(abCoeffs(:nab,:nvmax))), MAXVAL(ABS(abTemp(:ne,0:nab-1))), MAXVAL(ABS(zMat%data_c))
+                WRITE(*,'(a,2es12.4)') 'DMI-DEBUG   diff work_c vs host, abTemp vs host gemm:', MAXVAL(ABS(work_c(:nvmax,:ne)-dbg_w)), &
+                   MAXVAL(ABS(abTemp(:ne,0:nab-1)-dbg_t))
+                DEALLOCATE(dbg_w,dbg_t)
+             END IF
              ! A for all lm, B only for LAPW channels (none for APW)
              boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
              !$OMP PARALLEL DO default(shared) private(i,l,m,lm)
@@ -415,6 +440,8 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
     END DO ! loop over atoms
     !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
     !$acc exit data delete(fjgj)
+    IF (l_abcof_debug) WRITE(*,'(a,3es12.4)') 'DMI-DEBUG abcof end max|acof|,|bcof|,|ccof|:', & ! DMI-DEBUG
+       MAXVAL(ABS(acof)), MAXVAL(ABS(bcof)), MAXVAL(ABS(ccof))
     DEALLOCATE(work_c)
     IF(l_force) THEN
        DEALLOCATE(helpMat_force)

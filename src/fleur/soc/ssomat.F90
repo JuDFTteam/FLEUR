@@ -127,11 +127,14 @@ CONTAINS
        IF (ALLOCATED(zmat%data_c)) DEALLOCATE(zmat%data_c)
        ALLOCATE(zmat%data_c(zMat%matsize1,zmat%matsize2))
        CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,0,nk,1),zmat=zmat)
+       l_abcof_debug = .TRUE. ! DMI-DEBUG
+       WRITE(*,'(a,i4,a,i4,a,2i6)') 'DMI-DEBUG ssomat rank',fmpi%irank,' nk',nk,' ne,nv:',ne,lapw%nv(1)
        DO jsloc= 1,2
           eig_shift(:,0,nk,1)=0.0 !not needed
           CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc , &
                acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
        ENDDO
+       l_abcof_debug = .FALSE. ! DMI-DEBUG
 
        ! rotate abcof into global spin coordinate frame
        nat= 0
