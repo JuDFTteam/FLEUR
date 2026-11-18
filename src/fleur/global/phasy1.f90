@@ -81,40 +81,43 @@ CONTAINS
 
    END SUBROUTINE phasy1
 
-   SUBROUTINE phasy2(atoms, stars, sym, cell, k, iType, iAtom, pylm2)
-      ! phasy2 has i*RG in the sum of phasy1 and produces a vector
-      ! routine built to be called with a specific atom (type)
+   SUBROUTINE phasy2(atoms, stars, sym, cell, k, iType, pylm2)
+      ! Expansion of the gradient of a single plane wave,
+      !    i*G exp(i*G.r) = 4pi sum_lm i^l j_l(Gr) Y*_lm(G) Y_lm(r) * i*G,
+      ! around the centre of atom type iType, for every member G=kr(:,iOp) of
+      ! star k. In contrast to phasy1 this is not a symmetrized star function:
+      ! there is no star phase and no position phase factor, so it can be
+      ! combined with functions that are not symmetric, like the core tail of
+      ! a single atom. The radial part j_l(Gr) is supplied by the caller.
 
 !     .. Scalar Arguments ..
       TYPE(t_atoms),INTENT(IN)::atoms
       TYPE(t_stars),INTENT(IN)::stars
       TYPE(t_sym),INTENT(IN)  ::sym
       TYPE(t_cell),INTENT(IN) ::cell
-      INTEGER, INTENT (IN) :: k, iType, iAtom
+      INTEGER, INTENT (IN) :: k, iType
 
 !     .. Array Arguments ..
       COMPLEX, INTENT (OUT):: pylm2(:,:,:)
 
 !     .. Local Scalars ..
       COMPLEX sf,csf
-      REAL x
       INTEGER iOp,l,m,lm,ll1,dir
 
 !     .. Local Arrays ..
       COMPLEX ciall(0:atoms%lmaxd)
-      COMPLEX phas(sym%nop)
       REAL rg(3)
       INTEGER kr(3,sym%nop)
       COMPLEX, ALLOCATABLE :: ylm(:)
 
-      ciall(0) = fpi_const/sym%nop
+      ciall(0) = fpi_const
       DO l = 1, atoms%lmax(iType)
          ciall(l) = ciall(0)*ImagUnit**l
       ENDDO
 
       pylm2= CMPLX(0.0,0.0)
 
-      CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr,phas)
+      CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr)
 
       ALLOCATE (ylm( (atoms%lmaxd+1)**2))
       DO iOp = 1,sym%nop
@@ -122,15 +125,14 @@ CONTAINS
          rg(:)=matmul(kr(:,iOp),cell%bmat)
          CALL ylm4(atoms%lmaxd, rg(:), ylm(:))!keep
          ylm = conjg(ylm)
-         x = tpi_const* dot_product(real(kr(:,iOp)),atoms%taual(:,iAtom))
          DO dir = 1,3
-            sf = cmplx(cos(x),sin(x))*phas(iOp)*ImagUnit*rg(dir)
+            sf = ImagUnit*rg(dir)
             DO l = 0,atoms%lmax(iType)
                ll1 = l*(l+1) + 1
                csf = ciall(l)*sf
                DO m = -l,l
                   lm = ll1 + m
-                  pylm2(lm,dir,iOp) = pylm2(lm,dir,iOp) + csf*ylm(lm) !shouldn't iOp be iType in the first 2 terms?
+                  pylm2(lm,dir,iOp) = pylm2(lm,dir,iOp) + csf*ylm(lm)
                ENDDO
             ENDDO
          END DO ! direction
