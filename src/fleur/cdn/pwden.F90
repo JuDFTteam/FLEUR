@@ -124,7 +124,8 @@ CONTAINS
       ! per-thread objects of the loop over states
       TYPE(t_fft) :: fftBack, fftForw
       INTEGER :: nthr, fftBackend, glen
-      LOGICAL :: l_obj, l_omp, l_gamma, l_stateCharge
+      LOGICAL :: l_obj, l_omp, l_gamma, l_stateCharge, l_accgrid
+      REAL    :: wtfnu
       REAL, ALLOCATABLE    :: accR(:,:), ekR(:)
       COMPLEX, ALLOCATABLE :: accC(:,:), cwkS(:), starCharges(:), tempState(:)
       COMPLEX, ALLOCATABLE :: pwintStars(:), pwintAllStars(:)
@@ -348,6 +349,19 @@ CONTAINS
          CALL fftForw%init(state%dimensions, .TRUE., fieldSphereIndices)
       END IF
 
+      ! GPU: the state grid and the density accumulator stay on the device for the
+      ! whole band loop if no host work on the state grid is needed
+      l_accgrid = .FALSE.
+#ifdef _OPENACC
+      l_accgrid = .NOT.noco%l_noco .AND. .NOT.l_dfpt .AND. .NOT.input%l_f .AND. &
+                  .NOT.(l_stateCharge .AND. noco%l_soc .AND. input%jspins == 2)
+#endif
+      IF (l_accgrid) THEN
+         CALL fftBack%init(state%dimensions, .FALSE., l_gpu=.TRUE.)
+         !$acc enter data copyin(zMat, zMat%data_r, zMat%data_c, lapw, lapw%nv, lapw%gvec, state, accR) &
+         !$acc            create(state%grid)
+      END IF
+
       ! LOOP OVER OCCUPIED STATES
 #ifndef _OPENACC
       !$OMP DO SCHEDULE(dynamic)
@@ -460,6 +474,15 @@ CONTAINS
                ENDDO
             ENDIF
 
+         ELSE IF (l_accgrid) THEN
+            CALL state%put_state_on_external_grid(lapw, jSpin, zMat, nu, state%grid, l_gpu=.TRUE.)
+            CALL fftBack%exec(state%grid)
+            wtfnu = wtf(nu)
+            !$acc parallel loop present(accR, state%grid)
+            DO ir = 0, glen - 1
+               accR(ir,1) = accR(ir,1) + wtfnu * (REAL(state%grid(ir))**2 + AIMAG(state%grid(ir))**2)
+            END DO
+            !$acc end parallel loop
          ELSE
             CALL state%putStateOnGrid(lapw, jSpin, zMat, nu)
             IF (l_dfpt) THEN
@@ -548,6 +571,11 @@ CONTAINS
 #ifndef _OPENACC
       !$OMP END DO
 #endif
+      IF (l_accgrid) THEN
+         !$acc exit data copyout(accR) delete(state%grid, state, lapw%gvec, lapw%nv, lapw) &
+         !$acc           delete(zMat%data_r, zMat%data_c, zMat)
+         CALL fftBack%free()
+      END IF
 
       ! Sum up the densities of all threads
       !$OMP CRITICAL (pwden_sum)
