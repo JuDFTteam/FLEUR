@@ -110,7 +110,16 @@ CONTAINS
       IF (.NOT. ld(1)%fi%noco%l_noco .AND. ANY(ld(:)%fi%noco%l_soc)) &
          CALL juDFT_error("SOC needs l_noco=T in gfleur", &
                           hint="the second-variation SOC of collinear inputs is not available", calledby="gf_init")
-      embinp%l_nogno = (.NOT. embinp%l_fullgreen .AND. (embinp%l_dos .OR. embinp%l_charge))
+      !Without the spectral representation the full G is the only way to get DOS/charge
+      IF (.NOT. embinp%l_spectral .AND. .NOT. embinp%l_fullgreen .AND. (embinp%l_dos .OR. embinp%l_charge)) THEN
+         embinp%l_fullgreen = .TRUE.
+         IF (gmpi%pe0) THEN
+            WRITE (*, *) "NOTE: spectral=F with dos/charge, fullgreen=T is used"
+            WRITE (oUnit, *) "NOTE: spectral=F with dos/charge, fullgreen=T is used"
+         END IF
+      END IF
+      !nogno: G is kept in the eigenbasis of the spectral representation
+      embinp%l_nogno = (embinp%l_spectral .AND. .NOT. embinp%l_fullgreen .AND. (embinp%l_dos .OR. embinp%l_charge))
 
       !the 2D BZ is common to all layers - use the set of the first one
       gkpts = ld(1)%fi%kpts
