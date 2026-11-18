@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_matmul_dgemm
+    use m_juDFT
 #ifdef _OPENACC
     use openacc    
 #endif
@@ -129,6 +130,8 @@ module m_matmul_dgemm
 #ifdef CPP_MAGMA
             sel=magmablas_select; return
 #endif
+            ! host BLAS on device-resident arrays would use stale host data
+            call judft_error("blas_matmul: arrays are on the device, but no device BLAS is available")
         ENDIF
 #endif        
         sel=blas_select
@@ -147,6 +150,8 @@ module m_matmul_dgemm
 #ifdef CPP_MAGMA
         sel=magmablas_select
 #endif
+        ! host BLAS on device-resident arrays would use stale host data
+        if (sel==blas_select) call judft_error("blas_matmul: arrays are on the device, but no device BLAS is available")
     ENDIF
 #endif    
 end function                

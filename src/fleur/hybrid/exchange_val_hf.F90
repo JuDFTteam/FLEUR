@@ -87,7 +87,7 @@ MODULE m_exchange_valence_hf
    use iso_c_binding
    implicit none
    private
-   public :: exchange_valence_hf, calc_divergence, recombine_parts, alloc_dev_cpy, zero_order, ibs_corr
+   public :: exchange_valence_hf, calc_divergence, recombine_parts, zero_order, ibs_corr
 
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
@@ -220,7 +220,6 @@ CONTAINS
                ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
                call timestart("alloc & copy")
                call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik,jsp), mat_name="cprod_vv")
-               call alloc_dev_cpy(cprod_vv, CPP_cprod_r, CPP_cprod_c)
                call timestop("alloc & copy")
                IF (mat_ex%l_real) THEN
                   CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
@@ -293,11 +292,6 @@ CONTAINS
                call timestart("apply prefactors carr1_v")
                !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
                   if (mat_ex%l_real) then
-#ifdef _OPENACC
-                     call timestart("cpy cprod")
-                     call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
-                     call timestop("cpy cprod")
-#endif
                      !$acc enter data copyin(CPP_cprod_r)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
@@ -313,11 +307,6 @@ CONTAINS
                      !$acc end parallel loop
 
                   else
-#ifdef _OPENACC
-                     call timestart("cpy cprod")
-                     call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
-                     call timestop("cpy cprod")
-#endif
                      !$acc enter data copyin(CPP_cprod_c)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
@@ -643,27 +632,5 @@ CONTAINS
          enddo
       enddo
    end subroutine recombine_parts
-
-   subroutine alloc_dev_cpy(mat, arr_r, arr_c)
-      implicit none 
-      type(t_mat), intent(in)             :: mat
-
-      real, allocatable, intent(inout)    :: arr_r(:,:)
-      complex, allocatable, intent(inout) :: arr_c(:,:) 
-      integer :: ierr
-
-#ifdef _OPENACC
-      if(allocated(arr_r)) deallocate(arr_r)
-      if(allocated(arr_c)) deallocate(arr_c)
-
-      if(mat%l_real) then 
-         allocate(arr_r(mat%matsize1, mat%matsize2), stat=ierr)
-      else
-         allocate(arr_c(mat%matsize1, mat%matsize2), stat=ierr)
-      endif 
-
-      if(ierr /= 0) call judft_error("can't alloc. prob. no mem.")
-#endif
-   end subroutine alloc_dev_cpy
 
 END MODULE m_exchange_valence_hf

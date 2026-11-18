@@ -55,7 +55,7 @@ CONTAINS
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq ! Additional set of lapw, in case
       TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq ! the left and right ones differ.
 
-      INTEGER :: nn, na, ab_size, l, ll, size_ab_select
+      INTEGER :: nn, na, ab_size, l, ll, size_ab_select, nv_select
       INTEGER :: size_data_c, size_ab, size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
       INTEGER :: ikGPr, ikG
       REAL    :: rchi
@@ -196,9 +196,10 @@ CONTAINS
 #endif
             IF (.NOT.l_herk) THEN
             ! Of these ab1 coeffs only a part is needed in case of MPI parallelism
+            nv_select = lapw%nv(igSpin)
             !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
             IF (fmpi%n_size>1) THEN
-               ab_select(:, :) = ab1(fmpi%n_rank+1:lapw%nv(igSpin):fmpi%n_size, :)
+               ab_select(:, :) = ab1(fmpi%n_rank+1:nv_select:fmpi%n_size, :)
             ELSE
                ab_select(:, :) = ab1(:, :) !All of ab1 needed
             END IF

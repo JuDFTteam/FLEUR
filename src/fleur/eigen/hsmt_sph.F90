@@ -181,7 +181,6 @@ CONTAINS
                                                     & + apw_lo2*fjgjPr%gj(ikGPr,l,isp,igSpinPr) )
                END IF ! useapw
             END DO ! l
-            !$end acc
             ! Set up phase factors
             cph_re = 0.0
             cph_im = 0.0

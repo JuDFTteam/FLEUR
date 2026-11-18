@@ -373,7 +373,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          !$acc end kernels
 
          !$acc parallel loop default(none) private(xGrid, yGrid, zGrid) &
-         !$acc present(lapw, lapw%nv, lapw%gvec, this, this%dimensions, ext_grid, state, iSpin) 
+         !$acc present(lapw, lapw%nv, lapw%gvec, this, this%dimensions, ext_grid, state) copyin(iSpin)
          DO iLAPW = 1, lapw%nv(iSpin)
             xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
             yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))

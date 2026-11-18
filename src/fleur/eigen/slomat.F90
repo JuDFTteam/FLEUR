@@ -207,6 +207,7 @@ CONTAINS
                         END DO
                      END IF
                   END DO
+                  !$acc end loop
                   ! Calculate the overlap matrix elements of one local
                   ! orbital with itself
                   lop=lo
@@ -229,7 +230,6 @@ CONTAINS
                   !$acc end loop
                END IF ! mod(locol-1,n_size) = nrank
             END DO
-            !$acc end loop
          END DO
          !$acc end loop
          !$acc end kernels
