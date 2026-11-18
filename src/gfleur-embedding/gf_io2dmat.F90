@@ -1615,7 +1615,9 @@
       TYPE(t_kpts),INTENT(IN)    :: kpts
       INTEGER,INTENT(IN)         :: jspins
       LOGICAL,INTENT(IN)         :: l_noco
-      INTEGER :: n,l,irank,nk,nl,rank_index,e,cmplx_size
+      INTEGER :: n,l,irank,nk,nl,rank_index,e,cmplx_size,old_errhandler
+      LOGICAL :: win_ok(2),win_ok_all(2),size_ok
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: size_tmat,size_sigma
       INTEGER :: k_list(kpts%nkpt),l_list(layer%num_layers)
       INTEGER :: stat(MPI_STATUS_SIZE)
       TYPE(c_ptr)::ptr,ptr1
@@ -1675,19 +1677,26 @@
        !Determine the amount of local datasets
        n=count(mod(mem%mem_map,mpi_d%fmpi%isize)==mpi_d%fmpi%irank)
        call MPI_Type_size(MPI_DOUBLE_COMPLEX, cmplx_size, e)
-       mem%buffersize_tmat=2*mem%matsize*mem%matsize*mem%spins*gf_noEN()*2*n
-       mem%buffersize_sigma=mem%matsize*mem%matsize*mem%spins*gf_noEN()*2*n
+       !Sizes are computed in 64 bit: buffer sizes and displacement units (in bytes) are
+       !default integers and must not overflow
+       size_tmat=2_MPI_ADDRESS_KIND*mem%matsize*mem%matsize*mem%spins*gf_noEN()*2*n
+       size_sigma=INT(mem%matsize,MPI_ADDRESS_KIND)*mem%matsize*mem%spins*gf_noEN()*2*n
+       size_ok=MAX(size_tmat,size_sigma,4_MPI_ADDRESS_KIND*mem%matsize*mem%matsize*cmplx_size)<=HUGE(0)
+       !all PEs must agree, the windows are created collectively
+       CALL MPI_ALLREDUCE(MPI_IN_PLACE,size_ok,1,MPI_LOGICAL,MPI_LAND,mpi_d%fmpi%mpi_comm,e)
+       IF (.NOT.size_ok) THEN
+          IF (mpi_d%fmpi%irank==0) WRITE(0,*) "MPI windows too large, embedding potential and t-matrix are stored in files"
+          mem%in_mem=.false.
+          RETURN
+       END IF
+       mem%buffersize_tmat=INT(size_tmat)
+       mem%buffersize_sigma=INT(size_sigma)
        mem%stride_sigma=mem%matsize**2
        mem%stride_tmat=4*mem%matsize**2
-       !check if we have an overflow in memory
-       IF (mem%buffersize_tmat*cmplx_size<0.or.mem%buffersize_sigma*cmplx_size<0) THEN
-           mem%in_mem=.false.
-           return
-       ENDIF
        !write Info
-       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%fmpi%irank," created a window of ",Mem%buffersize_sigma*cmplx_size/1048576.,"Mbyte for sigma ->",&
+       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%fmpi%irank," created a window of ",REAL(size_sigma)*cmplx_size/1048576.,"Mbyte for sigma ->",&
                            mem%buffersize_sigma/mem%stride_sigma," Slots of ",mem%stride_sigma*cmplx_size
-       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%fmpi%irank," created a window of ",mem%buffersize_tmat/1048576.,"Mbyte for tmat ->",&
+       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%fmpi%irank," created a window of ",REAL(size_tmat)*cmplx_size/1048576.,"Mbyte for tmat ->",&
                            mem%buffersize_tmat/mem%stride_tmat," Slots of ",mem%stride_tmat*cmplx_size
 
 
@@ -1700,10 +1709,31 @@
        ALLOCATE(mem%buffer_tmat(mem%buffersize_tmat),stat=e)
        IF (e.ne.0) CALL juDFT_error("Could not allocated MPI-Data (tmat) in gf_io2dmat")
        !create windows
-       CALL MPI_WIN_CREATE(mem%buffer_sigma, int(mem%buffersize_sigma*cmplx_size,MPI_ADDRESS_KIND),mem%stride_sigma*cmplx_Size,  &
+       !Not every MPI provides one-sided communication for every setup, e.g. OpenMPI
+       !with a single process has no osc component for MPI_WIN_CREATE. Errors are
+       !therefore returned instead of aborting, and the caller falls back to files.
+       CALL MPI_COMM_GET_ERRHANDLER(mpi_d%fmpi%mpi_comm,old_errhandler,e)
+       CALL MPI_COMM_SET_ERRHANDLER(mpi_d%fmpi%mpi_comm,MPI_ERRORS_RETURN,e)
+       CALL MPI_WIN_CREATE(mem%buffer_sigma, size_sigma*cmplx_size,mem%stride_sigma*cmplx_size,  &
                Mpi_INFO_NULL, mpi_d%fmpi%mpi_comm, mem%mem_handle_sigma, e)
-       CALL MPI_WIN_CREATE(mem%buffer_tmat, int(mem%buffersize_tmat*cmplx_size,MPI_ADDRESS_KIND),mem%stride_tmat*cmplx_size,  &
+       win_ok(1)=(e==MPI_SUCCESS)
+       CALL MPI_WIN_CREATE(mem%buffer_tmat, size_tmat*cmplx_size,mem%stride_tmat*cmplx_size,  &
                MPI_INFO_NULL, mpi_d%fmpi%mpi_comm, mem%mem_handle_tmat, e)
+       win_ok(2)=(e==MPI_SUCCESS)
+       CALL MPI_COMM_SET_ERRHANDLER(mpi_d%fmpi%mpi_comm,old_errhandler,e)
+       !all PEs must agree, the windows are used collectively
+       CALL MPI_ALLREDUCE(win_ok,win_ok_all,2,MPI_LOGICAL,MPI_LAND,mpi_d%fmpi%mpi_comm,e)
+       IF (.NOT.ALL(win_ok_all)) THEN
+          !Free windows that exist on all PEs (collective). A window that exists on some
+          !PEs only cannot be freed, its buffer is kept on those PEs.
+          IF (win_ok_all(1)) CALL MPI_WIN_FREE(mem%mem_handle_sigma,e)
+          IF (win_ok_all(2)) CALL MPI_WIN_FREE(mem%mem_handle_tmat,e)
+          IF (win_ok_all(1).OR..NOT.win_ok(1)) DEALLOCATE(mem%buffer_sigma)
+          IF (win_ok_all(2).OR..NOT.win_ok(2)) DEALLOCATE(mem%buffer_tmat)
+          IF (mpi_d%fmpi%irank==0) WRITE(0,*) "MPI_WIN_CREATE failed, embedding potential and t-matrix are stored in files"
+          mem%in_mem=.false.
+          RETURN
+       END IF
 
 
        CALL  gf_io2dmat_memorysync()
