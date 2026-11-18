@@ -131,7 +131,8 @@ CONTAINS
       !TYPE(t_sym),      INTENT(IN)    :: sym
 
       COMPLEX :: aa, ab, av, ba, bb, bv, t1, factorx, factory, c_1, tempCmplx
-      REAL    :: arg, const, eps, ev, evacp, phs, phsp, qout, scale, sign, &
+      COMPLEX :: phs, phsp ! 2D star phases are complex for general nonsymmorphic operations
+      REAL    :: arg, const, eps, ev, evacp, qout, scale, sign, &
                  uei, uej, ui, uj, wronk, zks, RESULT(1), ui2, uei2, &
                  k_diff,k_d1,k_d2
       INTEGER :: ii, i1, i2, i3, ig3, ig3p, ik, ind2, ind2p, ivac, j, jj, &
