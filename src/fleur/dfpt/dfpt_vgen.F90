@@ -179,9 +179,11 @@ CONTAINS
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atomsefield,.TRUE.,workden1,vCoul, sternheimerJob=sternheimerJob,&
                      & dfpt=dfpt,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
-            dfptvTot%pw = dfptvTot%pw + vCoul%pw
-            dfptvTot%mt = dfptvTot%mt + vCoul%mt
-            dfptvTot%mtIm = dfptvTot%mtIm + vCoul%mtIm
+            DO ispin = 1, input%jspins
+               dfptvTot%pw(:,ispin) = dfptvTot%pw(:,ispin) + vCoul%pw(:,1)
+               dfptvTot%mt(:,:,:,ispin) = dfptvTot%mt(:,:,:,ispin) + vCoul%mt(:,:,:,1)
+               dfptvTot%mtIm(:,:,:,ispin) = dfptvTot%mtIm(:,:,:,ispin) + vCoul%mtIm(:,:,:,1)
+            END DO
          END IF
       else if (sternheimerJob%l_bfield) then
          atomsefield = atoms
@@ -192,9 +194,11 @@ CONTAINS
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atomsefield,.TRUE.,workden1,vCoul,sternheimerJob=sternheimerJob,&
                      & dfpt=dfpt,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
-            dfptvTot%pw = dfptvTot%pw + vCoul%pw
-            dfptvTot%mt = dfptvTot%mt + vCoul%mt
-            dfptvTot%mtIm = dfptvTot%mtIm + vCoul%mtIm
+            DO ispin = 1, input%jspins
+               dfptvTot%pw(:,ispin) = dfptvTot%pw(:,ispin) + vCoul%pw(:,1)
+               dfptvTot%mt(:,:,:,ispin) = dfptvTot%mt(:,:,:,ispin) + vCoul%mt(:,:,:,1)
+               dfptvTot%mtIm(:,:,:,ispin) = dfptvTot%mtIm(:,:,:,ispin) + vCoul%mtIm(:,:,:,1)
+            END DO
          end if 
 
       ELSE !standard phonon case

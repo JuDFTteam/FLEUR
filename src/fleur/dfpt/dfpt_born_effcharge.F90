@@ -268,7 +268,7 @@ contains
         !surface integral MT
         if (iQ .eq. iDir_den) then
             int_mt_r =0.0
-            call intgr3(rho%mt(:,0,iDType,1),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_r)
+            call intgr3(rho_mt(:,0,iDType),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_r)
             !call intgr3(rho%mt(:,0,iDType,1)-rho_core%mt(:,0,iDType,1),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_r)
 
             !print*,"offset_out",offset_out
