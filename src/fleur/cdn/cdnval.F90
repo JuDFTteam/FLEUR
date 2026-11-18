@@ -303,6 +303,9 @@ CONTAINS
 
          call timestop("init k-loop")
          IF (noccbd .LE. 0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
+         ! Upload the eigenvectors once per k-point; the copyin clauses of the
+         ! coefficient kernels then find them present.
+         !$acc enter data copyin(zMat, zMat%data_r, zMat%data_c)
          IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
             IF (greensfImagPart%l_calc) THEN
                CALL eigVecCoeffs%init(input, atoms, jsp, noccbd, gfinp%l_mperp)
@@ -445,6 +448,7 @@ CONTAINS
                END IF
             END IF
          END IF
+         !$acc exit data delete(zMat%data_r, zMat%data_c, zMat)
       END DO ! end of k-point loop
 
 #ifdef CPP_MPI
