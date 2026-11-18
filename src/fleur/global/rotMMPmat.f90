@@ -51,18 +51,20 @@ MODULE m_rotMMPmat
 
 
       IF(spin_rotation_arg.AND.PRESENT(su)) THEN
+         !Read from mmpmat, not mmpmatOut: d(1,2) needs element (mp,m) of the third block,
+         !which an in-place update has already rotated when mp < m
          DO m = -lmaxU_const, lmaxU_const
             DO mp = -lmaxU_const, lmaxU_const
 
                d = cmplx_0
-               d(1,1) = mmpmatOut(m,mp,1)
-               d(2,2) = mmpmatOut(m,mp,2)
+               d(1,1) = mmpmat(m,mp,1)
+               d(2,2) = mmpmat(m,mp,2)
                IF(SIZE(mmpmat,3)>=3) THEN
-                  d(2,1) = mmpmatOut(m,mp,3)
+                  d(2,1) = mmpmat(m,mp,3)
                   IF(SIZE(mmpmat,3)==3) THEN
-                     d(1,2) = conjg(mmpmatOut(mp,m,3))
+                     d(1,2) = conjg(mmpmat(mp,m,3))
                   ELSE
-                     d(1,2) = mmpmatOut(m,mp,4)
+                     d(1,2) = mmpmat(m,mp,4)
                   ENDIF
                ENDIF
 
@@ -79,7 +81,7 @@ MODULE m_rotMMPmat
                IF(SIZE(mmpmat,3)>=3) THEN
                   mmpmatOut(m,mp,3) = d(2,1)
                   IF(SIZE(mmpmat,3)==4) THEN
-                     mmpmatOut(mp,m,4) = d(1,2)
+                     mmpmatOut(m,mp,4) = d(1,2)
                   ENDIF
                ENDIF
 

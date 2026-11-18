@@ -35,3 +35,32 @@ if (FLEUR_USE_GPU)
 
   )
 endif()
+
+#Regression test for the spin rotation in rotMMPmat_dwgn (read-after-write in the in-place loop).
+#Not built by default; testing/tests/invariants/test_rotmmpmat_invariants.py builds and runs it.
+set(rotmmpmat_spin_test_files
+${CMAKE_SOURCE_DIR}/src/fleur/global/rotMMPmat.f90
+${CMAKE_SOURCE_DIR}/src/fleur/types/types_nococonv.F90
+${CMAKE_SOURCE_DIR}/src/fleur/types/types_potden.F90
+${CMAKE_SOURCE_DIR}/src/fleur/types/types_sphhar.f90
+${CMAKE_SOURCE_DIR}/src/fleur/types/types_stars.f90
+${CMAKE_SOURCE_DIR}/src/fleur/init/boxdim.f90
+${CMAKE_SOURCE_DIR}/src/fleur/init/spgrot.f90
+${CMAKE_SOURCE_DIR}/src/fleur/init/compile_descr.F90
+${CMAKE_SOURCE_DIR}/src/fleur/global/sort.f90
+${CMAKE_SOURCE_DIR}/src/fleur/global/utility.F90
+${CMAKE_SOURCE_DIR}/src/fleur/math/intgr.F90
+${CMAKE_SOURCE_DIR}/src/fleur/math/pol_angle.f90
+${CMAKE_SOURCE_DIR}/src/fleur/io/xmlOutput.F90
+${CMAKE_SOURCE_DIR}/testing/small-testcodes/rotmmpmat_spin_test.F90
+)
+add_executable(rotmmpmat_spin_test EXCLUDE_FROM_ALL ${rotmmpmat_spin_test_files})
+add_dependencies(rotmmpmat_spin_test buildinfo)
+target_link_libraries(rotmmpmat_spin_test fleurinput juDFT ${FLEUR_LIBRARIES} ${FLEUR_LINK_LIBRARIES})
+target_compile_definitions(rotmmpmat_spin_test PUBLIC ${FLEUR_DEFINITIONS} ${FLEUR_PARALLEL_DEFINITIONS})
+set_target_properties(rotmmpmat_spin_test PROPERTIES
+   Fortran_MODULE_DIRECTORY modules/rotmmpmat_spin_test
+   COMPILE_OPTIONS -Imodules/rotmmpmat_spin_test
+   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools")
+target_compile_options(rotmmpmat_spin_test PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
+target_compile_options(rotmmpmat_spin_test PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_COMPILE_OPTIONS}>)
