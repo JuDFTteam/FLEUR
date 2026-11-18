@@ -288,7 +288,7 @@
             <extrapolationTo0K value="-55340.3366424693"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="23.6192115442"/>
+            <chargeDensity spin="1" distance="23.6214452661"/>
          </densityConvergence>
       </iteration>
    </scfLoop>

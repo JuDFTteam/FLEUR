@@ -323,10 +323,10 @@
             <extrapolationTo0K value="-19707.2739261111"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="7.6170196730"/>
-            <chargeDensity spin="2" distance="14.1057615502"/>
-            <overallChargeDensity distance="17.0046759033"/>
-            <spinDensity distance="14.9941319405"/>
+            <chargeDensity spin="1" distance="7.6178022240"/>
+            <chargeDensity spin="2" distance="14.1062007919"/>
+            <overallChargeDensity distance="17.0061223748"/>
+            <spinDensity distance="14.9941130042"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    2" overallNumber="    2">
@@ -525,10 +525,10 @@
             <extrapolationTo0K value="-19707.2589688140"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="6.9558489366"/>
-            <chargeDensity spin="2" distance="7.5570836939"/>
-            <overallChargeDensity distance="10.5789317378"/>
-            <spinDensity distance="9.9535370627"/>
+            <chargeDensity spin="1" distance="6.9566171953"/>
+            <chargeDensity spin="2" distance="7.5585506636"/>
+            <overallChargeDensity distance="10.5819240089"/>
+            <spinDensity distance="9.9536579276"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
