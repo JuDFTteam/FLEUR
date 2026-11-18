@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_fleurinput_read_xml
   USE m_types_xml
+  USE m_constants, ONLY: t_constants
   USE m_types_atoms
   USE m_types_banddos
   USE m_types_cell
@@ -62,6 +63,7 @@ CONTAINS
     LOGICAL,INTENT(INOUT),OPTIONAL :: old_version
 
     TYPE(t_xml)::xml
+    TYPE(t_constants)::constants
 
     INTEGER :: numNodes, iNode
     CHARACTER(LEN=40) :: listName, altPurpose
@@ -72,6 +74,8 @@ CONTAINS
     call xml%init(filename_add,old_version)
 
     !Now read from inp.xml for all datatypes
+    !warp_factor first: it enters c_light()
+    call constants%read_xml(xml)
     if (present(cell)) call cell%read_xml(xml)
     if (present(sym)) call sym%read_xml(xml)
     if (present(atoms)) call atoms%read_xml(xml)

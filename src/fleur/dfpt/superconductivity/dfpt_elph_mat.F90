@@ -486,8 +486,8 @@ CONTAINS
             call interpolate_dynmat(fi%atoms,sym_q,fi%cell,qpts_q,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
             call timestop("Dynmat Interpolation")
             call timestart("Dynmat diagonalization")
-            call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
-                                   'band', .false., l_writeOutput=.false.)
+            call hermitize_scale_dynmat(fi%atoms, dynMat_interpol(:,:,1))
+            call DiagonalizeDynMat(fi%atoms, qvec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, .false.)
             call timestop("Dynmat diagonalization")
 
             nSurv = 0
@@ -627,14 +627,15 @@ CONTAINS
 
         integer :: iQc
         real,    allocatable :: wTmp(:)
-        complex, allocatable :: aTmp(:,:)
+        complex, allocatable :: aTmp(:,:), dynTmp(:,:)
 
         omegaMax = 0.0
         if (fi%dfpt%i_integration /= 1) return
 
         do iQc = 1, qpts_q%nkpt
-            call DiagonalizeDynMat(fi%atoms, qpts_q%bk(:,iQc), .false., dynMats(:,:,iQc), &
-                                   wTmp, aTmp, iQc, .true., "prescan", .false., .false.)
+            dynTmp = dynMats(:,:,iQc)
+            call hermitize_scale_dynmat(fi%atoms, dynTmp)
+            call DiagonalizeDynMat(fi%atoms, qpts_q%bk(:,iQc), dynTmp, wTmp, aTmp, .false.)
             omegaMax = max(omegaMax, maxval(sqrt(abs(wTmp))))
             deallocate(wTmp, aTmp)
         end do

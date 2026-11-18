@@ -1,4 +1,4 @@
-      SUBROUTINE inconz(e,l,xmj,kap1,kap2,vv,bb,rr,xx1,xx2)
+      SUBROUTINE inconz(e,l,xmj,kap1,kap2,vv,bb,rr,zz,xx1,xx2)
 
 c..........................................................inconz
 c initial point for outcome regular solution of dirac eq.
@@ -7,7 +7,7 @@ c
       USE m_constants, ONLY : c_light
       IMPLICIT NONE
 C     .. Scalar Arguments ..
-      REAL bb,e,rr,vv,xmj
+      REAL bb,e,rr,vv,xmj,zz
       INTEGER kap1,kap2,l
 C     ..
 C     .. Array Arguments ..
@@ -23,14 +23,14 @@ C     .. Local Arrays ..
      +     wq(2,2)
 C     ..
 C     .. Intrinsic Functions ..
-      INTRINSIC abs,real,int,sqrt
+      INTRINSIC abs,real,sqrt
 C     ..
       cc = c_light(2.0)
       csq = cc*cc
 c
 C     EXPANSION COEFFICIENTS FOR THE POTENTIAL AND B-FIELD
-C VV=VV(1)
-      tz = real(int(-vv*rr))
+C VV=VV(1), nuclear part -2*zz/r (Ry)
+      tz = 2.0*zz
       vc0 = vv - (-tz)/rr
 C BB=BB(1)
       bc0 = bb

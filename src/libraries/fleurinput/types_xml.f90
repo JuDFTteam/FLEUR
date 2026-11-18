@@ -760,7 +760,8 @@ CONTAINS
          WRITE (*, *) 'Error in trying to setting attribute value from XPath:'
          WRITE (*, *) TRIM(ADJUSTL(xPath))
          WRITE (*, *) TRIM(ADJUSTL(VALUE))
-         CALL juDFT_error("Attribute value could not be set.", calledby="xmlSetAttributeValue")
+         CALL juDFT_error("Attribute value could not be set.", calledby="xmlSetAttributeValue", &
+                          hint="-xmlXPath can only change attributes and elements that are present in inp.xml")
       END IF
 
    END SUBROUTINE SetAttributeValue

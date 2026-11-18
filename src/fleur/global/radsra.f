@@ -9,10 +9,11 @@ c     calculates the scalar relativistic wavefuction for energy e and
 c     angular momentum l for the potential vr by integrating outward.
 c     the large (small) component is returned in p (q). for non-
 c     relativistic case, set cin=0.        based on code by m. weinert 
+c     z is the nuclear charge, used for the start at the nucleus.
 c*********************************************************************
       CONTAINS
       SUBROUTINE radsra(
-     >                  e,l,vr,r0,h,jri,c,
+     >                  e,l,vr,r0,h,jri,c,z,
      <                  us,dus,nodes,p,q)
 
       IMPLICIT NONE
@@ -22,7 +23,7 @@ C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jri
       INTEGER, INTENT (OUT):: nodes
       REAL,    INTENT (IN) :: e,h,r0
-      REAL,    INTENT (IN) :: c
+      REAL,    INTENT (IN) :: c,z
       REAL,    INTENT (OUT):: dus,us
 C     ..
 C     .. Array Arguments ..
@@ -32,6 +33,7 @@ C     ..
 C     .. Local Scalars ..
       REAL dr,drh,erp,erq,fl1,p0,p1,p1p,q0,q1,q1p,r,rh,rh2,rm,rve,s,
      +     sk1,sk2,sk3,sk4,sl1,sl2,sl3,sl4,t,yn,zn,cin,cin2
+      REAL v1,m0,m1,sig,a1,b1,b0,rhs1,rhs2,det
       INTEGER i,it
 C     ..
 C     .. Local Arrays ..
@@ -49,10 +51,27 @@ C     ..
 
 c--->    set up initial conditions
       fl1 = l* (l+1)
-      s = sqrt(fl1+1-cin2*vr(1)*vr(1)) - 1.
       rm = 2.*r0 + cin2* (r0*e-vr(1))
-      p(1) = r0** (l+1)
-      q(1) = s*p(1)/rm
+      IF (cin.GT.0. .AND. z.GT.0.5) THEN
+c--->    first-order Frobenius start, r*v = -z + v1*r near the nucleus
+         v1 = (vr(1)+z)/r0
+         m0 = cin2*z
+         m1 = 2. + cin2* (e-v1)
+         sig = sqrt(fl1+1.-cin2*z*z)
+         b0 = (sig-1.)/m0
+         rhs1 = m1*b0
+         rhs2 = v1 - e - fl1*m1/ (m0*m0)
+         det = sig* (sig+2.) - fl1 + m0*z
+         a1 = ((sig+2.)*rhs1+m0*rhs2)/det
+         b1 = (sig*rhs2+ (fl1/m0-z)*rhs1)/det
+         p(1) = r0**sig* (1.+a1*r0)
+         q(1) = r0**sig* (b0+b1*r0)
+      ELSE
+c--->    no nuclear singularity or nonrelativistic: leading-order start
+         s = sqrt(fl1+1-cin2*vr(1)*vr(1)) - 1.
+         p(1) = r0** (l+1)
+         q(1) = s*p(1)/rm
+      END IF
       pp(1) = rm*q(1) + p(1)
       qp(1) = (fl1/rm+vr(1)-r0*e)*p(1) - q(1)
 c--->    use 4th order runge-kutta to get first few mesh points

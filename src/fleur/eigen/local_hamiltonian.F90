@@ -93,6 +93,7 @@ CONTAINS
                   ELSE
                      CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
                   END IF
+                  DEALLOCATE(vr)
                END IF
                CALL extract_nonsph(td,atoms,n,j1,j2)
                IF (jsp<3) CALL add_sph(td,n,jsp,input%l_useapw)

@@ -276,9 +276,8 @@ CONTAINS
       !! arbitrary set of target q-points. The coarse (IBZ, "raw") dynamical matrices
       !! are unfolded and transformed to the real-space (mass-normalized) FCM once via
       !! ft_dyn, then de-normalized and inverse-transformed (ift_dyn) to every target q.
-      !! The result is NOT diagonalized: it is returned in the convention that
-      !! DiagonalizeDynMat(..., l_scalemass=.TRUE.) expects, so the caller does the
-      !! diagonalization.
+      !! The result is NOT diagonalized: it is returned unscaled, so the caller applies
+      !! hermitize_scale_dynmat before the diagonalization.
 
       type(t_atoms), intent(in) :: atoms
       type(t_sym),   intent(in) :: sym
@@ -347,8 +346,8 @@ CONTAINS
       allocate(dyn_mat_r(dyn_dim,dyn_dim,0:nGrid-1))
       call ft_dyn(atoms, qpts_coarse, sym, ft_lim, cell%amat, dyn_mat_coarse, dyn_mat_r, dyn_mat_q_full)
 
-      ! De-normalize the FCM: the normal diagonalization routines re-apply the mass
-      ! scaling (l_scalemass=.TRUE.), so the FCM must be non-normalized here.
+      ! De-normalize the FCM: hermitize_scale_dynmat re-applies the mass scaling,
+      ! so the FCM must be non-normalized here.
       do iDir = 1, dyn_dim
          do iDir2 = 1, dyn_dim
             mass_mat(iDir,iDir2) = massInElectronMasses * &

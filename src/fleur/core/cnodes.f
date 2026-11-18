@@ -8,14 +8,14 @@ c...........................................................cnodes
 c number of nodes
 c
       CONTAINS
-      SUBROUTINE cnodes(mrad,iflag,is,ec,l,xmj,nqn,vv,bb,rc,dx,
+      SUBROUTINE cnodes(mrad,iflag,is,ec,l,xmj,nqn,vv,bb,rc,dx,zz,
      +                  nmatch,nzero,gc,fc,pow,qow,piw,qiw,node)
 c
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: mrad
-      REAL dx,ec,xmj
+      REAL dx,ec,xmj,zz
       INTEGER iflag,is,l,nmatch,node,nqn,nzero
 C     ..
 C     .. Array Arguments ..
@@ -26,7 +26,7 @@ C     .. Local Scalars ..
       INTEGER n
 C     ..
 c                    - outward solution -
-      CALL coredir(mrad,ec,l,xmj,1,vv,bb,rc,dx,nmatch,nzero,
+      CALL coredir(mrad,ec,l,xmj,1,vv,bb,rc,dx,zz,nmatch,nzero,
      +             gc,fc,pow,qow,piw,qiw)
 
       node = 0
@@ -59,7 +59,7 @@ c                    - outward solution -
          GO TO 20
       END IF
 c                    - inward solution -
-      CALL coredir(mrad,ec,l,xmj,2,vv,bb,rc,dx,nmatch,nzero,
+      CALL coredir(mrad,ec,l,xmj,2,vv,bb,rc,dx,zz,nmatch,nzero,
      +             gc,fc,pow,qow,piw,qiw)
    20 CONTINUE
 

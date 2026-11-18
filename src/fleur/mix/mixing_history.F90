@@ -13,14 +13,14 @@ MODULE m_mixing_history
   TYPE(t_mixvector),ALLOCATABLE::sm_store(:),fsm_store(:)
   PUBLIC :: mixing_history,mixing_history_reset,mixing_history_store
   PUBLIC :: mixing_history_open,mixing_history_close,mixing_history_limit
-  PUBLIC :: dfpt_mixing_history_reset
+  PUBLIC :: dfpt_mixing_history_reset, dfpt_history_basename
 CONTAINS
 
   SUBROUTINE mixing_history_open(mpi,maxiter,basename)
     INTEGER,INTENT(IN)    :: maxiter
     TYPE(t_mpi),INTENT(in):: mpi
 
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
 
    CHARACTER(len=80):: filename
     LOGICAL          :: l_fileexist
@@ -74,7 +74,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(in):: mpi
     INTEGER,INTENT(IN)    :: imix
 
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
 
    CHARACTER(len=80):: filename
     INTEGER          :: n
@@ -158,7 +158,7 @@ CONTAINS
   SUBROUTINE mixing_history_reset(mpi,basename)
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
     iter_stored=0
     IF (ALLOCATED(sm_store)) DEALLOCATE(sm_store,fsm_store)
     IF (mpi%irank==0) PRINT *, "Reset of history"
@@ -200,7 +200,7 @@ END SUBROUTINE dfpt_mixing_history_reset
     TYPE(t_mpi),INTENT(IN) :: mpi
     INTEGER,INTENT(OUT) :: expected_files, existing_files
     LOGICAL,INTENT(OUT) :: l_has_history
-    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: basename
 
     CHARACTER(len=80) :: filename
     LOGICAL :: l_fileexist
@@ -238,5 +238,19 @@ END SUBROUTINE dfpt_mixing_history_reset
 
     l_has_history = existing_files > 0
   END SUBROUTINE mixing_history_file_count
+
+  FUNCTION dfpt_history_basename(archiveName) RESULT(basename)
+    !! File base name of the mixing history of a DFPT perturbation, built from its archive name.
+    CHARACTER(len=*), INTENT(IN) :: archiveName
+    CHARACTER(len=64)            :: basename
+
+    INTEGER :: i
+
+    basename = ADJUSTL(archiveName)
+    IF (basename(1:1)=='/') basename = basename(2:)
+    DO i = 1, LEN_TRIM(basename)
+       IF (basename(i:i)=='/') basename(i:i) = '_'
+    END DO
+  END FUNCTION dfpt_history_basename
 
 end MODULE m_mixing_history

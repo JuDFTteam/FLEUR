@@ -61,7 +61,7 @@ MODULE m_types_profile
       REAL    :: kmax, kGmaxFactor, rmtFactor, lmaxFactor, fermiSmearing, kPDen
       LOGICAL :: l_exist, l_found
 
-      CHARACTER(LEN=20) :: name
+      CHARACTER(LEN=30) :: name
       CHARACTER(LEN=50) :: addLOSetup
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str
