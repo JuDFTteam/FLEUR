@@ -60,7 +60,7 @@ CONTAINS
       INTEGER :: ikGPr, ikG
       REAL    :: rchi
       COMPLEX :: cchi
-      LOGICAL :: l_samelapw, l_herk
+      LOGICAL :: l_samelapw, l_herk, l_reused
 
       COMPLEX, ALLOCATABLE :: ab1(:,:),ab_select(:,:)
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ab2(:,:), h_loc(:,:), data_c(:,:)
@@ -90,7 +90,7 @@ CONTAINS
       END IF
 
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-      ! abCoeffs and abCoeffsPr are allocated (and filled) inside hsmt_ab.
+      ! abCoeffs and abCoeffsPr are allocated below and filled in hsmt_ab.
       ALLOCATE(ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
 
       IF (igSpinPr.NE.igSpin) THEN
@@ -146,21 +146,24 @@ CONTAINS
             CALL timestart("hsmt_ab_1")
             ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
             ! hsmt_ab must not do the `enter data` on its own dummy argument.
-            IF (.NOT.l_use_abcoeff_store) THEN
-               ab_size = hsmt_ab_size(atoms, n, .TRUE.)
-               IF (ALLOCATED(abCoeffs)) THEN
-                  IF (SIZE(abCoeffs,1)/=ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
-                     !$acc exit data delete(abCoeffs)
-                     DEALLOCATE(abCoeffs)
-                  END IF
+            l_reused = .FALSE.
+            ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+            IF (ALLOCATED(abCoeffs)) THEN
+               IF (SIZE(abCoeffs,1)/=ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
+                  !$acc exit data delete(abCoeffs)
+                  DEALLOCATE(abCoeffs)
                END IF
-               IF (.NOT.ALLOCATED(abCoeffs)) THEN
-                  ALLOCATE(abCoeffs(ab_size, lapw%nv(igSpin)))
+            END IF
+            IF (.NOT.ALLOCATED(abCoeffs)) THEN
+               l_reused = abcoeff_store_alloc(abCoeffs, ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, .TRUE., .TRUE.)
+               IF (l_reused) THEN
+                  !$acc enter data copyin(abCoeffs)
+               ELSE
                   !$acc enter data create(abCoeffs)
                END IF
             END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., l_store=.TRUE.)
+                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., l_store=.TRUE., l_skip=l_reused)
             CALL timestop("hsmt_ab_1")
             CALL timestart("zgemm1")
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
@@ -254,18 +257,16 @@ CONTAINS
                      CALL timestart("hsmt_ab_2")
                      ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
                      ! hsmt_ab must not do the `enter data` on its own dummy argument.
-                     IF (.NOT.l_use_abcoeff_store) THEN
-                        ab_size = hsmt_ab_size(atoms, n, .TRUE.)
-                        IF (ALLOCATED(abCoeffsPr)) THEN
-                           IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
-                              !$acc exit data delete(abCoeffsPr)
-                              DEALLOCATE(abCoeffsPr)
-                           END IF
+                     ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+                     IF (ALLOCATED(abCoeffsPr)) THEN
+                        IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
+                           !$acc exit data delete(abCoeffsPr)
+                           DEALLOCATE(abCoeffsPr)
                         END IF
-                        IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-                           ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpin)))
-                           !$acc enter data create(abCoeffsPr)
-                        END IF
+                     END IF
+                     IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+                        ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpin)))
+                        !$acc enter data create(abCoeffsPr)
                      END IF
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                                 & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
@@ -296,18 +297,16 @@ CONTAINS
                   CALL timestart("hsmt_ab_3")
                   ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
                   ! hsmt_ab must not do the `enter data` on its own dummy argument.
-                  IF (.NOT.l_use_abcoeff_store) THEN
-                     ab_size = hsmt_ab_size(atoms, n, .TRUE.)
-                     IF (ALLOCATED(abCoeffsPr)) THEN
-                        IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
-                           !$acc exit data delete(abCoeffsPr)
-                           DEALLOCATE(abCoeffsPr)
-                        END IF
+                  ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+                  IF (ALLOCATED(abCoeffsPr)) THEN
+                     IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
+                        !$acc exit data delete(abCoeffsPr)
+                        DEALLOCATE(abCoeffsPr)
                      END IF
-                     IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-                        ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpin)))
-                        !$acc enter data create(abCoeffsPr)
-                     END IF
+                  END IF
+                  IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+                     ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpin)))
+                     !$acc enter data create(abCoeffsPr)
                   END IF
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
                              & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
@@ -346,18 +345,16 @@ CONTAINS
                CALL timestart("hsmt_ab_4")
                ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
                ! hsmt_ab must not do the `enter data` on its own dummy argument.
-               IF (.NOT.l_use_abcoeff_store) THEN
-                  ab_size = hsmt_ab_size(atoms, n, .TRUE.)
-                  IF (ALLOCATED(abCoeffsPr)) THEN
-                     IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
-                        !$acc exit data delete(abCoeffsPr)
-                        DEALLOCATE(abCoeffsPr)
-                     END IF
+               ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+               IF (ALLOCATED(abCoeffsPr)) THEN
+                  IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
+                     !$acc exit data delete(abCoeffsPr)
+                     DEALLOCATE(abCoeffsPr)
                   END IF
-                  IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-                     ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpinPr)))
-                     !$acc enter data create(abCoeffsPr)
-                  END IF
+               END IF
+               IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+                  ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpinPr)))
+                  !$acc enter data create(abCoeffsPr)
                END IF
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
                           & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
@@ -429,8 +426,11 @@ CONTAINS
                   call timestop("zgemm6")
                END IF
             END IF
-            ! abCoeffs/abCoeffsPr are (re)allocated per call inside hsmt_ab;
-            ! release the device copies and host arrays before the next nn.
+            ! Release the device copies and host arrays before the next nn.
+            ! the storage keeps the host copy
+            IF (l_use_abcoeff_store) THEN
+               !$acc update self(abCoeffs)
+            END IF
             !$acc exit data delete(abCoeffs)
             ! Hand the (unprimed) abCoeffs to the optional store for later reuse
             ! (no-op unless storage is enabled).

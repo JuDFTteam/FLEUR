@@ -83,7 +83,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
     INTEGER :: boff(0:atoms%lmaxd)
     REAL    :: tmk, qss(3), s2h
     COMPLEX :: phase, c_1, c_2
-    LOGICAL :: l_force,l_useinversionsym
+    LOGICAL :: l_force,l_useinversionsym,l_reused
 
     ! Local arrays
     REAL    :: fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
@@ -109,7 +109,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Allocations
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,jspin,noco)
-    ! abCoeffs is allocated (and filled) inside hsmt_ab.
+    ! abCoeffs is allocated per atom below and filled in hsmt_ab.
     ALLOCATE(abTemp(SIZE(acof,1),0:2*SIZE(acof,2)-1))
     ALLOCATE(fgpl(3,MAXVAL(lapw%nv)))
     ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
@@ -245,20 +245,23 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
              ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
              ! hsmt_ab must not do the `enter data` on its own dummy argument.
-             IF (.NOT.l_use_abcoeff_store) THEN
-                abSize = hsmt_ab_size(atoms, iType, .FALSE.)
-                IF (ALLOCATED(abCoeffs)) THEN
-                   IF (SIZE(abCoeffs,1)/=abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
-                      !$acc exit data delete(abCoeffs)
-                      DEALLOCATE(abCoeffs)
-                   END IF
+             l_reused = .FALSE.
+             abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+             IF (ALLOCATED(abCoeffs)) THEN
+                IF (SIZE(abCoeffs,1)/=abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
+                   !$acc exit data delete(abCoeffs)
+                   DEALLOCATE(abCoeffs)
                 END IF
-                IF (.NOT.ALLOCATED(abCoeffs)) THEN
-                   ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
+             END IF
+             IF (.NOT.ALLOCATED(abCoeffs)) THEN
+                l_reused = abcoeff_store_alloc(abCoeffs, abSize, lapw%nv(iintsp), lapw%nk, iintsp, jspin, iAtom, .FALSE., .TRUE.)
+                IF (l_reused) THEN
+                   !$acc enter data copyin(abCoeffs)
+                ELSE
                    !$acc enter data create(abCoeffs)
                 END IF
              END IF
-             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.,l_store=.TRUE.)
+             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.,l_store=.TRUE., l_skip=l_reused)
              !!$acc end data
              nab = abSize
              abSize = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
@@ -399,8 +402,11 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
                    DEALLOCATE (workTrans_c)
                 ENDIF
              END IF
-             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
-             ! device copy it created and the host array before the next call.
+             ! Release the device copy and the host array before the next call.
+             ! the storage keeps the host copy
+             IF (l_use_abcoeff_store) THEN
+                !$acc update self(abCoeffs)
+             END IF
              !$acc exit data delete(abCoeffs)
              ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
              CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)

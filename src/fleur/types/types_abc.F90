@@ -142,7 +142,7 @@ CONTAINS
       INTEGER :: boff(0:atoms%lmaxd)
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
-      LOGICAL ::  l_useinversionsym
+      LOGICAL ::  l_useinversionsym, l_reused
 
 ! Local arrays
       REAL    :: fg(3), fk(3), fkp(3), fkr(3)
@@ -197,7 +197,7 @@ CONTAINS
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ! abCoeffs is allocated (and filled) inside hsmt_ab.
+      ! abCoeffs is allocated per atom below and filled in hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
@@ -315,13 +315,16 @@ CONTAINS
             ! sits in the present table over stack that gets reused, and a later
             ! `enter data` on anything overlapping it (fjgj, above) aborts with
             ! "variable in data clause is partially present on the device".
-            ! Skipped when the abCoeffs cache is active: it owns the allocation.
-            IF (.NOT.l_use_abcoeff_store) THEN
-               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
-               ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
+            ! With the abCoeffs storage active the array may come from there (l_reused).
+            l_reused = .FALSE.
+            abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+            l_reused = abcoeff_store_alloc(abCoeffs, abSize, lapw%nv(iintsp), lapw%nk, iintsp, jspin, iAtom, .FALSE., .TRUE.)
+            IF (l_reused) THEN
+               !$acc enter data copyin(abCoeffs)
+            ELSE
                !$acc enter data create(abCoeffs)
             END IF
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE., l_skip=l_reused)
 !!$acc end data
             CALL timestop("hsmt_ab")
 
@@ -350,8 +353,11 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
 !$OMP END PARALLEL DO
 
             CALL timestop("gemm")
-            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
-            ! device copy it created and the host array before the next call.
+            ! Release the device copy and the host array before the next call.
+            ! the storage keeps the host copy
+            IF (l_use_abcoeff_store) THEN
+               !$acc update self(abCoeffs)
+            END IF
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
@@ -482,7 +488,7 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
       INTEGER :: boff(0:atoms%lmaxd)
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
-      LOGICAL ::  l_useinversionsym
+      LOGICAL ::  l_useinversionsym, l_reused
 
 ! Local arrays
       REAL    :: fg(3), fk(3), fkp(3), fkr(3), fgr(3), fgp(3)
@@ -546,7 +552,7 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ! abCoeffs is allocated (and filled) inside hsmt_ab.
+      ! abCoeffs is allocated per atom below and filled in hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
@@ -595,13 +601,16 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
             ! sits in the present table over stack that gets reused, and a later
             ! `enter data` on anything overlapping it (fjgj, above) aborts with
             ! "variable in data clause is partially present on the device".
-            ! Skipped when the abCoeffs cache is active: it owns the allocation.
-            IF (.NOT.l_use_abcoeff_store) THEN
-               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
-               ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
+            ! With the abCoeffs storage active the array may come from there (l_reused).
+            l_reused = .FALSE.
+            abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+            l_reused = abcoeff_store_alloc(abCoeffs, abSize, lapw%nv(iintsp), lapw%nk, iintsp, jspin, iAtom, .FALSE., .TRUE.)
+            IF (l_reused) THEN
+               !$acc enter data copyin(abCoeffs)
+            ELSE
                !$acc enter data create(abCoeffs)
             END IF
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE., l_skip=l_reused)
 !!$acc end data
             ! work_c and abCoeffs were filled on the device; the force part below runs on the host
             !$acc update self(abCoeffs,work_c)
@@ -649,8 +658,11 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
                END IF
             END DO
             CALL timestop("force contributions")
-            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
-            ! device copy it created and the host array before the next call.
+            ! Release the device copy and the host array before the next call.
+            ! the storage keeps the host copy
+            IF (l_use_abcoeff_store) THEN
+               !$acc update self(abCoeffs)
+            END IF
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)

@@ -75,8 +75,9 @@ MODULE m_vham
             INTEGER :: boff(0:atoms%lmaxd)
             COMPLEX c_0, a1, b1, a2, b2, power_fac, exponent
             REAL norm1_W, norm2_W, V_inp
+            LOGICAL :: l_reused
             COMPLEX, ALLOCATABLE :: abG1(:,:),abG2(:,:),temp_nIJ(:,:), c_pairs(:,:)
-            ! abG1/abG2 are allocated (and filled) inside hsmt_ab.
+            ! abG1/abG2 are allocated below and filled in hsmt_ab.
             ALLOCATE(temp_nIJ(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
             ALLOCATE(c_pairs(MAXVAL(lapw%nv),MAXVAL(lapw%nv)))
 
@@ -97,20 +98,23 @@ MODULE m_vham
                 !$acc update device(fjgj%fj,fjgj%gj)
                 ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
                 ! hsmt_ab must not do the `enter data` on its own dummy argument.
-                IF (.NOT.l_use_abcoeff_store) THEN
-                   abSizeG1 = hsmt_ab_size(atoms, atoms%itype(natom1), .FALSE.)
-                   IF (ALLOCATED(abG1)) THEN
-                      IF (SIZE(abG1,1)/=abSizeG1 .OR. SIZE(abG1,2)/=lapw%nv(1)) THEN
-                         !$acc exit data delete(abG1)
-                         DEALLOCATE(abG1)
-                      END IF
+                l_reused = .FALSE.
+                abSizeG1 = hsmt_ab_size(atoms, atoms%itype(natom1), .FALSE.)
+                IF (ALLOCATED(abG1)) THEN
+                   IF (SIZE(abG1,1)/=abSizeG1 .OR. SIZE(abG1,2)/=lapw%nv(1)) THEN
+                      !$acc exit data delete(abG1)
+                      DEALLOCATE(abG1)
                    END IF
-                   IF (.NOT.ALLOCATED(abG1)) THEN
-                      ALLOCATE(abG1(abSizeG1, lapw%nv(1)))
+                END IF
+                IF (.NOT.ALLOCATED(abG1)) THEN
+                   l_reused = abcoeff_store_alloc(abG1, abSizeG1, lapw%nv(1), lapw%nk, 1, jspin, natom1, .FALSE., .TRUE.)
+                   IF (l_reused) THEN
+                      !$acc enter data copyin(abG1)
+                   ELSE
                       !$acc enter data create(abG1)
                    END IF
                 END IF
-                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.,l_store=.TRUE.)
+                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.,l_store=.TRUE., l_skip=l_reused)
                 ! abG1 is filled on the device, the accumulation below runs on the host
                 !$acc update self(abG1)
                 ! row of the udot coefficient of latom1 (-1: APW channel, no udot)
@@ -126,20 +130,23 @@ MODULE m_vham
                     !$acc update device(fjgj%fj,fjgj%gj)
                     ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
                     ! hsmt_ab must not do the `enter data` on its own dummy argument.
-                    IF (.NOT.l_use_abcoeff_store) THEN
-                       abSizeG2 = hsmt_ab_size(atoms, atoms%itype(natom2), .FALSE.)
-                       IF (ALLOCATED(abG2)) THEN
-                          IF (SIZE(abG2,1)/=abSizeG2 .OR. SIZE(abG2,2)/=lapw%nv(1)) THEN
-                             !$acc exit data delete(abG2)
-                             DEALLOCATE(abG2)
-                          END IF
+                    l_reused = .FALSE.
+                    abSizeG2 = hsmt_ab_size(atoms, atoms%itype(natom2), .FALSE.)
+                    IF (ALLOCATED(abG2)) THEN
+                       IF (SIZE(abG2,1)/=abSizeG2 .OR. SIZE(abG2,2)/=lapw%nv(1)) THEN
+                          !$acc exit data delete(abG2)
+                          DEALLOCATE(abG2)
                        END IF
-                       IF (.NOT.ALLOCATED(abG2)) THEN
-                          ALLOCATE(abG2(abSizeG2, lapw%nv(1)))
+                    END IF
+                    IF (.NOT.ALLOCATED(abG2)) THEN
+                       l_reused = abcoeff_store_alloc(abG2, abSizeG2, lapw%nv(1), lapw%nk, 1, jspin, natom2, .FALSE., .TRUE.)
+                       IF (l_reused) THEN
+                          !$acc enter data copyin(abG2)
+                       ELSE
                           !$acc enter data create(abG2)
                        END IF
                     END IF
-                    CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.,l_store=.TRUE.)
+                    CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.,l_store=.TRUE., l_skip=l_reused)
                     !$acc update self(abG2)
                     boff(0:atoms%lmax(atoms%itype(natom2))) = atoms%udot_rows(atoms%lmax(atoms%itype(natom2)), atoms%itype(natom2))
                     bo2 = boff(latom2)
@@ -165,6 +172,10 @@ MODULE m_vham
                             c_pairs(iG1,iG2)=c_0+c_pairs(iG1,iG2)
                         ENDDO
                     ENDDO
+                    ! the storage keeps the host copy
+                    IF (l_use_abcoeff_store) THEN
+                       !$acc update self(abG2)
+                    END IF
                     !$acc exit data delete(abG2)
                     ! cache abG2 for later reuse (no-op unless storage enabled)
                     CALL abcoeff_store_save(abG2, lapw%nk, 1, jspin, natom2, .FALSE.)
@@ -172,6 +183,10 @@ MODULE m_vham
                     IF (ALLOCATED(abG2)) DEALLOCATE(abG2)
                     i_pair=i_pair+1
                 ENDDO
+                ! the storage keeps the host copy
+                IF (l_use_abcoeff_store) THEN
+                   !$acc update self(abG1)
+                END IF
                 !$acc exit data delete(abG1)
                 ! cache abG1 for later reuse (no-op unless storage enabled)
                 CALL abcoeff_store_save(abG1, lapw%nk, 1, jspin, natom1, .FALSE.)

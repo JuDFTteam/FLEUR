@@ -75,12 +75,6 @@ CONTAINS
       ! (-abcoeff_store, registered in add_fleur_arguments). Return without
       ! allocating any slots or switching the storage on otherwise.
       IF (.NOT.juDFT_was_argument("-abcoeff_store")) RETURN
-#ifdef _OPENACC
-      ! The slots hold host arrays while hsmt_ab computes abCoeffs on the device, and the
-      ! callers do not copy them back before saving: a reused slot would carry stale data.
-      CALL juDFT_warn("-abcoeff_store is not supported in GPU builds and is ignored", calledby="abcoeff_store_init")
-      RETURN
-#endif
 
       ! local spin in the atom: 1..2 for noco, otherwise 1..jspins (see hsmt.F90)
       n_ilSpin = MERGE(2, input%jspins, noco%l_noco)

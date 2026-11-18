@@ -68,7 +68,7 @@ CONTAINS
     !     ..
     ! Local Scalars
       INTEGER :: invsfct,i,k,locol,nb,ab_size,ab_size_Pr
-      LOGICAL :: l_samelapw
+      LOGICAL :: l_samelapw, l_reused
 
       ! Local Arrays
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), abCoeffsPr(:,:)
@@ -97,18 +97,16 @@ CONTAINS
       call timestart("hsmt_ab")
       ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
       ! hsmt_ab must not do the `enter data` on its own dummy argument.
-      IF (.NOT.l_use_abcoeff_store) THEN
-         ab_size_Pr = hsmt_ab_size(atoms, ntyp, .TRUE.)
-         IF (ALLOCATED(abCoeffsPr)) THEN
-            IF (SIZE(abCoeffsPr,1)/=ab_size_Pr .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
-               !$acc exit data delete(abCoeffsPr)
-               DEALLOCATE(abCoeffsPr)
-            END IF
+      ab_size_Pr = hsmt_ab_size(atoms, ntyp, .TRUE.)
+      IF (ALLOCATED(abCoeffsPr)) THEN
+         IF (SIZE(abCoeffsPr,1)/=ab_size_Pr .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
+            !$acc exit data delete(abCoeffsPr)
+            DEALLOCATE(abCoeffsPr)
          END IF
-         IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-            ALLOCATE(abCoeffsPr(ab_size_Pr, lapwPr%nv(igSpinPr)))
-            !$acc enter data create(abCoeffsPr)
-         END IF
+      END IF
+      IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+         ALLOCATE(abCoeffsPr(ab_size_Pr, lapwPr%nv(igSpinPr)))
+         !$acc enter data create(abCoeffsPr)
       END IF
       CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr,ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
       call timestop("hsmt_ab")
@@ -128,20 +126,23 @@ CONTAINS
          call timestart("hsmt_ab2")
          ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
          ! hsmt_ab must not do the `enter data` on its own dummy argument.
-         IF (.NOT.l_use_abcoeff_store) THEN
-            ab_size = hsmt_ab_size(atoms, ntyp, .TRUE.)
-            IF (ALLOCATED(abCoeffs)) THEN
-               IF (SIZE(abCoeffs,1)/=ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
-                  !$acc exit data delete(abCoeffs)
-                  DEALLOCATE(abCoeffs)
-               END IF
+         l_reused = .FALSE.
+         ab_size = hsmt_ab_size(atoms, ntyp, .TRUE.)
+         IF (ALLOCATED(abCoeffs)) THEN
+            IF (SIZE(abCoeffs,1)/=ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
+               !$acc exit data delete(abCoeffs)
+               DEALLOCATE(abCoeffs)
             END IF
-            IF (.NOT.ALLOCATED(abCoeffs)) THEN
-               ALLOCATE(abCoeffs(ab_size, lapw%nv(igSpin)))
+         END IF
+         IF (.NOT.ALLOCATED(abCoeffs)) THEN
+            l_reused = abcoeff_store_alloc(abCoeffs, ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, .TRUE., .TRUE.)
+            IF (l_reused) THEN
+               !$acc enter data copyin(abCoeffs)
+            ELSE
                !$acc enter data create(abCoeffs)
             END IF
          END IF
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin),l_store=.TRUE.)
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin),l_store=.TRUE., l_skip=l_reused)
          call timestop("hsmt_ab2")
       END IF
    
@@ -216,11 +217,14 @@ CONTAINS
          !$acc end data
       END IF
 
-      ! abCoeffs/abCoeffsPr are allocated and put on the device inside hsmt_ab
-      ! (or, for abcoeffs in the copy branch, just above); release them here.
+      ! Release the device copies and host arrays allocated above.
       !$acc exit data delete(abcoeffsPr)
       DEALLOCATE(abcoeffsPr)
       IF (ALLOCATED(abcoeffs)) THEN
+         ! the storage keeps the host copy
+         IF (l_use_abcoeff_store) THEN
+            !$acc update self(abcoeffs)
+         END IF
          !$acc exit data delete(abcoeffs)
          ! Store only the genuine unprimed abCoeffs produced by hsmt_ab (the ELSE
          ! branch above). The copy branch holds primed data, which must not be

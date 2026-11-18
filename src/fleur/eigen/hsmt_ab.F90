@@ -48,7 +48,7 @@ CONTAINS
       hsmt_ab_size = atoms%num_ab_rows(lmax, n)
    END FUNCTION hsmt_ab_size
 
-   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,l_store)
+   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,l_store,l_skip)
       !! Construct the matching coefficients of the form:
       !! \begin{aligned}
       !! a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) = e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}
@@ -102,6 +102,9 @@ CONTAINS
     !otherwise primed set of coefficients apart from the canonical one. Defaults
     !to .FALSE., i.e. no storage.
       LOGICAL, INTENT(IN),    OPTIONAL :: l_store
+    !Only with a caller-allocated abCoeffs: .TRUE. if it already holds valid coefficients
+    !(taken from the storage by the caller), so only abclo is computed
+      LOGICAL, INTENT(IN),    OPTIONAL :: l_skip
 
       INTEGER :: np, k, l, ll1, m, lmax, nkvec, lo, lm, invsfct, lmMin, lmMax, ierr
       REAL    :: term, bmrot(3, 3)
@@ -129,6 +132,8 @@ CONTAINS
       l_caller_owns = ALLOCATED(abCoeffs)
       IF (l_caller_owns) THEN
          l_skip_calc = .FALSE.
+         IF (PRESENT(l_skip)) l_skip_calc = l_skip
+         IF (l_skip_calc .AND. .NOT.l_abclo) RETURN
       ELSE
          l_skip_calc = abcoeff_store_alloc(abCoeffs, ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
                                          & l_nonsph, l_useStore)

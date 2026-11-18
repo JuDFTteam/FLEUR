@@ -28,6 +28,7 @@ Testset: Basic
 | +   | Bulk Fe, Kerker preconditioner               | basic/Fe_Kerker          | bulk                  |                    |                 | 2   |
 | +   | Bulk Fe fcc with relativistic core solver    | basic/Fe_fcc_kcrel       |                       |                    |                 | 2   |
 | +   | Si with LOs                                  | basic/SiLO               | bulk                  |                    |                 | 2   |
+| +   | Si with LOs, stored matching coefficients    | basic/SiLO               | bulk                  | -abcoeff_store     | -abcoeff_store  | 2   |
 | +   | Si non-relativistic via warp_factor          | basic/SiNonRel           | fast,bulk             |                    |                 | 2   |
 | +   | Cu with APW+lo, LAPW and APW channels        | basic/CuAPWlo            | bulk                  |                    |                 | 2   |
 | +   | Cu with APW+lo and DFT+U on the APW+lo d     | basic/CuAPWlo_U          | bulk,ldau             |                    |                 | 2   |
