@@ -173,7 +173,7 @@ CONTAINS
       IF (sternheimerJob%l_efield) THEN
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
-         CALL dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,iDir,1)
+         CALL dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,iDir)
          CALL dfptvefield%copy_both_spin(dfptvTot)
 
          IF (l_xc) THEN

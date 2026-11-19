@@ -26,7 +26,7 @@ module m_dfpt_vefield
 
 contains
     
-    subroutine dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,iDir,q_sign)
+    subroutine dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,iDir)
         !Currently only spin=1
 
 
@@ -40,8 +40,7 @@ contains
         type(t_sphhar),     intent(in)               :: sphhar
         type(t_cell),       intent(in)               :: cell
         type(t_potden),     intent(inout)            :: dfptvefield
-        integer,             intent(in)              :: iDir 
-        integer,            intent(in)               :: q_sign
+        integer,             intent(in)              :: iDir
 
         complex,allocatable                          :: v1efield_mt(:,:,:,:)
         real,allocatable                             :: resultreal(:,:,:,:)
@@ -49,24 +48,24 @@ contains
 
         complex, allocatable                         :: ylm(:), ylm_m(:)
         complex                                      :: pref
-        real                                         :: qlim, qnormvec(3), qvec_ext(3),qvec_int(3),det,inv_bmat(3,3) 
+        real                                         :: qlim, qcart(3), qnormvec(3), qvec_ext(3),qvec_int(3),det,inv_bmat(3,3)
         integer                                      :: n, lmax, l, iop, m, ll1, lm, i, imax
         real, allocatable                            :: sbf(:,:)
         !real                              :: sbf(0:atoms%lmaxd)
         real                                         :: sumreal, sumimag
-        TYPE(t_stars)                                  :: starsq_m
         integer                                         :: int
         complex                                      :: phas
-        complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype),pylm_m(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
+        complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
         character(len=20)                   :: densave_string
 
 
-        !print*,'q_sign',q_sign
-        qlim = dfpt%qlim 
+        qlim = dfpt%qlim
+        qcart = matmul(starsq%center, cell%bmat)
+        pref = ImagUnit/(2*qcart(iDir))
 
         !interstitial region
         dfptvefield%pw(:,1) = 0.0
-        dfptvefield%pw(1,1) = q_sign*cmplx(0.0,1/(2*qlim))!
+        dfptvefield%pw(1,1) = pref
         
         
         !MT-region
@@ -81,11 +80,8 @@ contains
         qvec_ext = qlim*qnormvec
         call inv3(cell%bmat,inv_bmat(:,:),det)
         qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-        starsq_m = starsq
-        starsq_m%center = -starsq%center
         !print*,"starsq%center",starsq%center
         call phasy1( atoms, starsq, sym, cell, 1, pylm )
-        call phasy1( atoms, starsq_m, sym, cell, 1, pylm_m )            !for minus solution
         !call save_npy('pylm.npy', pylm)
         do n =1, atoms%ntype
             lmax = atoms%lmax(n)
@@ -95,11 +91,10 @@ contains
                 call sphbes(lmax,qlim*atoms%rmsh(i,n),sbf(:,i))
             end do
             do l = 0,lmax
-                !pref =  -q_sign*fpi_const*(ImagUnit**(l+1))/2!q_sign*
                 ll1 = l*(l+1)+1
                 do m =-l,l
-                    lm = ll1 + m 
-                    v1efield_mt(1:imax,lm,n,1) = q_sign*ImagUnit/(qlim*2)*sbf(l,1:imax)*(pylm(lm,n))
+                    lm = ll1 + m
+                    v1efield_mt(1:imax,lm,n,1) = pref*sbf(l,1:imax)*(pylm(lm,n))
                 end do
             end do
             deallocate(sbf)

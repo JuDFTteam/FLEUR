@@ -222,7 +222,7 @@ contains
         tempval_pw = CMPLX(0.0,0.0)
 
         call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-        call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,iQ,q_sign)
+        call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,iQ)
 
         !interstitial
         pwwq2 = CMPLX(0.0,0.0)
