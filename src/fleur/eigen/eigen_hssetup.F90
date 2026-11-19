@@ -231,6 +231,20 @@ IF (fmpi%n_size == 1) THEN
       END DO
    END DO
 
+   ! H and S are built on the device by hs_int and hsmt and copied back after hsmt
+   DO i = 1, nspins
+      DO j = 1, nspins
+         !$acc enter data copyin(hmat(i,j),smat(i,j))
+         !$acc enter data create(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
+         !$acc kernels present(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
+         hmat(i,j)%data_r = 0.0
+         smat(i,j)%data_r = 0.0
+         hmat(i,j)%data_c = 0.0
+         smat(i,j)%data_c = 0.0
+         !$acc end kernels
+      END DO
+   END DO
+
    CALL timestart("Interstitial part")
    !Generate interstitial part of Hamiltonian
    ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
@@ -248,10 +262,6 @@ IF (fmpi%n_size == 1) THEN
    CALL timestop("Interstitial part")
    CALL timestart("MT part")
    !MT-part of Hamiltonian. In case of fi%noco, we need an loop over the local spin of the fi%atoms
-   DO i = 1, nspins; DO j = 1, nspins
-   !$acc enter data copyin(hmat(i,j),smat(i,j))
-   !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
-   END DO; END DO
    CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, td, smat, hmat)
    DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
    !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
@@ -311,6 +321,20 @@ ELSE
       END DO
    END DO
 
+   ! H and S are built on the device by hs_int and hsmt and copied back after hsmt
+   DO i = 1, nspins
+      DO j = 1, nspins
+         !$acc enter data copyin(hmat_mpi(i,j),smat_mpi(i,j))
+         !$acc enter data create(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r,hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
+         !$acc kernels present(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r,hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
+         hmat_mpi(i,j)%data_r = 0.0
+         smat_mpi(i,j)%data_r = 0.0
+         hmat_mpi(i,j)%data_c = 0.0
+         smat_mpi(i,j)%data_c = 0.0
+         !$acc end kernels
+      END DO
+   END DO
+
    CALL timestart("Interstitial part")
    !Generate interstitial part of Hamiltonian
    ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
@@ -327,10 +351,6 @@ ELSE
    CALL timestop("Interstitial part")
    CALL timestart("MT part")
    !MT-part of Hamiltonian. In case of fi%noco, we need an loop over the local spin of the fi%atoms
-   DO i = 1, nspins; DO j = 1, nspins
-   !$acc enter data copyin(hmat_mpi(i,j),smat_mpi(i,j))
-   !$acc enter data copyin(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r,hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
-   END DO; END DO
    CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, td, smat_mpi, hmat_mpi)
    DO i = 1, nspins; DO j = 1, nspins; if (hmat_mpi(1, 1)%l_real) THEN
    !$acc exit data copyout(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r) delete(hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)

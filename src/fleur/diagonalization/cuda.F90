@@ -81,7 +81,8 @@ contains
     !!$acc Data copyin(hmat,smat)
       if (hmat%l_real) then
          associate (h => hmat%data_r, s => smat%data_r)
-            !$ACC DATA copyin(s)COPY(h)COPYOUT(eig_tmp)
+            ! only the eigenvectors in the first ne_found columns of h are copied back
+            !$ACC DATA copyin(s,h) COPYOUT(eig_tmp)
             !$ACC HOST_DATA USE_DEVICE(s,h,eig_tmp)
             istat = cusolverDnDsygvdx_bufferSize(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, &
                                                  CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
@@ -97,6 +98,9 @@ contains
             !$ACC END HOST_DATA
             !$acc update self(devinfo)
             !$ACC END DATA
+            if (istat == CUSOLVER_STATUS_SUCCESS .and. devinfo(1) == 0) then
+               !$acc update self(h(:, 1:ne_found))
+            end if
             !$ACC END DATA
             if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnDsygvdx failed')
             if (devinfo(1) /= 0) call judft_error("cusolverDnDsygvdx failed", no=devinfo(1))
@@ -107,7 +111,7 @@ contains
          end associate
       else
          associate (h => hmat%data_c, s => smat%data_c)
-            !$ACC DATA copyin(s) COPY(h) COPYOUT(eig_tmp)
+            !$ACC DATA copyin(s,h) COPYOUT(eig_tmp)
             !$ACC HOST_DATA USE_DEVICE(s,h,eig_tmp)
             istat = cusolverDnZhegvdx_bufferSize(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, &
                                                  CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
@@ -128,6 +132,7 @@ contains
             end if
             if (devinfo(1) /= 0) call judft_error("cusolverDnZhegvdx failed", no=devinfo(1))
             !$ACC END DATA
+            !$acc update self(h(:, 1:ne_found))
             !$ACC END DATA
             ne = ne_found
             call zmat%alloc(hmat%l_real, hmat%matsize1, ne_found)
