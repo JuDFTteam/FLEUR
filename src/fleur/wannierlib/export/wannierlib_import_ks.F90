@@ -6,25 +6,26 @@
 
 !> Read WF<spin>_operators_ks.hdf back into the coarse operator slices it was written from.
 !>
-!> The file holds the operator matrices in the Bloch basis, which is the one thing a later
-!> run cannot rebuild without the eigenvectors. Everything else a gauge run consumes is
-!> either in the Wannier90 checkpoint (the gauge and the overlaps) or costs nothing to
-!> recompute, so this reader is what makes it possible to resume from the operator stage.
+!> The file holds the operator matrices in the Bloch basis, which is the one thing a reader
+!> cannot rebuild without the eigenvectors. It is written for a consumer outside FLEUR, and
+!> the one caller of this reader is wannierlib_ks_roundtrip below: the exporter reads its
+!> own file back and requires it to reproduce what it was written from. Nothing in FLEUR
+!> consumes the file as data.
 !>
 !> WHAT IS CHECKED. The layout version, the number of k-points, and the band, atom and
 !> channel counts of the dims record, each against this run. A file written for a different
 !> window or a different structure is refused by number rather than discovered later as a
 !> shape mismatch. What NO check here can see is the density: a file made on the same mesh
 !> from a different SCF matches on every count above and its matrices belong to states this
-!> run never computed. That is the same blind spot the Wannier90 checkpoint has.
+!> run never computed. The eigenvalue witness below is what closes that gap.
 !>
 !> THE EIGENVALUES. Layout version 2 adds eigval, the band energies of the manifold over
-!> the whole mesh. They are never consumed as data: a later run has its own from the
-!> diagonalisation it performs anyway, which is why storing them costs 840 kB and saves
-!> nothing. They are a witness. Every other number in this file, and in the Wannier90
-!> checkpoint beside it, is reproduced by a run on the same mesh with a different density,
-!> and neither file can tell -- the eigenvalues are what notices. A caller that hands its
-!> own over gets them compared; one that does not, is not asking the question.
+!> the whole mesh. They are never consumed as data: whoever reads this file has its own
+!> bands or does not need them, which is why storing them costs 840 kB and saves nothing.
+!> They are a witness. Every other number in this file, and in the Wannier90 checkpoint
+!> beside it, is reproduced by a run on the same mesh with a different density, and neither
+!> file can tell -- the eigenvalues are what notices. A caller that hands its own over gets
+!> them compared; one that does not, is not asking the question.
 !>
 !> WHAT IS NOT IN THE FILE. soc0, the sum over the four spin-orbit blocks, is not stored
 !> because it is SUM(soc4, DIM=3) and the blocks are. The cross-spin blocks x0 and tx0 are
@@ -40,40 +41,12 @@ MODULE m_wannierlib_import_ks
    USE m_types_mpi, ONLY: t_mpi
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wannierlib_import_ks, wannierlib_ks_roundtrip, wannierlib_ks_present
+   PUBLIC :: wannierlib_ks_roundtrip
 CONTAINS
 
    !> Fill the coarse slices from the file. l_found comes back .FALSE. when there is no
    !> file at all, which is a question for the caller and not an error here; anything else
    !> that is wrong with it stops the run.
-   !> Whether there is a file to read, asked before the arguments of a read exist.
-   !> Rank 0 looks and tells the others, the same way the reader itself does, so every
-   !> rank takes the same branch even if one of them sees the directory differently.
-   SUBROUTINE wannierlib_ks_present(jspin, fmpi, l_present)
-#ifdef CPP_HDF
-      USE m_wannierlib_hdf_util, ONLY: wl_hdf_exists
-#endif
-#ifdef CPP_MPI
-      USE mpi
-#endif
-      INTEGER,     INTENT(IN)  :: jspin
-      TYPE(t_mpi), INTENT(IN)  :: fmpi
-      LOGICAL,     INTENT(OUT) :: l_present
-      INTEGER :: flag(1), ierr
-
-      l_present = .FALSE.
-#ifdef CPP_HDF
-      flag = 0
-      IF (fmpi%irank == 0) THEN
-         IF (wl_hdf_exists('operators_ks', jspin)) flag = 1
-      END IF
-#ifdef CPP_MPI
-      IF (fmpi%isize > 1) CALL MPI_BCAST(flag, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-#endif
-      l_present = (flag(1) == 1)
-#endif
-   END SUBROUTINE wannierlib_ks_present
-
    SUBROUTINE wannierlib_import_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                    s0, l0, soc4, t0, n_channels, nat, &
                                    distk, nkptf, nb, jspin, fmpi, l_found, eig_now, eig_tol)
@@ -268,8 +241,8 @@ CONTAINS
    !> Exact is the right demand -- both sides are the same IEEE doubles through the same
    !> slab calls -- so any non-zero residual is a defect and not a tolerance to widen.
    !> The eigenvalues go through the same demand, with a tolerance of zero: inside one run
-   !> there is nothing for them to differ by, and this is what exercises the comparison a
-   !> later run makes with a tolerance that is not zero.
+   !> there is nothing for them to differ by, and this is what exercises the comparison an
+   !> outside reader makes with a tolerance that is not zero.
    SUBROUTINE wannierlib_ks_roundtrip(l_spin, l_orbital, l_spinorbit, l_torque, &
                                       s0, l0, soc4, t0, n_channels, nat, &
                                       distk, nkptf, nb, eig, jspin, fmpi)

@@ -6,7 +6,6 @@ src/fleur/wannierlib/wann_real.F
 )
 set(fleur_F90 ${fleur_F90}
 src/fleur/wannierlib/wannierlib_mmnkb.F90
-src/fleur/wannierlib/wannierlib_chkinfo.F90
 src/fleur/wannierlib/wannierlib_w90_adapter.F90
 src/fleur/wannierlib/wannierlib_build_amn_mmn.F90
 src/fleur/wannierlib/wannierlib_band_window.F90

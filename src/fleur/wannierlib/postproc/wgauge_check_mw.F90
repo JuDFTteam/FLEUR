@@ -20,10 +20,11 @@
 !> the overlaps, and which of u_opt and u_matrix goes on which side. A sign or a transpose
 !> anywhere in that chain gives a result that still looks like an overlap matrix.
 !>
-!> AND WHY IT IS WORTH HAVING THE NUMBER. The Wannier90 side survives in the checkpoint,
-!> where it is the nw x nw block. A run that resumes from a checkpoint has that block and
-!> no Bloch overlaps at all -- it cannot rebuild this quantity, so it has to take the one
-!> in the file. This measurement is what says the two are interchangeable.
+!> AND WHY IT IS WORTH HAVING THE NUMBER. The Wannier90 side is what leaves this run: it
+!> is the nw x nw block of the checkpoint handed to whoever carries on. That reader has
+!> the block and no Bloch overlaps at all, so it cannot rebuild the quantity and has to
+!> take the one in the file. This is the only run in which both sides exist, so it is the
+!> only place the two can be shown to be interchangeable.
 MODULE m_wgauge_check_mw
    USE m_juDFT
    USE m_constants, ONLY: oUnit
@@ -42,8 +43,7 @@ CONTAINS
    !>
    !> MEASURED, on Pt with 108 bands disentangled to 54 Wannier functions over 100 k:
    !> 2.1E-15 after one minimisation step, 1.1E-14 after fifty and 2.9E-14 after three
-   !> thousand, and a run resuming from each of those checkpoints reproduces its own
-   !> number. The drift is accumulation, so it tracks the step count rather than the
+   !> thousand. The drift is accumulation, so it tracks the step count rather than the
    !> system, and 1.0E-6 leaves it eight decades of room.
    SUBROUTINE wgauge_check_mw(mmn_loc, distk, u_opt, u_matrix, bmesh, mw_chk, fmpi, tol)
 #ifdef CPP_MPI

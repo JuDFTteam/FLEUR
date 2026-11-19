@@ -14,14 +14,13 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_mpi
   USE m_types_wannierlib
   USE m_types_wgauge_bmesh
-  USE m_wannierlib_chkinfo, ONLY : wl_chkinfo_write, wl_chkinfo_check
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, w90_create_kmesh, &
                           w90_get_centres, w90_get_spreads, w90_transport
-  USE w90_library_extra, ONLY : write_chkpt, read_chkpt
+  USE w90_library_extra, ONLY : write_chkpt
 #endif
   IMPLICIT NONE
 
@@ -275,7 +274,7 @@ CONTAINS
   !>    u_opt     the disentanglement matrix (the projections after w90 has processed them)
   !> The full Wannier gauge is V(k) = u_opt(k) . u_matrix(k). Evaluating operators in that gauge
   !> is NOT this module's job: the adapter only translates to and from the library.
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, jspin, n_channels, l_spinors, &
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, jspin, n_channels, &
                      u_matrix, u_opt, mw_chk)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
@@ -283,24 +282,19 @@ CONTAINS
     COMPLEX, TARGET, INTENT(IN) :: mmn(:, :, :, :)
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
-    INTEGER, INTENT(IN) :: irank
     !> Which channel this call is wannierising, and how many there are. Only the checkpoint
     !> name depends on them, and only when there are two.
     INTEGER, INTENT(IN) :: jspin, n_channels
-    !> Spinor route or not. Recorded in the witness beside the checkpoint, because it is the
-    !> one thing about a gauge that Wannier90's own checks cannot see.
-    LOGICAL, INTENT(IN) :: l_spinors
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_matrix(:, :, :)   ! (nw,nw,nk) MLWF gauge
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_opt(:, :, :)      ! (nb,nw,nk) disentangled projections
     !> The overlaps as Wannier90 leaves them: the num_wann corner of the buffer it was
     !> given, which by then holds V^dagger(k) M V(k_b) in the final gauge and not the
-    !> Bloch overlaps that went in. It is the same block the checkpoint carries, which is
-    !> why a run resuming from one has this and nothing to rebuild it from.
+    !> Bloch overlaps that went in. It is the same block the checkpoint carries, so the
+    !> two can be compared against each other while both exist.
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: mw_chk(:, :, :, :)  ! (nw,nw,nntot,nk_loc)
 
-    INTEGER :: ierr, num_kpts, ik, ib
+    INTEGER :: ierr, num_kpts
     CHARACTER(LEN=32) :: seedname
-    CHARACTER(LEN=9) :: route
     COMPLEX, ALLOCATABLE :: mmn_local(:, :, :, :)
     REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
 
@@ -313,9 +307,9 @@ CONTAINS
 
     !> One checkpoint per spin channel. Collinearly the two channels are two separate
     !> wannierisations with two gauges, and both used to write the one name the seedname
-    !> carries, so the second silently overwrote the first and a restart had nothing of
-    !> the first channel to read. The name is set here, before any checkpoint is read or
-    !> written, because set_w90_options runs once for the whole calculation.
+    !> carries, so the second silently overwrote the first and only one channel was ever
+    !> handed out. The name is set here, before any checkpoint is written, because
+    !> set_w90_options runs once for the whole calculation.
     !>
     !> A single channel is WF1, the same stem the one set of Bloch files carries; two
     !> channels are WF1 and WF2, one per spin, as those files already are.
@@ -324,22 +318,10 @@ CONTAINS
       !> Assigned, not set through w90_input_setopt: that call PROCESSES the option store
       !> and empties it on the way out ("must be empty here; emptied by w90_input_setopt
       !> call", library_interface.F90:458), so a second call fails. The field is the one
-      !> both checkpoint routines take to build the file name -- write_chkpt passes
-      !> common_data%seedname at library_extra.F90:393 and read_chkpt at :453 -- so this
-      !> is the whole of what has to change, and it changes nothing else about w90's state.
+      !> write_chkpt takes to build the file name -- it passes common_data%seedname at
+      !> library_extra.F90:393 -- so this is the whole of what has to change, and it
+      !> changes nothing else about w90's state.
       wannierlib_w90main%seedname = seedname
-    END IF
-
-    !> Which of the three routes built this gauge. A spinor run and a non-magnetic one are
-    !> both a single channel and both write the bare checkpoint name, so the only things
-    !> telling their files apart are num_bands and num_wann -- which is a coincidence of the
-    !> cases people run, not a check. Written down here, where both deciders are in scope.
-    IF (l_spinors) THEN
-      route = 'spinor'
-    ELSE IF (n_channels > 1) THEN
-      route = 'collinear'
-    ELSE
-      route = 'scalar'
     END IF
 
 #ifndef CPP_WANNLIB_API
@@ -366,36 +348,7 @@ CONTAINS
     CALL w90_set_u_opt(wannierlib_w90main, u_opt)
     CALL w90_set_u_matrix(wannierlib_w90main, u_matrix)
 
-    IF (this%l_restart_gauge) THEN
-      CALL wannierlib_read_chkpt(this, route)
-
-      !> A checkpoint carries u_matrix_opt only when it was written with a disentanglement
-      !> -- that is what its have_disentangled record decides. With num_bands == num_wann
-      !> there is no subspace to choose, so Wannier90 writes none, and the call that would
-      !> otherwise build one, w90_project_overlap below, does not run on a restart. Left
-      !> alone, u_opt stays empty and every rotation through it comes out zero: the gauge
-      !> is read, the overlaps are read, and the operators are built from nothing.
-      !>
-      !> The identity is what u_opt means in that case and not a repair of one: the
-      !> optimal subspace is the whole window. Setting it here reaches Wannier90's own
-      !> copy as well, since w90_set_u_opt above took this array rather than a copy of it.
-      IF (this%num_bands == this%num_wann) THEN
-        u_opt = CMPLX(0.0, 0.0)
-        DO ik = 1, num_kpts
-          DO ib = 1, this%num_wann
-            u_opt(ib, ib, ik) = CMPLX(1.0, 0.0)
-          END DO
-        END DO
-      ELSE IF (MAXVAL(ABS(u_opt)) == 0.0) THEN
-        !> num_bands above num_wann and still nothing: the file was written without the
-        !> subspace it needs, and going on would build operators out of zeros.
-        CALL juDFT_error('wannierlib: the checkpoint carries no subspace for a disentangled window', &
-                         hint='num_bands is larger than num_wann, so the file should hold '// &
-                              'u_matrix_opt', calledby='run_w90')
-      END IF
-    END IF
-
-    IF (.NOT.this%l_restart_gauge .AND. this%num_bands > this%num_wann) THEN
+    IF (this%num_bands > this%num_wann) THEN
       !> Optional, and tried first rather than instead: it fills u_opt with a subspace that
       !> holds the same number of states from each spin channel at every k. Wannier90 keeps
       !> the num_wann largest eigenvalues globally, which at an occasional k takes one state
@@ -407,24 +360,20 @@ CONTAINS
       IF (ierr /= 0) CALL juDFT_error('w90_disentangle failed in wannierlib adapter', calledby='run_w90')
     END IF
 
-    IF (.NOT.this%l_restart_gauge) THEN
-      CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)
-      IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed in wannierlib adapter', calledby='run_w90')
-    END IF
+    CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)
+    IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed in wannierlib adapter', calledby='run_w90')
 
-    !> The point a restart resumes the minimisation from, so it is written here rather than
+    !> The point a reader resumes the minimisation from, so it is written here rather than
     !> straight after the disentanglement: this is the state w90_wannierise is about to be
     !> handed. Every rank calls it -- the writer gathers the distributed matrices itself.
-    IF (this%export%chk .AND. .NOT.this%l_restart_gauge) CALL wannierlib_write_chkpt('postdis', this, route, irank)
+    IF (this%export%w90) CALL wannierlib_write_chkpt('postdis')
 
-    IF (this%l_restart_minimise) THEN
-      CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
-      IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+    CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
+    IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
 
-      !> Only after a minimisation. A restart that did not run one would otherwise rewrite
-      !> the very file it was handed, and a crash mid-write would take the original with it.
-      IF (this%export%chk) CALL wannierlib_write_chkpt('postwann', this, route, irank)
-    END IF
+    !> Again at the end, to the same file: the minimised gauge replaces the projected one,
+    !> which is what wannier90.x leaves behind and what its restart expects to find.
+    IF (this%export%w90) CALL wannierlib_write_chkpt('postwann')
 
     !> Transport last, because it reads the gauge: tran_main builds its own real-space
     !> Hamiltonian from u_matrix, u_matrix_opt and eigval, which are exactly what the calls
@@ -453,56 +402,19 @@ CONTAINS
   END SUBROUTINE run_w90
 
 #ifdef CPP_WANNLIB_API
-  !> Takes the gauge back from a Wannier90 checkpoint, straight into the arrays the gauge
-  !> stage reads: w90_set_u_matrix and w90_set_u_opt store pointers, so read_chkpt writes
-  !> through them and nothing has to be copied back.
-  !>
-  !> The format carries its own check and it is thorough: the reader compares the band
-  !> count, the excluded bands, both lattices, the number of k-points, the Monkhorst-Pack
-  !> grid, the k-point list itself, nntot and num_wann with this run, and refuses the file
-  !> on any of them. So the witness is consulted first, for the things that list leaves out
-  !> -- see wl_chkinfo_check -- and the density, which neither side can see at all: a
-  !> checkpoint made on the same mesh but from a different SCF is accepted here, and its
-  !> gauge then belongs to states this run never computed.
-  !>
-  !> The label is twenty characters because that is the width Wannier90 writes it at.
-  !> Asking for a longer one reads past the end of the record and ends the run.
-  SUBROUTINE wannierlib_read_chkpt(this, route)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-    CHARACTER(LEN=*), INTENT(IN) :: route
-    CHARACTER(LEN=20) :: label
-    INTEGER :: ierr
-
-    !> Before the file is opened, so a refusal costs nothing and says why.
-    CALL wl_chkinfo_check(this, route, TRIM(wannierlib_w90main%seedname))
-
-    CALL read_chkpt(wannierlib_w90main, label, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('read_chkpt failed in wannierlib adapter', &
-                                    calledby='wannierlib_read_chkpt')
-
-    WRITE (oUnit, '(a)') ' wannierlib: gauge read from the checkpoint, stage "'//TRIM(label)//'"'
-  END SUBROUTINE wannierlib_read_chkpt
-#endif
-
-#ifdef CPP_WANNLIB_API
   !> Ask Wannier90 to write its own checkpoint. The file and its layout are Wannier90's;
   !> what FLEUR decides is when to ask. 'label' is the position it records -- 'postdis'
   !> before the minimisation, 'postwann' after -- and both go to the same <seedname>.chk,
   !> which is how wannier90.x behaves and how its restart reads the position back.
-  SUBROUTINE wannierlib_write_chkpt(label, this, route, irank)
+  !>
+  !> Every rank calls it: write_chkpt gathers the distributed overlaps itself, so a rank
+  !> that skipped the call would leave that gather half done.
+  SUBROUTINE wannierlib_write_chkpt(label)
     CHARACTER(LEN=*), INTENT(IN) :: label
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-    CHARACTER(LEN=*), INTENT(IN) :: route
-    INTEGER, INTENT(IN) :: irank
     INTEGER :: ierr
     CALL write_chkpt(wannierlib_w90main, label, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('write_chkpt failed in wannierlib adapter', &
                                     calledby='wannierlib_write_chkpt')
-
-    !> Written here rather than by the caller, so that a checkpoint cannot be produced
-    !> without its witness: both of the two call sites get one by construction. Writing it
-    !> twice over costs nothing, because the contents do not depend on the stage.
-    CALL wl_chkinfo_write(this, route, TRIM(wannierlib_w90main%seedname), irank)
   END SUBROUTINE wannierlib_write_chkpt
 #endif
 

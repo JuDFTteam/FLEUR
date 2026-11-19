@@ -3611,7 +3611,7 @@
       </xsd:attribute>
       <xsd:attribute name="trialStep" type="FleurDouble" use="optional">
          <xsd:annotation>
-            <xsd:documentation>The trial step of the parabolic line search along the search direction (Wannier90 trial_step). Changing it changes the path taken, so it is one of the handles a sweep varies when two runs start from the same checkpoint and land in different minima.</xsd:documentation>
+            <xsd:documentation>The trial step of the parabolic line search along the search direction (Wannier90 trial_step). Changing it changes the path taken, so it is one of the handles a sweep varies when two runs land in different minima.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="fixedStep" type="FleurDouble" use="optional">
@@ -3778,12 +3778,12 @@
       </xsd:annotation>
       <xsd:attribute default="F" name="wannier90" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Writes WF&lt;spin&gt;.amn, .mmn and .eig, what a standalone wannier90.x needs. Opt-in: the .mmn is bulky.</xsd:documentation>
+            <xsd:documentation>Writes the five files a standalone wannier90.x needs, as one set: WF&lt;spin&gt;.win, .amn, .mmn, .eig and .chk. The .win declares the run -- cell, atoms, k-mesh, windows and the same search_shells the overlaps were built with -- so the reader picks the same b vectors; the .chk is written by Wannier90 itself, in its format and not ours, after the projection and again after the minimisation, so an interrupted run still leaves the earlier point. With restart = wannierise in the .win, wannier90.x carries on from the gauge this run reached. The .chk is also one of the two files WannierBerri accepts. Opt-in: the .mmn is bulky.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute default="F" name="wannierberri" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Writes the wannier90 files and WF&lt;spin&gt;_basis.hdf: the union of wannier90="T" and irrep="T".</xsd:documentation>
+            <xsd:documentation>Writes the wannier90 files -- the .chk among them -- and WF&lt;spin&gt;_basis.hdf: the union of wannier90="T" and irrep="T".</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute default="F" name="irrep" type="FleurBool" use="optional">
@@ -3804,11 +3804,6 @@
       <xsd:attribute default="F" name="juwip" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Writes w90files/ with the &lt;operatorsRs&gt; matrices. Not combinable with orbitrans: the matrices are moved, not copied.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute default="F" name="checkpoint" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Writes &lt;seedname&gt;.chk, the Wannier90 checkpoint, through Wannier90 itself: the gauge, the disentangled manifold and the overlaps, in their format and not ours. It is what a standalone wannier90.x resumes a minimisation from (restart = wannierise, with a .win of your own that matches), and one of the two files WannierBerri accepts. Written after the projection and again after the minimisation, as wannier90.x does, so an interrupted run still leaves the earlier point.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
@@ -3882,20 +3877,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="transport" type="WannierlibTransportType"/>
       </xsd:all>
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>
-      <xsd:attribute default="none" name="restart" type="WannierlibRestartType" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Where the gauge comes from. "none" builds it in this run. The other two read it back from &lt;seedname&gt;.chk, which must sit in the working directory under the name this code uses, WF1.chk (WF1.chk and WF2.chk for the two channels of a collinear run), must come from a run on the same k-mesh, and must have been written on the same number of MPI ranks: "wannierise" takes that gauge as the starting point and minimises again under the current &lt;wannierization&gt; settings, while "operators" takes it as final and goes straight to the operators. Together with &lt;export checkpoint="T"/&gt; these let a minimisation be repeated, here or in a standalone wannier90.x, without repeating the ab-initio pass.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
    </xsd:complexType>
-
-   <xsd:simpleType name="WannierlibRestartType">
-      <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="none"/>
-         <xsd:enumeration value="wannierise"/>
-         <xsd:enumeration value="operators"/>
-      </xsd:restriction>
-   </xsd:simpleType>
 
    <xsd:complexType name="RelaxationType">
       <xsd:annotation>

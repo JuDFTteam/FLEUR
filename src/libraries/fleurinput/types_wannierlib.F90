@@ -64,14 +64,14 @@ MODULE m_types_wannierlib
   !> the block is later promoted or dropped.
   TYPE t_wannierlib_export
     SEQUENCE
-    LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
+    !> The five files a standalone wannier90.x needs, as one set: the .win that declares
+    !> the run, the three matrices, and the .chk Wannier90 writes itself in its own format.
+    LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:  .win/.amn/.mmn/.eig/.chk
     !> Not a consumer but a fact about the run: the b-shells and the neighbour topology,
     !> fixed before any gauge exists and shared by everything built from them.
     LOGICAL :: bmesh = .FALSE.   ! <export bmesh="T"/>:          WF<spin>_bmesh.hdf
     LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    input/, renamed, + four structural
     LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
-    !> The only artefact here Wannier90 writes itself: FLEUR asks, the format stays theirs.
-    LOGICAL :: chk = .FALSE.     ! <export checkpoint="T"/>:    <seedname>.chk, written by w90
     !> The field keeps the content as its name and the attribute names the consumer, as
     !> w90 does for wannier90.
     LOGICAL :: basis = .FALSE.        ! <export irrep="T"/>:   WF<spin>_basis.hdf
@@ -86,13 +86,6 @@ MODULE m_types_wannierlib
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
-    !> Derived in read_xml from <wannierlib restart="...">, in the idiom of the flags
-    !> below: the adapter asks these two rather than decoding the keyword at each branch.
-    !>   none        F / T   the run builds the gauge and minimises, as before
-    !>   wannierise  T / T   the gauge comes from the checkpoint, then minimise again
-    !>   operators   T / F   the gauge comes from the checkpoint and is used as it stands
-    LOGICAL :: l_restart_gauge = .FALSE.
-    LOGICAL :: l_restart_minimise = .TRUE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
     ! They gate the coarse-mesh provider calls; the actual dispatch loops over ops(:).
     LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
@@ -226,9 +219,8 @@ MODULE m_types_wannierlib
     LOGICAL :: precond = .FALSE.
     !> The rest of Wannier90's minimisation controls. Each one is inert unless its
     !> attribute is present, so silence leaves Wannier90 on its own default and an older
-    !> inp.xml keeps its numbers. None of them is stored in the checkpoint: they are
-    !> rebuilt on every run, which is what lets a sweep vary them between two restarts
-    !> that begin from the same gauge.
+    !> inp.xml keeps its numbers. None of them is stored in the checkpoint either, so a
+    !> wannier90.x resuming from one takes them from the .win and not from here.
     INTEGER :: num_cg_steps = -1          ! W90 num_cg_steps;      XML @numCgSteps
     REAL    :: trial_step = -1.0          ! W90 trial_step;        XML @trialStep
     REAL    :: fixed_step = -1.0          ! W90 fixed_step;        XML @fixedStep
@@ -471,8 +463,6 @@ CONTAINS
 #endif
 
     CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
-    CALL mpi_bc(this%l_restart_gauge, rank, mpi_comm)
-    CALL mpi_bc(this%l_restart_minimise, rank, mpi_comm)
     CALL mpi_bc(this%l_interpolation, rank, mpi_comm)
     CALL mpi_bc(this%l_ws_distance, rank, mpi_comm)
     CALL mpi_bc(this%l_spin, rank, mpi_comm)
@@ -503,7 +493,6 @@ CONTAINS
     CALL mpi_bc(this%export%w90, rank, mpi_comm)
     CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
     CALL mpi_bc(this%export%juwip, rank, mpi_comm)
-    CALL mpi_bc(this%export%chk, rank, mpi_comm)
     CALL mpi_bc(this%export%plot, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
@@ -614,25 +603,6 @@ CONTAINS
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
     END IF
 
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@restart') == 1) THEN
-      sbuf = TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@restart')))
-      SELECT CASE (TRIM(sbuf))
-      CASE ('none')
-        this%l_restart_gauge = .FALSE.
-        this%l_restart_minimise = .TRUE.
-      CASE ('wannierise')
-        this%l_restart_gauge = .TRUE.
-        this%l_restart_minimise = .TRUE.
-      CASE ('operators')
-        this%l_restart_gauge = .TRUE.
-        this%l_restart_minimise = .FALSE.
-      CASE DEFAULT
-        !> Unreachable through the schema, which enumerates the three. It is here because
-        !> a default that silently picks one would turn a typo into a different physics run.
-        CALL juDFT_error('unknown value of <wannierlib restart>: '//TRIM(sbuf), &
-                         calledby='read_xml_wannierlib')
-      END SELECT
-    END IF
     ! Operator selection is now the <interpolation>/<operator> list (parsed below),
     ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.
 
@@ -859,21 +829,18 @@ CONTAINS
           calledby='read_xml_wannierlib')
         this%export%plot_grid = NINT(gridlist)
       END IF
-      this%export%chk = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@checkpoint'))
       this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@irrep'))
       this%export%bmesh = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@bmesh'))
       !> wannierberri="T" is a superset of the two flags above rather than a third artefact:
-      !> that wannierization consumes the .amn/.mmn/.eig and takes its symmetry table from
-      !> what irrep reads out of the interstitial, so one flag asks for everything the route
-      !> needs and nobody has to remember to light two.
+      !> that wannierization consumes the .amn/.mmn/.eig/.chk and takes its symmetry table
+      !> from what irrep reads out of the interstitial, so one flag asks for everything the
+      !> route needs and nobody has to remember to light two.
       IF (evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannierberri'))) THEN
         this%export%w90 = .TRUE.
         this%export%basis = .TRUE.
-        this%export%chk = .TRUE.
       END IF
     END IF
 
