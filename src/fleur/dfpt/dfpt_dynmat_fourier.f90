@@ -137,18 +137,20 @@ CONTAINS
       end do
    end subroutine
 
-   subroutine build_ws_shifted(amat, scaleSupercell, shifts, nNZ, Rvecs, weightNZ)
+   subroutine build_ws_shifted(amat, scaleSupercell, l_film, shifts, nNZ, Rvecs, weightNZ)
       !! Compact list of the lattice vectors Rvecs(:,i) for which R + shifts(:,iShift) (cartesian) lies in the
       !! Wigner-Seitz cell of the supercell, with weight weightNZ(iShift,i); the data of Rvecs(:,i) is stored at index i-1.
+      !! For films only in-plane lattice vectors and supercell images are used.
       real,    intent(in)  :: amat(3,3)
       integer, intent(in)  :: scaleSupercell(3)
+      logical, intent(in)  :: l_film
       real,    intent(in)  :: shifts(:,:)
       integer, intent(out) :: nNZ
       integer, allocatable, intent(out) :: Rvecs(:,:)
       real,    allocatable, intent(out) :: weightNZ(:,:)
 
       integer, parameter :: imageLim = 3 ! supercell images searched in each direction
-      integer :: bigBoxLim(2,3), boxSize, nShift, nImage, iShift, iGrid, iImage, iMem, i, ix, iy, iz
+      integer :: bigBoxLim(2,3), boxSize, nShift, nImage, imageLimZ, iShift, iGrid, iImage, iMem, i, ix, iy, iz
       real    :: tol, vecRCart(3), vecShift(3), distanceR, distance
       logical :: l_inside
       integer, allocatable :: supercellR(:,:)
@@ -157,10 +159,12 @@ CONTAINS
       nShift = size(shifts,2)
       tol    = 1e-6*dot_product(amat(:,1),amat(:,1))
 
-      nImage = (2*imageLim+1)**3
+      imageLimZ = imageLim
+      if (l_film) imageLimZ = 0
+      nImage = (2*imageLim+1)**2*(2*imageLimZ+1)
       allocate(imageCart(3,nImage))
       iImage = 0
-      do iz = -imageLim, imageLim
+      do iz = -imageLimZ, imageLimZ
          do iy = -imageLim, imageLim
             do ix = -imageLim, imageLim
                iImage = iImage + 1
@@ -171,7 +175,8 @@ CONTAINS
 
       bigBoxLim(2,:) =  2*scaleSupercell(:)
       bigBoxLim(1,:) = -2*scaleSupercell(:)
-      boxSize = product(4*scaleSupercell+1)
+      if (l_film) bigBoxLim(:,3) = 0
+      boxSize = product(bigBoxLim(2,:) - bigBoxLim(1,:) + 1)
       allocate(supercellR(3,boxSize), FTweight(nShift,boxSize))
       FTweight = 0.0
 
@@ -218,12 +223,13 @@ CONTAINS
       end do
    end subroutine
 
-   subroutine build_ws_pairs(atoms, amat, scaleSupercell, nNZ, Rvecs, weightPair)
+   subroutine build_ws_pairs(atoms, amat, scaleSupercell, l_film, nNZ, Rvecs, weightPair)
       !! Wigner-Seitz list of the force constants with weightPair(i,j,iR) for the bond R + tau_j - tau_i
       !! between atom i and atom j, on the union of all atom pairs.
       type(t_atoms), intent(in)  :: atoms
       real,          intent(in)  :: amat(3,3)
       integer,       intent(in)  :: scaleSupercell(3)
+      logical,       intent(in)  :: l_film
       integer,       intent(out) :: nNZ
       integer, allocatable, intent(out) :: Rvecs(:,:)
       real,    allocatable, intent(out) :: weightPair(:,:,:)
@@ -241,7 +247,7 @@ CONTAINS
             end do
          end do
       end if
-      call build_ws_shifted(amat, scaleSupercell, shifts, nNZ, Rvecs, weightNZ)
+      call build_ws_shifted(amat, scaleSupercell, l_film, shifts, nNZ, Rvecs, weightNZ)
       weightPair = reshape(weightNZ, [atoms%nat, atoms%nat, nNZ])
    end subroutine
 
@@ -403,7 +409,7 @@ CONTAINS
       if (present(l_bornhuang)) l_bh = l_bornhuang
 
       if (l_WSinterpol) then
-         call build_ws_pairs(atoms, cell%amat, qpts_coarse%nkpt3, nNZ, Rvecs, weightPair)
+         call build_ws_pairs(atoms, cell%amat, qpts_coarse%nkpt3, cell%z1 > 0.0, nNZ, Rvecs, weightPair)
       else
          ! simple back-transformation on the plain Fourier box
          ft_lim(2,:) =  qpts_coarse%nkpt3(:)/2

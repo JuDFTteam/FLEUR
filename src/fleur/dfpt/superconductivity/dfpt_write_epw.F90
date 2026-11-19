@@ -191,7 +191,7 @@ contains
 
       nq = qpts_dyn%nkpt3(:)
 
-      call build_ws_pairs(fi%atoms, fi%cell%amat, nq, nNZ_fcm, Rvecs_fcm, weightPair_fcm)
+      call build_ws_pairs(fi%atoms, fi%cell%amat, nq, fi%input%film, nNZ_fcm, Rvecs_fcm, weightPair_fcm)
 
       ! D_norm(R) = (1/Nq) sum_q e^{+i q.R} D(q)   (symmetry-unfolded to the full BZ)
       allocate(fcm(nmodes,nmodes,nNZ_fcm))

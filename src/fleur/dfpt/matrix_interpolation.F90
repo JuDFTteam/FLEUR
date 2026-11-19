@@ -231,7 +231,7 @@ contains
             do jAtom = 1, fi%atoms%nat
                 shifts(:,jAtom) = matmul(fi%cell%amat, fi%atoms%taual(:,jAtom))
             end do
-            call build_ws_shifted(fi%cell%amat, qpts_coarse%nkpt3, shifts, ft%ws_q_nNZ, ft%ws_q_Rvecs, weightAtom)
+            call build_ws_shifted(fi%cell%amat, qpts_coarse%nkpt3, fi%input%film, shifts, ft%ws_q_nNZ, ft%ws_q_Rvecs, weightAtom)
             ft%ws_q_weightNZ = weightAtom(iAtom,:)
         else
             call build_ws_ft(ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ)
