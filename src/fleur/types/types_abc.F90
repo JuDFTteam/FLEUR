@@ -486,7 +486,7 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l,j
       INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf, nA, nB
       INTEGER :: boff(0:atoms%lmaxd)
-      REAL    :: tmk, qss(3), s2h
+      REAL    :: tmk, qss(3)
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym, l_reused
 
@@ -498,11 +498,11 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
       COMPLEX :: ccchi(2, 2)
       REAL, ALLOCATABLE :: realCoeffs(:, :), imagCoeffs(:, :), workTrans_r(:, :)
       REAL, ALLOCATABLE :: fgpl(:, :)
-      COMPLEX, ALLOCATABLE :: s2h_e(:, :)
-      COMPLEX, ALLOCATABLE :: work_c(:, :), workTrans_c(:, :), workTrans_cf(:, :)
+      COMPLEX, ALLOCATABLE :: work_c(:, :)
       COMPLEX, ALLOCATABLE :: abCoeffs(:, :)
       COMPLEX, ALLOCATABLE :: abTemp(:, :)
-      COMPLEX, ALLOCATABLE :: helpMat_force(:, :)
+      COMPLEX, ALLOCATABLE :: lhs(:, :), abB(:, :), resA(:, :), resB(:, :)
+      REAL, ALLOCATABLE    :: s2h_v(:), eig_ne(:)
 
       CALL timestart("abcof")
       force%acoflo  = CMPLX(0.0,0.0)
@@ -512,9 +512,6 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
       force%aveccof = CMPLX(0.0,0.0)
       force%bveccof = CMPLX(0.0,0.0)
       force%cveccof = CMPLX(0.0,0.0)
-      ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
-      ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
-      ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
 ! Checks
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
@@ -556,10 +553,17 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
+      ! lhs: rows 1..ne (k+G)^2/2-e weighted, rows i*ne+1..(i+1)*ne (k+G)_i weighted eigenvectors
+      nA = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
+      nB = hsmt_ab_size(atoms, iType, .FALSE.) - nA
+      ALLOCATE (lhs(4*ne, MAXVAL(lapw%nv)), abB(MAX(nB,1), MAXVAL(lapw%nv)))
+      ALLOCATE (resA(4*ne, nA), resB(4*ne, MAX(nB,1)), s2h_v(MAXVAL(lapw%nv)))
+      eig_ne = eig(:ne)
 
 ! Initializations
       acof_size = size(this%cof, 1)
 !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
+!$acc enter data create(lhs,abB,resA,resB,s2h_v,fgpl) copyin(eig_ne)
 
 
 !Use inversion symmetry explicitely
@@ -612,11 +616,7 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
             END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE., l_skip=l_reused)
 !!$acc end data
-            ! work_c and abCoeffs were filled on the device; the force part below runs on the host
-            !$acc update self(abCoeffs,work_c)
             ! rows 1..nA: A for all lm; rows nA+1..abSize: B of the LAPW channels (boff)
-            nA = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
-            nB = abSize - nA
             boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
             CALL timestop("hsmt_ab")
 ! Force contributions
@@ -625,38 +625,55 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
             DO iLAPW = 1, nvmax
                fg(:) = MERGE(lapw%gvec(:, iLAPW, iintsp), lapw%gvec(:, iLAPW, jspin), noco%l_ss) + qss
                fk = lapw%bkpt + fg(:)
-               s2h = 0.5*DOT_PRODUCT(fk, MATMUL(cell%bbmat, fk))
-               s2h_e(:ne, iLAPW) = (s2h - eig(:ne))*work_c(iLAPW, :ne)
+               s2h_v(iLAPW) = 0.5*DOT_PRODUCT(fk, MATMUL(cell%bbmat, fk))
                nap = sym%ngopr(iAtom)
                inap = sym%invtab(nap)
                fgr = MATMUL(TRANSPOSE(sym%mrot(:, :, inap)), fg(:))
                fgpl(:, iLAPW) = MATMUL(fgr, cell%bmat)
             END DO
-      
-            workTrans_cf = CMPLX(0.0, 0.0)
-            helpMat_force = CMPLX(0.0, 0.0)
-      
-            CALL zgemm("N", "T", ne, nA, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
-                       CMPLX(1.0, 0.0), force%e1cof(:, :, iAtom), ne)
-            IF (nB > 0) THEN
-               CALL zgemm("N", "T", ne, nB, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + nA, 1), &
-                          size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-               CALL add_udot_rows(force%e2cof(:, :, iAtom), helpMat_force, boff(0:atoms%lmax(iType)), nA)
-            END IF
-            DO i = 1, 3
-               DO iLAPW = 1, nvmax
-                  workTrans_cf(:, iLAPW) = work_c(iLAPW, :)*fgpl(i, iLAPW)
-               END DO
+            !$acc update device(s2h_v,fgpl)
 
-               CALL zgemm("N", "T", ne, nA, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
-                          abCoeffs, size(abCoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-               force%aveccof(i, :, 0:nA-1, iAtom) = force%aveccof(i, :, 0:nA-1, iAtom) + helpMat_force(:, :nA)
-               IF (nB > 0) THEN
-                  CALL zgemm("N", "T", ne, nB, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
-                             abCoeffs(1 + nA, 1), size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-                  CALL add_udot_rows(force%bveccof(i, :, :, iAtom), helpMat_force, boff(0:atoms%lmax(iType)), nA)
-               END IF
+            ! The four force terms share one ZGEMM with the A and one with the B coefficients
+            !$CPP_OMP PARALLEL DO default(shared) private(iLAPW,i)
+            !$acc parallel loop collapse(2) present(lhs,work_c,s2h_v,fgpl,eig_ne)
+            DO iLAPW = 1, nvmax
+               DO i = 1, ne
+                  lhs(i, iLAPW)        = (s2h_v(iLAPW) - eig_ne(i))*work_c(iLAPW, i)
+                  lhs(ne + i, iLAPW)   = work_c(iLAPW, i)*fgpl(1, iLAPW)
+                  lhs(2*ne + i, iLAPW) = work_c(iLAPW, i)*fgpl(2, iLAPW)
+                  lhs(3*ne + i, iLAPW) = work_c(iLAPW, i)*fgpl(3, iLAPW)
+               END DO
             END DO
+            !$CPP_OMP END PARALLEL DO
+
+!$acc host_data use_device(lhs,abCoeffs,resA)
+            CALL zgemm_acc("N", "T", 4*ne, nA, nvmax, CMPLX(1.0, 0.0), lhs, 4*ne, abCoeffs, SIZE(abCoeffs, 1), &
+                           CMPLX(0.0, 0.0), resA, 4*ne)
+!$acc end host_data
+            IF (nB > 0) THEN
+               !$acc parallel loop collapse(2) present(abB,abCoeffs)
+               DO iLAPW = 1, nvmax
+                  DO i = 1, nB
+                     abB(i, iLAPW) = abCoeffs(nA + i, iLAPW)
+                  END DO
+               END DO
+!$acc host_data use_device(lhs,abB,resB)
+               CALL zgemm_acc("N", "T", 4*ne, nB, nvmax, CMPLX(1.0, 0.0), lhs, 4*ne, abB, SIZE(abB, 1), &
+                              CMPLX(0.0, 0.0), resB, 4*ne)
+!$acc end host_data
+            END IF
+            !$acc update self(resA,resB)
+
+            force%e1cof(:ne, 0:nA-1, iAtom) = force%e1cof(:ne, 0:nA-1, iAtom) + resA(:ne, :)
+            DO i = 1, 3
+               force%aveccof(i, :ne, 0:nA-1, iAtom) = force%aveccof(i, :ne, 0:nA-1, iAtom) + resA(i*ne+1:(i+1)*ne, :)
+            END DO
+            IF (nB > 0) THEN
+               CALL add_udot_rows(force%e2cof(:, :, iAtom), resB(:ne, :nB), boff(0:atoms%lmax(iType)), nA)
+               DO i = 1, 3
+                  CALL add_udot_rows(force%bveccof(i, :, :, iAtom), resB(i*ne+1:(i+1)*ne, :nB), boff(0:atoms%lmax(iType)), nA)
+               END DO
+            END IF
             CALL timestop("force contributions")
             ! Release the device copy and the host array before the next call.
             ! the storage keeps the host copy
@@ -744,6 +761,7 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
 !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
+!$acc exit data delete(lhs,abB,resA,resB,s2h_v,fgpl,eig_ne)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 

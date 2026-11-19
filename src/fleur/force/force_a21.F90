@@ -70,10 +70,11 @@ CONTAINS
       REAL,    PARAMETER :: zero=0.0
       COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
       COMPLEX dtd, dtu, utd, utu
-      INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m
-      INTEGER natrun, lmplmd
+      INTEGER :: i, ie, l1, ll1, lm1, lm2, m1, n, natom
+      INTEGER :: natrun, lmplmd, nlm, k, iat
 
       REAL, ALLOCATABLE :: a21(:,:)
+      COMPLEX, ALLOCATABLE :: tmat(:,:), vmat(:,:), wmat(:,:), cmat(:,:)
       COMPLEX forc_a21(3)
 
       CALL timestart("force_a21")
@@ -89,31 +90,45 @@ CONTAINS
                a21(:,natrun) = zero
             END DO
 
+            ! Non-spherical part, one ZGEMM per atom: W = V*T with V = [aveccof, bveccof]
+            ! (rows: band ie of direction i) and T the conjugated u/udot blocks of tlmplm%h
+            nlm = (atoms%lmax(n)+1)**2
+            ALLOCATE (tmat(2*nlm,2*nlm), vmat(3*ne,2*nlm), wmat(3*ne,2*nlm), cmat(ne,2*nlm))
+            DO lm1 = 0, nlm-1
+               DO lm2 = 0, nlm-1
+                  tmat(lm2+1,     lm1+1)     = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp)) ! utu
+                  tmat(nlm+lm2+1, lm1+1)     = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp)) ! utd
+                  tmat(lm2+1,     nlm+lm1+1) = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp)) ! dtu
+                  tmat(nlm+lm2+1, nlm+lm1+1) = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp)) ! dtd
+               END DO
+            END DO
+            DO natrun = natom,natom + atoms%neq(n) - 1
+               iat = natrun - natom + 1
+               DO lm1 = 0, nlm-1
+                  DO i = 1, 3
+                     vmat((i-1)*ne+1:i*ne, lm1+1)     = aveccof(i,:,lm1,natrun)
+                     vmat((i-1)*ne+1:i*ne, nlm+lm1+1) = bveccof(i,:,lm1,natrun)
+                  END DO
+                  cmat(:, lm1+1)     = abc%cof(:ne,lm1,1,iat)
+                  cmat(:, nlm+lm1+1) = abc%cof(:ne,lm1,2,iat)
+               END DO
+               CALL zgemm("N", "N", 3*ne, 2*nlm, 2*nlm, CMPLX(1.0,0.0), vmat, 3*ne, tmat, 2*nlm, &
+                          CMPLX(0.0,0.0), wmat, 3*ne)
+               DO i = 1, 3
+                  DO k = 1, 2*nlm
+                     DO ie = 1, ne
+                        a21(i,natrun) = a21(i,natrun) + 2.0*AIMAG(CONJG(cmat(ie,k))*wmat((i-1)*ne+ie,k))*we(ie)/atoms%neq(n)
+                     END DO
+                  END DO
+               END DO
+            END DO
+            DEALLOCATE (tmat, vmat, wmat, cmat)
+
             DO ie = 1,ne
                DO l1 = 0,atoms%lmax(n)
                   ll1 = l1* (l1+1)
                   DO m1 = -l1,l1
                      lm1 = ll1 + m1
-                     DO l2 = 0,atoms%lmax(n)
-                        ll2 = l2* (l2+1)
-                        DO m2 = -l2,l2
-                           lm2 = ll2 + m2
-                           DO natrun = natom,natom + atoms%neq(n) - 1
-                              utu = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp))
-                              dtd = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp))
-                              utd = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp))
-                              dtu = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp))
-                              DO i = 1,3
-                                 a21(i,natrun) = a21(i,natrun) + 2.0*&
-                                    AIMAG( CONJG(abc%cof(ie,lm1,1,natrun-natom+1)) *utu*aveccof(i,ie,lm2,natrun)&
-                                    +CONJG(abc%cof(ie,lm1,1,natrun-natom+1)) *utd*bveccof(i,ie,lm2,natrun)&
-                                    +CONJG(abc%cof(ie,lm1,2,natrun-natom+1)) *dtu*aveccof(i,ie,lm2,natrun)&
-                                    +CONJG(abc%cof(ie,lm1,2,natrun-natom+1)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
-                              END DO ! i (spatial directions)
-                           END DO ! natrun
-                        END DO ! m2
-                     END DO ! l2
-
                      ! Correct spherical part
                      utu = -eig(ie)
                      utd = 0.0
