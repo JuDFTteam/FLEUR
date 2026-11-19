@@ -176,6 +176,8 @@ CONTAINS
          mixingScheme = 'Broyden1'
       CASE (5)
          mixingScheme = 'Broyden2'
+      CASE (6)
+         mixingScheme = 'AndersonSF'
       CASE (7)
          mixingScheme = 'Anderson'
       CASE (9)

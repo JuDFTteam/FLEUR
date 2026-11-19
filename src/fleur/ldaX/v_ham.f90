@@ -86,6 +86,7 @@ MODULE m_vham
 
 
             i_pair=1 
+            !$acc enter data copyin(fjgj) create(fjgj%fj,fjgj%gj)
             DO i_v = 1,atoms%n_v  
                 V_inp=atoms%lda_v(i_v)%V / hartree_to_ev_const
                 natom1=atoms%lda_v(i_v)%atomIndex
@@ -93,6 +94,7 @@ MODULE m_vham
                 ll1atom1=latom1*(latom1+1)
                 norm1_W = rf(atoms%itype(natom1))%integral(2,2,latom1,jspin,jspin)**0.5
                 CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf(atoms%itype(natom1)),atoms%itype(natom1),jspin)
+                !$acc update device(fjgj%fj,fjgj%gj)
                 ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
                 ! hsmt_ab must not do the `enter data` on its own dummy argument.
                 IF (.NOT.l_use_abcoeff_store) THEN
@@ -109,6 +111,8 @@ MODULE m_vham
                    END IF
                 END IF
                 CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.,l_store=.TRUE.)
+                ! abG1 is filled on the device, the accumulation below runs on the host
+                !$acc update self(abG1)
                 ! row of the udot coefficient of latom1 (-1: APW channel, no udot)
                 boff(0:atoms%lmax(atoms%itype(natom1))) = atoms%udot_rows(atoms%lmax(atoms%itype(natom1)), atoms%itype(natom1))
                 bo1 = boff(latom1)
@@ -119,6 +123,7 @@ MODULE m_vham
                     norm2_W = rf(atoms%itype(natom2))%integral(2,2,latom2,jspin,jspin)**0.5
                     power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
                     CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf(atoms%itype(natom2)),atoms%itype(natom2),jspin)
+                    !$acc update device(fjgj%fj,fjgj%gj)
                     ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
                     ! hsmt_ab must not do the `enter data` on its own dummy argument.
                     IF (.NOT.l_use_abcoeff_store) THEN
@@ -135,6 +140,7 @@ MODULE m_vham
                        END IF
                     END IF
                     CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.,l_store=.TRUE.)
+                    !$acc update self(abG2)
                     boff(0:atoms%lmax(atoms%itype(natom2))) = atoms%udot_rows(atoms%lmax(atoms%itype(natom2)), atoms%itype(natom2))
                     bo2 = boff(latom2)
                     DO iG2=1,lapw%nv(jspin)
@@ -162,12 +168,17 @@ MODULE m_vham
                     !$acc exit data delete(abG2)
                     ! cache abG2 for later reuse (no-op unless storage enabled)
                     CALL abcoeff_store_save(abG2, lapw%nk, 1, jspin, natom2, .FALSE.)
+                    ! an allocated abG2 is taken as already mapped in the next iteration
+                    IF (ALLOCATED(abG2)) DEALLOCATE(abG2)
                     i_pair=i_pair+1
                 ENDDO
                 !$acc exit data delete(abG1)
                 ! cache abG1 for later reuse (no-op unless storage enabled)
                 CALL abcoeff_store_save(abG1, lapw%nk, 1, jspin, natom1, .FALSE.)
+                IF (ALLOCATED(abG1)) DEALLOCATE(abG1)
             ENDDO
+            !$acc exit data delete(fjgj%fj,fjgj%gj)
+            !$acc exit data delete(fjgj)
 
 
             DO iG1=1,lapw%nv(jspin)

@@ -324,14 +324,18 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
    IF (fmpi%irank==0) THEN
       CALL timestart("denmatrix%to_full_density")
+      ! the atom types are independent: each one only writes to den%mt(:,:,itype,:)
+      !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr) &
+      !$OMP SHARED(atoms, jsp_start, jsp_end, denmatrix, input, sphhar, noco, sym, radfun, den, l_minusq)
       DO itype = 1, atoms%ntype
          DO ispin = jsp_start, jsp_end
             DO ispinpr = jsp_start, jsp_end
                call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
                            sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=den%mtIm, l_minusq=l_minusq)
-            ENDDO               
+            ENDDO
          enddo
-      END DO      
+      END DO
+      !$OMP END PARALLEL DO
       CALL timestop("denmatrix%to_full_density")
    END IF
 

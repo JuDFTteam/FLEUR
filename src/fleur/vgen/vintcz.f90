@@ -11,6 +11,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
    USE m_constants
+   USE m_cfft
    USE m_lagrange3
    USE m_types_cell
    USE m_types_field
@@ -19,9 +20,72 @@ MODULE m_vintcz
    USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: vintcz, exp_safe
+   PUBLIC :: vintcz, vintcz_sumgrid, exp_safe
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen)
+   SUBROUTINE vintcz_sumgrid(stars,cell,nrec2,psq,n,vsum)
+      !! Sum over q_z in the interstitial part of vintcz for a star with G_par /= 0
+      !! (Neumann boundary condition) on the film z-grid z_i = a3*i/n, i=0..n-1
+      !! (a point with z_i > a3/2 stands for z_i - a3).
+      !!
+      !! exp(g(z-dh)), exp(-g(z+dh)) and the phases exp(+-i q dh) do not depend on q_z, so
+      !!   sum_q c_q [ e^{iqz} + vcons2 ( (g+iq) e_p(z) e^{iq dh} + (g-iq) e_m(z) e^{-iq dh} ) ]
+      !!     = F(z) + vcons2 ( A e_p(z) + B e_m(z) ),
+      !! with F(z) = sum_q c_q e^{iqz}, A = sum_q c_q (g+iq) e^{iq dh}, B = sum_q c_q (g-iq) e^{-iq dh}.
+      !! A and B cost O(mx3); F on the whole grid is one inverse FFT. The result is the value
+      !! vintcz would sum up for |z| < z1; for |z| >= z1 vintcz does not use it.
+      IMPLICIT NONE
+
+      TYPE(t_stars), INTENT(IN)  :: stars
+      TYPE(t_cell),  INTENT(IN)  :: cell
+      INTEGER,       INTENT(IN)  :: nrec2, n
+      COMPLEX,       INTENT(IN)  :: psq(stars%ng3)
+      COMPLEX,       INTENT(OUT) :: vsum(0:n-1)
+
+      REAL    :: a(n), b(n)
+      REAL    :: dh, g, g3, q, vcons2, cos_q, sin_q, z, ani, e_m, e_p
+      COMPLEX :: vcons1, ca, cb
+      INTEGER :: iq, ig3n, k1, k2, i
+
+      dh = cell%z1
+      k1 = stars%kv2(1,nrec2)
+      k2 = stars%kv2(2,nrec2)
+      g = stars%sk2(nrec2)
+      vcons2 = - 1.0 / (2.*g)
+      ani = 1.0 / REAL(n)
+
+      a = 0.0
+      b = 0.0
+      ca = CMPLX(0.0,0.0)
+      cb = CMPLX(0.0,0.0)
+      DO iq = -stars%mx3, stars%mx3
+         ig3n = stars%ig(k1,k2,iq)
+         IF (ig3n == 0) CYCLE
+         q = iq*cell%bmat(3,3)
+         g3 = stars%sk3(ig3n)
+         vcons1 = fpi_const*psq(ig3n)*stars%rgphs(k1,k2,iq) / (g3*g3)
+         ! the frequencies |iq| <= mx3 < n/2 do not overlap on the grid
+         i = MODULO(iq,n) + 1
+         a(i) = REAL(vcons1)
+         b(i) = AIMAG(vcons1)
+         cos_q = COS(q*dh)
+         sin_q = SIN(q*dh)
+         ca = ca + vcons1*(g + ImagUnit*q)*CMPLX(cos_q, sin_q)
+         cb = cb + vcons1*(g - ImagUnit*q)*CMPLX(cos_q, -sin_q)
+      END DO
+
+      CALL cfft(a, b, n, n, n, 1) ! sum_k c_k exp(+2 pi i k j/n)
+
+      DO i = 0, n-1
+         z = cell%amat(3,3) * i * ani
+         IF (z > cell%amat(3,3)/2.) z = z - cell%amat(3,3)
+         e_m = exp_safe( -g*(z+dh) ) !exp_safe handles overflow
+         e_p = exp_safe( g*(z-dh) )
+         vsum(i) = CMPLX(a(i+1), b(i+1)) + vcons2*(ca*e_p + cb*e_m)
+      END DO
+
+   END SUBROUTINE vintcz_sumgrid
+
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen,vsum)
 
       IMPLICIT NONE
 
@@ -41,6 +105,8 @@ CONTAINS
       !complex,        intent(in) :: sigma_disc(2)
       LOGICAL,        INTENT(IN) :: l_dfptvgen !, l_corr
       !COMPLEX,        INTENT(IN) :: diff_vmz1dh
+      !! sum over q_z of the interstitial part (G_par /= 0, Neumann) at this z, from vintcz_sumgrid
+      COMPLEX, OPTIONAL, INTENT(IN) :: vsum
 
       !complex, optional, intent(in) :: sigma_disc2(2)
       !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
@@ -136,12 +202,16 @@ CONTAINS
       ELSE
          k1 = stars%kv2(1,nrec2)
          k2 = stars%kv2(2,nrec2)
+         g = stars%sk2(nrec2)
 
          !newdp = cmplx(0.0,0.0)
          !newdm = cmplx(0.0,0.0)
          !newdp2 = cmplx(0.0,0.0)
          !newdm2 = cmplx(0.0,0.0)
 
+         IF (PRESENT(vsum) .AND. .NOT.field%efield%dirichlet) THEN
+            vintcz = vsum
+         ELSE
          DO  iq = -stars%mx3,stars%mx3
             ig3n = stars%ig(k1,k2,iq)
             !     ----> use only stars within the g_max sphere (oct.97 shz)
@@ -189,6 +259,7 @@ CONTAINS
                END IF ! Neumann (vs. Dirichlet)
             END IF ! ig3d /= 0
          END DO
+         END IF ! precomputed sum over q_z
          !  ----> v4(z)
          IF (field%efield%dirichlet) THEN
             e_m = SINH(g*(field%efield%zsigma+dh - z))

@@ -13,7 +13,7 @@ MODULE m_types_input
   USE m_types_noco
   IMPLICIT NONE
   PRIVATE
-  PUBLIC:: t_input
+  PUBLIC:: t_input, imix_from_name
   TYPE,EXTENDS(t_fleurinput_base):: t_input
   LOGICAL :: film=.FALSE.
   LOGICAL :: l_real
@@ -192,6 +192,35 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
 
 END SUBROUTINE mpi_bc_input
 
+INTEGER FUNCTION imix_from_name(name)
+   ! Maps the mixing scheme name used in inp.xml to imix
+   CHARACTER(len=*), INTENT(IN) :: name
+
+   SELECT CASE (TRIM(ADJUSTL(name)))
+      CASE ('straight')
+         imix_from_name = 0
+      CASE ('Broyden1')
+         imix_from_name = 3
+      CASE ('Broyden2')
+         imix_from_name = 5
+      CASE ('Anderson')
+         imix_from_name = 7
+      CASE ('AndersonSF')
+         imix_from_name = 6
+      CASE ("Pulay")
+         imix_from_name = 9
+      CASE ("pPulay")
+         imix_from_name = 11
+      CASE ("rPulay")
+         imix_from_name = 13
+      CASE ("aPulay")
+         imix_from_name = 15
+      CASE DEFAULT
+         imix_from_name = 7
+         CALL juDFT_error('Error: unknown mixing scheme selected: '//TRIM(ADJUSTL(name)))
+   END SELECT
+END FUNCTION imix_from_name
+
 SUBROUTINE read_xml_input(this,xml)
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
@@ -232,26 +261,7 @@ SUBROUTINE read_xml_input(this,xml)
    this%minDistance = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
    this%maxiter = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
    valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
-   SELECT CASE (valueString)
-      CASE ('straight')
-         this%imix = 0
-      CASE ('Broyden1')
-         this%imix = 3
-      CASE ('Broyden2')
-         this%imix = 5
-      CASE ('Anderson')
-         this%imix = 7
-      CASE ("Pulay")
-         this%imix = 9
-      CASE ("pPulay")
-         this%imix = 11
-      CASE ("rPulay")
-         this%imix = 13
-      CASE ("aPulay")
-         this%imix = 15
-      CASE DEFAULT
-         CALL juDFT_error('Error: unknown mixing scheme selected!')
-   END SELECT
+   this%imix = imix_from_name(valueString)
 
    this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
