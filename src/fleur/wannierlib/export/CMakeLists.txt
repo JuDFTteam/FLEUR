@@ -9,4 +9,5 @@ src/fleur/wannierlib/export/wannierlib_export_basis.F90
 src/fleur/wannierlib/export/wannierlib_export_ks.F90
 src/fleur/wannierlib/export/wannierlib_import_ks.F90
 src/fleur/wannierlib/export/wannierlib_export_bmesh.F90
+src/fleur/wannierlib/export/wannierlib_export_win.F90
 )

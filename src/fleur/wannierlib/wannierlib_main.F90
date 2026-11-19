@@ -45,6 +45,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wannierlib_export_ks, ONLY: wannierlib_export_ks
+   USE m_wannierlib_export_win, ONLY: wannierlib_write_win
    USE m_wannierlib_import_ks, ONLY: wannierlib_ks_roundtrip, wannierlib_import_ks, &
                                      wannierlib_ks_present
    USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
@@ -317,6 +318,11 @@ CONTAINS
 
                CALL wannierlib_write_mmn(this, mmn_full, kpts, nnkp, gkpb, jspin)
                CALL wannierlib_write_eig(eig, spin12(jspin)//'.eig')
+               !> And the input file that names them. Without it the three above are a
+               !> set of tables no reader can act on: wannier90.x takes its whole setup
+               !> from the .win and refuses to start without one.
+               CALL wannierlib_write_win(wl, atoms, cell, kpts, spin12(jspin)//'.win', &
+                                         l_wannierlib_spinors, WANNIERLIB_SEARCH_SHELLS)
             END IF
             DEALLOCATE (mmn_full)
          END IF

@@ -43,7 +43,7 @@ MODULE m_wannierlib_w90_adapter
   INTEGER, PARAMETER :: WANNIERLIB_SEARCH_SHELLS = 1000
 
   PRIVATE
-  PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90
+  PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90, WANNIERLIB_SEARCH_SHELLS
 #ifdef CPP_WANNLIB_API
   TYPE(lib_common_type), SAVE, PUBLIC :: wannierlib_w90main
 #endif
