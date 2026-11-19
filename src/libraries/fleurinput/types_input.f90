@@ -241,6 +241,8 @@ SUBROUTINE read_xml_input(this,xml)
          this%imix = 5
       CASE ('Anderson')
          this%imix = 7
+      CASE ('AndersonSF')
+         this%imix = 6
       CASE ("Pulay")
          this%imix = 9
       CASE ("pPulay")
