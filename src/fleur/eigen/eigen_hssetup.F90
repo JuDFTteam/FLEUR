@@ -44,6 +44,11 @@ MODULE m_eigen_hssetup
    implicit none
    PRIVATE
    PUBLIC :: hsvac_hyb
+#ifdef _OPENACC
+   INTERFACE priv_zero_on_device
+      MODULE PROCEDURE priv_zero_on_device_r, priv_zero_on_device_c
+   END INTERFACE
+#endif
 #ifndef _OPENACC
    PUBLIC :: eigen_hssetup
 #endif
@@ -236,12 +241,10 @@ IF (fmpi%n_size == 1) THEN
       DO j = 1, nspins
          !$acc enter data copyin(hmat(i,j),smat(i,j))
          !$acc enter data create(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
-         !$acc kernels present(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
-         hmat(i,j)%data_r = 0.0
-         smat(i,j)%data_r = 0.0
-         hmat(i,j)%data_c = 0.0
-         smat(i,j)%data_c = 0.0
-         !$acc end kernels
+         CALL priv_zero_on_device(hmat(i,j)%data_r)
+         CALL priv_zero_on_device(smat(i,j)%data_r)
+         CALL priv_zero_on_device(hmat(i,j)%data_c)
+         CALL priv_zero_on_device(smat(i,j)%data_c)
       END DO
    END DO
 
@@ -326,12 +329,10 @@ ELSE
       DO j = 1, nspins
          !$acc enter data copyin(hmat_mpi(i,j),smat_mpi(i,j))
          !$acc enter data create(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r,hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
-         !$acc kernels present(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r,hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
-         hmat_mpi(i,j)%data_r = 0.0
-         smat_mpi(i,j)%data_r = 0.0
-         hmat_mpi(i,j)%data_c = 0.0
-         smat_mpi(i,j)%data_c = 0.0
-         !$acc end kernels
+         CALL priv_zero_on_device(hmat_mpi(i,j)%data_r)
+         CALL priv_zero_on_device(smat_mpi(i,j)%data_r)
+         CALL priv_zero_on_device(hmat_mpi(i,j)%data_c)
+         CALL priv_zero_on_device(smat_mpi(i,j)%data_c)
       END DO
    END DO
 
@@ -428,4 +429,20 @@ END SUBROUTINE eigen_hssetup
       END IF
    END SUBROUTINE hsvac_hyb
 
+#ifdef _OPENACC
+   ! Zero a mapped matrix on the device. A kernel on hmat(i,j)%data would map all of hmat.
+   SUBROUTINE priv_zero_on_device_r(a)
+      REAL, INTENT(INOUT) :: a(:, :)
+      !$acc kernels present(a)
+      a = 0.0
+      !$acc end kernels
+   END SUBROUTINE priv_zero_on_device_r
+
+   SUBROUTINE priv_zero_on_device_c(a)
+      COMPLEX, INTENT(INOUT) :: a(:, :)
+      !$acc kernels present(a)
+      a = 0.0
+      !$acc end kernels
+   END SUBROUTINE priv_zero_on_device_c
+#endif
 END MODULE m_eigen_hssetup
