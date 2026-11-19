@@ -233,7 +233,10 @@ CONTAINS
           CALL w90_set_option(wannierlib_w90main, 'dist_cutoff', bohr_to_angstrom_const*this%tran_dist_cutoff)
     END IF
 
-    seedname = 'fleur_wlib_internal'
+    !> The stem the checkpoint and its witness are named after. It is the same stem the
+    !> .amn, .mmn, .eig and .win carry, so that the five files a standalone wannier90.x
+    !> reads sit side by side under one name and none of them has to be renamed first.
+    seedname = 'WF1'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='set_w90_options')
   END SUBROUTINE set_w90_options
@@ -314,10 +317,10 @@ CONTAINS
     !> the first channel to read. The name is set here, before any checkpoint is read or
     !> written, because set_w90_options runs once for the whole calculation.
     !>
-    !> A single channel keeps the bare name, so every checkpoint written before this is
-    !> still found: the suffix appears only where it was impossible to restart anyway.
+    !> A single channel is WF1, the same stem the one set of Bloch files carries; two
+    !> channels are WF1 and WF2, one per spin, as those files already are.
     IF (n_channels > 1) THEN
-      WRITE (seedname, '(a,i0)') 'fleur_wlib_internal.', jspin
+      WRITE (seedname, '(a,i0)') 'WF', jspin
       !> Assigned, not set through w90_input_setopt: that call PROCESSES the option store
       !> and empties it on the way out ("must be empty here; emptied by w90_input_setopt
       !> call", library_interface.F90:458), so a second call fails. The field is the one

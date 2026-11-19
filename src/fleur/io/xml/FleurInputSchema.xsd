@@ -3884,7 +3884,7 @@
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>
       <xsd:attribute default="none" name="restart" type="WannierlibRestartType" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Where the gauge comes from. "none" builds it in this run. The other two read it back from &lt;seedname&gt;.chk, which must sit in the working directory under the name this code uses, fleur_wlib_internal.chk, and must come from a run on the same k-mesh: "wannierise" takes that gauge as the starting point and minimises again under the current &lt;wannierization&gt; settings, while "operators" takes it as final and goes straight to the operators. Together with &lt;export checkpoint="T"/&gt; these let a minimisation be repeated, here or in a standalone wannier90.x, without repeating the ab-initio pass.</xsd:documentation>
+            <xsd:documentation>Where the gauge comes from. "none" builds it in this run. The other two read it back from &lt;seedname&gt;.chk, which must sit in the working directory under the name this code uses, WF1.chk (WF1.chk and WF2.chk for the two channels of a collinear run), must come from a run on the same k-mesh, and must have been written on the same number of MPI ranks: "wannierise" takes that gauge as the starting point and minimises again under the current &lt;wannierization&gt; settings, while "operators" takes it as final and goes straight to the operators. Together with &lt;export checkpoint="T"/&gt; these let a minimisation be repeated, here or in a standalone wannier90.x, without repeating the ab-initio pass.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>
