@@ -60,7 +60,7 @@ include("cmake/ReportConfig.txt")
 #'inpgen2' -> 'inpgen'); install(TARGETS) honours RUNTIME_OUTPUT_NAME.
 install(TARGETS fleur   RUNTIME DESTINATION bin)
 install(TARGETS inpgen2 RUNTIME DESTINATION bin)
-#gfleur/gfprep only exist in builds with HDF5 (see cmake/gfleur.cmake)
+#gfleur/gfprep only exist if configured with -gfleur true (see cmake/gfleur.cmake)
 if (TARGET gfleur)
    install(TARGETS gfleur gfprep RUNTIME DESTINATION bin)
 endif()

@@ -2,8 +2,10 @@
 #
 #The gfleur executables are built from the full FLEUR source list plus the
 #sources in src/gfleur-embedding, replacing only the main program. All
-#persistent I/O of gfleur is HDF5-based, so the targets are skipped entirely
-#if HDF5 is not available.
+#persistent I/O of gfleur is HDF5-based, so HDF5 is required.
+#
+#The targets are optional and only built if configure.sh was called with
+#'-gfleur true' (CMake variable CLI_FLEUR_USE_GFLEUR).
 #
 #As for fleur, there is one target per executable; the definitions and linked
 #libraries follow the fleur target in Files_and_Targets.txt.
@@ -48,7 +50,16 @@ function(gfleur_configure_target target)
    target_link_libraries(${target} ${FLEUR_LINK_LIBRARIES})
 endfunction()
 
-if (FLEUR_USE_HDF5)
+set(FLEUR_USE_GFLEUR FALSE)
+if (DEFINED CLI_FLEUR_USE_GFLEUR)
+   set(FLEUR_USE_GFLEUR ${CLI_FLEUR_USE_GFLEUR})
+endif()
+if (FLEUR_USE_GFLEUR AND NOT FLEUR_USE_HDF5)
+   message(WARNING "gfleur requested but HDF5 is not available: gfleur targets skipped")
+   set(FLEUR_USE_GFLEUR FALSE)
+endif()
+
+if (FLEUR_USE_GFLEUR)
    include(src/gfleur-embedding/CMakeLists.txt)
    set(gfleur_SRC ${fleur_SRC} ${gfleur_F90})
    list(REMOVE_ITEM gfleur_SRC src/fleur/main/fleur_prog.F90)
@@ -66,6 +77,4 @@ if (FLEUR_USE_HDF5)
    #gfprep runs on a single rank
    add_executable(gfprep ${gfprep_SRC} ${c_filesFleur})
    gfleur_configure_target(gfprep)
-else()
-   message(STATUS "gfleur targets skipped: HDF5 is required")
 endif()
