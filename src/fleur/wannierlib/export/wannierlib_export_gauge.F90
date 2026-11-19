@@ -27,7 +27,7 @@
 !> beyond the shapes the attributes state.
 MODULE m_wannierlib_export_gauge
    USE m_juDFT
-   USE m_constants, ONLY: oUnit
+   USE m_constants, ONLY: oUnit, bohr_to_angstrom_const
    USE m_types_kpts
    USE m_types_input
    USE m_types_mpi
@@ -43,7 +43,8 @@ MODULE m_wannierlib_export_gauge
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_export_gauge, &
-             wannierlib_store_gauge
+             wannierlib_store_gauge, &
+             wannierlib_store_centres
 CONTAINS
 
    SUBROUTINE wannierlib_export_gauge(kpts, fmpi, jspin, u_opt, u_matrix)
@@ -178,4 +179,25 @@ CONTAINS
          DEALLOCATE (buf)
       END IF
    END SUBROUTINE wannierlib_store_gauge
+
+
+   !> Copy the Wannier centres of channel jspin into results, in bohr and identical on all ranks.
+   SUBROUTINE wannierlib_store_centres(fmpi, input, jspin, centres_ang, results)
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      TYPE(t_input), INTENT(IN) :: input
+      INTEGER, INTENT(IN) :: jspin
+      REAL, INTENT(IN) :: centres_ang(:, :)       ! (3, nw), cartesian, Angstrom
+      TYPE(t_results), INTENT(INOUT) :: results
+
+      INTEGER :: ierr
+
+      IF (.NOT. ALLOCATED(results%wann_centres)) &
+         ALLOCATE (results%wann_centres(3, SIZE(centres_ang, 2), input%jspins), source=0.0)
+      results%wann_centres(:, :, jspin) = centres_ang / bohr_to_angstrom_const
+#ifdef CPP_MPI
+      IF (fmpi%isize > 1) &
+         CALL MPI_BCAST(results%wann_centres(:, :, jspin), SIZE(centres_ang), MPI_DOUBLE_PRECISION, 0, &
+                        fmpi%mpi_comm, ierr)
+#endif
+   END SUBROUTINE wannierlib_store_centres
 END MODULE m_wannierlib_export_gauge

@@ -30,7 +30,7 @@ MODULE m_wannierlib_main
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
-   USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge
+   USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge, wannierlib_store_centres
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
 USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
    USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, wannierlib_write_s0, &
@@ -246,6 +246,7 @@ CONTAINS
          ! there nor in the post-processing, and only those touch this file.
          ! Kept BEFORE report_w90 so the ordering of the operator messages in `out` is unchanged.
          CALL wannierlib_get_bmesh(this, kpts, bmesh)
+         IF (ALLOCATED(bmesh%centres)) CALL wannierlib_store_centres(fmpi, input, jspin, bmesh%centres, results)
          !> F wants the gauge at two neighbours at once, so it can be built neither with the
          !> coarse matrices, which come before any gauge, nor in the post-processing, which
          !> cannot reach the wavefunctions. It goes here, and only when it was asked for.

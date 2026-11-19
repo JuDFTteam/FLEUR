@@ -22,8 +22,9 @@ module m_dfpt_write_epw
    !!                  yields eigenvalues omega^2 in Ry^2 (= 4 omega^2_Htr).
    !!   * masses    : amass = m[amu] * amu_ry   (QE internal Rydberg mass unit)
    !!   * WS lists  : EPW reads the WS lists and degeneracies from wigner.fmt on restart
-   !!                 (use_ws = .true.: dims = nwann, dims2 = nat). The phonon list has
-   !!                 one degeneracy per atom pair, the e-ph list one per displaced atom.
+   !!                 (use_ws = .true.: dims = nwann, dims2 = nat). The electron list has
+   !!                 one degeneracy per Wannier pair, the phonon list one per atom pair,
+   !!                 the e-ph list one per bra Wannier function and displaced atom.
    !!                 Every R-indexed array is written in the order of wigner.fmt.
    !!                 FLEUR interpolates back with e^{-i k.R}, EPW with e^{+i k.R}, so
    !!                 the FLEUR value at R is stored at EPW's vector -R. Exception: FLEUR's
@@ -355,13 +356,13 @@ contains
 1     format(1000(I0, :, 1X))
 2     format(3I6, ES26.17E3)
       write(iu,1) nNZ_k, nNZ_fcm, nNZ_g, nwann, nat
-      ! electron block (R_e): ndegen_k(ir,iw,iw2), identical for all pairs since all Wannier centres are at the origin
+      ! electron block (R_e): ndegen_k(ir,iw,iw2) of the Wannier pair (iw,iw2)
       do ir = 1, nNZ_k
          j = ord_k(ir)
          irvec = -gmatSpin(1)%ws_k_Rvecs(:,j)
          write(iu,2) irvec, ws_len(fi%cell%amat, gmatSpin(1)%ws_k_Rvecs(:,j), alat)
          do iw = 1, nwann
-            write(iu,1) (ndegen(gmatSpin(1)%ws_k_weightNZ(j)), ja = 1, nwann)
+            write(iu,1) (ndegen(gmatSpin(1)%ws_k_weight(iw,ja,j)), ja = 1, nwann)
          end do
       end do
       ! phonon block (R_q): ndegen_q(ir,na,nb)
@@ -373,13 +374,13 @@ contains
             write(iu,1) (ndegen(weightPair_fcm(ia,ja,j)), ja = 1, nat)
          end do
       end do
-      ! e-ph block (R_g): ndegen_g(iw,ir,na), weights of the displaced atom na
+      ! e-ph block (R_g): ndegen_g(iw,ir,na) of the bra Wannier function iw and the displaced atom na
       do ir = 1, nNZ_g
          j = ord_g(ir)
          irvec = -gmatSpin(1)%ws_q_Rvecs(:,j)
          write(iu,2) irvec, ws_len(fi%cell%amat, gmatSpin(1)%ws_q_Rvecs(:,j), alat)
          do iw = 1, nwann
-            write(iu,1) (ndegen(gmatSpin(3*ia)%ws_q_weightNZ(j)), ia = 1, nat)
+            write(iu,1) (ndegen(gmatSpin(3*ia)%ws_q_weight(iw,j)), ia = 1, nat)
          end do
       end do
       close(iu)

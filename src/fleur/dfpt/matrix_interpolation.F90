@@ -25,14 +25,13 @@ module m_matrix_interpolation
     ! interpolation (real-space tensor + Wigner-Seitz data).
     type t_wann_ft
         integer :: nwann
-        integer :: bigBox_lim_k(2,3), bigBox_lim_q(2,3)
-        real,    allocatable :: FTweight_k(:), FTweight_q(:)
         complex, allocatable :: matWannier(:,:,:,:)   ! nwann,nwann, 0:ws_k_nNZ-1 (R_e), 0:ws_q_nNZ-1 (R_p)
-        ! Wigner-Seitz vectors *_Rvecs(:,i) with weights *_weightNZ(i), stored at index i-1
+        ! Wigner-Seitz vectors *_Rvecs(:,i), stored at index i-1
         integer :: ws_k_nNZ = 0, ws_q_nNZ = 0
         integer, allocatable :: ws_k_Rvecs(:,:)
         integer, allocatable :: ws_q_Rvecs(:,:)
-        real,    allocatable :: ws_k_weightNZ(:), ws_q_weightNZ(:)
+        real,    allocatable :: ws_k_weight(:,:,:)    ! (nwann,nwann,ws_k_nNZ) for the bond R_e + c_a - c_b
+        real,    allocatable :: ws_q_weight(:,:)      ! (nwann,ws_q_nNZ) for the bond R_p + c_a - tau of the displaced atom
     end type t_wann_ft
 
 contains
@@ -137,15 +136,17 @@ contains
         real,intent(in) :: qpts_fine(:,:)                         ! fine q-mesh to interpolate onto
 
         type(t_wann_ft) :: ft
+        real, allocatable :: centres(:,:)
 
-        call wannier_matrixq_forward(fi, matElement, U_mat, kpts_coarse, qpts_coarse, ft)
+        allocate(centres(3,size(U_mat,2)), source=0.0)
+        call wannier_matrixq_forward(fi, matElement, U_mat, kpts_coarse, qpts_coarse, centres, ft)
         call wannier_matrixq_backward(ft, kpts_fine, qpts_fine, matInterpol)
 
     end subroutine wannier_matrixq_interpolate
 
-    subroutine wannier_matrixq_forward(fi,matElement,U_mat,kpts_coarse,qpts_coarse,ft,k_list,mpi_comm,iAtom)
+    subroutine wannier_matrixq_forward(fi,matElement,U_mat,kpts_coarse,qpts_coarse,centres,ft,k_list,mpi_comm,iAtom)
 
-        ! Build the real-space Wannier-gauge matWannier and the Wigner-Seitz weights.
+        ! Build the real-space Wannier-gauge matWannier and the Wigner-Seitz weights of each Wannier pair (R_e) and bra function (R_p).
         ! With k_list/mpi_comm, matElement holds only the k-points k_list and matWannier is summed over all ranks.
         ! With iAtom, R_p runs over the union of the per-atom lists and carries the weights of the displaced atom iAtom.
 
@@ -154,17 +155,17 @@ contains
         complex,            intent(in)  :: U_mat(:,:,:)           ! bloch, wannier, kpoint (full coarse mesh)
         type(t_kpts),       intent(in)  :: kpts_coarse            ! coarse Wannier k-mesh
         type(t_kpts),       intent(in)  :: qpts_coarse            ! coarse Wannier q-mesh, summed over its full zone (nkptf/bkf)
+        real,               intent(in)  :: centres(:,:)           ! (3,nwann) Wannier centres, cartesian bohr
         type(t_wann_ft),    intent(out) :: ft
         integer, optional,  intent(in)  :: k_list(:)              ! global k index of each local slot of matElement
         integer, optional,  intent(in)  :: mpi_comm
         integer, optional,  intent(in)  :: iAtom                  ! atom displaced by this matrix element
 
-        integer :: ikpt, nk_i, iqpt, ikqpt, ix, iy, iz, iGrid, iqR, jAtom
-        integer :: boxSize_k, boxSize_q
-        integer :: nwann, nk_c, nq_c, nk1, nk2, nk3, nq1, nq2, nq3
-        type(t_cell) :: cell
-        real,    allocatable :: shifts(:,:), weightAtom(:,:)
-        integer, allocatable :: supercellR_k(:,:), supercellR_q(:,:), kpt_list(:)
+        integer :: ikpt, nk_i, iqpt, ikqpt, iqR, iw, jw, jAtom, nAtom, iAtomW
+        integer :: nwann, nk_c, nq_c
+        real    :: tau(3)
+        real,    allocatable :: sites(:,:), shifts(:,:), weightShift(:,:)
+        integer, allocatable :: kpt_list(:)
         complex, allocatable :: matRot(:,:)                       ! wannier-gauge block for one (k,q)
         complex, allocatable :: matRpK(:,:,:,:)                  ! after q->R_p FT (nwann,nwann, R_p, local k)
         real :: bkqpt(3)
@@ -184,58 +185,36 @@ contains
         if (size(matElement,3) /= size(kpt_list)) call juDFT_error("matElement k dimension does not match the k list", &
                                                               calledby="wannier_matrixq_forward")
 
-        nk1 = kpts_coarse%nkpt3(1); nk2 = kpts_coarse%nkpt3(2); nk3 = kpts_coarse%nkpt3(3)
-        nq1 = qpts_coarse%nkpt3(1); nq2 = qpts_coarse%nkpt3(2); nq3 = qpts_coarse%nkpt3(3)
-
         ft%nwann = nwann
 
-        ! Wigner-Seitz weights and big-box supercell R vectors, one set per mesh
+        ! The FT conventions put the bra function a (at k+q) at the origin, the ket function b at -R_e + c_b
+        ! and the displaced atom at -R_p + tau, so the bonds are R_e + c_a - c_b and R_p + c_a - tau.
         call timestart("Wigner-Seitz weights (k and q)")
-        ft%bigBox_lim_k(2,:) =   2*kpts_coarse%nkpt3(:)
-        ft%bigBox_lim_k(1,:) = - 2*kpts_coarse%nkpt3(:)
-        boxSize_k = (4*nk1+1) * (4*nk2+1) * (4*nk3+1)
-        allocate(ft%FTweight_k(boxSize_k), supercellR_k(3,boxSize_k))
-        ft%FTweight_k = 0.0; supercellR_k = 0
-        iGrid = 1
-        do iz=ft%bigBox_lim_k(1,3),ft%bigBox_lim_k(2,3)
-            do iy=ft%bigBox_lim_k(1,2),ft%bigBox_lim_k(2,2)
-                do ix=ft%bigBox_lim_k(1,1),ft%bigBox_lim_k(2,1)
-                    supercellR_k(:,iGrid) = (/ix,iy,iz/)
-                    iGrid = iGrid+1
-                end do
+        sites = wannier_sites(fi, centres)
+        allocate(shifts(3,nwann*nwann))
+        do jw = 1, nwann
+            do iw = 1, nwann
+                shifts(:,iw+nwann*(jw-1)) = sites(:,iw) - sites(:,jw)
             end do
         end do
+        call build_ws_shifted(fi%cell%amat, kpts_coarse%nkpt3, fi%input%film, shifts, ft%ws_k_nNZ, ft%ws_k_Rvecs, weightShift)
+        ft%ws_k_weight = reshape(weightShift, [nwann, nwann, ft%ws_k_nNZ])
+        deallocate(shifts, weightShift)
 
-        ft%bigBox_lim_q(2,:) =   2*qpts_coarse%nkpt3(:)
-        ft%bigBox_lim_q(1,:) = - 2*qpts_coarse%nkpt3(:)
-        boxSize_q = (4*nq1+1) * (4*nq2+1) * (4*nq3+1)
-        allocate(ft%FTweight_q(boxSize_q), supercellR_q(3,boxSize_q))
-        ft%FTweight_q = 0.0; supercellR_q = 0
-        iGrid = 1
-        do iz=ft%bigBox_lim_q(1,3),ft%bigBox_lim_q(2,3)
-            do iy=ft%bigBox_lim_q(1,2),ft%bigBox_lim_q(2,2)
-                do ix=ft%bigBox_lim_q(1,1),ft%bigBox_lim_q(2,1)
-                    supercellR_q(:,iGrid) = (/ix,iy,iz/)
-                    iGrid = iGrid+1
-                end do
+        nAtom = 1
+        if (present(iAtom)) nAtom = fi%atoms%nat
+        allocate(shifts(3,nwann*nAtom))
+        do jAtom = 1, nAtom
+            tau = 0.0
+            if (present(iAtom)) tau = matmul(fi%cell%amat, fi%atoms%taual(:,jAtom))
+            do iw = 1, nwann
+                shifts(:,iw+nwann*(jAtom-1)) = sites(:,iw) - tau
             end do
         end do
-
-        cell = fi%cell
-        call cell%calculate_WSweight(supercellR_k,ft%FTweight_k,scaleSupercell=kpts_coarse%nkpt3(:))
-        call cell%calculate_WSweight(supercellR_q,ft%FTweight_q,scaleSupercell=qpts_coarse%nkpt3(:))
-        call build_ws_ft(ft%bigBox_lim_k, ft%FTweight_k, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_weightNZ)
-        if (present(iAtom)) then
-            ! bond R_p + tau_a between the Wannier centres (at the origin) and the displaced atom
-            allocate(shifts(3,fi%atoms%nat))
-            do jAtom = 1, fi%atoms%nat
-                shifts(:,jAtom) = matmul(fi%cell%amat, fi%atoms%taual(:,jAtom))
-            end do
-            call build_ws_shifted(fi%cell%amat, qpts_coarse%nkpt3, fi%input%film, shifts, ft%ws_q_nNZ, ft%ws_q_Rvecs, weightAtom)
-            ft%ws_q_weightNZ = weightAtom(iAtom,:)
-        else
-            call build_ws_ft(ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ)
-        end if
+        call build_ws_shifted(fi%cell%amat, qpts_coarse%nkpt3, fi%input%film, shifts, ft%ws_q_nNZ, ft%ws_q_Rvecs, weightShift)
+        iAtomW = 1
+        if (present(iAtom)) iAtomW = iAtom
+        ft%ws_q_weight = weightShift(nwann*(iAtomW-1)+1:nwann*iAtomW,:)
         call timestop("Wigner-Seitz weights (k and q)")
 
         allocate(matRot(nwann,nwann))
@@ -308,17 +287,90 @@ contains
             ! ---- stage 1: R_p -> q', for each R_e grid point ----
             matReQ = cmplx(0.0,0.0)
             do ikR = 0, ft%ws_k_nNZ-1
-                call ft_fcm_weight_packed(-1, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weightNZ, qpts_fine(:,iq_fine), &
-                                   matReQ(:,:,ikR), ft%matWannier(:,:,ikR,:))
+                call ft_backward_rows(ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_weight, qpts_fine(:,iq_fine), &
+                                      matReQ(:,:,ikR), ft%matWannier(:,:,ikR,:))
             end do
             ! ---- stage 2: R_e -> k' ----
             do ik_fine = 1 , nk_fine
-                call ft_fcm_weight_packed(-1, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_weightNZ, kpts_fine(:,ik_fine), &
-                                   matInterpol(:,:,ik_fine,iq_fine), matReQ)
+                call ft_backward_pairs(ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_weight, kpts_fine(:,ik_fine), &
+                                       matInterpol(:,:,ik_fine,iq_fine), matReQ)
             end do !ik_fine
         end do !iq_fine
         call timestop("Backward FT")
 
     end subroutine wannier_matrixq_backward
+
+    function wannier_sites(fi, centres) result(sites)
+        !! Wannier centres moved onto the nearest atom image within snapRadius; centres farther from every atom are kept.
+        type(t_fleurinput), intent(in) :: fi
+        real,               intent(in) :: centres(:,:)    ! (3,nwann) cartesian bohr
+        real, allocatable :: sites(:,:)
+
+        real, parameter :: snapRadius = 1.0
+        integer :: iw, iAtom, ix, iy, iz
+        real    :: pos(3), dist, distMin
+
+        sites = centres
+        do iw = 1, size(centres,2)
+            distMin = snapRadius
+            do iAtom = 1, fi%atoms%nat
+                do iz = -2, 2
+                    do iy = -2, 2
+                        do ix = -2, 2
+                            pos = matmul(fi%cell%amat, fi%atoms%taual(:,iAtom) + [ix,iy,iz])
+                            dist = norm2(pos - centres(:,iw))
+                            if (dist < distMin) then
+                                distMin = dist
+                                sites(:,iw) = pos
+                            end if
+                        end do
+                    end do
+                end do
+            end do
+            if (distMin >= snapRadius) write(oUnit,'(a,i0,a)') "Wannier function ", iw, &
+                                                              ": centre not on an atom, Wigner-Seitz weights use the Wannier90 centre"
+        end do
+    end function wannier_sites
+
+    subroutine ft_backward_rows(nNZ, Rvecs, weight, bqpt, mat_q, mat_r)
+        !! Backward FT r -> q with the weight weight(a,i) on row a of the block at Rvecs(:,i), stored at index i-1.
+        integer, intent(in)    :: nNZ
+        integer, intent(in)    :: Rvecs(:,:)
+        real,    intent(in)    :: weight(:,:)
+        real,    intent(in)    :: bqpt(3)
+        complex, intent(inout) :: mat_q(:,:)
+        complex, intent(in)    :: mat_r(:,:,0:)
+
+        integer :: i, iw
+        real    :: phas
+        complex :: phase_fac
+
+        do i = 1, nNZ
+            phas = -tpi_const*dot_product(bqpt, real(Rvecs(:,i)))
+            phase_fac = cmplx(cos(phas), sin(phas))
+            do iw = 1, size(weight,1)
+                if (weight(iw,i) == 0.0) cycle
+                mat_q(iw,:) = mat_q(iw,:) + phase_fac*weight(iw,i)*mat_r(iw,:,i-1)
+            end do
+        end do
+    end subroutine ft_backward_rows
+
+    subroutine ft_backward_pairs(nNZ, Rvecs, weight, bqpt, mat_q, mat_r)
+        !! Backward FT r -> q with the weight weight(a,b,i) on element (a,b) of the block at Rvecs(:,i), stored at index i-1.
+        integer, intent(in)    :: nNZ
+        integer, intent(in)    :: Rvecs(:,:)
+        real,    intent(in)    :: weight(:,:,:)
+        real,    intent(in)    :: bqpt(3)
+        complex, intent(inout) :: mat_q(:,:)
+        complex, intent(in)    :: mat_r(:,:,0:)
+
+        integer :: i
+        real    :: phas
+
+        do i = 1, nNZ
+            phas = -tpi_const*dot_product(bqpt, real(Rvecs(:,i)))
+            mat_q = mat_q + cmplx(cos(phas), sin(phas))*weight(:,:,i)*mat_r(:,:,i-1)
+        end do
+    end subroutine ft_backward_pairs
 
 end module m_matrix_interpolation 

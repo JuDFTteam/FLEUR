@@ -150,14 +150,27 @@ CONTAINS
       real,    allocatable, intent(out) :: weightNZ(:,:)
 
       integer, parameter :: imageLim = 3 ! supercell images searched in each direction
-      integer :: bigBoxLim(2,3), boxSize, nShift, nImage, imageLimZ, iShift, iGrid, iImage, iMem, i, ix, iy, iz
+      integer :: bigBoxLim(2,3), boxSize, nShift, nUnique, nImage, imageLimZ, iShift, iGrid, iImage, iMem, i, ix, iy, iz
       real    :: tol, vecRCart(3), vecShift(3), distanceR, distance
       logical :: l_inside
-      integer, allocatable :: supercellR(:,:)
-      real,    allocatable :: FTweight(:,:), imageCart(:,:)
+      integer, allocatable :: supercellR(:,:), iUnique(:)
+      real,    allocatable :: FTweight(:,:), imageCart(:,:), uniqueShifts(:,:)
 
       nShift = size(shifts,2)
       tol    = 1e-6*dot_product(amat(:,1),amat(:,1))
+
+      allocate(iUnique(nShift), uniqueShifts(3,nShift))
+      nUnique = 0
+      do iShift = 1, nShift
+         do i = 1, nUnique
+            if (all(abs(shifts(:,iShift) - uniqueShifts(:,i)) < 1e-8)) exit
+         end do
+         if (i > nUnique) then
+            nUnique = nUnique + 1
+            uniqueShifts(:,nUnique) = shifts(:,iShift)
+         end if
+         iUnique(iShift) = i
+      end do
 
       imageLimZ = imageLim
       if (l_film) imageLimZ = 0
@@ -177,7 +190,7 @@ CONTAINS
       bigBoxLim(1,:) = -2*scaleSupercell(:)
       if (l_film) bigBoxLim(:,3) = 0
       boxSize = product(bigBoxLim(2,:) - bigBoxLim(1,:) + 1)
-      allocate(supercellR(3,boxSize), FTweight(nShift,boxSize))
+      allocate(supercellR(3,boxSize), FTweight(nUnique,boxSize))
       FTweight = 0.0
 
       iGrid = 0
@@ -187,8 +200,8 @@ CONTAINS
                iGrid = iGrid + 1
                supercellR(:,iGrid) = [ix,iy,iz]
                vecRCart = matmul(amat, real([ix,iy,iz]))
-               do iShift = 1, nShift
-                  vecShift = vecRCart + shifts(:,iShift)
+               do iShift = 1, nUnique
+                  vecShift = vecRCart + uniqueShifts(:,iShift)
                   distanceR = dot_product(vecShift,vecShift)
                   l_inside = .true.
                   iMem = 0
@@ -213,7 +226,7 @@ CONTAINS
          if (all(FTweight(:,iGrid) == 0.0)) cycle
          i = i + 1
          Rvecs(:,i) = supercellR(:,iGrid)
-         weightNZ(:,i) = FTweight(:,iGrid)
+         weightNZ(:,i) = FTweight(iUnique,iGrid)
       end do
 
       do iShift = 1, nShift
