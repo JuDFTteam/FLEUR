@@ -65,9 +65,6 @@ CONTAINS
     INTEGER :: na,nef
     REAL    :: r1,r2
     COMPLEX :: c1,c2
-    COMPLEX :: dbg_ref, dbg_sa(2), dbg_sb(2), dbg_ra, dbg_rb ! DMI-DEBUG
-    REAL    :: dbg_h, dbg_r ! DMI-DEBUG
-    INTEGER :: dbg_l, dbg_m1, dbg_m2, dbg_s1, dbg_s2, dbg_i, dbg_j, dbg_js ! DMI-DEBUG
 
     COMPLEX, ALLOCATABLE :: matel(:,:,:)
     REAL,    ALLOCATABLE :: eig_shift(:,:,:,:)
@@ -121,40 +118,6 @@ CONTAINS
        CALL rsoc%angles(atoms,fmpi,theta(nr),phi(nr))
        soangl(:,:,:,:,:,:,nr) = rsoc%soangl
     ENDDO
-    ! DMI-DEBUG: hermiticity of soangl and symmetry of rso
-    DO nr=1,SIZE(theta)
-       dbg_h = 0.0
-       DO dbg_l=1,atoms%lmaxd
-          DO dbg_m1=-dbg_l,dbg_l
-             DO dbg_m2=-dbg_l,dbg_l
-                DO dbg_s1=1,2
-                   DO dbg_s2=1,2
-                      dbg_h = MAX(dbg_h, ABS(soangl(dbg_l,dbg_m1,dbg_s1,dbg_l,dbg_m2,dbg_s2,nr) &
-                                 - CONJG(soangl(dbg_l,dbg_m2,dbg_s2,dbg_l,dbg_m1,dbg_s1,nr))))
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDDO
-       WRITE(*,'(a,i3,a,es12.4,a,l2)') 'DMI-DEBUG soangl nr',nr,' max hermiticity error',dbg_h, &
-          ' NaN:',ANY(soangl(:,:,:,:,:,:,nr)/=soangl(:,:,:,:,:,:,nr))
-    ENDDO
-    dbg_r = 0.0
-    DO n=1,atoms%ntype
-       DO dbg_l=1,atoms%lmax(n)
-          DO dbg_i=1,2
-             DO dbg_j=1,2
-                DO dbg_s1=1,2
-                   DO dbg_s2=1,2
-                      dbg_r = MAX(dbg_r, ABS(rsoc%rso(dbg_i,dbg_j,n,dbg_l,dbg_s1,dbg_s2)-rsoc%rso(dbg_j,dbg_i,n,dbg_l,dbg_s2,dbg_s1)))
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDDO
-    WRITE(*,'(a,es12.4,a,l2,a,es12.4)') 'DMI-DEBUG rso max symmetry error',dbg_r,' NaN:',ANY(rsoc%rso/=rsoc%rso), &
-       ' max|rso|:',MAXVAL(ABS(rsoc%rso))
 
     DO nk=fmpi%irank+1,kpts%nkpt,fmpi%isize
        CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell)
@@ -164,14 +127,11 @@ CONTAINS
        IF (ALLOCATED(zmat%data_c)) DEALLOCATE(zmat%data_c)
        ALLOCATE(zmat%data_c(zMat%matsize1,zmat%matsize2))
        CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,0,nk,1),zmat=zmat)
-       l_abcof_debug = .TRUE. ! DMI-DEBUG
-       WRITE(*,'(a,i4,a,i4,a,2i6)') 'DMI-DEBUG ssomat rank',fmpi%irank,' nk',nk,' ne,nv:',ne,lapw%nv(1)
        DO jsloc= 1,2
           eig_shift(:,0,nk,1)=0.0 !not needed
           CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc , &
                acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
        ENDDO
-       l_abcof_debug = .FALSE. ! DMI-DEBUG
 
        ! rotate abcof into global spin coordinate frame
        nat= 0
@@ -211,36 +171,6 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
-       ! DMI-DEBUG: reference diagonal element of band 1, atom 1, first angle (no LOs)
-       dbg_ref = CMPLX(0.0,0.0)
-       DO dbg_js=1,2
-          DO dbg_l=1,atoms%lmax(1)
-             DO dbg_m1=-dbg_l,dbg_l
-                dbg_sa = CMPLX(0.0,0.0)
-                dbg_sb = CMPLX(0.0,0.0)
-                DO dbg_s2=1,2
-                   DO dbg_m2=-dbg_l,dbg_l
-                      dbg_sa(dbg_s2) = dbg_sa(dbg_s2) + CONJG(acof(1,dbg_l*(dbg_l+1)+dbg_m2,1,dbg_s2,dbg_js)) &
-                                       * soangl(dbg_l,dbg_m2,dbg_js,dbg_l,dbg_m1,dbg_js,1)
-                      dbg_sb(dbg_s2) = dbg_sb(dbg_s2) + CONJG(bcof(1,dbg_l*(dbg_l+1)+dbg_m2,1,dbg_s2,dbg_js)) &
-                                       * soangl(dbg_l,dbg_m2,dbg_js,dbg_l,dbg_m1,dbg_js,1)
-                   ENDDO
-                ENDDO
-                DO dbg_s1=1,2
-                   dbg_ra = CMPLX(0.0,0.0)
-                   dbg_rb = CMPLX(0.0,0.0)
-                   DO dbg_s2=1,2
-                      dbg_ra = dbg_ra + dbg_sa(dbg_s2)*rsoc%rso(1,1,1,dbg_l,dbg_s1,dbg_s2) + dbg_sb(dbg_s2)*rsoc%rso(1,2,1,dbg_l,dbg_s1,dbg_s2)
-                      dbg_rb = dbg_rb + dbg_sa(dbg_s2)*rsoc%rso(2,1,1,dbg_l,dbg_s1,dbg_s2) + dbg_sb(dbg_s2)*rsoc%rso(2,2,1,dbg_l,dbg_s1,dbg_s2)
-                   ENDDO
-                   dbg_ref = dbg_ref + acof(1,dbg_l*(dbg_l+1)+dbg_m1,1,dbg_s1,dbg_js)*dbg_ra &
-                                     + bcof(1,dbg_l*(dbg_l+1)+dbg_m1,1,dbg_s1,dbg_js)*dbg_rb
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDDO
-       WRITE(*,'(a,i4,2es16.8)') 'DMI-DEBUG reference matel band 1 atom 1, nk:',nk,dbg_ref
-       WRITE(*,'(a,4es12.4)') 'DMI-DEBUG acof(1,:,1,:,:) max, bcof max:',MAXVAL(ABS(acof(1,:,1,:,:))),MAXVAL(ABS(bcof(1,:,1,:,:)))
        DO nr=1,size(theta) !loop over angles
           ! matrix elements within k
           CALL ssomatel(neigf,input,atoms, noco, &
