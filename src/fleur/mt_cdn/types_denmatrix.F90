@@ -15,6 +15,7 @@ module m_types_denmatrix
    use m_types_sym
    use m_types_abc
    use m_gaunt
+   use m_matmul_dgemm, only: blas_matmul
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -249,7 +250,7 @@ contains
       complex :: coef, cil, cmv, beta
       integer :: jmem, l, lh, lm, lmp, lp, lv, m, mp, mv, ns, nt, lphi, lplow, icoef, jcoef, i, nlm, ncf, nd, irow, icol
       logical :: l_minusq, l_gamma, l_dfpt
-      complex, allocatable :: dm(:, :), dmm(:, :), wa(:, :)
+      complex, allocatable :: dm(:, :), dmm(:, :), wa(:, :), ca(:, :)
 
       call timestart("rhonmt")
       l_gamma = .false.
@@ -260,18 +261,21 @@ contains
       ns = sym%ntypsy(atoms%firstAtom(itype))
 
       ! Band sums for all pairs (lm',j),(lm,i), summed over the equivalent atoms:
-      ! dm = abc%cof^H * wa, with wa(nu,(lm,i)) the weighted ket coefficients
+      ! dm = ca^H * wa, with ca(nu,(lm',j)) the bra and wa(nu,(lm,i)) the weighted ket
+      ! coefficients. In GPU builds the ZGEMMs run on the device.
       nlm = size(abc%cof, 2)
       ncf = size(abc%cof, 3)
       nd = nlm*ncf
-      allocate (dm(nd, nd), wa(ne, nd))
+      allocate (dm(nd, nd), wa(ne, nd), ca(ne, nd))
       if (l_minusq) allocate (dmm(nd, nd))
+      !$acc data create(ca, wa) copyout(dm, dmm)
       do nt = 1, atoms%neq(itype)
          beta = merge(cmplx(0.0, 0.0), cmplx(1.0, 0.0), nt == 1)
          !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i, lm, icoef)
          do i = 1, nd
             lm = mod(i - 1, nlm)
             icoef = (i - 1)/nlm + 1
+            ca(:, i) = abc%cof(:ne, lm, icoef, nt)
             if (l_dfpt) then
                wa(:, i) = merge(1.0, 2.0, l_minusq)*we(:)*abc1%cof(:ne, lm, icoef, nt)
                if (l_gamma) wa(:, i) = wa(:, i) + we1(:)*abcpr%cof(:ne, lm, icoef, nt)
@@ -280,21 +284,23 @@ contains
             end if
          end do
          !$OMP END PARALLEL DO
-         call zgemm('C', 'N', nd, nd, ne, cmplx(1.0, 0.0), abc%cof(:, :, :, nt), size(abc%cof, 1), &
-                    wa, ne, beta, dm, nd)
+         !$acc update device(ca, wa)
+         call blas_matmul(nd, nd, ne, ca, wa, dm, beta=beta, op_a="C")
          if (l_minusq) then
             !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i, lm, icoef)
             do i = 1, nd
                lm = mod(i - 1, nlm)
                icoef = (i - 1)/nlm + 1
+               ca(:, i) = abc1m%cof(:ne, lm, icoef, nt)
                wa(:, i) = we(:)*abcpr%cof(:ne, lm, icoef, nt)
             end do
             !$OMP END PARALLEL DO
-            call zgemm('C', 'N', nd, nd, ne, cmplx(1.0, 0.0), abc1m%cof(:, :, :, nt), size(abc1m%cof, 1), &
-                       wa, ne, beta, dmm, nd)
+            !$acc update device(ca, wa)
+            call blas_matmul(nd, nd, ne, ca, wa, dmm, beta=beta, op_a="C")
          end if
       end do
-      deallocate (wa)
+      !$acc end data
+      deallocate (wa, ca)
 
       ! gaunt1 sets up its tables on the first call, which must not happen inside the threads
       call gaunt_init(atoms%lmaxd)
