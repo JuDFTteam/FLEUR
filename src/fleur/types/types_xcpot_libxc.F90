@@ -41,7 +41,7 @@ MODULE m_types_xcpot_libxc
    use M_mpi_bc_tool
    IMPLICIT NONE
    private
-   public :: apply_vac_cutoffs, apply_cutoffs, xcpot_init, xcpot_vx_is_lda, xcpot_vc_is_lda, xcpot_exc_is_lda, &
+   public :: apply_vac_cutoffs, apply_cutoffs, apply_tau_floor, xcpot_init, xcpot_vx_is_lda, xcpot_vc_is_lda, xcpot_exc_is_lda, &
       xcpot_vc_is_gga, xcpot_vx_is_gga, xcpot_vx_is_metagga, xcpot_exc_is_gga, xcpot_exc_is_metagga, xcpot_is_hybrid, &
       xcpot_get_exchange_weight, xcpot_get_vxc, xcpot_get_exc, xcpot_get_fxc_lda, xcpot_get_fxc_gga, &
       xcpot_alloc_gradients, mpi_bc_xcpot_libxc
@@ -89,6 +89,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: create_from_aux => xcpot_create_from_aux
       PROCEDURE        :: free => xcpot_free
       PROCEDURE,NOPASS :: apply_cutoffs
+      PROCEDURE,NOPASS :: apply_tau_floor
       PROCEDURE,NOPASS :: apply_vac_cutoffs
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
@@ -121,14 +122,18 @@ CONTAINS
 
   end subroutine apply_vac_cutoffs
 
-  subroutine apply_cutoffs(density_cutoff,rh,grad)
+  subroutine apply_cutoffs(density_cutoff,rh,grad,l_sigma_cutoff)
     real,intent(INOUT) :: rh(:,:)
     real,INTENT(IN)    :: density_cutoff
     type(t_gradients),INTENT(INOUT),OPTIONAL :: grad
-
-
+    ! .FALSE. skips the absolute cutoff sigma<1e-5 (default .TRUE.)
+    logical,INTENT(IN),OPTIONAL :: l_sigma_cutoff
 
     integer:: i,j
+    logical:: l_sigcut
+
+    l_sigcut = .TRUE.
+    IF (PRESENT(l_sigma_cutoff)) l_sigcut = l_sigma_cutoff
     DO j=1,size(rh,2)
       DO i=1,size(rh,1)
         if (abs(rh(i,j))<density_cutoff) THEN
@@ -139,13 +144,35 @@ CONTAINS
             if (allocated(grad%laplace)) grad%laplace(i,j)=0.0
           endif
         endif
-        if (allocated(grad%sigma)) then
-         where (abs(grad%sigma(:,i))<1E-5) grad%sigma(:,i)=0.0
-        endif 
+        if (l_sigcut .and. present(grad)) then
+          if (allocated(grad%sigma)) then
+            where (abs(grad%sigma(:,i))<1E-5) grad%sigma(:,i)=0.0
+          endif
+        endif
       ENDDO
     ENDDO
 
   end subroutine
+
+  subroutine apply_tau_floor(rh,grad,tau)
+    !! Raises the kinetic energy density to the von Weizsaecker value where tau < tau_W.
+    !! Otherwise libxc reduces sigma to 8*rho*tau, which removes the regularization of
+    !! r2SCAN-type functionals and gives huge vsigma at low density.
+    real,INTENT(IN)              :: rh(:,:)   !points,spin
+    type(t_gradients),INTENT(IN) :: grad
+    real,INTENT(INOUT)           :: tau(:,:)  !points,spin
+
+    integer :: i,js,isig
+
+    if (.not.allocated(grad%sigma)) return
+    DO js=1,size(rh,2)
+      isig = merge(1,3,js==1)
+      DO i=1,size(rh,1)
+        if (rh(i,js) <= 0.0) cycle
+        tau(i,js) = max(tau(i,js), grad%sigma(isig,i)/(8.0*rh(i,js)))
+      ENDDO
+    ENDDO
+  end subroutine apply_tau_floor
 
    SUBROUTINE xcpot_init(xcpot, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, jspins, l_bj)
       IMPLICIT NONE
@@ -737,6 +764,7 @@ CONTAINS
       type is (t_xcpot_libxc)
          aux_libxc%l_libxc        = xcpot%l_libxc
          aux_libxc%l_relativistic = xcpot%l_relativistic
+         aux_libxc%gmaxxc         = xcpot%gmaxxc
          CALL aux_libxc%init(xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
                           xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
                           xcpot%jspins, .false.)

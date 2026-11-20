@@ -152,3 +152,38 @@ def test_mt_collinear_constraint_path_unchanged(execute_fleur):
     assert deltas, "no DeltaBConstrain entries recorded"
     assert max(abs(d) for d in deltas) < 1.0e-8, \
         f"spurious transverse constraining field in the collinear-MT path: {deltas}"
+
+
+def _scf_distances(outxml):
+    root = ElementTree.parse(outxml).getroot()
+    dist = {"charge": float(root.findall(".//densityConvergence/chargeDensity")[-1].attrib["distance"])}
+    for e in root.findall(".//densityConvergence/Magnetization"):
+        dist[e.attrib["direction"]] = float(e.attrib["distance"])
+    return dist
+
+
+@pytest.mark.fleur
+@pytest.mark.noco
+@pytest.mark.soc
+@pytest.mark.film
+def test_noco_soc_reduced_kset_matches_full_bz(execute_fleur):
+    """Noco+SOC with symmetry-reduced k-points must reproduce the full-BZ density (#832).
+
+    Non-magnetic Pb film, SOC in first variation, C4 about the spin axis. The
+    operations rotate (m_x,m_y), so the spin off-diagonal density must not be
+    symmetrized like a scalar. Before the fix the reduced k-set produced a spurious
+    in-plane magnetization; the full-BZ run did not.
+    """
+    input_dir = "./inputfiles/film/PbFilmNocoSOC"
+    common = ["kpts.xml", "sym.xml"]
+
+    reduced = execute_fleur(input_dir, rm_files=['.'], only_copy=["inp.xml", *common], mpi_procs=1)
+    reduced = _scf_distances(reduced["out.xml"])
+    full = execute_fleur(input_dir, rm_files=['.'],
+                         only_copy=[["inp_fullbz.xml", "inp.xml"], *common], mpi_procs=1)
+    full = _scf_distances(full["out.xml"])
+
+    assert reduced["mx,my"] < 1.0e-8, f"spurious in-plane magnetization: {reduced}"
+    assert full["mx,my"] < 1.0e-8
+    for key in ("charge", "mz"):
+        assert abs(reduced[key] - full[key]) < 1.0e-6, f"{key}: {reduced} vs {full}"

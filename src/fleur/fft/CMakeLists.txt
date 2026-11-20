@@ -10,6 +10,6 @@ src/fleur/fft/fft_interface.F90
 src/fleur/fft/selecFFT.F90
 src/fleur/fft/fftw3.F90
 )
-if (MKL_FFT_INTERFACE_FILE)
+if (FLEUR_USE_FFTMKL AND MKL_FFT_INTERFACE_FILE)
    set(fleur_F90 ${fleur_F90} ${MKL_FFT_INTERFACE_FILE})
 endif()

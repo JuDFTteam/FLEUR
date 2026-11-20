@@ -110,7 +110,7 @@ CONTAINS
                flo(:,1,ilo),flo(:,2,ilo),usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp))
           nodelo = 0
        ELSE
-          CALL radsra(ello(ilo,ntyp),atoms%llo(ilo,ntyp),vr(:),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c,&
+          CALL radsra(ello(ilo,ntyp),atoms%llo(ilo,ntyp),vr(:),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c,atoms%zatom(ntyp),&
                usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp),nodelo,flo(:,1,ilo), flo(:,2,ilo))
           !
           !+apw+lo

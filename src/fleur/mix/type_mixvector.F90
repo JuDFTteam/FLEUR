@@ -626,7 +626,7 @@ CONTAINS
             DO iv2c = 1, iv2
                DO k2 = 1, stars%ng2 - 1
                   !
-                  volnstr2 = dvol*stars%nstr2(k2)
+                  volnstr2 = dvol*stars%nstr2(k2 + 1) ! vector holds stars 2..ng2
                   DO iz = 1, vacuum%nmzxy
                      i = i + 1
                      g_vac(i) = wght(iz)*volnstr2

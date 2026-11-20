@@ -30,6 +30,7 @@ src/fleur/global/rotMMPmat.f90
 src/fleur/global/desym_potden.F90
 src/fleur/global/desym_eigvec.F90
 src/fleur/global/symMMPmat.f90
+src/fleur/global/spin_sym.f90
 )
 if (FLEUR_USE_GPU)
   set(fleur_F90 ${fleur_F90}

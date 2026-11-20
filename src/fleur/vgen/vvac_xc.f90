@@ -95,8 +95,8 @@ CONTAINS
           ! Note: to mimic inbuild behavior, put cutoff before xcpot%get_vxc
           ! the cutoff here is done for a better containing of the libxc block
           CALL xcpot%apply_vac_cutoffs(rho,grad)
-          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
-          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_x,grad)
+          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,noco%l_noco,v_xc,grad)
+          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,noco%l_noco,v_x,grad)
        END IF
     END SELECT
 

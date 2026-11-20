@@ -121,7 +121,16 @@ contains
 
         do iDir = 1 ,3 
             call sh_to_lh(fi%sym, fi%atoms, sphhar, SIZE(rho%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, potdummy%mt)
-        end do 
+        end do
+
+        if (size(rho%mt,4)==4) then
+            ! For noco, the gradients of the gs density have to be stored according to DFPT processing
+            do iDir = 1, 3
+                grRho3(iDir)%mtIm(:,:,:,3) =  grRho3(iDir)%mt(:,:,:,4)
+                grRho3(iDir)%mtIm(:,:,:,4) = -grRho3(iDir)%mt(:,:,:,4)
+                grRho3(iDir)%mt(:,:,:,4)   =  grRho3(iDir)%mt(:,:,:,3)
+            end do
+        end if
 
 
         !  compute gradient external potential

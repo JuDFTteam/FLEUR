@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      bcc Fe                                                                                              
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="2.5" Gmax="7.5" GmaxXC="7.5" numbands="all"/>
+      <scfLoop itmax="100" minDistance="0.00001000" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0" sdNocoIR="T"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+         <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
+      </xcFunctional>
+      <magnetism jspins="2" l_noco="T" l_ss="F">
+         <qss>0.0 0.0 0.0</qss>
+         <mtNocoParams l_mperp="F" l_mtNocoPot="T" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.0" l_constrained="F" mix_constr="1.0"/>
+         <sourceFreeMag l_sourceFree="F" l_scaleMag="F" mag_scale="1.0"/>
+      </magnetism>
+      <soc l_soc="F" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="16.0" mode="hist" fermiSmearingEnergy="0.005">
+         <kPointListSelection listName="mesh"/>
+         <kPointLists>
+            <kPointList name="mesh" count="8" nx="2" ny="2" nz="2" type="mesh">
+               <kPoint weight="   0.1250000000000">   0.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   0.00/2.00    0.00/2.00    1.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   0.00/2.00    1.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   0.00/2.00    1.00/2.00    1.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   1.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   1.00/2.00    0.00/2.00    1.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   1.00/2.00    1.00/2.00    0.00/2.00</kPoint>
+               <kPoint weight="   0.1250000000000">   1.00/2.00    1.00/2.00    1.00/2.00</kPoint>
+            </kPointList>
+            <kPointList name="qH" count="1" type="path">
+               <kPoint weight="     1.0000000000000" label="H"> 0.5000000000000000 -0.5000000000000000  0.5000000000000000</kPoint>
+            </kPointList>
+         </kPointLists>
+      </bzIntegration>
+      <symmetryOperations>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+      </symmetryOperations>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>   -2.6772800342095002     2.6772800342095002     2.6772800342095002</row-1>
+            <row-2>    2.6772800342095002    -2.6772800342095002     2.6772800342095002</row-2>
+            <row-3>    2.6772800342095002     2.6772800342095002    -2.6772800342095002</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Iron (Fe)" element="Fe" atomicNumber="26">
+         <mtSphere radius="2.26" gridPoints="451" logIncrement="0.0265"/>
+         <atomicCutoffs lmax="6" lnonsphr="4"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.2" spinDown="1.2"/>
+            <stateOccupation state="(3d5/2)" spinUp="2.9" spinDown="0.7"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Iron (Fe)">
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+         <nocoParams  alpha="Pi*0.5" beta="Pi*0.5"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <dfpt l_dfpt="F" l_scf="T" l_interpolate="F" l_postprocess="F" l_rm_qhdf="T" l_phonon="T" l_efield="F" l_borneffcharge="F" l_bfield="F">
+         <phonon l_sumrule="F" startq="1" qptsListName="qH"/>
+         <efield l_efield_scr="F" qlim="0.01"/>
+         <interpolation l_band="F" l_dos="F" l_sumrule="F" l_bornhuang="F" l_polar="F" qptsListName="default"/>
+         <postprocess l_elph="F"  l_write_epw="F" epw_prefix="fleur"/>
+      </dfpt>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Data/ias-1/hanrath/fleur-versions/local/dfpt_bfield/build/inpgen -f inp-Fe -noco -dfpt -nosym
+
+Initial (original) inpgen input (only for documentation purposes):
+ bcc Fe
+
+ &input film=f /
+
+ &lattice latsys='cI' a0=1.8897269 a=2.83351 /
+
+ 1
+ 26     0.0 0.0 0.0
+
+-->
