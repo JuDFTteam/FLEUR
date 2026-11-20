@@ -9,8 +9,6 @@ module m_desym_potden
    use m_gaussp
    use m_ylm
    use m_spgrot
-   use m_outcdn
-   use m_plot, only: getMTSphere
    use m_types_atoms
    use m_types_cell
    use m_types_desym_map
@@ -21,7 +19,7 @@ module m_desym_potden
    use m_types_sym
    implicit none
    private
-   public :: desym_potden, desym_check_potden, potden_on_grid
+   public :: desym_potden
 
 contains
 
@@ -192,66 +190,5 @@ contains
       end do
 
    end subroutine eval_lh
-
-   subroutine desym_check_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, pd, pd_nosym, l_potential, ngrid, maxdev)
-      !! Largest deviation between pd and pd_nosym on a regular real-space grid of ngrid^3 points of the unit cell.
-      type(t_fleurinput), intent(in)  :: fi, fi_nosym
-      type(t_stars),      intent(in)  :: stars, stars_nosym
-      type(t_sphhar),     intent(in)  :: sphhar, sphhar_nosym
-      type(t_potden),     intent(in)  :: pd, pd_nosym
-      logical,            intent(in)  :: l_potential
-      integer,            intent(in)  :: ngrid
-      real,               intent(out) :: maxdev
-
-      real, allocatable :: vals(:,:), vals_nosym(:,:), points(:,:)
-
-      call potden_on_grid(fi, stars, sphhar, pd, l_potential, ngrid, points, vals)
-      call potden_on_grid(fi_nosym, stars_nosym, sphhar_nosym, pd_nosym, l_potential, ngrid, points, vals_nosym)
-      maxdev = maxval(abs(vals - vals_nosym))
-
-   end subroutine desym_check_potden
-
-   subroutine potden_on_grid(fi, stars, sphhar, pd, l_potential, ngrid, points, vals)
-      !! Values of pd at the ngrid^3 points of a regular grid of the unit cell (cartesian points(3,ngrid^3)), vals(ngrid^3,jspins).
-      type(t_fleurinput),   intent(in)  :: fi
-      type(t_stars),        intent(in)  :: stars
-      type(t_sphhar),       intent(in)  :: sphhar
-      type(t_potden),       intent(in)  :: pd
-      logical,              intent(in)  :: l_potential
-      integer,              intent(in)  :: ngrid
-      real, allocatable,    intent(out) :: points(:,:), vals(:,:)
-
-      integer :: ix, iy, iz, ip, jsp, it, iatom, iflag, lv(3)
-      real    :: pt(3), p(3)
-
-      allocate(points(3, ngrid**3), vals(ngrid**3, fi%input%jspins))
-      ip = 0
-      do iz = 0, ngrid-1
-         do iy = 0, ngrid-1
-            do ix = 0, ngrid-1
-               ip = ip + 1
-               points(:,ip) = matmul(fi%cell%amat, [real(ix), real(iy), real(iz)] / real(ngrid))
-               if (fi%input%film .and. 2*iz >= ngrid) points(:,ip) = points(:,ip) - fi%cell%amat(:,3)
-               if (fi%input%film .and. abs(points(3,ip)) > fi%cell%z1) then
-                  iflag = 0
-                  it = 0
-                  iatom = 0
-                  lv = 0
-                  pt = points(:,ip)
-               else
-                  ! getMTSphere writes lattvec_index unconditionally, so it must be passed
-                  call getMTSphere(fi%input, fi%cell, fi%atoms, points(:,ip), it, iatom, pt, lv)
-                  iflag = merge(1, 2, iatom /= 0)
-                  if (iatom == 0) pt = points(:,ip)
-               end if
-               do jsp = 1, fi%input%jspins
-                  p = pt
-                  call outcdn(p, it, iatom, 1, iflag, jsp, l_potential, stars, fi%vacuum, sphhar, fi%atoms, fi%sym, fi%cell, pd, vals(ip,jsp), lv)
-               end do
-            end do
-         end do
-      end do
-
-   end subroutine potden_on_grid
 
 end module m_desym_potden

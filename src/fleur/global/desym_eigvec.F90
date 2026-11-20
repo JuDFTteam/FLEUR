@@ -4,16 +4,10 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_desym_eigvec
-#ifdef CPP_MPI
-   use mpi
-#endif
    use m_juDFT
    use m_constants
    use m_eig66_io
-   use m_eigen_hssetup, only: eigen_hssetup
    use m_genMTBasis
-   use m_local_hamiltonian, only: local_ham
-   use m_npy, only: save_npy
    use m_trafo, only: waveftrafo_gen_zmat, waveftrafo_gen_cmt
    use m_types_abc
    use m_types_atoms
@@ -21,8 +15,6 @@ module m_desym_eigvec
    use m_types_desym_map
    use m_types_enpara
    use m_types_fleurinput
-   use m_types_hub1data
-   use m_types_hybdat
    use m_types_hybinp
    use m_types_input
    use m_types_lapw
@@ -30,28 +22,22 @@ module m_desym_eigvec
    use m_types_misc
    use m_types_mpdata
    use m_types_mpi
-   use m_types_mpimat
    use m_types_noco
    use m_types_nococonv
    use m_types_potden
    use m_types_radfun
-   use m_types_sphhar
-   use m_types_stars
    use m_types_sym
-   use m_types_tlmplm
    use m_types_usdus
-   use m_types_xcpot
    implicit none
    private
-   public :: desym_eigvec, desym_dump_eigvec, desym_check_hamiltonian
+   public :: desym_eigvec
 
 contains
 
    subroutine desym_eigvec(fi, enpara, nococonv, vTot, eig_id, results, &
                            fmpi_nosym, fi_nosym, enpara_nosym, nococonv_nosym, vTot_nosym, map, &
-                           eig_id_nosym, results_nosym, maxdev)
+                           eig_id_nosym, results_nosym)
       !! Rotates the IBZ eigenvectors of eig_id onto the full k-mesh of the setup without symmetry (eig_id_nosym).
-      !! Optional maxdev: largest deviation of the MT coefficients of the new eigenvectors from the rotated ones.
       type(t_fleurinput), intent(in)  :: fi, fi_nosym
       type(t_enpara),     intent(in)  :: enpara, enpara_nosym
       type(t_nococonv),   intent(in)  :: nococonv, nococonv_nosym
@@ -62,20 +48,15 @@ contains
       type(t_desym_map),  intent(in)  :: map
       integer,            intent(out) :: eig_id_nosym
       type(t_results),    intent(out) :: results_nosym
-      real, optional,     intent(out) :: maxdev
 
       type(t_hybinp) :: hybinp
       type(t_mpdata) :: mpdata
       type(t_usdus)  :: usdus, usdus_nosym
       type(t_lapw)   :: lapw_k, lapw_nosym
       type(t_mat)    :: zk, zk_c, z_nosym
-      complex, allocatable :: cmt_k(:,:,:), cmt_rot(:,:,:), cmt_nosym(:,:,:), c_phase(:)
+      complex, allocatable :: cmt_k(:,:,:), cmt_rot(:,:,:), c_phase(:)
       integer, allocatable :: ev_list(:)
       integer :: jsp, ikk, ik, kp, iop, neig, nb, n, maxlmindx
-      real    :: dev
-#ifdef CPP_MPI
-      integer :: ierr
-#endif
 
       if (fi%noco%l_noco .or. fi%noco%l_soc) call juDFT_error("Eigenvector rotation is not implemented for noco/SOC.", calledby="desym_eigvec")
 
@@ -91,7 +72,6 @@ contains
       eig_id_nosym = open_eig(fmpi_nosym%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi_nosym%kpts%nkpt, fi%input%jspins, .false., &
                               .true., .false., .false., .false., .false., fmpi_nosym%n_size, filename="eig_nosym")
 
-      dev = 0.0
       do jsp = 1, fi%input%jspins
          call mt_basis(fi, enpara, vTot, fmpi_nosym, jsp, usdus)
          call mt_basis(fi_nosym, enpara_nosym, vTot_nosym, fmpi_nosym, jsp, usdus_nosym)
@@ -133,14 +113,6 @@ contains
 
                call lo_coefficients(fi_nosym, nococonv_nosym, usdus_nosym, lapw_nosym, jsp, nb, cmt_rot, z_nosym)
 
-               if (present(maxdev)) then
-                  allocate(cmt_nosym(nb, maxlmindx, fi%atoms%nat))
-                  call mt_coefficients(fi_nosym%input, fi_nosym%atoms, fi_nosym%sym, fi_nosym%cell, fi_nosym%noco, nococonv_nosym, &
-                                       usdus_nosym, lapw_nosym, z_nosym, jsp, nb, cmt_nosym)
-                  dev = max(dev, maxval(abs(cmt_nosym - cmt_rot)))
-                  deallocate(cmt_nosym)
-               end if
-
                deallocate(cmt_k, cmt_rot, c_phase)
                call zk%free()
                call zk_c%free()
@@ -151,13 +123,6 @@ contains
             call z_nosym%free()
          end do
       end do
-
-      if (present(maxdev)) then
-#ifdef CPP_MPI
-         call MPI_ALLREDUCE(MPI_IN_PLACE, dev, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi_nosym%mpi_comm, ierr)
-#endif
-         maxdev = dev
-      end if
 
       call timestop("desym_eigvec")
 
@@ -319,175 +284,6 @@ contains
       call zunit%free()
 
    end subroutine lo_coefficients
-
-   subroutine desym_dump_eigvec(fmpi, fi, nococonv, eig_id)
-      !! Test output: eigenvalues, k-point, G-vectors and eigenvectors of about 32 k-points of the mesh as npy files.
-      !! The k-points are selected by their mesh indices, so runs with different k orderings write the same ones.
-      type(t_mpi),        intent(in) :: fmpi
-      type(t_fleurinput), intent(in) :: fi
-      type(t_nococonv),   intent(in) :: nococonv
-      integer,            intent(in) :: eig_id
-
-      type(t_lapw) :: lapw
-      type(t_mat)  :: z
-      real, allocatable :: eig(:)
-      integer :: ik, jsp, neig, idx(3), p
-      character(len=40) :: tag
-#ifdef CPP_MPI
-      integer :: ierr
-
-      call MPI_BARRIER(fmpi%mpi_comm, ierr)
-#endif
-      if (fmpi%irank == 0) then
-         if (any(fi%kpts%nkpt3 < 1)) call juDFT_error("k-point mesh dimensions (nkpt3) are not set.", calledby="desym_dump_eigvec")
-         p = max(1, fi%kpts%nkpt / 32)
-         do ik = 1, fi%kpts%nkpt
-            idx = modulo(nint(fi%kpts%bk(:,ik) * fi%kpts%nkpt3), fi%kpts%nkpt3)
-            if (mod(idx(1) + 3*idx(2) + 7*idx(3), p) /= 0) cycle
-            call lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell)
-            do jsp = 1, fi%input%jspins
-               call read_eig(eig_id, ik, jsp, neig=neig)
-               allocate(eig(neig))
-               call z%init(.false., lapw%nv(jsp) + fi%atoms%nlotot, neig)
-               call read_eig(eig_id, ik, jsp, neig=neig, eig=eig, zmat=z)
-               write(tag, '(3("_",i0),"_s",i0)') idx, jsp
-               call save_npy("desym_z"//trim(tag)//".npy", z%data_c)
-               call save_npy("desym_eig"//trim(tag)//".npy", eig)
-               call save_npy("desym_gvec"//trim(tag)//".npy", lapw%gvec(:, :lapw%nv(jsp), jsp))
-               call save_npy("desym_k"//trim(tag)//".npy", fi%kpts%bk(:,ik))
-               call z%free()
-               deallocate(eig)
-            end do
-         end do
-      end if
-#ifdef CPP_MPI
-      call MPI_BARRIER(fmpi%mpi_comm, ierr)
-#endif
-
-   end subroutine desym_dump_eigvec
-
-   subroutine desym_check_hamiltonian(fmpi, fi, stars, sphhar, xcpot, hybdat, enpara, nococonv, results, rho, vTot, eig_id, maxres, maxorth)
-      !! Largest residual |(H - eps S) z| and deviation |z^H S z - 1| of the eigenvectors in eig_id, with H and S built in the given setup.
-      type(t_mpi),        intent(in)    :: fmpi
-      type(t_fleurinput), intent(in)    :: fi
-      type(t_stars),      intent(in)    :: stars
-      type(t_sphhar),     intent(in)    :: sphhar
-      class(t_xcpot),     intent(in)    :: xcpot
-      type(t_hybdat),     intent(inout) :: hybdat
-      type(t_enpara),     intent(in)    :: enpara
-      type(t_nococonv),   intent(in)    :: nococonv
-      type(t_results),    intent(in)    :: results
-      type(t_potden),     intent(in)    :: rho, vTot
-      integer,            intent(in)    :: eig_id
-      real,               intent(out)   :: maxres, maxorth
-
-      type(t_tlmplm)   :: td
-      type(t_hub1data) :: hub1data
-      type(t_results)  :: res
-      type(t_lapw)     :: lapw
-      type(t_mat)      :: z
-      class(t_mat), allocatable :: hmat, smat
-      complex, allocatable :: h(:,:), s(:,:), hz(:,:), sz(:,:), olap(:,:)
-      real, allocatable :: eig(:)
-      integer :: jsp, ikk, ik, neig, nmat, n
-#ifdef CPP_MPI
-      integer :: ierr
-#endif
-
-      res = results
-      call local_ham(sphhar, fi%atoms, fi%sym, fi%noco, nococonv, enpara, fmpi, vTot, vTot, rho, fi%input, fi%hub1inp, hub1data, td, alpha_hybrid=0.0)
-
-      maxres = 0.0
-      maxorth = 0.0
-      do jsp = 1, fi%input%jspins
-         do ikk = 1, size(fmpi%k_list)
-            ik = fmpi%k_list(ikk)
-            call lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell, fmpi)
-            call eigen_hssetup(jsp, fmpi, fi, res, rho, vTot, xcpot, enpara, nococonv, stars, sphhar, hybdat, td, vTot, lapw, ik, smat, hmat)
-            call hmat%u2l()
-            call smat%u2l()
-            nmat = lapw%nv(jsp) + fi%atoms%nlotot
-            call full_matrix(fmpi, hmat, nmat, h)
-            call full_matrix(fmpi, smat, nmat, s)
-            call hmat%free()
-            call smat%free()
-            deallocate(hmat, smat)
-            if (fmpi%n_rank /= 0) cycle
-
-            call read_eig(eig_id, ik, jsp, neig=neig)
-            allocate(eig(neig))
-            call z%init(.false., nmat, neig)
-            call read_eig(eig_id, ik, jsp, neig=neig, eig=eig, zmat=z)
-
-            hz = matmul(h, z%data_c)
-            sz = matmul(s, z%data_c)
-            olap = matmul(conjg(transpose(z%data_c)), sz)
-            do n = 1, neig
-               maxres = max(maxres, norm2(abs(hz(:,n) - eig(n)*sz(:,n))))
-               olap(n,n) = olap(n,n) - cmplx_1
-            end do
-            maxorth = max(maxorth, maxval(abs(olap)))
-
-            call z%free()
-            deallocate(eig)
-         end do
-      end do
-
-#ifdef CPP_MPI
-      call MPI_ALLREDUCE(MPI_IN_PLACE, maxres, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi%mpi_comm, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, maxorth, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi%mpi_comm, ierr)
-#endif
-
-   end subroutine desym_check_hamiltonian
-
-   subroutine full_matrix(fmpi, mat, nmat, full)
-      !! Complex copy of the (possibly block-cyclically distributed) matrix mat, summed onto rank 0 of the k-point communicator.
-      type(t_mpi),          intent(in)  :: fmpi
-      class(t_mat),         intent(in)  :: mat
-      integer,              intent(in)  :: nmat
-      complex, allocatable, intent(out) :: full(:,:)
-
-      integer :: i, j, ig, jg, mb, nb
-#ifdef CPP_MPI
-      integer :: ierr
-#endif
-
-      allocate(full(nmat, nmat), source=cmplx_0)
-      select type (mat)
-      class is (t_mpimat)
-         if (mat%blacsdata%myrow >= 0 .and. mat%blacsdata%mycol >= 0) then
-            mb = mat%blacsdata%blacs_desc(5)
-            nb = mat%blacsdata%blacs_desc(6)
-            do j = 1, mat%matsize2
-               jg = ((j - 1)/nb*mat%blacsdata%npcol + mat%blacsdata%mycol)*nb + mod(j - 1, nb) + 1
-               if (jg > nmat) cycle
-               do i = 1, mat%matsize1
-                  ig = ((i - 1)/mb*mat%blacsdata%nprow + mat%blacsdata%myrow)*mb + mod(i - 1, mb) + 1
-                  if (ig > nmat) cycle
-                  if (mat%l_real) then
-                     full(ig, jg) = mat%data_r(i, j)
-                  else
-                     full(ig, jg) = mat%data_c(i, j)
-                  end if
-               end do
-            end do
-         end if
-#ifdef CPP_MPI
-         if (fmpi%n_rank == 0) then
-            call MPI_REDUCE(MPI_IN_PLACE, full, size(full), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%sub_comm, ierr)
-         else
-            call MPI_REDUCE(full, full, size(full), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%sub_comm, ierr)
-         end if
-#endif
-      class default
-         if (mat%l_real) then
-            full = cmplx(mat%data_r(:nmat,:nmat), 0.0)
-         else
-            full = mat%data_c(:nmat,:nmat)
-         end if
-      end select
-
-   end subroutine full_matrix
 
    integer function max_lmindx(atoms)
       !! Largest number of (l, m, radial function) entries of any atom type.
