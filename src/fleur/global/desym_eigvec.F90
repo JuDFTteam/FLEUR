@@ -70,7 +70,7 @@ contains
       call desym_results(fi, fi_nosym, map, results, results_nosym)
 
       eig_id_nosym = open_eig(fmpi_nosym%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi_nosym%kpts%nkpt, fi%input%jspins, .false., &
-                              .true., .false., .false., .false., .false., fmpi_nosym%n_size, filename="eig_nosym")
+                              .true., .false., .false., .false., .false., fmpi_nosym%n_size)
 
       do jsp = 1, fi%input%jspins
          call mt_basis(fi, enpara, vTot, fmpi_nosym, jsp, usdus)
