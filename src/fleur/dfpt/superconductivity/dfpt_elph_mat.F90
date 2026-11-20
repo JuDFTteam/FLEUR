@@ -322,14 +322,13 @@ CONTAINS
             U_full(:,:,:,:) = results%U_mat(:,:,:,:)
         end if
         call timestop("Load Wannier U matrices")
-        if (.not. allocated(results%wann_centres)) call juDFT_error("Wannier centres not available", calledby="el_ph_wannier")
 
         ! Construct the realspace representation
         call timestart("Forward FT elph-element")
         allocate(gmatRealspace(3*fi%atoms%nat, fi%input%jspins))
         do iMode = 1 , 3*fi%atoms%nat
             do ispin = 1 , fi%input%jspins
-                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,results%wann_centres(:,:,ispin),gmatRealspace(iMode,ispin), &
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,gmatRealspace(iMode,ispin), &
                                              k_list=k_list,mpi_comm=fmpi%mpi_comm,iAtom=(iMode-1)/3+1)
             end do !ispin
         end do !iMode
