@@ -79,7 +79,6 @@ CONTAINS
 
       INTEGER,            INTENT(IN)    :: dfpt_eig_id, dfpt_eig_id2
 
-      !complex,        intent(in)  :: sigma_disc(2), sigma_disc2(2)
 
       TYPE(t_stars),   OPTIONAL, INTENT(INOUT) :: starsmq
       TYPE(t_results), OPTIONAL, INTENT(INOUT) :: resultsmq, results1m

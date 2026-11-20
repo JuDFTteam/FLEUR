@@ -101,8 +101,11 @@ CONTAINS
          
             IF (p(3).LT.0.0) THEN
                ivac = vacuum%nvac
-               IF (sym%invs) THEN
-                  p(1:2) = -p(1:2)
+               IF (vacuum%nvac == 1) THEN
+                  ! map onto the upper vacuum with the operation relating the two vacua
+                  x(1:2) = MATMUL(cell%bmat(1:2,1:2),p(1:2))/tpi_const
+                  x(1:2) = MATMUL(REAL(vacuum%mrot2),x(1:2)) + vacuum%tau2
+                  p(1:2) = MATMUL(cell%amat(1:2,1:2),x(1:2))
                END IF
                p(3) = abs(p(3))
             END IF

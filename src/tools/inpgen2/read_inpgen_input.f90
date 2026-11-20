@@ -80,6 +80,7 @@ CONTAINS
 
     IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
        input%tkb = profile%fermiSmearing
+       IF (LEN_TRIM(profile%mixingScheme).GT.0) input%imix = imix_from_name(profile%mixingScheme)
     END IF
 
     aa=0.0

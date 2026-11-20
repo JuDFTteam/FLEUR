@@ -11,13 +11,14 @@ MODULE m_vac_tofrom_grid
       USE m_mkgz
       USE m_mkgxyz3
       USE m_fft2d
+      USE m_types_fftGrid
       USE m_types_stars
       USE m_types_vacuum
       USE m_types_cell
       USE m_types_xcpot
       IMPLICIT NONE
       PRIVATE
-      PUBLIC :: vac_to_grid, vac_from_grid, fixed_ndvgrd
+      PUBLIC :: vac_to_grid, vac_from_grid, vac_divergence, fixed_ndvgrd
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
@@ -457,6 +458,75 @@ CONTAINS
 
 
   END SUBROUTINE vac_to_grid
+
+  subroutine vac_divergence(stars,vacuum,cell,ifftd2,h,div)
+    !! Divergence of a vector field on the vacuum grid of vac_to_grid. In the warping region the
+    !! in-plane derivatives come from a plain 2D FFT of each plane (the components are not
+    !! symmetric scalars, so no star projection) and d/dz from finite differences at each
+    !! in-plane point; beyond it only h_z varies, along the z mesh.
+    type(t_stars),intent(in)  :: stars
+    type(t_vacuum),intent(in) :: vacuum
+    type(t_cell),intent(in)   :: cell
+    integer,intent(in)        :: ifftd2
+    real,intent(in)           :: h(:,:)    !(points,3)
+    real,intent(out)          :: div(:)    !(points)
+
+    type(t_fftgrid)   :: grid
+    real, allocatable :: col(:), dcol(:), ddcol(:)
+    integer :: ivac, ip, k, i, j, idx, idxw, nmz0, nmzdiff, d(2), ig(2)
+    real    :: g(3)
+
+    div = 0.0
+    d = [3*stars%mx1, 3*stars%mx2]
+    CALL grid%init([d(1),d(2),1])
+    nmz0 = max(1,vacuum%nmzxy+1+(fixed_ndvgrd/2)-fixed_ndvgrd)
+    nmzdiff = vacuum%nmz - nmz0 + 1
+    idx = 1
+    DO ivac = 1, vacuum%nvac
+       ! warping region: in-plane part plane by plane
+       idxw = idx
+       DO ip = 1, vacuum%nmzxy
+          DO k = 1, 2
+             grid%grid = CMPLX(h(idx:idx+ifftd2-1,k),0.0)
+             CALL grid%perform_fft(forward=.TRUE.)
+             DO i = 0, ifftd2-1
+                ig = [MODULO(i,d(1)), i/d(1)]
+                ig = MERGE(ig-d, ig, 2*ig > d)
+                ! Nyquist components of even grids have no real derivative
+                IF (ANY(2*ABS(ig) == d)) THEN
+                   grid%grid(i) = CMPLX(0.0,0.0)
+                   CYCLE
+                END IF
+                g = MATMUL(REAL([ig(1),ig(2),0]), cell%bmat)
+                grid%grid(i) = grid%grid(i)*CMPLX(0.0,-g(k))/ifftd2
+             END DO
+             CALL grid%perform_fft(forward=.FALSE.)
+             div(idx:idx+ifftd2-1) = div(idx:idx+ifftd2-1) + REAL(grid%grid)
+          END DO
+          idx = idx + ifftd2
+       END DO
+       ! warping region: d h_z/dz at each in-plane point
+       ALLOCATE(col(vacuum%nmzxy), dcol(vacuum%nmzxy), ddcol(vacuum%nmzxy))
+       DO i = 0, ifftd2-1
+          DO ip = 1, vacuum%nmzxy
+             col(ip) = h(idxw+(ip-1)*ifftd2+i,3)
+          END DO
+          CALL grdchlh(vacuum%delz, col, dcol, ddcol)
+          DO ip = 1, vacuum%nmzxy
+             j = idxw+(ip-1)*ifftd2+i
+             div(j) = div(j) + dcol(ip)
+          END DO
+       END DO
+       DEALLOCATE(col, dcol, ddcol)
+       ! region with g_par = 0 only
+       ALLOCATE(col(nmzdiff), dcol(nmzdiff), ddcol(nmzdiff))
+       col = h(idx:idx+nmzdiff-1,3)
+       CALL grdchlh(vacuum%delz, col, dcol, ddcol)
+       div(idx:idx+nmzdiff-1) = div(idx:idx+nmzdiff-1) + dcol
+       DEALLOCATE(col, dcol, ddcol)
+       idx = idx + nmzdiff
+    END DO
+  end subroutine vac_divergence
 
   subroutine vac_from_grid(stars,vacuum,v_xc,ifft2d,vac)
     type(t_stars),intent(in)  :: stars

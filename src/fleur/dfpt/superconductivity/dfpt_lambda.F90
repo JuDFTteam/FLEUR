@@ -27,8 +27,7 @@ module m_dfpt_lambda
    use m_genMTBasis, only: genMTBasis
    use m_hs_int_direct
    use m_inv3
-   use m_dwigner
-   use m_map_to_unit
+   use m_dfpt_dynmat_fourier, only: remap_fullsym_atoms
    use m_vacfun
    use m_types_abc
    use m_types_atoms
@@ -56,7 +55,7 @@ module m_dfpt_lambda
 
    private
 
-   public :: dfpt_read_fullsym, dfpt_build_lambda, dfpt_check_lambda, dfpt_unfold_gmat
+   public :: dfpt_read_fullsym, dfpt_check_sym_full, dfpt_build_lambda, dfpt_check_lambda, dfpt_unfold_gmat
 
 contains
 
@@ -83,10 +82,8 @@ contains
       class(t_forcetheo), allocatable :: forcetheo_fullsym
 
       character(len=100) :: inp_pref
-      integer            :: iQ, ik, isym, iatom
-      integer            :: mrot(3, 3), invmrot(3, 3)
-      logical            :: l_trs
-      real               :: trans(3), rkpt(3)
+      integer            :: iQ
+      integer            :: nvd_save, nv2d_save, nbasfcn_save
 
       inp_pref = adjustl("fullsym_")
 
@@ -94,8 +91,15 @@ contains
       fmpi_fullsym%mpi_comm            = fmpi%mpi_comm
 
       ! Skip setupMPI: the parallel-solver setup can fail if the fullsym q-mesh
+      ! fleur_init reruns lapw_dim on the fullsym k-set; keep the basis dimensions of the main run
+      nvd_save = lapw_dim_nvd
+      nv2d_save = lapw_dim_nv2d
+      nbasfcn_save = lapw_dim_nbasfcn
       call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
                       enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, inp_pref, l_skip_setupmpi=.true.)
+      lapw_dim_nvd = nvd_save
+      lapw_dim_nv2d = nv2d_save
+      lapw_dim_nbasfcn = nbasfcn_save
 
       sym_full  = fi_fullsym%sym
       qvec_full = fi_fullsym%kpts
@@ -116,39 +120,48 @@ contains
          end if
       end do
 
-      ! sym_full%mapped_atom is indexed with fi%atoms, so both cells must list the
-      ! atoms in the same order even though the type grouping differs.
-      do iatom = 1, fi%atoms%nat
-         if (any(abs(fi_fullsym%atoms%taual(:, iatom) - fi%atoms%taual(:, iatom)) > 1e-7)) then
-            call juDFT_error("fullsym_ atom ordering differs from the DFPT cell; the atom map would be wrong.", calledby="dfpt_read_fullsym")
-         end if
-      end do
+      ! the unfolding indexes sym_full%mapped_atom with fi%atoms
+      call remap_fullsym_atoms(fi%atoms, fi_fullsym%atoms, sym_full)
 
       if (fi_fullsym%input%film .neqv. fi%input%film) then
          call juDFT_error("fullsym_ input and DFPT input disagree on film geometry.", calledby="dfpt_read_fullsym")
       end if
 
+      call dfpt_check_sym_full(fi, sym_full)
+
+   end subroutine dfpt_read_fullsym
+
+   subroutine dfpt_check_sym_full(fi, sym_full)
+      !! Checks that sym_full can unfold quantities on the k-mesh of fi: film operations
+      !! keep z apart from the plane, and the k-mesh is closed under every operation.
+      type(t_fleurinput), intent(in) :: fi
+      type(t_sym),        intent(in) :: sym_full
+
+      integer :: ik, isym
+      integer :: mrot(3, 3), invmrot(3, 3)
+      logical :: l_trs
+      real    :: trans(3), rkpt(3)
+
       ! The vacuum matching assumes operations that do not mix z with the plane.
       if (fi%input%film) then
          do isym = 1, sym_full%nop
             if (any(sym_full%mrot(3, 1:2, isym) /= 0) .or. any(sym_full%mrot(1:2, 3, isym) /= 0) .or. abs(sym_full%tau(3, isym)) > 1e-9) then
-               call juDFT_error("fullsym_ film operation mixes z with the plane or carries a z translation.", calledby="dfpt_read_fullsym")
+               call juDFT_error("Film symmetry operation mixes z with the plane or carries a z translation.", calledby="dfpt_check_sym_full")
             end if
          end do
       end if
 
-      ! S k must be on the k mesh for every k and every operation.
       do isym = 1, sym_full%nsym
          call sym_full%get_sym_operation_int_coord(isym, mrot, invmrot, trans, l_trs)
          do ik = 1, fi%kpts%nkptf
             rkpt = matmul(transpose(mrot), fi%kpts%bkf(:, ik))
             if (fi%kpts%get_nk(rkpt) < 1) then
-               call juDFT_error("k mesh is not closed under the full symmetry group; regenerate it with the fullsym_ symmetry.", calledby="dfpt_read_fullsym")
+               call juDFT_error("k mesh is not closed under the full symmetry group.", calledby="dfpt_check_sym_full")
             end if
          end do
       end do
 
-   end subroutine dfpt_read_fullsym
+   end subroutine dfpt_check_sym_full
 
    subroutine dfpt_build_lambda(fi, sym_full, fmpi, enpara, vTot, nococonv, stars, eig_id, jsp, bandWindow, lambda, mapped_kpt, eig_win)
       !! Builds \(\Lambda(\boldsymbol{k},\mathcal{S})\) and the index map
@@ -436,7 +449,7 @@ contains
 
    end subroutine dfpt_check_lambda
 
-   subroutine dfpt_unfold_gmat(fi, sym_full, qvec_full, jsp, lambda, mapped_kpt, gmatIBZ, gmatFull)
+   subroutine dfpt_unfold_gmat(fi, sym_full, qvec_full, jsp, lambda, mapped_kpt, k_list, k_list_inv, gmatIBZ, gmatFull)
       !! Fills the full q Brillouin zone from the electron-phonon matrix elements
       !! computed on the irreducible wedge, by
       !! $$\underline{g}^{\kappa'\beta}(S\boldsymbol{k},S\boldsymbol{q})
@@ -452,6 +465,8 @@ contains
       !! For `isym > nop` (time reversal), `invmrot`/`mapped_atom` are only
       !! tabulated up to `nop`, so the spatial operation is `-invmrot` at index
       !! `isym - nop`, and the source block is conjugated
+      !!
+      !! `gmatFull` holds only the target k-points `k_list` of this rank
 
 
       type(t_fleurinput), intent(in)    :: fi
@@ -460,10 +475,12 @@ contains
       integer,            intent(in)    :: jsp
       complex,            intent(in)    :: lambda(:, :, :, :)        ! (nb,nb,nkpt,nsym), same bands as gmat
       integer,            intent(in)    :: mapped_kpt(:, :)               ! (nkpt,nsym): index of S k
+      integer,            intent(in)    :: k_list(:)                 ! global k of each local slot
+      integer,            intent(in)    :: k_list_inv(:)             ! (nkpt): local slot of a global k, returns 0 if k is not on this rank
       complex,            intent(in)    :: gmatIBZ(:, :, :, :, :, :) ! (nb,nb,nkpt,jspins,3nat,nkptIBZ)
-      complex,            intent(inout) :: gmatFull(:, :, :, :, :, :)! (nb,nb,nkpt,jspins,3nat,nkptf)
+      complex,            intent(inout) :: gmatFull(:, :, :, :, :, :)! (nb,nb,size(k_list),jspins,3nat,nkptf)
 
-      integer :: iqf, iq, isym, iopAtom, ik, ikPrime, ikq, iAtom, jAtom
+      integer :: iqf, iq, isym, iopAtom, ik, ikPrime, nk_i, ikq, iAtom, jAtom
       integer :: alpha, beta, iPerturb, iPerturbPrime, nb
       integer :: mrot(3, 3), invmrot(3, 3), rotReal(3, 3), unitMat(3, 3)
       logical :: l_trs
@@ -480,6 +497,9 @@ contains
       end if
       if (size(gmatFull, 6) /= qvec_full%nkptf) then
          call juDFT_error("gmatFull q dimension is not the full BZ size.", calledby="dfpt_unfold_gmat")
+      end if
+      if (size(gmatFull, 3) /= size(k_list)) then
+         call juDFT_error("gmatFull k dimension does not match the local k list.", calledby="dfpt_unfold_gmat")
       end if
 
       call timestart("dfpt unfold gmat")
@@ -505,7 +525,7 @@ contains
          q_0 = qvec_full%bk(:, iq)
 
          if ((.not.l_trs) .and. all(rotReal == unitMat) .and. all(abs(trans) < 1e-9)) then
-            gmatFull(:, :, :, jsp, :, iqf) = gmatIBZ(:, :, :, jsp, :, iq)
+            gmatFull(:, :, :, jsp, :, iqf) = gmatIBZ(:, :, k_list, jsp, :, iq)
             cycle
          end if
 
@@ -521,6 +541,8 @@ contains
 
          do ik = 1, fi%kpts%nkpt
             ikPrime = mapped_kpt(ik, isym)
+            nk_i    = k_list_inv(ikPrime)
+            if (nk_i == 0) cycle !nk_i doesnt belong to irank
             ikq     = fi%kpts%get_nk(fi%kpts%bkf(:, ik) + q_0)
             if (ikq < 1 .or. ikq > fi%kpts%nkpt) then
                call juDFT_error("k+q is not on the k mesh; the q mesh must be commensurate with it.", calledby="dfpt_unfold_gmat")
@@ -542,7 +564,7 @@ contains
                   gtmp = phaseAtom(iAtom)*gtmp
 
                   iPerturbPrime = beta + 3*(jAtom - 1)
-                  gmatFull(:, :, ikPrime, jsp, iPerturbPrime, iqf) = matmul(lamKQ, matmul(gtmp, conjg(transpose(lamK))))
+                  gmatFull(:, :, nk_i, jsp, iPerturbPrime, iqf) = matmul(lamKQ, matmul(gtmp, conjg(transpose(lamK))))
                end do
             end do
          end do
@@ -568,29 +590,13 @@ contains
       integer, allocatable, intent(out) :: n_r(:, :)
       integer,              intent(out) :: maxlmindx, maxn_r
 
-      integer :: itype, l, m1, m2, isym, iisym, ilo, jlo, iOrd, jOrd, lmaxd
+      integer :: itype, l, ilo, jlo, iOrd, jOrd, lmaxd
 
       lmaxd = fi%atoms%lmaxd
 
-      call gen_map_all_atoms(fi%atoms, sym_full, fi%input%film, hybinp)
-
-      ! Wigner d matrices, l = 0..lmaxd, including the time-reversal half
-      allocate (hybinp%d_wgn2(-lmaxd:lmaxd, -lmaxd:lmaxd, 0:lmaxd, sym_full%nsym))
-      call d_wigner(sym_full%nop, sym_full%mrot, fi%cell%bmat, lmaxd, hybinp%d_wgn2(:, :, 1:, :sym_full%nop))
-      hybinp%d_wgn2(:, :, 0, :) = 1
-
-      do isym = sym_full%nop + 1, sym_full%nsym
-         iisym = isym - sym_full%nop
-         do l = 0, lmaxd
-            do m2 = -l, l
-               do m1 = -l, -1
-                  hybinp%d_wgn2(m1, m2, l, isym)  = hybinp%d_wgn2(-m1, m2, l, iisym)*(-1)**m1
-                  hybinp%d_wgn2(-m1, m2, l, isym) = hybinp%d_wgn2(m1, m2, l, iisym)*(-1)**m1
-               end do
-               hybinp%d_wgn2(0, m2, l, isym) = hybinp%d_wgn2(0, m2, l, iisym)
-            end do
-         end do
-      end do
+      ! DFPT runs without symmetry, so the images of an atom lie in other types
+      call hybinp%gen_map_all(fi%atoms, sym_full, fi%input%film)
+      call hybinp%gen_d_wgn2(fi%atoms, fi%cell, sym_full)
 
       ! waveftrafo_gen_cmt needs only mpdata%num_radfun_per_l.
       call mpdata%set_num_radfun_per_l(fi%atoms)
@@ -632,60 +638,6 @@ contains
       end do
 
    end subroutine setup_rotation_data
-
-   subroutine gen_map_all_atoms(atoms, sym_full, l_film, hybinp)
-      !! Atom map and lattice-vector table for `waveftrafo_gen_cmt`, searching all
-      !! atoms rather than only the equivalents of one type. `t_hybinp%gen_map`
-      !! restricts the search to `neq(itype)`.
-      !! DFPT runs with -nosym, types are broken up
-
-
-      type(t_atoms),  intent(in)    :: atoms
-      type(t_sym),    intent(in)    :: sym_full
-      logical,        intent(in)    :: l_film
-      type(t_hybinp), intent(inout) :: hybinp
-
-      integer :: iatom, jatom, isym, iisym, ratom
-      real    :: rtaual(3), dvec(3), dist, minDist
-
-      if (allocated(hybinp%map))  deallocate (hybinp%map)
-      if (allocated(hybinp%tvec)) deallocate (hybinp%tvec)
-      allocate (hybinp%map(atoms%nat, sym_full%nsym), source=0)
-      allocate (hybinp%tvec(3, atoms%nat, sym_full%nsym), source=0)
-
-      do isym = 1, sym_full%nsym
-         iisym = isym
-         if (isym > sym_full%nop) iisym = isym - sym_full%nop
-
-         do iatom = 1, atoms%nat
-            rtaual = matmul(sym_full%mrot(:, :, iisym), atoms%taual(:, iatom)) + sym_full%tau(:, iisym)
-
-            ratom   = 0
-            minDist = 1e33
-            do jatom = 1, atoms%nat
-               dvec = map_to_unit(rtaual - atoms%taual(:, jatom))
-               ! a film is not periodic along z
-               if (l_film) dvec(3) = rtaual(3) - atoms%taual(3, jatom)
-               dist = norm2(dvec)
-               if (dist < minDist) then
-                  minDist = dist
-                  ratom   = jatom
-               end if
-            end do
-
-            if (minDist > 1e-6) then
-               call juDFT_error("No image atom for a full-group operation; the fullsym_ cell does not match the DFPT cell.", calledby="gen_map_all_atoms")
-            end if
-            if (atoms%nz(atoms%itype(ratom)) /= atoms%nz(atoms%itype(iatom))) then
-               call juDFT_error("Symmetry maps an atom onto a different element.", calledby="gen_map_all_atoms")
-            end if
-
-            hybinp%map(iatom, isym)     = ratom
-            hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
-         end do
-      end do
-
-   end subroutine gen_map_all_atoms
 
    subroutine cmt_from_z(fi, usdus, nococonv, lapw, zMat, jsp, nbands, maxlmindx, cmt)
       !! Expands an eigenvector into muffin-tin coefficients, in the hybrid-code

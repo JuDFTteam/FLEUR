@@ -19,6 +19,7 @@ MODULE m_types_profile
       CHARACTER(LEN=20) :: profileName
       CHARACTER(LEN=50) :: addLOSetup
       CHARACTER(LEN=20) :: atomSetup
+      CHARACTER(LEN=20) :: mixingScheme ! inp.xml name of the mixing scheme, empty: inpgen default
 
       CONTAINS
 
@@ -44,6 +45,7 @@ MODULE m_types_profile
       this%fermiSmearing = 0.001
       this%addLOSetup = ""
       this%atomSetup = ""
+      this%mixingScheme = ""
       this%kPDen = -1.0
 
    END SUBROUTINE initProfile
@@ -66,8 +68,9 @@ MODULE m_types_profile
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str
       CHARACTER(LEN=20) :: atomSetup
+      CHARACTER(LEN=20) :: mixingScheme
 
-      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup,kGmaxFactor,kPDen
+      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup,kGmaxFactor,kPDen,mixingScheme
 
       filename = "profile.config"
 
@@ -94,6 +97,7 @@ MODULE m_types_profile
             fermiSmearing = 0.001
             kPDen = -1.0
             atomSetup = ""
+            mixingScheme = ""
             READ(558,profile,iostat=io_stat)
             IF (io_stat.EQ.0) THEN
                IF(TRIM(ADJUSTL(profileName)).EQ.TRIM(ADJUSTL(name))) THEN
@@ -106,6 +110,7 @@ MODULE m_types_profile
                   this%fermiSmearing = fermiSmearing
                   this%kPDen = kPDen
                   this%atomSetup = TRIM(ADJUSTL(atomSetup))
+                  this%mixingScheme = TRIM(ADJUSTL(mixingScheme))
                   l_found = .TRUE.
                END IF
             ELSE

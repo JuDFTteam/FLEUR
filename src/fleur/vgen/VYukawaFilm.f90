@@ -175,7 +175,8 @@ module m_VYukawaFilm
     real                        :: exp_m(vacuum%nmz,stars%ng2), exp_p(vacuum%nmz,stars%ng2)
     real                        :: expDg(stars%ng2)
     real                        :: z(vacuum%nmz)
-    integer                     :: iz, irec2, irec3, ivac, iqz
+    integer                     :: iz, irec2, irec2r, irec3, ivac, iqz
+    complex                     :: phas
     complex                     :: fa(vacuum%nmzxy,2:stars%ng2), fb(vacuum%nmzxy,2:stars%ng2)
     complex                     :: alpha(vacuum%nmzxy,2:stars%ng2,2), beta(vacuum%nmzxy,2:stars%ng2,2), gamma(vacuum%nmzxy,2:stars%ng2)
     real                        :: ga(vacuum%nmz), gb(vacuum%nmz)
@@ -259,13 +260,15 @@ module m_VYukawaFilm
         ! alphm(q_xy,ivac) = alpha(D/2,q_xy,ivac) --- these integrals are also needed for the interstitial potential
         alphm(irec2,ivac) = alpha(1,irec2,ivac)
       end do
-      if ( vacuum%nvac == 1 ) then
-        if ( sym%invs ) then
-          alphm(irec2,2) = conjg( alphm(irec2,1) )
-        else
-          alphm(irec2,2) = alphm(irec2,1)
-        end if
-      end if
+    end do
+    ! lower vacuum from the upper one; the source star may come later in the list
+    if ( vacuum%nvac == 1 ) then
+      do irec2 = 2, stars%ng2
+        call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+        alphm(irec2,2) = phas * alphm(irec2r,1)
+      end do
+    end if
+    do irec2 = 2, stars%ng2
       do ivac = 1, vacuum%nvac
         gamma(1:vacuum%nmzxy,irec2) = exp_m(1:vacuum%nmzxy,irec2) * ( alphm(irec2,mod(ivac,2)+1) + beta(1:vacuum%nmzxy,irec2,ivac) ) &
                                     + exp_p(1:vacuum%nmzxy,irec2) *                               alpha(1:vacuum%nmzxy,irec2,ivac) ! mod(ivac,2)+1 outputs the other ivac value 
@@ -493,7 +496,8 @@ module m_VYukawaFilm
     ! add the computed components to V^I(q_xy,q_z):
       do iqz= -stars%mx3, stars%mx3
         irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),iqz)
-        if ( irec3 /= 0 ) VIq(irec3) = VIq(irec3) + VIqz(iqz,irec2) * partitioning / ( stars%nstr(irec3) / stars%nstr2(irec2) )
+        if ( irec3 /= 0 ) VIq(irec3) = VIq(irec3) + VIqz(iqz,irec2) * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),iqz) ) &
+                                          * partitioning / ( stars%nstr(irec3) / stars%nstr2(irec2) )
       end do
     end do
 
@@ -527,7 +531,8 @@ module m_VYukawaFilm
     real,           intent(out) :: dh_prec
     real,           intent(out) :: coshdh(stars%ng2)
 
-    integer                                             :: iz, irec2, irec3, ivac, iqz, nzdhprec, sign
+    integer                                             :: iz, irec2, irec2r, irec3, ivac, iqz, nzdhprec, sign
+    complex                                             :: phas
     real                                                :: dh, qz, qxy_numerics 
     real, allocatable                                   :: z(:)
     complex, dimension(stars%ng2)                       :: sum_qz
@@ -642,13 +647,15 @@ module m_VYukawaFilm
         ! alphm(q_xy,ivac) = alpha(D/2,q_xy,ivac) --- these integrals are also needed for the interstitial potential
         alphm(irec2,ivac) = alpha(1,irec2,ivac)
       end do
-      if ( vacuum%nvac == 1 ) then
-        if ( sym%invs ) then
-          alphm(irec2,2) = conjg( alphm(irec2,1) )
-        else
-          alphm(irec2,2) = alphm(irec2,1)
-        end if
-      end if
+    end do
+    ! lower vacuum from the upper one; the source star may come later in the list
+    if ( vacuum%nvac == 1 ) then
+      do irec2 = 2, stars%ng2
+        call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+        alphm(irec2,2) = phas * alphm(irec2r,1)
+      end do
+    end if
+    do irec2 = 2, stars%ng2
       do ivac = 1, vacuum%nvac
         gamma(1:nzdhprec,irec2) = quotz(-1:-nzdhprec:-1,irec2) * alphm(irec2,mod(ivac,2)+1) &
                                 + quotz(1:nzdhprec,irec2) * alpha(1:nzdhprec,irec2,ivac) &
@@ -893,7 +900,8 @@ module m_VYukawaFilm
     ! add the computed components to V^I(q_xy,q_z):
       do iqz= -stars%mx3, stars%mx3
         irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),iqz)
-        if ( irec3 /= 0 ) VIq(irec3) = VIq(irec3) + VIqz(iqz,irec2) * partitioning / ( stars%nstr(irec3) / stars%nstr2(irec2) )
+        if ( irec3 /= 0 ) VIq(irec3) = VIq(irec3) + VIqz(iqz,irec2) * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),iqz) ) &
+                                          * partitioning / ( stars%nstr(irec3) / stars%nstr2(irec2) )
       end do
     end do
 

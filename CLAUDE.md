@@ -38,6 +38,7 @@ Useful configure flags not shown above:
 - `-make` — run `make` immediately after configure
 - `-debug` — debug build
 - `-gpu <spec>` — GPU support (e.g., `acc:cc80` for OpenACC on Compute Capability 8.0)
+- `-native` — GNU release builds: add `-march=native` (AVX2/FMA/AVX-512 of the build machine; binary not portable)
 - `-elsi`, `-elpa`, `-chase`, `-magma` — optional diagonalization libraries (auto-downloaded if TRUE)
 - `-libxc`, `-wannier` — enable libxc / Wannier interface
 - `-libdir <path>`, `-includedir <path>`, `-link <flag>` — pass custom library paths/flags
@@ -101,6 +102,7 @@ Set `juDFT_PYTHON` to override the Python interpreter used by `run_tests.sh`.
 - **Error handling:** use `judft_error()`, `judft_warn()`, `judft_end()` — never `stop`
 - **Array arguments:** use shape-assumed `real, intent(in) :: x(:,:)` or allocatable arrays; avoid explicit-size `real, intent(in) :: x(n,m)` which allows unsafe rank/size reinterpretation
 - **No file I/O outside `io/`:** files are not substitutes for common blocks or status variables
+- **OpenMP private allocatables:** deallocate every `PRIVATE`/`FIRSTPRIVATE` allocatable inside the region before `!$OMP END PARALLEL` / `END PARALLEL DO`, and in a `PARALLEL DO` at the end of each iteration. This includes allocatable components of private derived types, e.g. `t_fftGrid%grid`, and arrays allocated by called routines through `intent(out)`. ifx with `-fiopenmp` neither deallocates nor finalizes private copies at the end of the region, while gfortran does. A missing deallocation therefore leaks memory on every call with ifx only, even with one thread (see `edfb9a40f` in `local_ham`, and issue #843 for `pwden` after `f20aef703`).
 
 Pre-commit hooks (`.pre-commit-config.yaml`, hooks from `fleur/fleur-pre-commit`) enforce: copyright header presence, `implicit none`, absence of `stop` statements, `USE` only in the module head (`check-use-placement` moves them there itself), a `PRIVATE` default in every module, no `USE` of the removed `m_types`/`m_types_setup`, validity of XML/YAML/TOML files and check for added large files. Install them with:
 

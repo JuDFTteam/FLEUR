@@ -148,6 +148,7 @@ module m_dfpt_dynmat_eig
     integer                                 :: iatom
     integer                                 :: idir
     real                                    :: convFact
+    real                                    :: THz_to_cm
 
     ! Array variables
     CHARACTER(LEN=20)                         :: attributes(5)
@@ -158,6 +159,7 @@ module m_dfpt_dynmat_eig
 
 
     convFact = 4.35974472220e-18 / (5.2918e-11)**2 / 9.1093837015e-31 
+    THz_to_cm = 33.3564
 
     if (l_writeOutput) then
       write(*, *)
@@ -190,7 +192,7 @@ module m_dfpt_dynmat_eig
       do ieqat = 1, atoms%neq(itype)
         iatom = iatom + 1
         do idir = 1, 3
-          eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * 33
+          eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * THz_to_cm
         end do ! idir
         if (l_writeOutput) write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat

@@ -18,23 +18,19 @@ module m_vvacxy
    use m_qsf
    use m_types_cell
    use m_types_field
-   use m_types_input
    use m_types_stars
-   use m_types_sym
    use m_types_vacuum
    implicit none
    private
    public :: vvacxy, exp_safe
 
 contains
-   subroutine vvacxy( stars, vacuum, cell, sym, input, field, rhtxy, vxy, alphm, l_dfptvgen )
+   subroutine vvacxy( stars, vacuum, cell, field, rhtxy, vxy, alphm, l_dfptvgen )
 
       implicit none
 
-      type(t_input),  intent(in)     :: input
       type(t_field),  intent(in)     :: field
       type(t_vacuum), intent(in)     :: vacuum
-      type(t_sym),    intent(in)     :: sym
       type(t_stars),  intent(in)     :: stars
       type(t_cell),   intent(in)     :: cell
 
@@ -44,7 +40,7 @@ contains
       logical,        intent(in)     :: l_dfptvgen
 
       complex                        :: alph0, alphaz, betaz, test, phas
-      real                           :: g, vcons, z, e_m, e_p,arg
+      real                           :: g, vcons, z, e_m, e_p
       integer                        :: imz, ip, irec2, ivac, ncsh,irec2r, start_star
       real                           :: fra(vacuum%nmzxyd), frb(vacuum%nmzxyd), fia(vacuum%nmzxyd), fib(vacuum%nmzxyd)
       real                           :: alpha(vacuum%nmzxyd,2,2,stars%ng2), beta(vacuum%nmzxyd,2,2,stars%ng2)
@@ -71,9 +67,6 @@ contains
       end if
       ! 2-dim star loop g/=0
       ip = vacuum%nmzxy + 1
-      !    irec2_loop: do irec2 = 2, stars%ng2
-      !      g = stars%sk2(irec2)
-      !      vcons = tpi_const / g
       if ( field%efield%dirichlet ) then ! Dirichlet
          do irec2 = start_star, stars%ng2
             g = stars%sk2(irec2)

@@ -14,6 +14,7 @@ src/fleur/init/efield.f90
 src/fleur/init/make_stars.f90
 src/fleur/init/make_sphhar.f90
 src/fleur/init/make_sym.f90
+src/fleur/init/desym_setup.F90
 src/fleur/init/make_forcetheo.f90
 src/fleur/init/make_xcpot.f90
 src/fleur/init/boxdim.f90

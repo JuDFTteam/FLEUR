@@ -261,9 +261,9 @@
             <extrapolationTo0K value="-4388.2922536385"/>
          </totalEnergy>
          <totalForcesOnRepresentativeAtoms units="Htr/bohr">
-            <forceTotal atomType="1" x="1.391736" y="2.641203" z="0.180937" F_x="-0.03458084" F_y="-0.03605020" F_z="0.00681482"/>
-            <forceTotal atomType="2" x="-5.705850" y="3.659033" z="1.817085" F_x="0.09593328" F_y="-0.03455817" F_z="0.13085448"/>
-            <forceTotal atomType="3" x="-0.718992" y="3.665475" z="2.550264" F_x="-0.07086423" F_y="0.01426217" F_z="0.08500500"/>
+            <forceTotal atomType="1" x="1.391736" y="2.641203" z="0.180937" F_x="-0.03447178" F_y="-0.03583507" F_z="0.00709794"/>
+            <forceTotal atomType="2" x="-5.705850" y="3.659033" z="1.817085" F_x="0.09730315" F_y="-0.05883434" F_z="0.12316928"/>
+            <forceTotal atomType="3" x="-0.718992" y="3.665475" z="2.550264" F_x="-0.07652478" F_y="0.03429300" F_z="0.08360301"/>
          </totalForcesOnRepresentativeAtoms>
          <densityConvergence units="me/bohr^3">
             <chargeDensity spin="1" distance="30.1178763059"/>

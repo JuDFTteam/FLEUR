@@ -55,33 +55,64 @@ CONTAINS
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt
 
-   SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
+   SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,l_noco,v_xc,grad)
+      !! Adds the gradient term -2 div(vsigma grad rho) of a GGA/MetaGGA potential on the xc FFT
+      !! grid. The vector field h = vsigma grad rho stays bounded where vsigma grows at low
+      !! density, so the divergence is taken of h rather than expanding it with the product rule.
+      !! Noco keeps the product rule: its local-frame gradients are not smooth enough for a
+      !! numerical divergence where the magnetization is small.
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_stars),INTENT(IN)    :: stars
       TYPE(t_cell),INTENT(IN)     :: cell
+      LOGICAL,INTENT(IN)          :: l_noco
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
 
       COMPLEX,ALLOCATABLE:: vsigma_g(:,:)
-      REAL,ALLOCATABLE:: vsigma(:,:)
+      REAL,ALLOCATABLE :: vsigma(:,:), h(:,:), div(:)
       TYPE(t_gradients)::grad_vsigma
-      INTEGER :: nsp,n_sigma
+      INTEGER :: nsp, n_sigma, i
 
       nsp=SIZE(v_xc,1) !no of points
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
-      ALLOCATE(vsigma_g(stars%ng3,n_sigma),vsigma(nsp,n_sigma)); vsigma_g=0.0
-      vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL pw_from_grid(stars,vsigma,vsigma_g)
-      !vsigma_g(:,1)=vsigma_g(:,1)*stars%nstr(:)
-      ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL pw_to_grid(xcpot%needs_grad(),n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma,xcpot)
 
-      CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
+      IF (l_noco) THEN
+         ALLOCATE(vsigma_g(stars%ng3,n_sigma),vsigma(nsp,n_sigma)); vsigma_g=0.0
+         vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
+         CALL pw_from_grid(stars,vsigma,vsigma_g)
+         ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
+         CALL pw_to_grid(xcpot%needs_grad(),n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma,xcpot)
+         CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
+         RETURN
+      END IF
+
+      ALLOCATE(h(nsp,3),div(nsp))
+      IF (SIZE(v_xc,2)==1) THEN
+         DO i = 1, nsp
+            h(i,:) = 2.0*grad%vsigma(1,i)*grad%gr(:,i,1)
+         END DO
+         CALL grid_divergence(cell,h,div)
+         v_xc(:,1) = v_xc(:,1) - div
+      ELSE
+         ! vsigma is ordered (up-up, up-down, down-down)
+         DO i = 1, nsp
+            h(i,:) = 2.0*grad%vsigma(1,i)*grad%gr(:,i,1) + grad%vsigma(2,i)*grad%gr(:,i,2)
+         END DO
+         CALL grid_divergence(cell,h,div)
+         v_xc(:,1) = v_xc(:,1) - div
+         DO i = 1, nsp
+            h(i,:) = 2.0*grad%vsigma(3,i)*grad%gr(:,i,2) + grad%vsigma(2,i)*grad%gr(:,i,1)
+         END DO
+         CALL grid_divergence(cell,h,div)
+         v_xc(:,2) = v_xc(:,2) - div
+      END IF
    END SUBROUTINE libxc_postprocess_gga_pw
 
-   SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
+   SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,l_noco,v_xc,grad)
+      !! Vacuum counterpart of libxc_postprocess_gga_pw: -2 div(vsigma grad rho) as the
+      !! divergence of h = vsigma grad rho; noco keeps the product rule.
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -89,19 +120,45 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_stars),INTENT(IN)   :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
-       
+      LOGICAL,INTENT(IN)          :: l_noco
+
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
 
       COMPLEX,ALLOCATABLE:: vsigma_new(:,:,:,:)
-      REAL,ALLOCATABLE:: vsigma(:,:), rho_dummy(:,:)
+      REAL,ALLOCATABLE:: vsigma(:,:), rho_dummy(:,:), h(:,:), div(:)
       TYPE(t_gradients)::grad_vsigma
-      INTEGER :: nsp,n_sigma,ifftd2
+      INTEGER :: nsp,n_sigma,ifftd2,i
 
       ifftd2 = 9*stars%mx1*stars%mx2
 
       nsp=SIZE(v_xc,1) !no of points
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
+
+      IF (.NOT.l_noco) THEN
+         ALLOCATE(h(nsp,3),div(nsp))
+         IF (SIZE(v_xc,2)==1) THEN
+            DO i = 1, nsp
+               h(i,:) = 2.0*grad%vsigma(1,i)*grad%gr(:,i,1)
+            END DO
+            CALL vac_divergence(stars,vacuum,cell,ifftd2,h,div)
+            v_xc(:,1) = v_xc(:,1) - div
+         ELSE
+            ! vsigma is ordered (up-up, up-down, down-down)
+            DO i = 1, nsp
+               h(i,:) = 2.0*grad%vsigma(1,i)*grad%gr(:,i,1) + grad%vsigma(2,i)*grad%gr(:,i,2)
+            END DO
+            CALL vac_divergence(stars,vacuum,cell,ifftd2,h,div)
+            v_xc(:,1) = v_xc(:,1) - div
+            DO i = 1, nsp
+               h(i,:) = 2.0*grad%vsigma(3,i)*grad%gr(:,i,2) + grad%vsigma(2,i)*grad%gr(:,i,1)
+            END DO
+            CALL vac_divergence(stars,vacuum,cell,ifftd2,h,div)
+            v_xc(:,2) = v_xc(:,2) - div
+         END IF
+         RETURN
+      END IF
+
       ALLOCATE(rho_dummy(size(v_xc,1),n_sigma))
       ALLOCATE(vsigma_new(vacuum%nmzd,stars%ng2,vacuum%nvac,n_sigma))
       vsigma_new=CMPLX(0.0,0.0)

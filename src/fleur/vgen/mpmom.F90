@@ -264,6 +264,7 @@ contains
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     complex, ALLOCATABLE           :: qlmpStars(:,:,:,:)
+    real, ALLOCATABLE              :: il_rmt(:,:), dfac(:)
     TYPE(t_parallelLoop)           :: mpiLoop, ompLoop
 
     ALLOCATE(qpw(stars%ng3))
@@ -271,6 +272,19 @@ contains
     qlmp = 0.0
 
     call mpi_bc(qpw,0,fmpi%mpi_comm)
+
+    ! Yukawa case: star-independent modified Bessel functions at the MT radius and prefactors
+    ALLOCATE(il_rmt(0:maxval(atoms%lmax)+1,atoms%ntype), dfac(0:maxval(atoms%lmax)))
+    il_rmt = 0.0
+    dfac = 0.0
+    if ( potdenType == POTDEN_TYPE_POTYUK ) then
+       do n = 1, atoms%ntype
+          call ModSphBessel( il_rmt(0:atoms%lmax(n)+1,n), kl(0:atoms%lmax(n)+1), input%preconditioning_param * atoms%rmt(n), atoms%lmax(n) + 1 )
+       end do
+       do l = 0, maxval(atoms%lmax)
+          dfac(l) = DoubleFactorial( l ) / input%preconditioning_param ** l
+       end do
+    end if
 
     firstStar = MERGE(2,1,norm2(stars%center)<=1e-8)
     maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number detrmined from some
@@ -284,8 +298,8 @@ contains
     DO iBunch = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
        CALL ompLoop%init(iBunch,numBunches,firstStar,stars%ng3)
        !$OMP parallel do default( NONE ) &
-       !$OMP SHARED(input,atoms,stars,sym,cell,ompLoop,qpw,qlmpStars,potdenType) &
-       !$OMP private(iTempArray,pylm,nqpw,n,sk3r,aj,rl2,il,kl,sk3i,l,cil,ll1,m,lm)
+       !$OMP SHARED(input,atoms,stars,sym,cell,ompLoop,qpw,qlmpStars,potdenType,il_rmt,dfac) &
+       !$OMP private(iTempArray,pylm,nqpw,n,sk3r,aj,rl2,sk3i,l,cil,ll1,m,lm)
        do k = ompLoop%bunchMinIndex, ompLoop%bunchMaxIndex
           iTempArray = k - ompLoop%bunchMinIndex + 1
           call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -295,14 +309,13 @@ contains
              call sphbes( atoms%lmax(n) + 1, sk3r, aj )
              rl2 = atoms%rmt(n) ** 2
              if ( potdenType == POTDEN_TYPE_POTYUK ) then
-                call ModSphBessel( il(0:atoms%lmax(n)+1), kl(0:atoms%lmax(n)+1), input%preconditioning_param * atoms%rmt(n), atoms%lmax(n) + 1 )
                 sk3i = nqpw / ( stars%sk3(k) ** 2 + input%preconditioning_param ** 2 ) * rl2
              else
                 sk3i = nqpw / stars%sk3(k)
              end if
              do l = 0, atoms%lmax(n)
                 if ( potdenType == POTDEN_TYPE_POTYUK ) then
-                   cil = ( stars%sk3(k) * il(l) * aj(l+1) + input%preconditioning_param * il(l+1) * aj(l) ) * ( DoubleFactorial( l ) / input%preconditioning_param ** l ) * sk3i
+                   cil = ( stars%sk3(k) * il_rmt(l,n) * aj(l+1) + input%preconditioning_param * il_rmt(l+1,n) * aj(l) ) * dfac(l) * sk3i
                 else
                    cil = aj(l+1) * sk3i * rl2
                    rl2 = rl2 * atoms%rmt(n)

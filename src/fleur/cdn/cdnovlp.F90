@@ -285,7 +285,7 @@ CONTAINS
       REAL    :: acoff(atoms%ntype),alpha(atoms%ntype)
       REAL    :: rat(atoms%msh,atoms%ntype)
       INTEGER :: mshc(atoms%ntype,SIZE(rh,3))
-      COMPLEX,ALLOCATABLE :: qpwc(:,:),ffonat(:,:)
+      COMPLEX,ALLOCATABLE :: qpwc(:,:),ffonat(:,:,:)
       REAL,ALLOCATABLE    :: force_a4_mt_loc(:,:),rbuf(:,:,:,:)
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -308,7 +308,7 @@ CONTAINS
          CALL fa4_formfactors(fmpi,atoms,sphhar,stars,sym,cell,vr(:,:,:,jspin),tol_14,ffonat)
       ELSE
          !dummies: they are passed on but never touched without the forces
-         ALLOCATE(ffonat(1,1),force_a4_mt_loc(1,1))
+         ALLOCATE(ffonat(1,1,1),force_a4_mt_loc(1,1))
       END IF
 
       ALLOCATE(qpwc(stars%ng3,nsrc))
@@ -685,6 +685,9 @@ CONTAINS
       !        int_0^R_{beta} r^2 j_{l}(Gr) V_{eff,l}^{beta}(r) dr
       !     and multiply it by pylm2 times clnu. The entries for the first star
       !     (G = 0) stay zero, because grad rho_core^alpha vanishes there.
+      !     ffonat(:,(k-1)*nop+j,n) belongs to the star member kr(:,j) and to the
+      !     representative atom of type n; the other atoms of the type are
+      !     added by symmetry in StructureConst_forAtom.
       !
       !     TODO: Proper parallelization of Klueppelberg force levels. The
       !           original attempt to distribute the stars over the ranks is
@@ -701,7 +704,7 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)   :: cell
       REAL,INTENT(IN)           :: vr(:,0:,:)
       REAL,INTENT(IN)           :: tol_14
-      COMPLEX,ALLOCATABLE,INTENT(OUT) :: ffonat(:,:)
+      COMPLEX,ALLOCATABLE,INTENT(OUT) :: ffonat(:,:,:)
 
       INTEGER :: n,nat,nd,maxl,lh,l,j,k,kp,jm,dir,lm,symint
       REAL    :: g,gr,factor
@@ -711,7 +714,7 @@ CONTAINS
 
       CALL fa4_vr2(atoms,sphhar,vr,vr2)
 
-      ALLOCATE ( ffonat(3,stars%ng3*sym%nop) )
+      ALLOCATE ( ffonat(3,stars%ng3*sym%nop,atoms%ntype) )
       ALLOCATE ( integrandr(atoms%jmtd) )
       ALLOCATE ( pylm2( (atoms%lmaxd+1)**2,3,sym%nop ) )
       ffonat = CMPLX(0.0,0.0)
@@ -743,7 +746,7 @@ CONTAINS
             END IF
 
             ! as phasy1, but with i\vec{G} in it, i.e. gradient of plane wave, only for atom n and star k
-            CALL phasy2(atoms, stars, sym, cell, k, n, nat, pylm2)
+            CALL phasy2(atoms, stars, sym, cell, k, n, pylm2)
 
             DO lh = 0,sphhar%nlh(nd)
                l = sphhar%llh(lh,nd)
@@ -757,7 +760,7 @@ CONTAINS
                         lm = l*(l+1) + sphhar%mlh(jm,lh,nd) + 1
                         sm = sm + conjg(sphhar%clnu(jm,lh,nd)) * pylm2(lm,dir,j)
                      END DO ! jm
-                     ffonat(dir,symint) = ffonat(dir,symint) + factor * sm
+                     ffonat(dir,symint,n) = ffonat(dir,symint,n) + factor * sm
                   END DO ! dir
                END DO ! symint
             END DO ! lh
@@ -869,7 +872,7 @@ CONTAINS
       type(t_sym)      ,intent(in) :: sym
       LOGICAL,         INTENT(IN)  :: l_f2
       REAL,OPTIONAL,   INTENT(IN)  :: wgt(:,:) !(SIZE(qpwc,2),atoms%ntype)
-      COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:)
+      COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:,:)
       REAL,OPTIONAL,INTENT(IN) :: force_a4_mt_loc(:,:)
       complex       ,intent(inout) :: qpwc(:,:) !(stars%ng3,ncomp)
 
@@ -910,12 +913,10 @@ CONTAINS
               nat1 = atoms%firstAtom(n)
               
               IF (l_f2) THEN
-                 CALL StructureConst_forAtom(nat1,stars ,sym,&
-                                    atoms%neq(n),atoms%nat,atoms%taual,&
+                 CALL StructureConst_forAtom(nat1,stars,sym,atoms,&
                                     cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
               ELSE
-                 CALL StructureConst_forAtom(nat1,stars ,sym,&
-                                    atoms%neq(n),atoms%nat,atoms%taual,&
+                 CALL StructureConst_forAtom(nat1,stars,sym,atoms,&
                                     cell,qf,qpwc_at,jspin,l_f2,n)
               END IF
               DO icomp = 1, ncomp
@@ -944,33 +945,33 @@ CONTAINS
        DEALLOCATE(qpwc_loc)
       end subroutine ft_of_CorePseudocharge
 
-   SUBROUTINE StructureConst_forAtom(nat1,stars ,sym,&
-                          neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
-      ! Calculates the structure constant for each atom of atom type
-
-       
+   SUBROUTINE StructureConst_forAtom(nat1,stars,sym,atoms,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
+      ! Calculates the structure constant for each atom of atom type n.
+      ! With l_f2 it also adds the core-tail force contributions of the
+      ! representative atom nat1 (Klueppelberg, force level 1). The core tail of
+      ! a single atom is not symmetric, so its muffin-tin term is summed over all
+      ! atoms b explicitly: b = S_i(rep) contributes R_i * ffonat(G*M_i).
 
       integer,       intent(in)  :: nat1
       type(t_stars), intent(in)  :: stars
-       
       type(t_sym),   intent(in)  :: sym
-      integer,       intent(in)  :: neq,natd, jspin, n
-      real,          intent(in)  :: taual(3,natd)
+      type(t_atoms), intent(in)  :: atoms
+      integer,       intent(in)  :: jspin, n
       type(t_cell),  intent(in)  :: cell
       real,          intent(in)  :: qf(stars%ng3)
       LOGICAL,       INTENT(IN)  :: l_f2
-      COMPLEX,OPTIONAL,INTENT(IN):: vpw(:,:),ffonat(:,:)
+      COMPLEX,OPTIONAL,INTENT(IN):: vpw(:,:),ffonat(:,:,:)
       complex,       intent(out) :: qpwc_at(stars%ng3)
 
       ! ..Local variables
-      integer k, nat2, nat, j
+      integer k, nat2, nat, j, i, p, nb
       real x
       complex sf, czero
 
       ! ..Local arrays
-      integer kr(3,sym%nop)
-      real    force_mt_loc(3)
-      complex phas(sym%nop), phase, force_is_loc(3)
+      integer kr(3,sym%nop), opprod(sym%nop,sym%nop)
+      real    force_mt_loc(3), rotc(3,3,sym%nop), xb(3,sym%nop,atoms%ntype)
+      complex phas(sym%nop), phase, force_is_loc(3), sumb(3)
       complex  kcmplx(3)
 
       czero = (0.0,0.0)
@@ -978,36 +979,64 @@ CONTAINS
 
       !    first G=0
       k=1
-      qpwc_at(k)      = qpwc_at(k)      + neq * qf(k)
+      qpwc_at(k)      = qpwc_at(k)      + atoms%neq(n) * qf(k)
+
+      IF (l_f2) THEN
+         ! opprod(j,i): operation with mrot = mrot(j)*mrot(i), i.e. kr(:,opprod(j,i)) = kr(:,j)*mrot(i)
+         opprod = 0
+         DO j = 1, sym%nop
+            DO i = 1, sym%nop
+               DO p = 1, sym%nop
+                  IF (ALL(sym%mrot(:,:,p)==MATMUL(sym%mrot(:,:,j),sym%mrot(:,:,i)))) THEN
+                     opprod(j,i) = p
+                     EXIT
+                  END IF
+               END DO
+            END DO
+         END DO
+         IF (ANY(opprod==0)) CALL juDFT_error("symmetry operations are not a group",calledby="StructureConst_forAtom")
+         ! Cartesian rotations and the atoms S_i(rep) of every type (internal coordinates)
+         DO i = 1, sym%nop
+            rotc(:,:,i) = MATMUL(cell%amat,MATMUL(REAL(sym%mrot(:,:,i)),cell%bmat))/tpi_const
+            DO nb = 1, atoms%ntype
+               xb(:,i,nb) = MATMUL(REAL(sym%mrot(:,:,i)),atoms%taual(:,atoms%firstAtom(nb))) + sym%tau(:,i)
+            END DO
+         END DO
+      END IF
 
       !    then  G>0
 
       force_mt_loc=0.0
       force_is_loc=cmplx(0.0,0.0)
 !$OMP PARALLEL DO DEFAULT(none) &
-!$OMP SHARED(stars ,sym,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
+!$OMP SHARED(stars,sym,atoms,nat1,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw,opprod,rotc,xb) &
 !$OMP FIRSTPRIVATE(czero) &
-!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kcmplx,phase) &
+!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,i,nb,x,kcmplx,phase,sumb) &
 !$OMP REDUCTION(+:force_mt_loc,force_is_loc)
       DO k = 2, stars%ng3
-         
+
             CALL spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, &
                         stars%kv3(:,k), kr, phas)
-            
+
             ! ----> start loop over equivalent atoms
 
             IF (l_f2) THEN ! Klueppelberg (force level 1)
                ! generate phase factors for each G, not only for each star, to incorporate the atomic phase factors
                kcmplx = cmplx(0.0,0.0)
                DO j = 1,sym%nop
-                  x = -tpi_const * ( kr(1,j) * taual(1,nat1) &
-                                   + kr(2,j) * taual(2,nat1) &
-                                   + kr(3,j) * taual(3,nat1) )
+                  x = -tpi_const * DOT_PRODUCT(REAL(kr(:,j)),atoms%taual(:,nat1))
                   phase = cmplx(cos(x),sin(x))
-                  ! generate muffin-tin part of core force component
-                  force_mt_loc(:) = force_mt_loc(:) + qf(k) * &
-                                           phase * stars%nstr(k) * ffonat(:,(k-1)*sym%nop+j)
-                  kcmplx(:) = kcmplx(:) + kr(:,j) * phase * phas(j) ! should be conjg(phas(j)), but in FLEUR, only real phas(j) are accepted
+                  ! muffin-tin part: sum over all atoms b = S_i(rep) of all types
+                  sumb = czero
+                  DO nb = 1, atoms%ntype
+                     DO i = 1, sym%nop
+                        x = tpi_const * DOT_PRODUCT(REAL(kr(:,j)),xb(:,i,nb))
+                        sumb(:) = sumb(:) + cmplx(cos(x),sin(x)) * atoms%neq(nb) &
+                                  * MATMUL(rotc(:,:,i),ffonat(:,(k-1)*sym%nop+opprod(j,i),nb))
+                     END DO
+                  END DO
+                  force_mt_loc(:) = force_mt_loc(:) + REAL(qf(k) * phase * stars%nstr(k) * sumb(:)) / sym%nop**2
+                  kcmplx(:) = kcmplx(:) + kr(:,j) * phase * conjg(phas(j))
                END DO !j
                kcmplx = matmul(kcmplx,cell%bmat) * stars%nstr(k) / sym%nop
                ! generate interstitial part of core force component
@@ -1015,20 +1044,19 @@ CONTAINS
                                         conjg(vpw(k,jspin))*cell%omtil*ImagUnit*kcmplx(:)
             END IF
 
-            nat2 = nat1 + neq - 1
+            nat2 = nat1 + atoms%neq(n) - 1
             DO nat = nat1, nat2
                sf = czero
                DO j = 1,sym%nop
-                  x = -tpi_const * ( kr(1,j) * taual(1,nat) &
-                                   + kr(2,j) * taual(2,nat) &
-                                   + kr(3,j) * taual(3,nat) )
-                       !gb      sf = sf + CMPLX(COS(x),SIN(x))*phas(j)
+                  x = -tpi_const * ( kr(1,j) * atoms%taual(1,nat) &
+                                   + kr(2,j) * atoms%taual(2,nat) &
+                                   + kr(3,j) * atoms%taual(3,nat) )
                   sf = sf + CMPLX(COS(x),SIN(x))*conjg(phas(j))
                END DO
                sf = sf / REAL( sym%nop )
                qpwc_at(k) = qpwc_at(k) + sf * qf(k)
             END DO
-         
+
       ENDDO
 !$OMP END PARALLEL DO
 
