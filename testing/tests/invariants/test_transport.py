@@ -15,10 +15,11 @@ E_MIN_HTR = 0.025
 E_MAX_HTR = 0.085
 
 #> One file per spin channel, because the case is jspins="2" and Wannier90 names its
-#> output after the seedname, which the adapter suffixes per channel. Before that suffix
-#> existed the second channel overwrote the first, so a single bare file was all that was
-#> left and this test read channel 2 believing it was the whole system.
-QC_FILES = ["fleur_wlib_internal.1_qc.dat", "fleur_wlib_internal.2_qc.dat"]
+#> output after the seedname, which is WF1 for one channel and WF1 and WF2 for two -- the
+#> same stem the Bloch files carry. While both channels shared one seedname the second
+#> overwrote the first, so a single bare file was all that was left and this test read
+#> channel 2 believing it was the whole system.
+QC_FILES = ["WF1_qc.dat", "WF2_qc.dat"]
 BASE = "./inputfiles/wannier/WannAlNTransport"
 
 

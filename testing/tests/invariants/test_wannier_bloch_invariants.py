@@ -185,7 +185,7 @@ def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
     #> the exporter is the identity and a mis-ordered k map would never show.
     res = execute_fleur(BASE, rm_files=["."], mpi_procs=2)
 
-    for name in ("WF1_operators_ks.hdf", "WF1_bmesh.hdf", "fleur_wlib_internal.chk",
+    for name in ("WF1_operators_ks.hdf", "WF1_bmesh.hdf", "WF1.chk",
                  "rspauli.1", "anglmomrs.1"):
         assert name in res, (
             f"{name} was not written. This case asks for <operatorsKs>, <operatorsRs>, "
@@ -193,7 +193,7 @@ def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
 
     _check_bmesh(res["WF1_bmesh.hdf"], np, h5py)
 
-    num_bands, num_wann, num_kpts, gauge = _read_checkpoint(res["fleur_wlib_internal.chk"], np)
+    num_bands, num_wann, num_kpts, gauge = _read_checkpoint(res["WF1.chk"], np)
 
     #> If the checkpoint and the export disagree about the manifold there is nothing to
     #> compare, and saying so here beats a shape error twenty lines down.
