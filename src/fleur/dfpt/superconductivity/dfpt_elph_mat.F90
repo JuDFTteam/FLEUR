@@ -280,7 +280,7 @@ CONTAINS
 
     END SUBROUTINE construct_elph_element
 
-    subroutine el_ph_wannier(fmpi,fi,results,dynMats,gmatCart,qpts_q,sym_q)
+    subroutine el_ph_wannier(fmpi,fi,results,dynMats,gmatCart,qpts_q,sym_q,k_list)
         ! Builds the real-space (Wannier-gauge, q-independent) el-ph matrix element
         ! and either exports it as EPW restart files or interpolates the isotropic
         ! el-ph coupling and phonon linewidths onto the fine k/q mesh.
@@ -293,9 +293,10 @@ CONTAINS
         type(t_fleurinput) , intent(in) :: fi
         type(t_results),     intent(in) :: results
         complex,intent(in)              :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
-        complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iPerturb,iQfull)
+        complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',local kpoints,spin,iPerturb,iQfull)
         type(t_kpts), intent(in)        :: qpts_q
         type(t_sym),  intent(in)        :: sym_q
+        integer, intent(in)             :: k_list(:) ! global k index of each local k slot of gmatCart
 
         complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
         type(t_wann_ft), allocatable :: gmatRealspace(:,:) !(3*nat, jspins) q-independent forward transforms
@@ -306,6 +307,9 @@ CONTAINS
         ! Full Wannier gauge matrix: disentanglement (U_dis) composed with Wannierization (U_mat).
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
+        if (.not. allocated(results%U_mat)) call juDFT_error("Wannier gauge U_mat not available", calledby="el_ph_wannier")
+        if (num_bands > num_wann .and. .not. allocated(results%U_dis)) call juDFT_error("Wannier gauge U_dis not available", calledby="el_ph_wannier")
+        if (size(results%U_mat, 3) /= fi%kpts%nkptf) call juDFT_error("Wannier gauge U_mat does not match the k-mesh", calledby="el_ph_wannier")
         call timestart("Load Wannier U matrices")
         allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
         if (num_bands > num_wann) then
@@ -319,12 +323,13 @@ CONTAINS
         end if
         call timestop("Load Wannier U matrices")
 
-        ! Construct the realspace representation 
+        ! Construct the realspace representation
         call timestart("Forward FT elph-element")
         allocate(gmatRealspace(3*fi%atoms%nat, fi%input%jspins))
         do iMode = 1 , 3*fi%atoms%nat
             do ispin = 1 , fi%input%jspins
-                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,gmatRealspace(iMode,ispin))
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,gmatRealspace(iMode,ispin), &
+                                             k_list=k_list,mpi_comm=fmpi%mpi_comm,iAtom=(iMode-1)/3+1)
             end do !ispin
         end do !iMode
         call timestop("Forward FT elph-element")

@@ -478,10 +478,9 @@ CONTAINS
 
  
       ! Build the full BZ (nkptf, bkf, bkp, bksym) for the interpolation meshes.
-      if (allocated(this%qvec%bk)) then 
+      if (allocated(this%qvec%bk)) then
         call this%qvec%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
-        this%qvec%nkpt3 = this%qvec%calcNkpt3()
-      end if 
+      end if
       ! if (allocated(this%qpts_interpol%bk)) then 
       !   call this%qpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
       !   this%qpts_interpol%nkpt3 = this%qpts_interpol%calcNkpt3()

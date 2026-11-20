@@ -16,10 +16,10 @@ MODULE m_dfpt
    USE m_types_BEC
    USE m_types_bfield
    USE m_dfpt_postprocess_pot
-   USE m_desymmetrizer
-   USE m_outcdn
-   USE m_plot
-   USE m_fleur_init
+   USE m_desym_setup
+   USE m_desym_potden
+   USE m_desym_eigvec
+   USE m_types_desym_map
    USE m_types_lapw
    USE m_types_enpara
    USE m_types_fleurinput
@@ -34,6 +34,7 @@ MODULE m_dfpt
    USE m_types_sphhar
    USE m_types_stars
    USE m_types_sternheimerjob
+   USE m_types_sym
    USE m_types_xcpot
 #ifdef CPP_MPI
    USE mpi
@@ -41,15 +42,64 @@ MODULE m_dfpt
 
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: dfpt, dfpt_desym
+   PUBLIC :: dfpt
 
 CONTAINS
-   SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+   subroutine dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+      !! DFPT driver. A symmetric ground state is desymmetrized in memory and the DFPT kernel runs on the setup without symmetry.
+      type(t_mpi),        intent(in)    :: fmpi
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_sphhar),     intent(in)    :: sphhar
+      type(t_stars),      intent(in)    :: stars
+      type(t_nococonv),   intent(in)    :: nococonv
+      type(t_enpara),     intent(inout) :: enpara
+      type(t_results),    intent(inout) :: results
+      type(t_hybdat),     intent(inout) :: hybdat
+      type(t_mpdata),     intent(inout) :: mpdata
+      class(t_xcpot),     intent(in)    :: xcpot
+      class(t_forcetheo), intent(inout) :: forcetheo
+      type(t_kpts),       intent(in)    :: qpts
+      type(t_potden),     intent(inout) :: rho
+      type(t_potden),     intent(in)    :: vTot, vxc
+      integer,            intent(in)    :: eig_id
 
-      
+      type(t_mpi)        :: fmpi_nosym
+      type(t_fleurinput) :: fi_nosym
+      type(t_stars)      :: stars_nosym
+      type(t_sphhar)     :: sphhar_nosym
+      type(t_enpara)     :: enpara_nosym
+      type(t_nococonv)   :: nococonv_nosym
+      type(t_desym_map)  :: map
+      type(t_potden)     :: rho_nosym, vTot_nosym, vxc_nosym
+      type(t_results)    :: results_nosym
+      integer :: eig_id_nosym
 
+      if (fmpi%irank == 0) call dfpt_check(fi, xcpot)
 
+      if (fi%sym%nop == 1) then
+         call dfpt_main(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+         return
+      end if
+
+      call timestart("desymmetrization")
+      call desym_setup(fmpi, fi, enpara, nococonv, forcetheo, fmpi_nosym, fi_nosym, stars_nosym, sphhar_nosym, enpara_nosym, nococonv_nosym, map)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, rho, rho_nosym)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, vTot, vTot_nosym)
+      call desym_potden(fi, stars, sphhar, fi_nosym, stars_nosym, sphhar_nosym, map, vxc, vxc_nosym)
+      call desym_eigvec(fi, enpara, nococonv, vTot, eig_id, results, fmpi_nosym, fi_nosym, enpara_nosym, nococonv_nosym, vTot_nosym, &
+                        map, eig_id_nosym, results_nosym)
+      call timestop("desymmetrization")
+
+      call dfpt_main(fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, fi_nosym%kpts, fmpi_nosym, results_nosym, enpara_nosym, &
+                       rho_nosym, vTot_nosym, vxc_nosym, eig_id_nosym, xcpot, hybdat, mpdata, forcetheo, sym_full=fi%sym)
+      call close_eig(eig_id_nosym)
+
+   end subroutine dfpt
+
+   SUBROUTINE dfpt_main(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
+                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo, sym_full)
+      !! DFPT perturbations, interpolation and el-ph postprocessing for a setup without symmetry.
+      !! sym_full: symmetry of the desymmetrized input, used with fi%dfpt%qvec to unfold the q-mesh.
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
       TYPE(t_sphhar),     INTENT(IN)     :: sphhar
@@ -68,6 +118,7 @@ CONTAINS
       TYPE(t_potden),   INTENT(INOUT) :: rho
       TYPE(t_potden),   INTENT(IN)    :: vTot, vxc
       INTEGER,          INTENT(IN)    :: eig_id
+      TYPE(t_sym),      INTENT(IN), OPTIONAL :: sym_full
 
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVext3x3(3,3)
@@ -97,8 +148,9 @@ CONTAINS
 
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
-     
-      if (fmpi%irank==0) call dfpt_check(fi, xcpot)
+
+      if (fmpi%n_size > 1) call juDFT_error("DFPT needs one MPI rank per k-point.", calledby="dfpt_main", &
+                                            hint="Run with -pe_per_kpt 1 or choose the number of ranks as a divisor of the number of k-points.")
 
       ! q_results saves the eigen-info for k+q, results1 for the perturbed quantities
       CALL q_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
@@ -180,7 +232,7 @@ CONTAINS
          ! Do post processing of converged results 
          ! Interpolate the dynamic matrix with FFT
          call timestart("dfpt interpolation")
-         call dfpt_interpolation(fi,fmpi,nococonv,results)
+         call dfpt_interpolation(fi,fmpi,nococonv,results,sym_full)
          call timestop("dfpt interpolation")
       end if 
 
@@ -188,7 +240,7 @@ CONTAINS
          ! Construct the matrix element from converged potentials
          if (fi%dfpt%l_elph) then 
             call timestart("construction of el-ph matrix elements")
-            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real,sym_full)
             call timestop("construction of el-ph matrix elements")
          end if 
       end if 
@@ -206,137 +258,6 @@ CONTAINS
 
       if (fmpi%irank==0) WRITE (oUnit,*) '------------------------------------------------------'
 
-   END SUBROUTINE dfpt
-
-   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
-                         fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
-
-      TYPE(t_mpi),        INTENT(INOUT) :: fmpi_nosym
-      TYPE(t_fleurinput), INTENT(INOUT) :: fi_nosym
-      TYPE(t_sphhar),     INTENT(INOUT) :: sphhar_nosym
-      TYPE(t_stars),      INTENT(INOUT) :: stars_nosym
-      TYPE(t_nococonv),   INTENT(INOUT) :: nococonv_nosym
-      TYPE(t_enpara),     INTENT(INOUT) :: enpara_nosym
-      TYPE(t_results),    INTENT(INOUT) :: results_nosym
-      TYPE(t_hybdat),     INTENT(INOUT) :: hybdat_nosym
-      TYPE(t_mpdata),     INTENT(INOUT) :: mpdata_nosym
-
-      CLASS(t_xcpot),     ALLOCATABLE, INTENT(INOUT) :: xcpot_nosym
-      CLASS(t_forcetheo), ALLOCATABLE, INTENT(INOUT) :: forcetheo_nosym
-
-      TYPE(t_potden), INTENT(INOUT):: rho_nosym, vTot_nosym
-      TYPE(t_fleurinput), INTENT(IN) :: fi
-      TYPE(t_sphhar),     INTENT(IN) :: sphhar
-      TYPE(t_stars),      INTENT(IN) :: stars
-      TYPE(t_nococonv),   INTENT(IN) :: nococonv
-      TYPE(t_enpara),     INTENT(IN) :: enpara
-      TYPE(t_results),    INTENT(IN) :: results
-      TYPE(t_potden),   INTENT(IN) :: rho, vTot
-
-      INTEGER, INTENT(IN) :: grid(3)
-
-      CHARACTER(len=100), INTENT(IN) :: inp_pref
-
-      INTEGER :: ix, iy, iz, iv_old, iflag_old, iv_new, iflag_new
-      INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new!, inversionOp
-      REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new!, atom_shift(3)
-      LOGICAL :: test_desym
-      CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
-                        enpara_nosym, xcpot_nosym, results_nosym, hybdat_nosym, mpdata_nosym, &
-                        inp_pref)
-
-      CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN)
-      CALL vTot_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
-
-      ! TODO: Correctly account for such a shift in the desymmetrization.
-      ! For now: Just build input, that does not necessitate a shift.
-      !        inversionOp = -1
-      !        symOpLoop: DO iSym = 1, sym%nop
-      !           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
-      !              inversionOp = iSym
-      !              EXIT symOpLoop
-      !           END IF
-      !        END DO symOpLoop
-
-      !        atom_shift = 0.0
-      !        IF (inversionOp.GT.0) THEN
-      !           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
-      !              atom_shift = 0.5*sym%tau(:,inversionOp)
-      !           END IF
-      !        END IF
-
-      ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
-      vTot_nosym%pw_w = CMPLX(0.0,0.0)
-
-      CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
-      CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
-      CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
-      CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
-
-      CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
-                              nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
-
-      test_desym = .FALSE.
-      IF (test_desym) THEN
-         DO iz = 0, grid(3)-1
-            DO iy = 0, grid(2)-1
-               DO ix = 0, grid(1)-1
-                  old_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                              fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                              fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)
-
-                  new_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                              fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                              fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)! - &
-                              !atom_shift
-
-                  ! Set region specific parameters for point
-                  ! Get MT sphere for point if point is in MT sphere
-                  CALL getMTSphere(fi%input,fi%cell,fi%atoms,old_point,iType_old,iAtom_old,pt_old)
-                  CALL getMTSphere(fi_nosym%input,fi_nosym%cell,fi_nosym%atoms,new_point,iType_new,iAtom_new,pt_new)
-                  IF (iAtom_old.NE.0) THEN
-                     iv_old = 0
-                     iflag_old = 1
-                  ELSE
-                     iv_old = 0
-                     iflag_old = 2
-                     pt_old(:) = old_point(:)
-                  END IF
-
-                  IF (iAtom_new.NE.0) THEN
-                     iv_new = 0
-                     iflag_new = 1
-                  ELSE
-                     iv_new = 0
-                     iflag_new = 2
-                     pt_new(:) = new_point(:)
-                  END IF
-
-                  ! Old point:
-                  CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.FALSE.,stars,&
-                              fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
-                              rho,xdnout_old)
-                  ! New point:
-                  CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.FALSE.,stars_nosym,&
-                              fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                              rho_nosym,xdnout_new)
-
-                  WRITE(9004,*) xdnout_new-xdnout_old
-
-                  ! Old point:
-                  CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.TRUE.,stars,&
-                              fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
-                              vTot,xdnout_old)
-                  ! New point:
-                  CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.TRUE.,stars_nosym,&
-                              fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                              vTot_nosym,xdnout_new)
-                  WRITE(9005,*) xdnout_new-xdnout_old
-               END DO !x-loop
-            END DO !y-loop
-         END DO !z-loop
-      END IF
-
-   END SUBROUTINE
+   END SUBROUTINE dfpt_main
 
 END MODULE m_dfpt

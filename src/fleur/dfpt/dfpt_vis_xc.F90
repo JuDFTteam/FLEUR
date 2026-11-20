@@ -37,7 +37,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)     :: den, den1
       TYPE(t_potden),INTENT(INOUT)  :: vTot
 
-      TYPE(t_gradients) :: gradRho, gradRho1, gradRho1Im
+      TYPE(t_gradients) :: gradRho, gradRho1, gradRho1Im, gradRhoSig
       TYPE(t_gradients) :: gradDrivsigma, gradDrivsigma1, gradDrivsigma1Im
       TYPE(t_potden) :: vTotIm
 
@@ -52,6 +52,7 @@ CONTAINS
       INTEGER           :: iSpin, jSpin, fxcSpin, i, nfxc, n_sigma, npt
 
       REAL, PARAMETER   :: den_cut = 1.E-6
+      REAL, PARAMETER   :: rho_tail = 1.E-3 ! total density below which the GGA kernels are dropped
 
       nfxc = 2 * input%jspins - 1
       n_sigma = MERGE(1,3,input%jspins==1)
@@ -80,12 +81,13 @@ CONTAINS
       ALLOCATE(v_xc1Im,mold=rho)
 
       IF (xcpot%needs_grad()) THEN
-         ALLOCATE(l_cut(npt))
-         l_cut = ANY(ABS(rho)<den_cut,dim=2)
-
          call timestart("apply_cutoffs")
          CALL xcpot%apply_cutoffs(den_cut,rho,gradRho)
          call timestop("apply_cutoffs")
+
+         ! density-tail points with sigma set to zero, where the sigma-dependent kernels diverge
+         ALLOCATE(l_cut(npt))
+         l_cut = ALL(gradRho%sigma==0.0,dim=1) .AND. SUM(rho,dim=2) < rho_tail
 
          ALLOCATE(drivsigma(n_sigma,npt),driv2rho2(nfxc,npt))
          ALLOCATE(driv2rhosigma(input%jspins*n_sigma,npt),driv2sigma2(MERGE(1,6,input%jspins==1),npt))
@@ -94,20 +96,28 @@ CONTAINS
             CALL xcpot%get_fxc_gga(input%jspins,rho,gradRho%sigma,drivsigma,driv2rho2,driv2rhosigma,driv2sigma2)
          END SELECT
 
+         ! sigma-dependent kernels diverge in the density tail and are expanded in stars below
+         do i = 1, npt
+            if (l_cut(i)) then
+               drivsigma(:,i) = 0.0
+               driv2rhosigma(:,i) = 0.0
+               driv2sigma2(:,i) = 0.0
+            end if
+         end do
+
+         ! where the ground state is evaluated at sigma = 0, the response of sigma is zero as well
+         gradRhoSig = gradRho
+         do iSpin = 1, input%jspins
+            do i = 1, npt
+               if (gradRho%sigma(2*iSpin-1,i) == 0.0) gradRhoSig%gr(:,i,iSpin) = 0.0
+            end do
+         end do
+
          ALLOCATE(drivsigma1(npt,n_sigma),drivsigma1Im(npt,n_sigma))
          call timestart("dfpt_gga_assemble")
-         CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRho,gradRho1,rho1,v_xc1,drivsigma1)
-         CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRho,gradRho1Im,rho1Im,v_xc1Im,drivsigma1Im)
+         CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRhoSig,gradRho1,rho1,v_xc1,drivsigma1)
+         CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRhoSig,gradRho1Im,rho1Im,v_xc1Im,drivsigma1Im)
          call timestop("dfpt_gga_assemble")
-
-         !drivsigma1 is expanded in stars below, so a spike in the tail of the
-         !density would pollute the whole cell.
-         DO i = 1, npt
-            IF (l_cut(i)) THEN
-               drivsigma1(i,:) = 0.0
-               drivsigma1Im(i,:) = 0.0
-            END IF
-         END DO
 
          call timestart("gradient of drivsigma")
          !Ground state drivsigma; unshifted stars and real.

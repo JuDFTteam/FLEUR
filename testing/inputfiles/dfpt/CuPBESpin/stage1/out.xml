@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-11-19T15:38:03" user="bornhake" host="iffcluster1807" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/bornhake/clean_code/build/external/libxc" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.1-922-ge6165b237" branch="develop" lastCommitHash="e6165b237972bb4c605e255ded43dd1161b01c8c"/>
+      <compilationInfo date="2026-11-20T13:40:22" user="bornhake" host="iffcluster1805" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/bornhake/cluster/build.iff/external/libx" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.1-884-g3e3a6c47a-dirty" branch="dfpt_elph" lastCommitHash="3e3a6c47acf3ecd64cfbb30a24e5d54e674b691b"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build/fleur_MPI -warn_only"/>
+      <programExecution commandLine="/Data/ias-1/bornhake/cluster/build.iff/fleur_MPI -warn_only"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
       <mem memoryPerNode="131734184 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/11/19" time="18:08:02" zone="+0100"/>
+   <startDateAndTime date="2026/11/20" time="13:55:32" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -423,5 +423,5 @@
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/11/19" time="18:08:04" zone="+0100"/>
+   <endDateAndTime date="2026/11/20" time="13:55:33" zone="+0100"/>
 </fleurOutput>
