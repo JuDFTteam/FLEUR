@@ -59,7 +59,6 @@ MODULE m_types_misc
       INTEGER, ALLOCATABLE :: neig(:,:)    ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
       COMPLEX, ALLOCATABLE :: U_mat(:,:,:,:) ! rotation matrix for wannier gauge (nwann,nwann,nkpt,jspins)
       COMPLEX, ALLOCATABLE :: U_dis(:,:,:,:) ! disentanglement matrix (nbands,nwann,nkpt,jspins); only when nbands>nwann
-      REAL, ALLOCATABLE    :: wann_centres(:,:,:) ! Wannier centres (3,nwann,jspins), cartesian, bohr
       REAL :: tkb_loc
 
    CONTAINS
