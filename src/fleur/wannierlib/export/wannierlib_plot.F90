@@ -41,7 +41,7 @@ MODULE m_wannierlib_plot
    USE m_types_abc
    USE m_types_radfun
    USE m_types_wannierlib
-   USE m_types_spinor_layout, ONLY: radial_slot
+   USE m_types_spinor_layout, ONLY: radial_slot, t_spinor_layout
    USE m_matrix_element_factory, ONLY: matrix_element_states
    USE m_wann_real
    USE m_wann_plot_vac
@@ -101,42 +101,51 @@ CONTAINS
       INTEGER :: grid(3), mesh, posi, ix, iy, iz, i1, i2, i3, ii3
       LOGICAL :: twodim
       INTEGER :: ikpt, nbn, nb, nw, ib, ierr, irec, addnoco, jspin_rad, nv2d
+      INTEGER :: jspin_comp, icomp, ncomp, kidx
       INTEGER :: nt, nq, na, ivac, jvac
       REAL    :: s
       COMPLEX :: xdnout, factor
       INTEGER, ALLOCATABLE :: ev_list(:)
-      COMPLEX, ALLOCATABLE :: wf(:, :), vgauge(:, :)
+      COMPLEX, ALLOCATABLE :: wf(:, :, :), vgauge(:, :)
       COMPLEX, ALLOCATABLE :: acof(:, :, :), bcof(:, :, :), ccof(:, :, :, :)
       REAL,    ALLOCATABLE :: ff(:, :, :, :), gg(:, :, :, :), flo(:, :, :, :)
-      REAL,    ALLOCATABLE :: vz(:, :), u(:, :, :), ue(:, :, :)
+      REAL,    ALLOCATABLE :: vz(:, :, :), u(:, :, :), ue(:, :, :)
       COMPLEX, ALLOCATABLE :: ac(:, :, :), bc(:, :, :)
       TYPE(t_lapw) :: lapw
       TYPE(t_mat), POINTER :: zmat_p(:)
       TYPE(t_abc), POINTER :: abc_p(:, :)
+      TYPE(t_spinor_layout) :: slay
 
       IF (.NOT. this%export%plot) RETURN
-      !> The spinor case would need both components summed and only their norm drawn, and
-      !> the phase convention below stops meaning anything. Refused rather than guessed.
-      IF (l_wannierlib_spinors) CALL juDFT_error( &
-         'wannierlib plotWF is not implemented for spinor Wannier functions (noco+SOC)', &
-         calledby='wannierlib_plot_wf')
 
       CALL timestart('wannierlib_plot_wf')
 
       nb = this%num_bands
       nw = this%num_wann
-      jspin_rad = radial_slot(radfun, jspin)
+      !> A spinor is drawn component by component and the two are combined only at the
+      !> end, because neither half is a function on its own: what can be plotted is the
+      !> norm of the pair. A scalar state has one component and the loop below runs once.
+      ncomp = MERGE(2, 1, l_wannierlib_spinors)
 
       CALL plot_region(cell, this%export%plot_grid, twodim, grid, vec1, vec2, vec3, zero)
       mesh = grid(1)*grid(2)*grid(3)
 
-      ALLOCATE (wf(nw, mesh), source=CMPLX(0.0, 0.0), stat=ierr)
+      ALLOCATE (wf(nw, mesh, ncomp), source=CMPLX(0.0, 0.0), stat=ierr)
       IF (ierr /= 0) CALL juDFT_error('wannierlib_plot_wf failed allocating the grid', &
                                       calledby='wannierlib_plot_wf')
       ALLOCATE (vgauge(nb, nw))
-      ALLOCATE (vz(vacuum%nmzd, 2), source=0.0)
-      IF (input%film .AND. ALLOCATED(vtot%vac)) &
-         vz(:, 1:MIN(2, SIZE(vtot%vac, 3))) = REAL(vtot%vac(:, 1, 1:MIN(2, SIZE(vtot%vac, 3)), jspin))
+      !> The vacuum potential each spin component sees. One per component and not one
+      !> per channel: a spinor whose two halves were expanded in the same vacuum potential
+      !> is a film with no exchange splitting outside the slab, which is not this one.
+      !> The fourth extent is clamped, because a single potential serves both components.
+      ALLOCATE (vz(vacuum%nmzd, 2, ncomp), source=0.0)
+      IF (input%film .AND. ALLOCATED(vtot%vac)) THEN
+         DO icomp = 1, ncomp
+            jspin_comp = MERGE(icomp, jspin, l_wannierlib_spinors)
+            vz(:, 1:MIN(2, SIZE(vtot%vac, 3)), icomp) = &
+               REAL(vtot%vac(:, 1, 1:MIN(2, SIZE(vtot%vac, 3)), MIN(jspin_comp, SIZE(vtot%vac, 4))))
+         END DO
+      END IF
 
       ev_list = [(ib, ib=this%min_band, this%max_band)]
 
@@ -149,84 +158,105 @@ CONTAINS
 
          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
          nv2d = lapw%dim_nv2d()   ! only defined once this k's basis is set up
+         !> l_both_spinors is what makes the factory hand back the two halves of one
+         !> second-variation spinor; without it the records are independent channels.
          CALL matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, noco, &
                                     nococonv, enpara, lapw, vtot, fmpi, zmat_p, abc_p, &
-                                    ev_list=ev_list, kpts=kpts)
-         irec = MERGE(1, jspin, noco%l_noco)
-         addnoco = 0
-         IF (noco%l_noco .AND. jspin == 2) addnoco = lapw%nv(1) + atoms%nlotot
+                                    ev_list=ev_list, &
+                                    l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), &
+                                    kpts=kpts)
+         !> Where a spin block begins inside one record: zero when the two components are
+         !> two records, row_dn when one record already holds the whole spinor. Asked of
+         !> t_spinor_layout rather than re-derived from the flags here.
+         CALL slay%init(input, noco, lapw, atoms)
 
-         CALL repack_coefficients(atoms, sym, noco, radfun, abc_p(jspin, :), jspin_rad, nb, &
-                                  ff, gg, flo, acof, bcof, ccof)
+         !> jspin_comp is the spin DIRECTION this pass draws. For a scalar state it is the
+         !> channel being wannierised and the loop runs once; for a spinor it is the
+         !> component, and the two are summed onto separate grids because neither half is
+         !> a function on its own.
+         DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), &
+                         MERGE(2, jspin, l_wannierlib_spinors)
+            icomp     = MERGE(jspin_comp, 1, l_wannierlib_spinors)
+            irec      = MERGE(1, jspin_comp, noco%l_noco)
+            addnoco   = slay%row_offset(jspin_comp)
+            jspin_rad = radial_slot(radfun, jspin_comp)
+            !> lapw keeps one set of G vectors per channel and only a jspins=2 run has a
+            !> second one, so a spinor over a single potential reads the first set twice.
+            kidx      = MERGE(jspin_comp, 1, input%jspins == 2)
 
-         IF (input%film) THEN
-            IF (ALLOCATED(ac)) DEALLOCATE (ac, bc, u, ue)
-            ALLOCATE (ac(nv2d, nb, 2), bc(nv2d, nb, 2), u(vacuum%nmzd, nv2d, vacuum%nvac), &
-                      ue(vacuum%nmzd, nv2d, vacuum%nvac))
-            CALL wann_2dvacabcof(nv2d, nb, vacuum%nvac, vacuum%nmzd, vacuum%nmz, cell%omtil, vz, &
-                                 lapw%nv(jspin), lapw%bkpt, cell%z1, lapw%dim_nvd(), &
-                                 lapw%k1(:, jspin), lapw%k2(:, jspin), lapw%k3(:, jspin), &
-                                 enpara%evac0(:, jspin), cell%bbmat, vacuum%delz, cell%bmat, &
-                                 lapw%dim_nbasfcn(), input%neig, zmat_p(irec), &
-                                 ac, bc, u, ue, addnoco, noco%l_ss, nococonv%qss, jspin)
-         END IF
+            CALL repack_coefficients(atoms, sym, noco, radfun, abc_p(jspin_comp, :), jspin_rad, nb, &
+                                     ff, gg, flo, acof, bcof, ccof)
 
-         ii3 = MERGE(0, 3, input%film)
+            IF (input%film) THEN
+               IF (ALLOCATED(ac)) DEALLOCATE (ac, bc, u, ue)
+               ALLOCATE (ac(nv2d, nb, 2), bc(nv2d, nb, 2), u(vacuum%nmzd, nv2d, vacuum%nvac), &
+                         ue(vacuum%nmzd, nv2d, vacuum%nvac))
+               CALL wann_2dvacabcof(nv2d, nb, vacuum%nvac, vacuum%nmzd, vacuum%nmz, cell%omtil, &
+                                    vz(:, :, icomp), &
+                                    lapw%nv(kidx), lapw%bkpt, cell%z1, lapw%dim_nvd(), &
+                                    lapw%k1(:, kidx), lapw%k2(:, kidx), lapw%k3(:, kidx), &
+                                    enpara%evac0(:, kidx), cell%bbmat, vacuum%delz, cell%bmat, &
+                                    lapw%dim_nbasfcn(), input%neig, zmat_p(irec), &
+                                    ac, bc, u, ue, addnoco, noco%l_ss, nococonv%qss, jspin_comp)
+            END IF
 
-         DO nbn = 1, nb
-            DO iz = 0, grid(3) - 1
-               DO iy = 0, grid(2) - 1
-                  xloop: DO ix = 0, grid(1) - 1
-                     posi = ix + 1 + iy*grid(1) + iz*grid(1)*grid(2)
-                     point = zero + vec1*(REAL(ix)/REAL(grid(1) - 1)) + vec2*(REAL(iy)/REAL(grid(2) - 1))
-                     IF (.NOT. twodim) point = point + vec3*(REAL(iz)/REAL(grid(3) - 1))
+            ii3 = MERGE(0, 3, input%film)
 
-                     !> e^{ik.r}: wann_real returns the periodic part, the Bloch phase is here.
-                     poinint = MATMUL(cell%bmat, point)/tpi_const
-                     phas = tpi_const*DOT_PRODUCT(lapw%bkpt, poinint)
-                     factor = CMPLX(COS(phas), SIN(phas))
+            DO nbn = 1, nb
+               DO iz = 0, grid(3) - 1
+                  DO iy = 0, grid(2) - 1
+                     xloop: DO ix = 0, grid(1) - 1
+                        posi = ix + 1 + iy*grid(1) + iz*grid(1)*grid(2)
+                        point = zero + vec1*(REAL(ix)/REAL(grid(1) - 1)) + vec2*(REAL(iy)/REAL(grid(2) - 1))
+                        IF (.NOT. twodim) point = point + vec3*(REAL(iz)/REAL(grid(3) - 1))
 
-                     !> inside a muffin tin? the sphere may be the one of a neighbouring cell
-                     DO i1 = -3, 3
-                        DO i2 = -3, 3
-                           DO i3 = -ii3, ii3
-                              pt = point + MATMUL(cell%amat, [REAL(i1), REAL(i2), REAL(i3)])
-                              na = 0
-                              DO nt = 1, atoms%ntype
-                                 DO nq = 1, atoms%neq(nt)
-                                    na = na + 1
-                                    s = NORM2(atoms%pos(:, na) - pt)
-                                    IF (s < atoms%rmsh(atoms%jri(nt), nt)) THEN
-                                       CALL eval_state(pt, nt, na, 0, 1)
-                                       wf(:, posi) = wf(:, posi) + xdnout*vgauge(nbn, :)*factor
-                                       CYCLE xloop
-                                    END IF
+                        !> e^{ik.r}: wann_real returns the periodic part, the Bloch phase is here.
+                        poinint = MATMUL(cell%bmat, point)/tpi_const
+                        phas = tpi_const*DOT_PRODUCT(lapw%bkpt, poinint)
+                        factor = CMPLX(COS(phas), SIN(phas))
+
+                        !> inside a muffin tin? the sphere may be the one of a neighbouring cell
+                        DO i1 = -3, 3
+                           DO i2 = -3, 3
+                              DO i3 = -ii3, ii3
+                                 pt = point + MATMUL(cell%amat, [REAL(i1), REAL(i2), REAL(i3)])
+                                 na = 0
+                                 DO nt = 1, atoms%ntype
+                                    DO nq = 1, atoms%neq(nt)
+                                       na = na + 1
+                                       s = NORM2(atoms%pos(:, na) - pt)
+                                       IF (s < atoms%rmsh(atoms%jri(nt), nt)) THEN
+                                          CALL eval_state(pt, nt, na, 0, 1)
+                                          wf(:, posi, icomp) = wf(:, posi, icomp) + xdnout*vgauge(nbn, :)*factor
+                                          CYCLE xloop
+                                       END IF
+                                    END DO
                                  END DO
                               END DO
                            END DO
                         END DO
-                     END DO
 
-                     !> vacuum of a film
-                     IF (input%film .AND. ABS(point(3)) >= cell%z1) THEN
-                        ivac = MERGE(2, 1, point(3) < 0.0)
-                        jvac = MERGE(1, ivac, vacuum%nvac == 1)
-                        CALL wann_plot_vac(point, cell%z1, vacuum%nmzd, nv2d, stars%ng3, &
-                                           vacuum%nvac, vacuum%nmz, vacuum%delz, cell%bmat, &
-                                           cell%bbmat, enpara%evac0(:, jspin), lapw%bkpt, vz, jspin, &
-                                           lapw%k1(:, jspin), lapw%k2(:, jspin), lapw%k3(:, jspin), &
-                                           lapw%dim_nvd(), lapw%dim_nbasfcn(), input%neig, &
-                                           lapw%nv(jspin), cell%omtil, nb, &
-                                           ac(:, nbn, ivac), bc(:, nbn, ivac), &
-                                           u(:, :, jvac), ue(:, :, jvac), xdnout)
-                        wf(:, posi) = wf(:, posi) + xdnout*vgauge(nbn, :)*factor
-                        CYCLE xloop
-                     END IF
+                        !> vacuum of a film
+                        IF (input%film .AND. ABS(point(3)) >= cell%z1) THEN
+                           ivac = MERGE(2, 1, point(3) < 0.0)
+                           jvac = MERGE(1, ivac, vacuum%nvac == 1)
+                           CALL wann_plot_vac(point, cell%z1, vacuum%nmzd, nv2d, stars%ng3, &
+                                              vacuum%nvac, vacuum%nmz, vacuum%delz, cell%bmat, &
+                                              cell%bbmat, enpara%evac0(:, kidx), lapw%bkpt, vz(:, :, icomp), jspin_comp, &
+                                              lapw%k1(:, kidx), lapw%k2(:, kidx), lapw%k3(:, kidx), &
+                                              lapw%dim_nvd(), lapw%dim_nbasfcn(), input%neig, &
+                                              lapw%nv(kidx), cell%omtil, nb, &
+                                              ac(:, nbn, ivac), bc(:, nbn, ivac), &
+                                              u(:, :, jvac), ue(:, :, jvac), xdnout)
+                           wf(:, posi, icomp) = wf(:, posi, icomp) + xdnout*vgauge(nbn, :)*factor
+                           CYCLE xloop
+                        END IF
 
-                     !> interstitial
-                     CALL eval_state(point, 0, 0, 0, 2)
-                     wf(:, posi) = wf(:, posi) + xdnout*vgauge(nbn, :)*factor
-                  END DO xloop
+                        !> interstitial
+                        CALL eval_state(point, 0, 0, 0, 2)
+                        wf(:, posi, icomp) = wf(:, posi, icomp) + xdnout*vgauge(nbn, :)*factor
+                     END DO xloop
+                  END DO
                END DO
             END DO
          END DO
@@ -262,10 +292,10 @@ CONTAINS
                         lapw%dim_nvd(), cell%omtil, cell%amat, cell%bmat, &
                         atoms%nlod, atoms%llod, atoms%nlo, atoms%llo, &
                         ff, gg, flo, acof(nbn, :, :), bcof(nbn, :, :), ccof(:, nbn, :, :), &
-                        zmat_p(irec), lapw%nv(jspin), &
-                        lapw%k1(:, jspin), lapw%k2(:, jspin), lapw%k3(:, jspin), &
+                        zmat_p(irec), lapw%nv(kidx), &
+                        lapw%k1(:, kidx), lapw%k2(:, kidx), lapw%k3(:, kidx), &
                         atoms%lmaxd*(atoms%lmaxd + 2), lapw%dim_nbasfcn(), &
-                        noco%l_ss, nococonv%qss, jspin, addnoco, xdnout)
+                        noco%l_ss, nococonv%qss, jspin_comp, addnoco, xdnout)
       END SUBROUTINE eval_state
 
    END SUBROUTINE wannierlib_plot_wf
@@ -373,7 +403,7 @@ CONTAINS
 #ifdef CPP_MPI
    !> Each rank summed its own share of the k-mesh; the whole sum lives on rank 0.
    SUBROUTINE collect_wf(wf, fmpi)
-      COMPLEX,     INTENT(INOUT) :: wf(:, :)
+      COMPLEX,     INTENT(INOUT) :: wf(:, :, :)
       TYPE(t_mpi), INTENT(IN)    :: fmpi
       INTEGER :: ierr
       IF (fmpi%isize == 1) RETURN
@@ -381,12 +411,23 @@ CONTAINS
    END SUBROUTINE collect_wf
 #endif
 
-   !> One XSF per Wannier function, two data blocks in it: the real part -- which is what
-   !> a two-sign isosurface plot is made of -- and the modulus. The imaginary part is not
-   !> written but its weight is reported, because that number is the check on the phase
-   !> fix below and a file nobody opens is not.
+   !> One XSF per Wannier function, two data blocks in it.
+   !>
+   !> For a scalar state they are the real part -- which is what a two-sign isosurface plot
+   !> is made of -- and the modulus. The imaginary part is not written but its weight is
+   !> reported, because that number is the check on the phase fix below and a file nobody
+   !> opens is not.
+   !>
+   !> A spinor has neither. Each component carries its own phase, so there is no global one
+   !> to divide out and no real part to contour; dividing both by the phase of one of them
+   !> would make a picture that depends on which was picked. What is drawn instead is the
+   !> norm of the pair, sqrt(|w_up|^2 + |w_dn|^2), and beside it the spin density
+   !> |w_up|^2 - |w_dn|^2 -- both unchanged by either phase. What is reported is then the
+   !> spin polarisation of the function, which says whether spin-orbit coupling mixed it or
+   !> only tilted it, and a value far from +-1 in a weakly coupled magnet is the signal
+   !> that the two components were not the two halves of the same state.
    SUBROUTINE write_plots(wf, atoms, cell, input, twodim, grid, vec1, vec2, vec3, zero, jspin)
-      COMPLEX,       INTENT(INOUT) :: wf(:, :)
+      COMPLEX,       INTENT(INOUT) :: wf(:, :, :)
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell),  INTENT(IN) :: cell
       TYPE(t_input), INTENT(IN) :: input
@@ -394,35 +435,69 @@ CONTAINS
       INTEGER,       INTENT(IN) :: grid(3), jspin
       REAL,          INTENT(IN) :: vec1(3), vec2(3), vec3(3), zero(3)
 
-      INTEGER :: nw, mesh, nplo, ipos, imax, iunit, ix, iy, iz
-      REAL    :: total, edge
-      REAL    :: reweight, imweight
+      INTEGER :: nw, mesh, ncomp, nplo, ipos, imax, iunit, ix, iy, iz
+      REAL    :: total, edge, wup, wdn
+      REAL    :: reweight, imweight, report
       COMPLEX :: phase
+      LOGICAL :: l_spinor
+      REAL, ALLOCATABLE :: fld1(:), fld2(:), mag(:)
+      CHARACTER(LEN=8)  :: nm1, nm2
       CHARACTER(LEN=40) :: fname
 
-      nw   = SIZE(wf, 1)
-      mesh = SIZE(wf, 2)
+      nw    = SIZE(wf, 1)
+      mesh  = SIZE(wf, 2)
+      ncomp = SIZE(wf, 3)
+      l_spinor = ncomp == 2
+      ALLOCATE (fld1(mesh), fld2(mesh), mag(mesh))
+      nm1 = MERGE('norm    ', 'real    ', l_spinor)
+      nm2 = MERGE('spin    ', 'modulus ', l_spinor)
 
       WRITE (oUnit, '(/,a)') 'Wannier functions on a real-space grid (plotWF)'
       WRITE (oUnit, '(a,3i5)') '  grid           ', grid
       WRITE (oUnit, '(a,i5)')  '  functions      ', nw
-      WRITE (oUnit, '(a)')     '   WF    max|Im|/max|Re|   weight on the box edge'
-      WRITE (oUnit, '(a)')     '                             (both should be small; a large edge'
-      WRITE (oUnit, '(a)')     '                              weight means the cell clips the function)'
+      IF (l_spinor) THEN
+         WRITE (oUnit, '(a)')  '  spinor: each file holds the norm of the pair and the spin density'
+         WRITE (oUnit, '(a)')  '   WF    spin polarisation   weight on the box edge'
+         WRITE (oUnit, '(a)')  '                             (+1 is pure up, -1 pure down; a large'
+         WRITE (oUnit, '(a)')  '                              edge weight means the cell clips it)'
+      ELSE
+         WRITE (oUnit, '(a)')  '   WF    max|Im|/max|Re|   weight on the box edge'
+         WRITE (oUnit, '(a)')  '                             (both should be small; a large edge'
+         WRITE (oUnit, '(a)')  '                              weight means the cell clips the function)'
+      END IF
 
       DO nplo = 1, nw
-         !> A Wannier function is real up to one global phase; take it off, using the point
-         !> where the function is largest so the phase is well determined there.
-         imax = 1
-         DO ipos = 1, mesh
-            IF (ABS(wf(nplo, ipos)) > ABS(wf(nplo, imax))) imax = ipos
-         END DO
-         phase = wf(nplo, imax)/ABS(wf(nplo, imax))
-         wf(nplo, :) = wf(nplo, :)/phase
+         IF (l_spinor) THEN
+            !> No phase is taken off: the two fields below do not have one.
+            DO ipos = 1, mesh
+               wup = ABS(wf(nplo, ipos, 1))**2
+               wdn = ABS(wf(nplo, ipos, 2))**2
+               fld1(ipos) = SQRT(wup + wdn)
+               fld2(ipos) = wup - wdn
+            END DO
+            mag = fld1
+            wup = SUM(ABS(wf(nplo, :, 1))**2)
+            wdn = SUM(ABS(wf(nplo, :, 2))**2)
+            report = 0.0
+            IF (wup + wdn > 0.0) report = (wup - wdn)/(wup + wdn)
+         ELSE
+            !> A Wannier function is real up to one global phase; take it off, using the point
+            !> where the function is largest so the phase is well determined there.
+            imax = 1
+            DO ipos = 1, mesh
+               IF (ABS(wf(nplo, ipos, 1)) > ABS(wf(nplo, imax, 1))) imax = ipos
+            END DO
+            phase = wf(nplo, imax, 1)/ABS(wf(nplo, imax, 1))
+            wf(nplo, :, 1) = wf(nplo, :, 1)/phase
 
-         reweight = MAXVAL(ABS(REAL(wf(nplo, :))))
-         imweight = MAXVAL(ABS(AIMAG(wf(nplo, :))))
-         IF (reweight > 0.0) imweight = imweight/reweight
+            reweight = MAXVAL(ABS(REAL(wf(nplo, :, 1))))
+            imweight = MAXVAL(ABS(AIMAG(wf(nplo, :, 1))))
+            IF (reweight > 0.0) imweight = imweight/reweight
+            fld1 = REAL(wf(nplo, :, 1))
+            fld2 = ABS(wf(nplo, :, 1))
+            mag  = fld2
+            report = imweight
+         END IF
 
          !> How much of the function sits on the outermost layer of the box. If this is not
          !> small the unit cell is too tight for this Wannier function and the picture is cut.
@@ -431,35 +506,36 @@ CONTAINS
             DO iy = 0, grid(2) - 1
                DO ix = 0, grid(1) - 1
                   ipos = ix + 1 + iy*grid(1) + iz*grid(1)*grid(2)
-                  total = total + ABS(wf(nplo, ipos))**2
+                  total = total + mag(ipos)**2
                   IF (ix == 0 .OR. ix == grid(1) - 1 .OR. iy == 0 .OR. iy == grid(2) - 1 .OR. &
                       (.NOT. twodim .AND. (iz == 0 .OR. iz == grid(3) - 1))) &
-                     edge = edge + ABS(wf(nplo, ipos))**2
+                     edge = edge + mag(ipos)**2
                END DO
             END DO
          END DO
          IF (total > 0.0) edge = edge/total
-         WRITE (oUnit, '(i5,3x,es12.4,6x,es12.4)') nplo, imweight, edge
+         WRITE (oUnit, '(i5,3x,es12.4,6x,es12.4)') nplo, report, edge
 
          WRITE (fname, '(a,i1,a,i3.3,a)') 'WF', jspin, '_', nplo, '.xsf'
          OPEN (NEWUNIT=iunit, file=TRIM(fname))
          CALL xsf_WRITE_atoms(iunit, atoms, input%film, cell%amat)
          CALL xsf_WRITE_header(iunit, twodim, TRIM(fname), vec1, vec2, vec3, zero, grid)
          DO ipos = 1, mesh
-            WRITE (iunit, *) REAL(wf(nplo, ipos))
+            WRITE (iunit, *) fld1(ipos)
          END DO
          CALL xsf_WRITE_newblock(iunit, twodim, vec1, vec2, vec3, zero, grid)
          DO ipos = 1, mesh
-            WRITE (iunit, *) ABS(wf(nplo, ipos))
+            WRITE (iunit, *) fld2(ipos)
          END DO
          CALL xsf_WRITE_endblock(iunit, twodim)
          CLOSE (iunit)
 
-         !> The same function again for ParaView, which does not read XSF. Same grid, same
-         !> two fields, and the same column of wf -- the global phase above was taken off
-         !> once, so the two files cannot disagree about what they are showing.
+         !> The same function again for ParaView, which does not read XSF. Same grid and
+         !> the same two fields, built once above, so the two files cannot disagree about
+         !> what they are showing.
          WRITE (fname, '(a,i1,a,i3.3,a)') 'WF', jspin, '_', nplo, '.vts'
-         CALL write_vts(TRIM(fname), wf(nplo, :), twodim, grid, vec1, vec2, vec3, zero)
+         CALL write_vts(TRIM(fname), fld1, nm1, fld2, nm2, mag, l_spinor, &
+                        twodim, grid, vec1, vec2, vec3, zero)
       END DO
 
       WRITE (oUnit, '(a,i0,a,i0,a)') '  wrote ', nw, ' .xsf and ', nw, ' .vts files '// &
@@ -478,9 +554,13 @@ CONTAINS
    !>
    !> Angstrom, like the XSF beside it, so the two agree with each other and with the atom
    !> positions anyone loads next to them.
-   SUBROUTINE write_vts(fname, wfcol, twodim, grid, vec1, vec2, vec3, zero)
-      CHARACTER(LEN=*), INTENT(IN) :: fname
-      COMPLEX, INTENT(IN) :: wfcol(:)
+   SUBROUTINE write_vts(fname, fld1, nm1, fld2, nm2, mag, l_spinor, &
+                        twodim, grid, vec1, vec2, vec3, zero)
+      CHARACTER(LEN=*), INTENT(IN) :: fname, nm1, nm2
+      !> The two fields to write and their names, plus the magnitude the isosurface levels
+      !> are taken from -- the modulus of a scalar state, the norm of a spinor.
+      REAL,    INTENT(IN) :: fld1(:), fld2(:), mag(:)
+      LOGICAL, INTENT(IN) :: l_spinor
       LOGICAL, INTENT(IN) :: twodim
       INTEGER, INTENT(IN) :: grid(3)
       REAL,    INTENT(IN) :: vec1(3), vec2(3), vec3(3), zero(3)
@@ -502,10 +582,17 @@ CONTAINS
       !> ENCLOSED CHARGE and not as a fraction of the maximum -- 0.45*max encloses under
       !> half of the function and draws a stunted lobe, which is how the first pictures of
       !> these came out.
-      WRITE (iunit, '(a,3(a,f10.6),a)') '<!-- isosurface by enclosed charge: ', &
-         '  70% ', iso_by_charge(wfcol, 0.70), &
-         '  85% ', iso_by_charge(wfcol, 0.85), &
-         '  95% ', iso_by_charge(wfcol, 0.95), '   (contour the real part at +c and -c) -->'
+      IF (l_spinor) THEN
+         WRITE (iunit, '(a,3(a,f10.6),a)') '<!-- isosurface by enclosed charge: ', &
+            '  70% ', iso_by_charge(mag, 0.70), &
+            '  85% ', iso_by_charge(mag, 0.85), &
+            '  95% ', iso_by_charge(mag, 0.95), '   (contour the norm at c) -->'
+      ELSE
+         WRITE (iunit, '(a,3(a,f10.6),a)') '<!-- isosurface by enclosed charge: ', &
+            '  70% ', iso_by_charge(mag, 0.70), &
+            '  85% ', iso_by_charge(mag, 0.85), &
+            '  95% ', iso_by_charge(mag, 0.95), '   (contour the real part at +c and -c) -->'
+      END IF
       WRITE (iunit, '(a)') '<VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian">'
       WRITE (iunit, '(a)') '  <StructuredGrid WholeExtent="'//TRIM(ext)//'">'
       WRITE (iunit, '(a)') '    <Piece Extent="'//TRIM(ext)//'">'
@@ -525,15 +612,15 @@ CONTAINS
       END DO
       WRITE (iunit, '(a)') '        </DataArray>'
       WRITE (iunit, '(a)') '      </Points>'
-      WRITE (iunit, '(a)') '      <PointData Scalars="real">'
-      WRITE (iunit, '(a)') '        <DataArray type="Float32" Name="real" format="ascii">'
+      WRITE (iunit, '(a)') '      <PointData Scalars="'//TRIM(nm1)//'">'
+      WRITE (iunit, '(a)') '        <DataArray type="Float32" Name="'//TRIM(nm1)//'" format="ascii">'
       DO ipos = 1, mesh
-         WRITE (iunit, '(es16.7)') REAL(wfcol(ipos))
+         WRITE (iunit, '(es16.7)') fld1(ipos)
       END DO
       WRITE (iunit, '(a)') '        </DataArray>'
-      WRITE (iunit, '(a)') '        <DataArray type="Float32" Name="modulus" format="ascii">'
+      WRITE (iunit, '(a)') '        <DataArray type="Float32" Name="'//TRIM(nm2)//'" format="ascii">'
       DO ipos = 1, mesh
-         WRITE (iunit, '(es16.7)') ABS(wfcol(ipos))
+         WRITE (iunit, '(es16.7)') fld2(ipos)
       END DO
       WRITE (iunit, '(a)') '        </DataArray>'
       WRITE (iunit, '(a)') '      </PointData>'
@@ -549,19 +636,19 @@ CONTAINS
    !> By bisection rather than by sorting: the enclosed weight falls monotonically with c,
    !> so forty halvings pin it down to one part in 10^12 of the peak, and nothing has to be
    !> ordered. The volume element cancels, being the same at every point of the grid.
-   FUNCTION iso_by_charge(wfcol, frac) RESULT(c)
-      COMPLEX, INTENT(IN) :: wfcol(:)
-      REAL,    INTENT(IN) :: frac
+   FUNCTION iso_by_charge(mag, frac) RESULT(c)
+      REAL, INTENT(IN) :: mag(:)
+      REAL, INTENT(IN) :: frac
       REAL :: c, lo, hi, total, inside
       INTEGER :: it
 
-      total = SUM(ABS(wfcol)**2)
+      total = SUM(mag**2)
       c = 0.0
       IF (total <= 0.0) RETURN
-      lo = 0.0; hi = MAXVAL(ABS(wfcol))
+      lo = 0.0; hi = MAXVAL(mag)
       DO it = 1, 40
          c = 0.5*(lo + hi)
-         inside = SUM(ABS(wfcol)**2, MASK=ABS(wfcol) > c)
+         inside = SUM(mag**2, MASK=mag > c)
          IF (inside > frac*total) THEN
             lo = c      ! still enclosing too much: the level has to come up
          ELSE
