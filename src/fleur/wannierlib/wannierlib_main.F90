@@ -50,6 +50,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
+   USE m_wannierlib_export_modern_k, ONLY: wannierlib_export_modern_k
    USE m_wannierlib_chkinfo, ONLY: wl_chkinfo_set, wl_chkinfo_stamp
    USE m_wgauge_check_mw, ONLY: wgauge_check_mw
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
@@ -130,6 +131,10 @@ CONTAINS
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
+      !> What the postproc pass hands back for the <operatorsKs> file: B(k) and the global
+      !> index of each k this rank owns, in the order the per-rank slices were cut.
+      INTEGER, ALLOCATABLE :: gk_loc_ks(:)
+      COMPLEX, ALLOCATABLE :: b0k_ks(:, :, :, :)
       real, allocatable :: eig(:, :)
       COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), u_opt(:, :, :)   ! Wannier gauge factors from w90
       COMPLEX, ALLOCATABLE :: mw_chk(:, :, :, :)  ! the overlaps as Wannier90 leaves them
@@ -402,7 +407,18 @@ CONTAINS
                                 vtot, vacuum, fmpi, distk, u_matrix, u_opt, c0_loc)
          CALL wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
                         mmn, bmesh, distk, fmpi, &
-                        wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
+                        wf_channel=jspin, spin_suffix=TRIM(spin_sfx), &
+                        b0k_out=b0k_ks, gk_loc_out=gk_loc_ks)
+
+         !> The <operatorsKs> tensors, written here rather than in the pass that built them:
+         !> the writer is a consumer in export/ and postproc/ does not reach into it. B(k)
+         !> arrives unallocated when only C or F were asked for, which the writer expects.
+         IF (request%has_op_k('bmn') .OR. request%has_op_k('cmn') .OR. request%has_op_k('fmn')) &
+            CALL wannierlib_export_modern_k(b0k_ks, c0_loc, f0_loc, gk_loc_ks, kpts, cell, &
+                                            manifold%num_wann, jspin, fmpi%mpi_comm, fmpi%irank, &
+                                            request%has_op_k('bmn'), request%has_op_k('cmn'), &
+                                            request%has_op_k('fmn'))
+         IF (ALLOCATED(b0k_ks)) DEALLOCATE (b0k_ks)
 
          !> After wgauge_run so the message order in `out` keeps the operators together,
          !> and inside the channel loop because a collinear two-channel run lays its

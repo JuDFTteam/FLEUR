@@ -25,7 +25,6 @@ MODULE m_wgauge_run
    USE m_types_wgauge_domains, ONLY: t_wgauge_domains
    USE m_wgauge_operators_r, ONLY: wgauge_write_operators_r
    USE m_wgauge_coeff_b, ONLY: wgauge_build_bk
-   USE m_wannierlib_export_modern_k, ONLY: wannierlib_export_modern_k
    USE m_wgauge_coeff_a, ONLY: wgauge_build_berry_aw_r, wgauge_check_berry_centres
    USE m_wgauge_hamk, ONLY: t_wgauge_hgauge, wgauge_build_hamk, wgauge_hgauge_domain
    USE m_wgauge_bands_io, ONLY: wgauge_bands_labels
@@ -42,7 +41,7 @@ MODULE m_wgauge_run
 CONTAINS
 
    SUBROUTINE wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, coarse, f0_loc, c0_loc, &
-                        mmn, bmesh, distk, fmpi, wf_channel, spin_suffix)
+                        mmn, bmesh, distk, fmpi, wf_channel, spin_suffix, b0k_out, gk_loc_out)
       TYPE(t_melem_request), INTENT(IN) :: request
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       TYPE(t_wgauge_domains), INTENT(IN) :: domains
@@ -63,6 +62,11 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN), OPTIONAL :: wf_channel            !< collinear spin channel (1/2); default 1
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix  !< '_spin1'/'_spin2' collinear; empty otherwise
+      !> B(k) and this rank's global-k list, handed up for the <operatorsKs> file. The file
+      !> is written by the driver because the writer lives in export/, which this directory
+      !> does not reach into: what belongs here is building B(k), not writing it.
+      COMPLEX, ALLOCATABLE, INTENT(OUT), OPTIONAL :: b0k_out(:, :, :, :)
+      INTEGER, ALLOCATABLE, INTENT(OUT), OPTIONAL :: gk_loc_out(:)
 
       INTEGER :: iop, wf_ch, irank, mpi_comm
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
@@ -98,6 +102,7 @@ CONTAINS
       DO iop = 1, SIZE(distk)
          IF (distk(iop) == irank) THEN; jkl = jkl + 1; gk_loc(jkl) = iop; END IF
       END DO
+      IF (PRESENT(gk_loc_out)) gk_loc_out = gk_loc
 
       ! ---- output domains: one per <domain>, in the order they were declared ----
       !> A suffixed domain's files are renamed after it runs, so an unsuffixed domain
@@ -124,16 +129,14 @@ CONTAINS
       !> not, so these three carry the Wannier gauge and go to a file of their own. The
       !> request is independent of <operatorsRs> -- either block may ask for a tensor and
       !> neither obliges the other -- so this runs whether or not the pass above did.
-      IF (request%has_op_k('bmn') .OR. request%has_op_k('cmn') .OR. request%has_op_k('fmn')) THEN
-         IF (request%has_op_k('bmn')) &
-            CALL wgauge_build_bk(manifold, kpts, eig, u_matrix, u_opt, mmn, gk_loc, bmesh, &
-                                b0k, irank)
-         CALL wannierlib_export_modern_k(b0k, c0_loc, f0_loc, gk_loc, kpts, cell, &
-                                        manifold%num_wann, wf_ch, mpi_comm, irank, &
-                                        request%has_op_k('bmn'), request%has_op_k('cmn'), &
-                                        request%has_op_k('fmn'))
-         IF (ALLOCATED(b0k)) DEALLOCATE (b0k)
-      END IF
+      !>
+      !> C and F arrive already built, so only B is made here; the three travel up to the
+      !> driver, which writes them.
+      IF (request%has_op_k('bmn')) &
+         CALL wgauge_build_bk(manifold, kpts, eig, u_matrix, u_opt, mmn, gk_loc, bmesh, &
+                             b0k, irank)
+      IF (PRESENT(b0k_out) .AND. ALLOCATED(b0k)) CALL MOVE_ALLOC(b0k, b0k_out)
+      IF (ALLOCATED(b0k)) DEALLOCATE (b0k)
 
       !> MDRS, switched on once for every operator and every output domain rather than per
       !> call: interpolating H with it and an operator without it would put the two in
