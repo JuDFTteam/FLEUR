@@ -44,18 +44,13 @@
 !> the shifted-band case above.
 MODULE m_wannierlib_chkinfo
    USE m_juDFT
+   USE m_wannierlib_hdf_names, ONLY: wl_hdf_name, WL_HDF_WHAT
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wl_chkinfo_set, wl_chkinfo_stamp, wl_crc32_file
 #ifdef CPP_HDF
    PUBLIC :: wl_chkinfo_write
 #endif
-
-   !> The three files the stamp pass reaches, as wl_hdf_create spells them. Named here
-   !> rather than discovered, because a file that is missing is the normal case: each is
-   !> written only if its own <export> flag or operator block asked for it.
-   CHARACTER(LEN=*), PARAMETER :: WL_HDF_WHAT(3) = &
-      [CHARACTER(LEN=12) :: 'bmesh', 'operators_ks', 'modern_k']
 
    TYPE :: t_wl_chkinfo
       LOGICAL           :: l_set        = .FALSE.
@@ -185,6 +180,11 @@ CONTAINS
    !>
    !> Rank 0 alone: it is the rank that wrote the files, and reopening an HDF5 file for
    !> write from several ranks at once is not something any of them would survive.
+   !>
+   !> The roster and the spelling both come from wannierlib_hdf_names, the same ones
+   !> wl_hdf_create works off, so a file this walks past is a file that was never created.
+   !> A file that is MISSING is the normal case: each is written only if its own <export>
+   !> flag or operator block asked for it.
    SUBROUTINE wl_chkinfo_stamp(jspin, chkfile, irank)
 #ifdef CPP_HDF
       USE hdf5
@@ -203,7 +203,7 @@ CONTAINS
       IF (irank /= 0) RETURN
       crc = wl_crc32_file(chkfile)
       DO i = 1, SIZE(WL_HDF_WHAT)
-         WRITE (fn, '(a,i0,a)') 'WF', jspin, '_'//TRIM(WL_HDF_WHAT(i))//'.hdf'
+         fn = wl_hdf_name(WL_HDF_WHAT(i), jspin)
          INQUIRE (file=TRIM(fn), exist=l_ex)
          IF (.NOT. l_ex) CYCLE
          CALL h5fopen_f(TRIM(fn), H5F_ACC_RDWR_F, fid, e)

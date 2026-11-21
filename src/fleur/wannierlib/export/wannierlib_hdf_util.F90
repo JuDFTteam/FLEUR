@@ -19,16 +19,22 @@ MODULE m_wannierlib_hdf_util
    USE hdf5
    USE m_hdf_tools
    USE m_juDFT
+   USE m_wannierlib_hdf_names, ONLY: wl_hdf_name, wl_hdf_check_what
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wr_r1, wr_r2, wr_r3, wr_r4, wr_i1, wr_i2, wr_i3, wl_hdf_create, wl_hdf_root
    PUBLIC :: wl_ds5_open, wl_ds5_slab, wl_ds_close
-   PUBLIC :: wl_hdf_name, wl_hdf_open, wl_hdf_root_read, rd_i1, wl_ds_exists
+   PUBLIC :: wl_hdf_open, wl_hdf_root_read, rd_i1, wl_ds_exists
    PUBLIC :: wl_ds5_open_read, wl_ds5_read, wl_ds5_dims, rd_r2
 CONTAINS
 
    !> Make WF<jspin>_<what>.hdf and return it open. A stale file is removed rather than
    !> written over, so a shorter run cannot leave the tail of a longer one behind.
+   !>
+   !> The name is asked for and not spelled here, and a stem that is not on the roster is
+   !> refused: everything downstream that has to find these files again -- the reader, and
+   !> the pass that stamps each one with its checkpoint -- works off that same list, so a
+   !> file created outside it would be written and then quietly left out of both.
    SUBROUTINE wl_hdf_create(what, jspin, fid, filename)
       CHARACTER(LEN=*), INTENT(IN) :: what
       INTEGER, INTENT(IN) :: jspin
@@ -36,7 +42,8 @@ CONTAINS
       CHARACTER(LEN=*), INTENT(OUT) :: filename
       LOGICAL :: l_ex
       INTEGER :: e
-      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_'//TRIM(what)//'.hdf'
+      CALL wl_hdf_check_what(what, calledby="wl_hdf_create")
+      filename = wl_hdf_name(what, jspin)
       INQUIRE (file=TRIM(filename), exist=l_ex)
       IF (l_ex) CALL system('rm '//TRIM(filename))
       CALL h5fcreate_f(TRIM(filename), H5F_ACC_TRUNC_F, fid, e, H5P_DEFAULT_F, H5P_DEFAULT_F)
@@ -200,15 +207,6 @@ CONTAINS
 
    !> Open WF<jspin>_<what>.hdf for reading. A missing file is NOT an error here: the
    !> caller may know how to produce what it holds, and only it can decide.
-   !> The one place the file name is spelled, for the writer and the reader alike:
-   !> two spellings of one convention drift apart without anything noticing.
-   FUNCTION wl_hdf_name(what, jspin) RESULT(filename)
-      CHARACTER(LEN=*), INTENT(IN) :: what
-      INTEGER,          INTENT(IN) :: jspin
-      CHARACTER(LEN=80) :: filename
-      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_'//TRIM(what)//'.hdf'
-   END FUNCTION wl_hdf_name
-
    SUBROUTINE wl_hdf_open(what, jspin, fid, filename, l_found)
       CHARACTER(LEN=*), INTENT(IN) :: what
       INTEGER, INTENT(IN) :: jspin
