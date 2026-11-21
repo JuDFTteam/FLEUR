@@ -128,7 +128,7 @@ CONTAINS
          IF (request%has_op_k('bmn')) &
             CALL wgauge_build_bk(manifold, kpts, eig, u_matrix, u_opt, mmn, gk_loc, bmesh, &
                                 b0k, irank)
-         CALL wannierlib_export_modern_k(b0k, c0_loc, f0_loc, gk_loc, kpts%nkptf, &
+         CALL wannierlib_export_modern_k(b0k, c0_loc, f0_loc, gk_loc, kpts, cell, &
                                         manifold%num_wann, wf_ch, mpi_comm, irank, &
                                         request%has_op_k('bmn'), request%has_op_k('cmn'), &
                                         request%has_op_k('fmn'))

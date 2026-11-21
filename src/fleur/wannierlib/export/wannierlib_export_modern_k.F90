@@ -27,6 +27,15 @@
 !> outside: B(R) rebuilt outside FLEUR from the Bloch-basis overlaps reproduces
 !> WF1_bmn.dat to 6e-08, and this file carries the other two down the same path.
 !>
+!> AND IT CARRIES THE K-POINTS ITSELF. O(R) = (1/N) sum_k exp(-2pi i k.R) O(k) needs the k
+!> the tensors were built on, and a consumer that has to go and find them somewhere else
+!> can pick up a list in another order and get a wrong answer with no error: the sum is
+!> defined for any list of the right length. They were in WF<n>_bmesh.hdf, which is a
+!> separate opt-in flag, so a file could be written that nothing on its own could use.
+!> Fractional, in the same order the datasets are indexed in -- that order is the contract,
+!> not the values. amat goes with them, in Bohr as FLEUR holds it (NOT the Angstrom of the
+!> operators above), for a consumer that wants its R set in Cartesian.
+!>
 !> UNITS. The ones the .dat files are printed in, so the pair is consistent and the
 !> Fourier sum between them is a plain phase sum with nothing converted on the way:
 !> B in eV*Angstrom, C in eV*Angstrom^2, F in Angstrom^2. B and C arrive in Hartree and
@@ -35,8 +44,9 @@
 !> carries no energy and is passed through. Getting this wrong is invisible in F and in
 !> the shape of C: it came out of the first run a clean factor of 27.2114 small.
 !>
-!> LAYOUT. One rank-5 dataset per tensor, (2, nw, nw, ncomp, nkpt) in Fortran order, real
-!> part then imaginary, written one component at a time. HDF reverses the dimension order,
+!> LAYOUT, version 2 -- version 1 had no kpts and no amat. One rank-5 dataset per tensor,
+!> (2, nw, nw, ncomp, nkpt) in Fortran order, real part then imaginary, written one
+!> component at a time. HDF reverses the dimension order,
 !> so a reader sees (nkpt, ncomp, nw, nw, 2) AND GETS EVERY MATRIX TRANSPOSED; undoing
 !> that is not optional and nothing on the reader's side reports it. The nine components
 !> of C and F run with the second Cartesian index fastest, c = 3*(a-1) + b, which is the
@@ -51,8 +61,10 @@ CONTAINS
 
    !> Write WF<jspin>_modern_k.hdf. Collective: each rank owns a k-slice and every tensor
    !> has to be gathered before rank 0 can write it.
-   SUBROUTINE wannierlib_export_modern_k(b0_loc, c0_loc, f0_loc, gk_loc, nkptf, nw, &
+   SUBROUTINE wannierlib_export_modern_k(b0_loc, c0_loc, f0_loc, gk_loc, kpts, cell, nw, &
                                          jspin, mpicm, irank, l_want_b, l_want_c, l_want_f)
+      USE m_types_kpts, ONLY: t_kpts
+      USE m_types_cell, ONLY: t_cell
 #ifdef CPP_HDF
       USE hdf5
       USE m_wannierlib_hdf_util
@@ -61,7 +73,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE, INTENT(IN) :: c0_loc(:, :, :, :, :)   !< (nw,nw,3,3,nk_loc)
       COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)   !< (nw,nw,3,3,nk_loc)
       INTEGER,              INTENT(IN) :: gk_loc(:)               !< global k of each slice entry
-      INTEGER,              INTENT(IN) :: nkptf, nw, jspin, mpicm, irank
+      TYPE(t_kpts),         INTENT(IN) :: kpts                    !< the full-zone list the tensors are on
+      TYPE(t_cell),         INTENT(IN) :: cell
+      INTEGER,              INTENT(IN) :: nw, jspin, mpicm, irank
       !> Which of the three <operatorsKs> named. Not the same question as whether the
       !> slice exists: <operatorsRs> may have built C or F for its own .dat file, and a
       !> tensor nobody asked for in k has no business in this one.
@@ -69,9 +83,10 @@ CONTAINS
 #ifdef CPP_HDF
       INTEGER(HID_T)    :: fid, gid, did
       CHARACTER(LEN=80) :: filename
-      INTEGER           :: a, b, ic, e
+      INTEGER           :: a, b, ic, e, nkptf
       LOGICAL           :: l_root, l_b, l_c, l_f
 
+      nkptf = kpts%nkptf
       l_root = (irank == 0)
       l_b = l_want_b .AND. ALLOCATED(b0_loc)
       l_c = l_want_c .AND. ALLOCATED(c0_loc)
@@ -88,8 +103,10 @@ CONTAINS
 
       IF (l_root) THEN
          CALL wl_hdf_create('modern_k', jspin, fid, filename)
-         CALL wl_hdf_root(fid, 1, nkptf, gid)
+         CALL wl_hdf_root(fid, 2, nkptf, gid)
          CALL wr_i1(gid, 'dims', [2], [nw, nkptf])
+         CALL wr_r2(gid, 'kpts', [3, nkptf], kpts%bkf(:, 1:nkptf))
+         CALL wr_r2(gid, 'amat', [3, 3], cell%amat)
       END IF
 
       did = -1
@@ -131,7 +148,7 @@ CONTAINS
          CALL h5gclose_f(gid, e)
          CALL h5fclose_f(fid, e)
          WRITE (oUnit, '(a,i0,a,i0,a)') 'wannierlib: wrote '//TRIM(filename)//' (', nw, &
-            ' Wannier functions, ', nkptf, ' k-points, Wannier gauge)'
+            ' Wannier functions, ', nkptf, ' k-points and the list they are on, Wannier gauge)'
       END IF
 #else
       CALL juDFT_error("wannierlib: bmn/cmn/fmn in <operatorsKs> need FLEUR built with HDF5", &

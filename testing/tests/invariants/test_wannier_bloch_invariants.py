@@ -36,6 +36,10 @@ error. This one closes the loop through a second, already-trusted writer:
 with V read back out of the Wannier90 checkpoint the same run wrote. Measured
 residual on this case is ~7e-9, which is the precision rspauli.1 is printed with.
 
+WF<n>_modern_k.hdf carries the k-list it was built on, so the phase sum needs nothing
+but that one file; the test reads the list from there, checks it against the b-mesh
+writer, and sums with it, which is what makes a drifting order visible.
+
 The same case also asks for <export bmesh="T"/>. Nothing else writes that file, so
 there is no second writer to join it to; what stands in for one is its layout, pinned
 shape by shape, and the two identities the shells have to obey for a finite difference
@@ -185,8 +189,9 @@ def _check_bmesh(path, np, h5py):
         "must, and a gkpb that is always zero is the signature of the field never being "
         "filled rather than of a mesh that does not need it")
 
-    #> Handed back because the phase sum below needs the very k-list the file was built
-    #> on, and reconstructing it from inp.xml would be a second convention to get wrong.
+    #> Handed back as the second writer the k-list inside WF<n>_modern_k.hdf is checked
+    #> against. Reconstructing it from inp.xml instead would be a convention of its own to
+    #> get wrong, and would prove nothing about the list the tensors were actually built on.
     return bkf
 
 
@@ -289,13 +294,29 @@ def test_operators_ks_reproduces_the_real_space_route(execute_fleur):
     #> B, and anything that breaks the join is O(1).
     irvec, theirs = _read_bmn_dat(res["WF1_bmn.dat"], num_wann, np)
     with h5py.File(res["WF1_modern_k.hdf"], "r") as handle:
+        #> Written through io_write_attint0, which stores a scalar as a length-1 array;
+        #> ravel takes either shape so the check does not depend on that detail.
+        version = int(np.ravel(handle.attrs["version"])[0])
+        assert version == 2, (
+            f"WF1_modern_k.hdf announces layout version {version}; version 2 is the one "
+            f"that carries its own k-list, and a consumer picks its reader by this number")
         nw_file, nk_file = (int(v) for v in handle["dims"][:2])
         assert (nw_file, nk_file) == (num_wann, num_kpts), (
             f"the k-space tensors say {nw_file} Wannier functions and {nk_file} "
             f"k-points, the checkpoint says {num_wann} and {num_kpts}")
         bloch = _read_operator_k(handle["bmn"], np)          # (nk, 3, row, column)
+        #> The k the sum below is actually run with. The file has to be enough on its own:
+        #> a consumer that goes looking for the list elsewhere can pick one up in another
+        #> order and get a wrong answer with no error, because the sum is defined for any
+        #> list of the right length. Pinned against the b-mesh writer, which is the only
+        #> other file that stores the same list, and then USED -- so an order that drifted
+        #> would fail here and again in the join below.
+        mine_kpts = np.asarray(handle["kpts"])
+    assert mine_kpts.shape == bkf.shape and np.abs(mine_kpts - bkf).max() < 1e-12, (
+        "the k-list inside WF1_modern_k.hdf is not the one WF1_bmesh.hdf stores, so the "
+        "two writers disagree about the mesh the very same run was built on")
 
-    phase = np.exp(-2j * np.pi * (bkf @ irvec.T)) / num_kpts  # (nk, nR)
+    phase = np.exp(-2j * np.pi * (mine_kpts @ irvec.T)) / num_kpts  # (nk, nR)
     mine = np.einsum("kcnm,kr->cnmr", bloch, phase)
 
     scale = np.abs(theirs).max()
