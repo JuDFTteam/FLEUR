@@ -864,9 +864,10 @@ CONTAINS
       END IF
     END IF
 
-    ! --- operatorsKs: the operator matrices in the BLOCH basis, written straight out of
-    !     the coarse pass. No gauge is applied and none is needed, so this is the one
-    !     operator export a run can ask for without paying for a wannierisation. ---
+    ! --- operatorsKs: what the run holds in k, before the Fourier sum to R. The four
+    !     Bloch-basis matrices come straight out of the coarse pass and need no gauge, so
+    !     asking only for those costs no wannierisation; bmn, cmn and fmn are pair
+    !     contractions and do carry the gauge, so they go to a file of their own. ---
     xPathA = '/fleurInput/output/wannierlib/operatorsKs'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%l_operators_k = .TRUE.

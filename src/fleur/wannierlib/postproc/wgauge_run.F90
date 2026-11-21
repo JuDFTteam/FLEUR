@@ -24,6 +24,8 @@ MODULE m_wgauge_run
    USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, melem_exposed_find
    USE m_types_wgauge_domains, ONLY: t_wgauge_domains
    USE m_wgauge_operators_r, ONLY: wgauge_write_operators_r
+   USE m_wgauge_coeff_b, ONLY: wgauge_build_bk
+   USE m_wannierlib_export_modern_k, ONLY: wannierlib_export_modern_k
    USE m_wgauge_coeff_a, ONLY: wgauge_build_berry_aw_r, wgauge_check_berry_centres
    USE m_wgauge_hamk, ONLY: t_wgauge_hgauge, wgauge_build_hamk, wgauge_hgauge_domain
    USE m_wgauge_bands_io, ONLY: wgauge_bands_labels
@@ -66,6 +68,7 @@ CONTAINS
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
+      COMPLEX, ALLOCATABLE :: b0k(:, :, :, :)          ! (nw,nw,3,nk_loc) B(k) for the k-space export
       !> H_W(k) and H(R): the Hamiltonian side of every interpolation, built once here.
       COMPLEX, ALLOCATABLE :: ham_k(:, :, :), ham_r(:, :, :)
       INTEGER, ALLOCATABLE :: h_irvec(:, :), h_ndegen(:)
@@ -114,6 +117,23 @@ CONTAINS
       CALL wgauge_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
                                    coarse%s0, coarse%l0, coarse%soc4, coarse%t0, coarse%hxc0, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
+
+      !> (2b) <operatorsKs> can also ask for B, C and F. They are not in the Bloch basis
+      !> the other half of that block promises: contracting over PAIRS of neighbours needs
+      !> a band index that means the same state at k+b1 and at k+b2, and the Bloch one does
+      !> not, so these three carry the Wannier gauge and go to a file of their own. The
+      !> request is independent of <operatorsRs> -- either block may ask for a tensor and
+      !> neither obliges the other -- so this runs whether or not the pass above did.
+      IF (request%has_op_k('bmn') .OR. request%has_op_k('cmn') .OR. request%has_op_k('fmn')) THEN
+         IF (request%has_op_k('bmn')) &
+            CALL wgauge_build_bk(manifold, kpts, eig, u_matrix, u_opt, mmn, gk_loc, bmesh, &
+                                b0k, irank)
+         CALL wannierlib_export_modern_k(b0k, c0_loc, f0_loc, gk_loc, kpts%nkptf, &
+                                        manifold%num_wann, wf_ch, mpi_comm, irank, &
+                                        request%has_op_k('bmn'), request%has_op_k('cmn'), &
+                                        request%has_op_k('fmn'))
+         IF (ALLOCATED(b0k)) DEALLOCATE (b0k)
+      END IF
 
       !> MDRS, switched on once for every operator and every output domain rather than per
       !> call: interpolating H with it and an operator without it would put the two in

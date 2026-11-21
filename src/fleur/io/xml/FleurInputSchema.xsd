@@ -3728,7 +3728,7 @@
 
    <xsd:complexType name="WannierlibOperatorsKType">
       <xsd:annotation>
-         <xsd:documentation>The operator matrices in the Bloch basis, O(k), written as the coarse pass built them and before any gauge exists. Together with the finite-difference b-shells that travel in the same file, this is what a consumer that builds its own Wannier functions needs, and it costs no wannierisation.</xsd:documentation>
+         <xsd:documentation>What the run holds in k, one step before the Fourier sum &lt;operatorsRs&gt; takes. The two blocks are independent requests: either may be absent, and asking for a quantity in one does not oblige the other. Two kinds of name live here and they go to two files. spin, orbital, spinOrbit and exchangeTorque are a matrix at a single k, written to WF&lt;spin&gt;_operators_ks.hdf as the coarse pass built them, before any gauge exists -- with the finite-difference b-shells that travel in the same file, that is what a consumer building its own Wannier functions needs, and it costs no wannierisation. bmn, cmn and fmn are contractions over PAIRS of neighbours, so they carry the Wannier gauge and go to WF&lt;spin&gt;_modern_k.hdf. Each file states in its own header which of the two it holds.</xsd:documentation>
       </xsd:annotation>
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="operator" type="WannierlibOperatorKType"/>
@@ -3741,13 +3741,16 @@
 
    <xsd:simpleType name="WannierlibOperatorKEnum">
       <xsd:annotation>
-         <xsd:documentation>Only the four operators that are a matrix at a single k. The Hamiltonian in this basis is the eigenvalue list and the position operator is a finite difference over the b-shells, so neither is nameable here; asking for one fails validation rather than at run time.</xsd:documentation>
+         <xsd:documentation>The first four are a matrix at a single k and are written in the Bloch basis, with no gauge. The last three -- B(k), C(k) and F(k) of the modern theory of magnetisation -- are contractions over pairs of neighbours, and a contraction over b needs a band index that means the same state at k+b1 and at k+b2, which the Bloch one does not: a gauge-free B(k), C(k) or F(k) does not exist, so these three carry the Wannier gauge and are written to a separate file, in the units their .dat counterparts use so the Fourier sum between the two is a plain phase sum. The Hamiltonian in this basis is the eigenvalue list and the position operator is a finite difference over the b-shells, so neither is nameable here; asking for one fails validation rather than at run time.</xsd:documentation>
       </xsd:annotation>
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="spin"/>
          <xsd:enumeration value="orbital"/>
          <xsd:enumeration value="spinOrbit"/>
          <xsd:enumeration value="exchangeTorque"/>
+         <xsd:enumeration value="bmn"/>
+         <xsd:enumeration value="cmn"/>
+         <xsd:enumeration value="fmn"/>
       </xsd:restriction>
    </xsd:simpleType>
 

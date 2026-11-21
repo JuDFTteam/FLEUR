@@ -300,11 +300,15 @@ CONTAINS
          END IF
          IF (this%export%bmesh) CALL wannierlib_export_bmesh(bmesh_k, kpts, jspin, fmpi)
 
-         !> The operators in the Bloch basis, before run_w90 has a gauge to offer. It
-         !> goes here and not beside the O(R) export because that is the whole point: a
+         !> The Bloch-basis half of <operatorsKs>, before run_w90 has a gauge to offer.
+         !> It goes here and not beside the O(R) export because that is the whole point: a
          !> consumer that builds its own Wannier functions needs these and not a gauge,
-         !> and asking for them must not oblige the run to produce one.
-         IF (request%l_operators_k) THEN
+         !> and asking for them must not oblige the run to produce one. The same block may
+         !> also name bmn, cmn and fmn, which are pair contractions and DO carry the gauge:
+         !> those are written after run_w90, so asking only for them must not open a file
+         !> here -- which is why the four names are tested and not the block.
+         IF (request%has_op_k('spin') .OR. request%has_op_k('orbital') .OR. &
+             request%has_op_k('spinOrbit') .OR. request%has_op_k('exchangeTorque')) THEN
             CALL wannierlib_export_ks(request%has_op_k('spin'), request%has_op_k('orbital'), &
                                       request%has_op_k('spinOrbit'), &
                                       request%has_op_k('exchangeTorque'), &
@@ -366,14 +370,15 @@ CONTAINS
          CALL wannierlib_get_bmesh(this, kpts, bmesh)
          !> F wants the gauge at two neighbours at once, so it can be built neither with the
          !> coarse matrices, which come before any gauge, nor in the post-processing, which
-         !> cannot reach the wavefunctions. It goes here, and only when it was asked for.
-         IF (request%has_op_r('fmn')) &
+         !> cannot reach the wavefunctions. It goes here, and only when it was asked for --
+         !> by EITHER block, since the two are independent requests for the same tensor.
+         IF (request%has_op_r('fmn') .OR. request%has_op_k('fmn')) &
             CALL wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
                                 vtot, vacuum, fmpi, distk, u_matrix, u_opt, f0_loc)
          !> C asks for what F asks -- the gauge at two neighbours at once -- and for the
          !> eigenvalues of the bra on top, so it lives here for the same reason.
-         IF (request%has_op_r('cmn')) &
+         IF (request%has_op_r('cmn') .OR. request%has_op_k('cmn')) &
             CALL wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
                                 vtot, vacuum, fmpi, distk, u_matrix, u_opt, c0_loc)

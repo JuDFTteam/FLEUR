@@ -103,16 +103,27 @@ MODULE m_types_melem_optable
       !> asking for it builds the same exchange-field blocks and nothing more.
       t_melem_exposed('exchangeField', 'exchangeTorque', 1, '', '', .FALSE.)]
 
-   !> <operatorsKs>/<operator name="..">. The same matrices in the BLOCH basis, written
-   !> before any gauge exists. Only the four that ARE a matrix at a single k are here: the
-   !> Hamiltonian in this basis is the eigenvalue list, and the position operator is a
-   !> finite difference over the b-shells rather than a matrix, which is why the shells
-   !> travel in the same file instead of being exposed as an operator.
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPK(4) = [ &
+   !> <operatorsKs>/<operator name="..">. What the run holds in k, one step before the
+   !> Fourier sum <operatorsRs> takes. That, and not "no gauge", is what the block
+   !> collects. The first four ARE a matrix at a single k and go out in the Bloch basis,
+   !> before any gauge exists. The last three are contractions over PAIRS of neighbours
+   !> and carry the Wannier gauge, because summing over b needs a band index that means
+   !> the same state at k+b1 and at k+b2 and the Bloch one does not; they go to a file of
+   !> their own, and each file says in its header which of the two it is.
+   !>
+   !> The Hamiltonian is not nameable here -- in this basis it is the eigenvalue list --
+   !> and neither is the position operator, which is a finite difference over the
+   !> b-shells rather than a matrix, which is why the shells travel in the file instead.
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPK(7) = [ &
       t_melem_exposed('spin',           'spin',           3, '', '', .FALSE.), &
       t_melem_exposed('orbital',        'orbital',        3, '', '', .FALSE.), &
       t_melem_exposed('spinOrbit',      'spinOrbit',      4, '', '', .FALSE.), &
-      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.)]
+      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.), &
+      !> B(k), C(k) and F(k) of the modern theory, in the Wannier gauge. No provider of
+      !> their own: they are built from the neighbour overlaps and the gauge.
+      t_melem_exposed('bmn',            '',               0, '', '', .FALSE.), &
+      t_melem_exposed('cmn',            '',               0, '', '', .FALSE.), &
+      t_melem_exposed('fmn',            '',               0, '', '', .FALSE.)]
 
    PUBLIC :: melem_exposed_find, melem_exposed_names
 

@@ -45,13 +45,24 @@ once per channel.
 guesses are `<wannierproj l=".." m=".." spin=".."/>` children of a `<species>`; their total
 count over all atoms is `num_wann`.
 
-The two operator blocks are independent: `<operatorsRs>` writes `O(R)` to disk and does no
-interpolation, while `<interpolation>` projects onto the interpolated bands. They accept
-different *sets* of names, because not everything with an `O(R)` has an interpolation driver
-and the other way round, but **a name never means two different things in the two blocks** --
-the spin-orbit operator is `spinOrbit` in both. The accepted names of each live in
-`fleurinput/types_melem_optable.f90`, and a name the tables do not have stops the run with
-the accepted list in the message.
+The three operator blocks are independent: `<operatorsKs>` hands over what the run holds in
+`k`, `<operatorsRs>` writes `O(R)` to disk and does no interpolation, and `<interpolation>`
+projects onto the interpolated bands. Any of them may be absent, and asking for a quantity in
+one never obliges another to be there. They accept different *sets* of names, because not
+everything with an `O(R)` has an interpolation driver and the other way round, but **a name
+never means two different things in two blocks** -- the spin-orbit operator is `spinOrbit`
+everywhere, and `bmn` is the same `B` in `<operatorsKs>` and in `<operatorsRs>`, one Fourier
+sum apart. The accepted names of each live in `fleurinput/types_melem_optable.f90`, and a
+name the tables do not have stops the run with the accepted list in the message.
+
+`<operatorsKs>` carries two kinds of name and writes them to two files. `spin`, `orbital`,
+`spinOrbit` and `exchangeTorque` are a matrix at a single `k`: they go out in the Bloch
+basis, before any gauge exists, and that half costs no wannierisation. `bmn`, `cmn` and `fmn`
+are contractions over *pairs* of neighbours, and summing over `b` needs a band index that
+means the same state at `k+b1` and at `k+b2`, which the Bloch one does not -- the gauge that
+enters is the one at the neighbours, not at `k`, so there is nothing to factor out and no
+gauge-free `B(k)`, `C(k)` or `F(k)` exists. Those three therefore carry the Wannier gauge,
+and the two kinds go to different files so that no consumer has to guess which it has.
 
 `<export>` is a third, separate thing: it hands out matrices the run already holds, one
 boolean per consumer (`wannier90`, `irrep`, `wannierberri`, `plotWF`, `orbitrans`,
@@ -94,12 +105,19 @@ Real space, from `<operatorsRs>`:
 |---|---|
 | `WF<n>_hr.dat` | `H(R)` in eV, Wannier90 `hr` format |
 | `WF<n>_r.dat` | `A(R) = <0n\|r\|Rm>` in Å, the non-centred WYSV form |
-| `WF<n>_bmn.dat` | `B(R) = <0n\|H r\|Rm>` in eV·Å — **not numerically validated yet** |
+| `WF<n>_bmn.dat` | `B(R) = <0n\|H r\|Rm>` in eV·Å; reproduced to 6e-08 by rebuilding it outside FLEUR from the Bloch-basis overlaps |
 | `rspauli.1` | spin, 3 components |
 | `anglmomrs.<n>` | orbital moment, 3 components |
 | `rssocmat.1` | spin-orbit, the 2×2 spinor blocks |
 | `wig_vectors` | the Wigner-Seitz `R` mesh |
 | `WF<n>.amn`, `WF<n>.mmn`, `WF<n>.eig` | from `<export wannier90="T"/>`; also written unasked on a serial run, as a path for inspection |
+
+In `k`, from `<operatorsKs>`:
+
+| File | Content |
+|---|---|
+| `WF<n>_operators_ks.hdf` | `spin`, `orbital`, `spinOrbit`, `exchangeTorque` in the Bloch basis, no gauge, with the b-shells beside them |
+| `WF<n>_modern_k.hdf` | `B(k)`, `C(k)`, `F(k)` in the Wannier gauge, one Fourier sum from the three `.dat` files above and in the same units, so the step between them is a plain phase sum |
 
 Interpolated, from `<interpolation>`: `bands_wann_<what>[_domain][_spinN].dat`, one row per
 k-point, `kdist` first and then the bands. `<n>` and `_spinN` are the collinear spin

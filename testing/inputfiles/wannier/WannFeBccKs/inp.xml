@@ -16,7 +16,7 @@
    </calculationSetup>
    <cell>
       <bzIntegration valenceElectrons="16.0" mode="hist" fermiSmearingEnergy="0.001">
-         <kPointListSelection listName="w222"/>
+         <kPointListSelection listName="w444"/>
          <!-- k-points included here -->
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
@@ -66,9 +66,11 @@
         <operatorsKs>
           <operator name="spin"/>
           <operator name="orbital"/>
+          <operator name="bmn"/>
         </operatorsKs>
         <operatorsRs>
           <operator name="hamiltonian"/>
+          <operator name="bmn"/>
           <operator name="spin"/>
           <operator name="orbital"/>
           <operator name="spinOrbit"/>

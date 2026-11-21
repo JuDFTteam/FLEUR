@@ -21,7 +21,7 @@ MODULE m_wgauge_coeff_b
 #endif
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wgauge_write_bmn
+  PUBLIC :: wgauge_write_bmn, wgauge_build_bk
 CONTAINS
 
   ! ---------------------------------------------------------------------------
@@ -52,61 +52,39 @@ CONTAINS
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts, mpicm, irank
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref
 
-    INTEGER :: nb, nw, nk, nnt, nkl, kl, k, kb, nn, a, i, m, n, irpt, ierr
+    INTEGER :: nw, nk, nkl, kl, k, a, i, irpt, ierr
     REAL    :: rdotk0
     COMPLEX :: fac
-    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), tmp(:, :), mh(:, :, :, :), br(:, :, :, :)
+    COMPLEX, ALLOCATABLE :: br(:, :, :, :), bk_loc(:, :, :, :)
     CHARACTER(LEN=64) :: fn
 
-    nb = this%num_bands; nw = this%num_wann; nk = kpts%nkptf
-    nnt = bmesh%nntot; nkl = SIZE(gk_loc)
-    IF (nnt < 1 .OR. .NOT. ALLOCATED(bmesh%wb)) THEN
+    nw = this%num_wann; nk = kpts%nkptf; nkl = SIZE(gk_loc)
+    !> The same builder the k-space export calls, so the file and that export cannot
+    !> drift apart: there is one B(k) and both read it.
+    CALL wgauge_build_bk(this, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, bmesh, &
+                        bk_loc, irank)
+    IF (.NOT. ALLOCATED(bk_loc)) THEN
       IF (irank == 0) WRITE(oUnit,'(a)') &
         'wannierlib operatorsRs: B(R) needs the b-shell weights -> skipped'
       RETURN
     END IF
-
-    ! ---- M^H(k,b) = V(k)^dag diag(eig) M V(k+b) on this rank's k-slice ----
-    ALLOCATE(mh(nw, nw, nnt, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
-    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), tmp(nb, nw))
-    DO kl = 1, nkl
-      k = gk_loc(kl)
-      Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
-      DO i = 1, nb                      ! the eigenvalue weighting acts on the k side
-        Vk(i, :) = eig(i, k) * Vk(i, :)
-      END DO
-      DO nn = 1, nnt
-        kb = bmesh%nnlist(k, nn)
-        Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
-        tmp = MATMUL(mmn_loc(:, :, nn, kl), Vkb)
-        mh(:, :, nn, kl) = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)
-      END DO
-    END DO
-    DEALLOCATE(Vk, Vkb, tmp)
-    IF (irank == 0 .AND. nkl > 0) &
-      CALL wgauge_check_bmn_identity(nb, nw, nnt, gk_loc(1), eig, u_matrix, u_opt, &
-                                    mmn_loc(:, :, :, 1), bmesh)
+    !> bk_loc arrives in Hartree*Angstrom, and the eV*Angstrom of the file is put on by
+    !> the 'bmn' layout on its way to disk: a layout's unit contract belongs to whoever
+    !> writes it, and the k-space export does its own for the same reason.
 
     ! ---- the R sum ----
     ALLOCATE(br(3, nw, nw, nrpts), source=CMPLX(0.0, 0.0))
     DO irpt = 1, nrpts
-      DO m = 1, nw
-        DO n = 1, nw
-          DO kl = 1, nkl
-            k = gk_loc(kl)
-            rdotk0 = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
-            fac = EXP(CMPLX(0.0, -rdotk0)) / REAL(nk)
-            DO nn = 1, nnt
-              DO a = 1, 3
-                br(a, n, m, irpt) = br(a, n, m, irpt) + &
-                  CMPLX(0.0, bmesh%wb(nn) * bmesh%bk(a, nn, k)) * mh(n, m, nn, kl) * fac
-              END DO
-            END DO
-          END DO
+      DO kl = 1, nkl
+        k = gk_loc(kl)
+        rdotk0 = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
+        fac = EXP(CMPLX(0.0, -rdotk0)) / REAL(nk)
+        DO a = 1, 3
+          br(a, :, :, irpt) = br(a, :, :, irpt) + bk_loc(:, :, a, kl) * fac
         END DO
       END DO
     END DO
-    DEALLOCATE(mh)
+    DEALLOCATE(bk_loc)
 #ifdef CPP_MPI
     CALL MPI_ALLREDUCE(MPI_IN_PLACE, br, SIZE(br), MPI_DOUBLE_COMPLEX, MPI_SUM, mpicm, ierr)
 #endif
@@ -130,6 +108,73 @@ CONTAINS
     END IF
     DEALLOCATE(br)
   END SUBROUTINE wgauge_write_bmn
+
+  !> B(k)_a = i sum_b w_b b_a M^H(k,b), with M^H(k,b) = V(k)^dag diag(eig) M^(0,b) V(k+b).
+  !>
+  !> Split out because two separate requests want it and neither implies the other:
+  !> <operatorsRs name="bmn"> sums it over R and writes WF<n>_bmn.dat, and
+  !> <operatorsKs name="bmn"> hands it over as it stands. One builder, so the two cannot
+  !> disagree, and the b-sum sits here rather than inside the R loop, where it did not
+  !> depend on the loop variable and was rebuilt nrpts times.
+  !>
+  !> Comes back in Hartree*Angstrom, the unit eig and the b-shells make it; converting is
+  !> the business of whoever writes a layout. bk_loc comes back UNALLOCATED when the run
+  !> has no b-shell weights, which is the one way this quantity can be asked for and not
+  !> exist; the caller decides what to say about that.
+  SUBROUTINE wgauge_build_bk(this, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, bmesh, &
+                            bk_loc, irank)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    REAL,    INTENT(IN) :: eig(:, :)                 ! (nb,nk) ab-initio, Hartree
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         ! (nw,nw,nk)
+    COMPLEX, INTENT(IN) :: u_opt(:, :, :)            ! (nb,nw,nk)
+    COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's slice
+    INTEGER, INTENT(IN) :: gk_loc(:)                 ! (nk_loc) global k of each slice entry
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: bk_loc(:, :, :, :)   ! (nw,nw,3,nk_loc)
+    INTEGER, INTENT(IN) :: irank
+
+    INTEGER :: nb, nw, nnt, nkl, kl, k, kb, nn, a, i
+    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), tmp(:, :), mh(:, :, :, :)
+
+    nb = this%num_bands; nw = this%num_wann
+    nnt = bmesh%nntot; nkl = SIZE(gk_loc)
+    IF (nnt < 1 .OR. .NOT. ALLOCATED(bmesh%wb)) RETURN
+
+    ! ---- M^H(k,b) = V(k)^dag diag(eig) M V(k+b) on this rank's k-slice ----
+    ALLOCATE(mh(nw, nw, nnt, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), tmp(nb, nw))
+    DO kl = 1, nkl
+      k = gk_loc(kl)
+      Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
+      DO i = 1, nb                      ! the eigenvalue weighting acts on the k side
+        Vk(i, :) = eig(i, k) * Vk(i, :)
+      END DO
+      DO nn = 1, nnt
+        kb = bmesh%nnlist(k, nn)
+        Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
+        tmp = MATMUL(mmn_loc(:, :, nn, kl), Vkb)
+        mh(:, :, nn, kl) = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)
+      END DO
+    END DO
+    DEALLOCATE(Vk, Vkb, tmp)
+    IF (irank == 0 .AND. nkl > 0) &
+      CALL wgauge_check_bmn_identity(nb, nw, nnt, gk_loc(1), eig, u_matrix, u_opt, &
+                                    mmn_loc(:, :, :, 1), bmesh)
+
+    ! ---- the b-sum, which does not depend on R ----
+    ALLOCATE(bk_loc(nw, nw, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    DO kl = 1, nkl
+      k = gk_loc(kl)
+      DO nn = 1, nnt
+        DO a = 1, 3
+          bk_loc(:, :, a, kl) = bk_loc(:, :, a, kl) + &
+            CMPLX(0.0, bmesh%wb(nn) * bmesh%bk(a, nn, k)) * mh(:, :, nn, kl)
+        END DO
+      END DO
+    END DO
+    DEALLOCATE(mh)
+  END SUBROUTINE wgauge_build_bk
 
   ! B^W_alpha(k) = H^W(k) . A^W_alpha(k), with H^W = V^dag diag(eig) V.
   !

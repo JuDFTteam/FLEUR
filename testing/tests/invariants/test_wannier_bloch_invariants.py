@@ -1,12 +1,30 @@
 """
-Differential regression test for <operatorsKs>, the Bloch-basis operator export.
+Differential regression test for <operatorsKs>, in both of its halves.
 
-What it guards is a JOIN, not a number. <operatorsKs> writes O(k) before any gauge
-exists; <operatorsRs> writes O(R) after the gauge has been applied and Fourier
-transformed. The two share the coarse matrices and nothing else, so if the Bloch
-export ever starts writing a different object -- a transposed one, a differently
-distributed one, a stale slice -- the identity below stops holding while every
-self-contained check on the new file keeps passing.
+What it guards is a JOIN, not a number. <operatorsKs> hands over what the run holds in
+k; <operatorsRs> writes O(R) after the Fourier sum. The two share their inputs and
+nothing else, so if either export starts writing a different object -- a transposed
+one, a differently distributed one, a stale slice -- the identities below stop holding
+while every self-contained check on the new file keeps passing.
+
+The block has two halves and this covers one join per half:
+
+  spin, orbital       Bloch basis, no gauge. The gauge is applied here, from the
+                      checkpoint, and must land on O(R = 0).
+  bmn                 already contracted over neighbours, so it carries the gauge
+                      and all that is left between it and the .dat is a phase sum.
+
+They fail for different reasons -- the first for a gauge or a band-axis error, the
+second for an R set, a component order or a unit -- which is why both are here.
+
+WHY THE MESH IS 4x4x4, AND WHY IT MUST NOT BE SHRUNK. The second join is a phase sum,
+and on a 2x2x2 mesh every k component is 0 or 1/2, so every k.R is a multiple of 1/2
+and every phase is +-1: real. The sign of the exponent is then not observable at all --
+flipping it leaves the result bit-identical, and so does sending R to -R. That is not a
+weak assertion but a case with no information in it, and it was measured: on 2x2x2 the
+inverted-sign mutation PASSES, on 4x4x4 it fails by 1.46 against a tolerance of 2e-6.
+Fifty-six more k-points are what buys this test its sensitivity, and dropping back to
+the coarser mesh would blind it without turning anything red.
 
 That is the whole point: the file is Hermitian, has the right norm, the right
 eigenvalues and the right shape whether or not its two band axes are the way round
@@ -28,7 +46,7 @@ neither numpy nor h5py, so the importorskip below turns it into a skip there bef
 anything is executed. It is a cross-check of two writers against each other, not a
 gate on the pipeline. Where both packages are present it runs like any other test:
 
-    ./run_tests.sh testing/tests/invariants/test_wannier_bloch_invariants.py
+    ./run_tests.sh -k operators_ks_reproduces
 """
 
 import pytest
@@ -126,10 +144,9 @@ def _check_bmesh(path, np, h5py):
     Wannier90 chooses the shells per k-point and bk carries a k index for that reason.
 
     WHAT IS NOT CHECKED, and why. Not that neighbour index b names the same b vector for
-    every k -- it does not. On the 2x2x2 mesh this case uses, +b and -b land on the same
-    stored point, so which one a given slot holds is Wannier90's business and bk varies
-    over k by an amount the size of a shell. Tying nnlist and gkpb to bk needs the
-    reciprocal lattice, which this file does not carry and a consumer has anyway.
+    every k: which b a given slot holds is Wannier90's business, and bk carries a k index
+    for exactly that reason. Tying nnlist and gkpb to bk needs the reciprocal lattice,
+    which this file does not carry and a consumer has anyway.
     """
     with h5py.File(path, "r") as handle:
         nntot = int(np.asarray(handle["nntot"])[0])
@@ -168,12 +185,50 @@ def _check_bmesh(path, np, h5py):
         "must, and a gkpb that is always zero is the signature of the field never being "
         "filled rather than of a mesh that does not need it")
 
+    #> Handed back because the phase sum below needs the very k-list the file was built
+    #> on, and reconstructing it from inp.xml would be a second convention to get wrong.
+    return bkf
+
+
+def _read_bmn_dat(path, num_wann, np):
+    """WF<n>_bmn.dat in the 'bmn' layout: R1 R2 R3  i j  then the three components.
+
+    One row per (R, i, j) with all three Cartesian components on it, so a row is
+    5 + 2*3 = 11 numbers. The file opens with a header line that happens to split into
+    eleven words too, which is why the first five are also required to be integers --
+    counting the columns alone lets the header through and poisons the R set.
+
+    Returns the R vectors as written and B(R) as (comp, row, column, R).
+    """
+    rvec, rows = [], []
+    with open(path) as handle:
+        for line in handle:
+            tok = line.split()
+            if len(tok) != 11:
+                continue
+            try:
+                head = [int(x) for x in tok[:5]]
+            except ValueError:
+                continue
+            rvec.append(head[:3])
+            rows.append((head, [float(x) for x in tok[5:]]))
+    assert rows, f"{path} holds no data row in the 'bmn' layout"
+
+    uniq = sorted({tuple(r) for r in rvec})
+    index = {r: i for i, r in enumerate(uniq)}
+    out = np.zeros((3, num_wann, num_wann, len(uniq)), complex)
+    for head, vals in rows:
+        ir = index[tuple(head[:3])]
+        for a in range(3):
+            out[a, head[3] - 1, head[4] - 1, ir] = vals[2 * a] + 1j * vals[2 * a + 1]
+    return np.array(uniq, float), out
+
 
 @pytest.mark.wannierlib
 @pytest.mark.bulk
 @pytest.mark.soc
-def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
-    """Rotating <operatorsKs> with the checkpoint gauge must give <operatorsRs> at R = 0."""
+def test_operators_ks_reproduces_the_real_space_route(execute_fleur):
+    """Both halves of <operatorsKs> must land on what <operatorsRs> wrote."""
     #> These two stay INSIDE the test and must not be hoisted to module level: they are
     #> what keeps it off CI. Collection imports the module, so a module-level "import
     #> numpy" raises there on a machine that lacks it -- which is every CI runner -- and
@@ -185,13 +240,13 @@ def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
     #> the exporter is the identity and a mis-ordered k map would never show.
     res = execute_fleur(BASE, rm_files=["."], mpi_procs=2)
 
-    for name in ("WF1_operators_ks.hdf", "WF1_bmesh.hdf", "WF1.chk",
-                 "rspauli.1", "anglmomrs.1"):
+    for name in ("WF1_operators_ks.hdf", "WF1_modern_k.hdf", "WF1_bmesh.hdf", "WF1.chk",
+                 "rspauli.1", "anglmomrs.1", "WF1_bmn.dat"):
         assert name in res, (
             f"{name} was not written. This case asks for <operatorsKs>, <operatorsRs>, "
             f"a b-mesh and a checkpoint, and the cross-check needs all of them")
 
-    _check_bmesh(res["WF1_bmesh.hdf"], np, h5py)
+    bkf = _check_bmesh(res["WF1_bmesh.hdf"], np, h5py)
 
     num_bands, num_wann, num_kpts, gauge = _read_checkpoint(res["WF1.chk"], np)
 
@@ -223,3 +278,31 @@ def test_bloch_operators_reproduce_the_real_space_route(execute_fleur):
                 f"R = 0: relative deviation {deviation:.3e} against a tolerance of {TOL:.0e}. "
                 f"The two writers share the coarse matrices, so either the gauge rotation, "
                 f"the k ordering or the band-axis order of one of them has moved")
+
+    #> The second half. B is already contracted over the neighbours and already gauged,
+    #> so no rotation happens here: what separates the two files is the phase sum alone,
+    #> over the R set the .dat itself carries and with no degeneracy weight -- the cart2
+    #> family writes none and the sum takes none, unlike H(R).
+    #>
+    #> The tolerance is ABSOLUTE and does not scale: the .dat is printed with six
+    #> decimals, so 5e-7 of disagreement is the file's own rounding whatever the size of
+    #> B, and anything that breaks the join is O(1).
+    irvec, theirs = _read_bmn_dat(res["WF1_bmn.dat"], num_wann, np)
+    with h5py.File(res["WF1_modern_k.hdf"], "r") as handle:
+        nw_file, nk_file = (int(v) for v in handle["dims"][:2])
+        assert (nw_file, nk_file) == (num_wann, num_kpts), (
+            f"the k-space tensors say {nw_file} Wannier functions and {nk_file} "
+            f"k-points, the checkpoint says {num_wann} and {num_kpts}")
+        bloch = _read_operator_k(handle["bmn"], np)          # (nk, 3, row, column)
+
+    phase = np.exp(-2j * np.pi * (bkf @ irvec.T)) / num_kpts  # (nk, nR)
+    mine = np.einsum("kcnm,kr->cnmr", bloch, phase)
+
+    scale = np.abs(theirs).max()
+    assert scale > 1e-3, f"WF1_bmn.dat is all but empty (max {scale:.3e})"
+    deviation = np.abs(theirs - mine).max()
+    assert deviation < 2e-6, (
+        f"B(k) no longer Fourier-sums to WF1_bmn.dat: max deviation {deviation:.3e} "
+        f"against a tolerance of 2e-6 on a scale of {scale:.3e}. Nothing but a phase sum "
+        f"sits between the two, so the suspects are the R set, the order of the three "
+        f"Cartesian components, the band-axis order of the HDF read, or the units")
