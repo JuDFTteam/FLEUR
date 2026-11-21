@@ -1,5 +1,4 @@
 set(fleur_F77 ${fleur_F77}
-src/fleur/wannierlib/eulerrot.f
 src/fleur/wannierlib/wann_2dvacabcof.F
 src/fleur/wannierlib/wann_plot_vac.F
 src/fleur/wannierlib/wann_real.F

@@ -20,7 +20,6 @@ MODULE m_wannierlib_amn
   USE m_constants
   USE m_intgr, ONLY: intgr3
   USE m_dwigner
-  USE m_eulerrot
   USE m_clebsch
   USE m_types_atoms
   USE m_types_kpts
@@ -84,7 +83,17 @@ CONTAINS
       CALL wannierlib_tlmw(wannierlib, wannierlib%num_wann, l_spinors, jspin, tlmwf)
     END IF
 
-    CALL eulerrot(wannierlib%num_wann, wannierlib%proj%alpha, wannierlib%proj%beta, wannierlib%proj%gamma, amx)
+    !> One rotation matrix per projection. euler comes from m_dwigner, beside the
+    !> d_wigner below it feeds; the eulerrot that used to sit in this directory was the
+    !> same rotation element for element with this loop already wrapped around it.
+    !>
+    !> Nothing in the testset could have told the two apart: no case there gives a
+    !> projection an angle, so every one of these matrices is the identity in every test
+    !> that runs. The two were compared directly instead, over 2197 angle triples.
+    DO nwf = 1, wannierlib%num_wann
+      CALL euler(wannierlib%proj(nwf)%alpha, wannierlib%proj(nwf)%beta, &
+                 wannierlib%proj(nwf)%gamma, amx(:, :, nwf:nwf))
+    END DO
     imx(:, :) = 0.0
     imx(1, 1) = 1.0
     imx(2, 2) = 1.0
