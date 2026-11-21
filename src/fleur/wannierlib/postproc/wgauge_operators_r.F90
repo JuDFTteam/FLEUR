@@ -33,6 +33,7 @@ MODULE m_wgauge_operators_r
   USE m_types_wgauge_bmesh
   USE m_wgauge_ft, ONLY : wgauge_ft_to_real, wgauge_ws_vectors, wgauge_ft_to_real_reduce
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+  USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
   USE m_wgauge_hamk, ONLY : wgauge_build_hamk
   USE m_wgauge_coeff_a, ONLY : wgauge_build_berry_aw_r, wgauge_check_berry_centres, wgauge_write_ar
   USE m_wgauge_coeff_b, ONLY : wgauge_write_bmn
@@ -57,20 +58,20 @@ CONTAINS
     fn = 'WF1_hr'
     IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_hr'
     ALLOCATE(hr4(nw, nw, nrpts, 1)); hr4(:, :, :, 1) = hr(1:nw, 1:nw, 1:nrpts)
-    CALL wgauge_write_realspace(hr4, irvec, ndegen, nrpts, nw, 1, 'hr', TRIM(fn)//'.dat', 0)
+    CALL wgauge_write_realspace(hr4, irvec, ndegen, nrpts, nw, 1, 'hr', wannierlib_export_file(TRIM(fn)//'.dat'), 0)
     DEALLOCATE(hr4)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (H(R), eV)'
   END SUBROUTINE wgauge_write_hr
 
   ! ---------------------------------------------------------------------------
-  ! <operators_r>: real-space Wannier operator matrices O(R) (Fourier step 3),
+  ! <operatorsRs>: real-space Wannier operator matrices O(R) (Fourier step 3),
   ! in Wannier90/FLEUR standalone format for external transport post-processing.
-  ! No band interpolation. Rank 0 writes; spin/orbital/spin_orbit use a distributed FT-reduce
+  ! No band interpolation. Rank 0 writes; spin/orbital/spinOrbit use a distributed FT-reduce
   ! over MPI ranks. Files: WF1_hr.dat (H, eV), WF1_r.dat (position, Ang), rspauli.1 (spin),
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE wgauge_write_operators_r(this, request, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
+                                          s0_loc, l0_loc, soc4_loc, t0_loc, hxc0_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_melem_request), INTENT(IN) :: request
     TYPE(t_cell), INTENT(IN) :: cell
@@ -81,6 +82,12 @@ CONTAINS
     !> Per-rank coarse slices. ALLOCATABLE because a slice nobody asked for is not
     !> built at all: every use below sits behind the request that would have built it.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :, :), soc4_loc(:, :, :, :)
+    !> The exchange torque, three Cartesian components like the spin it is built from.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: t0_loc(:, :, :, :)
+    !> (nb,nb,1,nk_loc) the same exchange field projected ON the moment instead of across
+    !> it: one component, which is why it goes out in the hoppings layout and not the
+    !> Cartesian one.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: hxc0_loc(:, :, :, :)
     !> (nw,nw,3,3,nk_loc) the geometric tensor, already contracted over the pairs of
     !> neighbours and already gauged, because that has to happen where the wavefunctions are.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
@@ -152,7 +159,7 @@ CONTAINS
         IF (irank == 0) CALL wgauge_check_berry_centres(this, aw_r, aw_irvec, aw_nrpts, bmesh)
         IF (irank == 0) CALL wgauge_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
-      CASE ('position_pw90') ! A(R) in the postw90 convention: Eq. (44) on the diagonal too,
+      CASE ('positionPw90') ! A(R) in the postw90 convention: Eq. (44) on the diagonal too,
                              ! plus A <- (A + A^dagger)/2 at each k. `position` is NOT touched:
                              ! orbitrans and the Wannier-centre check need the _r.dat form, and
                              ! berry.F90 refuses that form for the orbital magnetisation
@@ -168,8 +175,24 @@ CONTAINS
         IF (l_collinear) THEN
           CONTINUE
         ELSE
-          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
+          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., wannierlib_export_file('rspauli.1'))
         END IF
+      !> Written in the 'hr' layout, which is the one the transport code reads for the
+      !> Hamiltonian: five integer columns and the complex entry, no Cartesian index --
+      !> there is only one component -- and in eV, because the consumer keeps it
+      !> alongside the hoppings and the two have to be in one unit.
+      CASE ('exchangeField')
+        CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, hxc0_loc, gk_loc, 1, mpi_comm, irank, .FALSE., &
+                                          wannierlib_export_file('rshxc.1'), fmt='hr')
+      CASE ('exchangeTorque')
+        !> T = -m_hat x <sigma B_xc>, the same three components the spin has and the same
+        !> reduce, since the local blocks were already assembled on the coarse mesh.
+        ! collinear: the cross-spin block is what the classic route calls updown.perpmag,
+        ! and it is a Bloch-basis quantity. It is written whole by wgauge_perpmag_collinear
+        ! (main) rather than transformed to R per channel here.
+        IF (l_collinear) CYCLE
+        CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, t0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., &
+                                          wannierlib_export_file('rstorque.1'))
       CASE ('orbital')
         ! collinear: like the spin, L is written once as one 2N block-diagonal matrix after
         ! both wannierisations by wgauge_anglmom_collinear (main), not per channel here.
@@ -179,15 +202,15 @@ CONTAINS
         ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 6)))
         o0l = SUM(l0_loc(:, :, :, :, wf_channel, :), DIM=4)
         CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., &
-                                          'anglmomrs.'//ACHAR(48+wf_channel))
+                                          wannierlib_export_file('anglmomrs.'//ACHAR(48+wf_channel)))
         DEALLOCATE(o0l)
-      CASE ('spin_orbit')
+      CASE ('spinOrbit')
         ! collinear: like spin and orbital, written once as one 2N matrix after both
         ! wannierisations by wgauge_soc_collinear (main), not per channel here.
         IF (l_collinear) THEN
           CONTINUE
         ELSE
-          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
+          CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., wannierlib_export_file('rssocmat.1'))
         END IF
       CASE DEFAULT
         !> Accepted by the request, so the gap is this dispatch and not the input.
@@ -203,7 +226,7 @@ CONTAINS
   ! Distributed real-space export of a coarse operator (spin/orbital/soc): each rank builds
   ! ow_loc = V(gk)^dagger o0_loc V(gk) for its k-slice, FT-reduces to O(R), rank 0 writes.
   ! is_soc=.TRUE. -> rssocmat.1 format (R i j jj ii); else rspauli/anglmomrs (R i j comp).
-  SUBROUTINE wgauge_op_rs_distributed(this, cell, kpts, vloc, o0_loc, gk_loc, ncomp, mpi_comm, irank, is_soc, fname)
+  SUBROUTINE wgauge_op_rs_distributed(this, cell, kpts, vloc, o0_loc, gk_loc, ncomp, mpi_comm, irank, is_soc, fname, fmt)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -212,6 +235,10 @@ CONTAINS
     INTEGER, INTENT(IN) :: gk_loc(:), ncomp, mpi_comm, irank
     LOGICAL, INTENT(IN) :: is_soc
     CHARACTER(LEN=*), INTENT(IN) :: fname
+    !> The layout, for an operator whose shape is not the Cartesian one. Absent means
+    !> what every caller before this one got: 'generic', or 'spinor2x2' for the SOC.
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: fmt
+    CHARACTER(LEN=9) :: layout
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), or_(:, :, :, :), o1(:, :, :), tmp(:, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nb, nw, nkl, kl, a, nrpts
@@ -232,8 +259,10 @@ CONTAINS
     END DO
     DEALLOCATE(ow_loc)
     IF (irank == 0) THEN
+      layout = MERGE('spinor2x2', 'generic  ', is_soc)
+      IF (PRESENT(fmt)) layout = fmt
       CALL wgauge_write_realspace(or_, irvec, ndegen, nrpts, nw, ncomp, &
-                                 MERGE('spinor2x2', 'generic  ', is_soc), TRIM(fname), irank)
+                                 TRIM(layout), TRIM(fname), irank)
       WRITE(oUnit, '(a,i0,a)') 'wannierlib: wrote '//TRIM(fname)//' (', nrpts, ' R-vectors, distributed FT)'
     END IF
     IF (ALLOCATED(or_)) DEALLOCATE(or_)
@@ -249,7 +278,7 @@ CONTAINS
     INTEGER :: nrpts, ii, iu
     IF (done) RETURN
     CALL wgauge_ws_vectors(cell, kpts%nkpt3, irvec, ndegen, nrpts)
-    OPEN(newunit=iu, file='wig_vectors', status='replace')
+    OPEN(newunit=iu, file=wannierlib_export_file('wig_vectors'), status='replace')
     DO ii = 1, nrpts
       WRITE(iu, *) ii, irvec(1, ii), irvec(2, ii), irvec(3, ii), ndegen(ii)
     END DO

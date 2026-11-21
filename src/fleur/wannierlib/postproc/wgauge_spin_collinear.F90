@@ -17,6 +17,10 @@
 !>  spatial part alone, so <up|L|dn> carries the spin overlap <up|dn> = 0 as a factor and
 !>  the cross block vanishes identically. The 2N matrix is block-diagonal, and the two
 !>  blocks are each channel's own L in its own gauge.
+!>
+!>  The exchange torque is the exception that stays in the Bloch basis: its ingredient is
+!>  the cross-spin block of the exchange field, which the classic route writes as
+!>  updown.perpmag for its consumers to read, so it is written as the k-loop built it.
 MODULE m_wgauge_spin_collinear
    USE m_juDFT
    USE m_constants, ONLY: ImagUnit, oUnit
@@ -25,13 +29,37 @@ MODULE m_wgauge_spin_collinear
    USE m_types_mpi
    USE m_wgauge_ft, ONLY: wgauge_ft_to_real_reduce
    USE m_wgauge_io, ONLY: wgauge_write_realspace
+   USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
    IMPLICIT NONE
    PRIVATE
 
    PUBLIC :: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
+   PUBLIC :: wgauge_perpmag_collinear
 
 CONTAINS
 
+   !> The extents behind a manifold mismatch, as text for the error's hint.
+   !>
+   !> Which of the three is wrong names a different fault: the first is the band count, the
+   !> second the number of Wannier functions, and a fourth extent other than two means the
+   !> run wannierised a single spin channel. Reporting none of them leaves the reader to
+   !> guess among the three.
+   FUNCTION manifold_sizes(v_ch, nb, nw) RESULT(txt)
+      COMPLEX, INTENT(IN) :: v_ch(:, :, :, :)
+      INTEGER, INTENT(IN) :: nb, nw
+      CHARACTER(LEN=160) :: txt
+      WRITE (txt, '(6(a,i0),a)') &
+         'the gauges are (', SIZE(v_ch, 1), ',', SIZE(v_ch, 2), ',', SIZE(v_ch, 3), ',', &
+         SIZE(v_ch, 4), ') and the manifold wants (', nb, ',', nw, ',*,2)'
+   END FUNCTION manifold_sizes
+
+   !> The spin operator over the collinear 2N basis, in real space, as rspauli.1.
+   !>
+   !> A collinear run solves two independent eigenproblems, so the operator that mixes them
+   !> cannot be built inside either pass: each channel contributes its own diagonal block
+   !> through its gauge, and the cross-spin overlap x0 carries the off-diagonal one. That is
+   !> why this runs once both wannierisations have finished and takes both gauges at once.
+   !> The k-sum is done on each rank's slice and reduced before anything is written.
    SUBROUTINE wgauge_rspauli_collinear(num_wann, x0, v_ch, cell, kpts, distk, fmpi)
       INTEGER, INTENT(IN) :: num_wann
       !> The cross-spin overlap <up|dn> on this rank's k-slice, in the Bloch basis:
@@ -55,8 +83,16 @@ CONTAINS
 
       !> The gauges index the same manifolds the overlap does, and a mismatch would be a
       !> silently wrong rotation rather than a failure.
+      !> The empty case goes first: a gauge that was never kept fails the shape test
+      !> too, and reporting a shape of zeros instead of the reason sends the reader
+      !> looking for a mismatch that is not there.
+      IF (SIZE(v_ch) == 0) CALL juDFT_error( &
+         "wgauge_rspauli_collinear: no gauge was kept for this operator", &
+         hint="the run has to ask for it before the channels are wannierised", &
+         calledby="wgauge_rspauli_collinear")
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_rspauli_collinear: the gauges do not match the manifold", &
+                          hint=manifold_sizes(v_ch, nb, nw), &
                           calledby="wgauge_rspauli_collinear")
 
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
@@ -94,7 +130,7 @@ CONTAINS
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
       IF (fmpi%irank == 0) THEN
-         OPEN (newunit=iu, file='rspauli.1', status='replace')
+         OPEN (newunit=iu, file=wannierlib_export_file('rspauli.1'), status='replace')
          DO irpt = 1, nrpts
             DO j = 1, n2
                DO i = 1, n2
@@ -135,8 +171,16 @@ CONTAINS
 
       nb = SIZE(l0, 1); nw = num_wann; n2 = 2*nw
 
+      !> The empty case goes first: a gauge that was never kept fails the shape test
+      !> too, and reporting a shape of zeros instead of the reason sends the reader
+      !> looking for a mismatch that is not there.
+      IF (SIZE(v_ch) == 0) CALL juDFT_error( &
+         "wgauge_anglmom_collinear: no gauge was kept for this operator", &
+         hint="the run has to ask for it before the channels are wannierised", &
+         calledby="wgauge_anglmom_collinear")
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_anglmom_collinear: the gauges do not match the manifold", &
+                          hint=manifold_sizes(v_ch, nb, nw), &
                           calledby="wgauge_anglmom_collinear")
       IF (SIZE(l0, 5) /= 2) CALL juDFT_error( &
          "wgauge_anglmom_collinear: L was not stored for both spin channels", &
@@ -173,7 +217,7 @@ CONTAINS
          lr(:, :, :, kk) = l1; DEALLOCATE (l1)
       END DO
       IF (fmpi%irank == 0) THEN
-         OPEN (newunit=iu, file='anglmomrs.1', status='replace')
+         OPEN (newunit=iu, file=wannierlib_export_file('anglmomrs.1'), status='replace')
          DO irpt = 1, nrpts
             DO j = 1, n2
                DO i = 1, n2
@@ -222,8 +266,16 @@ CONTAINS
 
       nb = SIZE(soc4, 1); nw = num_wann; n2 = 2*nw
 
+      !> The empty case goes first: a gauge that was never kept fails the shape test
+      !> too, and reporting a shape of zeros instead of the reason sends the reader
+      !> looking for a mismatch that is not there.
+      IF (SIZE(v_ch) == 0) CALL juDFT_error( &
+         "wgauge_soc_collinear: no gauge was kept for this operator", &
+         hint="the run has to ask for it before the channels are wannierised", &
+         calledby="wgauge_soc_collinear")
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
          CALL juDFT_error("wgauge_soc_collinear: the gauges do not match the manifold", &
+                          hint=manifold_sizes(v_ch, nb, nw), &
                           calledby="wgauge_soc_collinear")
       IF (SIZE(soc4, 3) /= 4) CALL juDFT_error( &
          "wgauge_soc_collinear: the SOC operator did not keep its four spin blocks", &
@@ -262,12 +314,75 @@ CONTAINS
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
       IF (fmpi%irank == 0) THEN
-         CALL wgauge_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', 'rssocmat.1', fmpi%irank)
+         CALL wgauge_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', wannierlib_export_file('rssocmat.1'), fmpi%irank)
          WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote rssocmat.1 (2N collinear spin-orbit, ', nrpts, ' R-vectors, distributed FT)'
       END IF
       DEALLOCATE (soc_loc, gk_loc)
       IF (ALLOCATED(sr)) DEALLOCATE (sr)
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
    END SUBROUTINE wgauge_soc_collinear
+
+   !> The cross-spin exchange-field block over the whole mesh, in the Bloch basis and in
+   !> the format the classic route writes as updown.perpmag: a title, nbnd/nkpt/nbnd, and
+   !> one free-format record per element.
+   !>
+   !> Written before any gauge on purpose. updown.perpmag is a Bloch-basis quantity -- it
+   !> is what wann_updown produces and what its consumers read -- so rotating it first
+   !> would make it a different object that happens to share a name.
+   !>
+   !> Index order follows wann_perpmag.f: the FIRST index is the bra and carries spin up,
+   !> the second is the ket and carries spin down.
+   SUBROUTINE wgauge_perpmag_collinear(tx0, kpts, distk, fmpi)
+#ifdef CPP_MPI
+      USE mpi
+#endif
+      !> (nbnd, nbnd, nk_loc) on this rank, in ascending global-k order.
+      COMPLEX, INTENT(IN) :: tx0(:, :, :)
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      INTEGER, INTENT(IN) :: distk(:)
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+
+      INTEGER :: nb, nkl, kl, gk, i, j, k, iu, ierr
+      COMPLEX, ALLOCATABLE :: full(:, :, :)
+
+      nb = SIZE(tx0, 1)
+      nkl = COUNT(distk == fmpi%irank)
+      IF (SIZE(tx0, 3) < nkl) CALL juDFT_error( &
+         'wgauge_perpmag_collinear: fewer blocks than k-points on this rank', &
+         calledby='wgauge_perpmag_collinear')
+
+      !> Every rank holds whole matrices for its own k and zeros elsewhere, so the mesh is
+      !> assembled with one sum rather than a gather with displacements.
+      ALLOCATE (full(nb, nb, kpts%nkptf), source=CMPLX(0.0, 0.0))
+      kl = 0
+      DO i = 1, SIZE(distk)
+         IF (distk(i) /= fmpi%irank) CYCLE
+         kl = kl + 1
+         full(:, :, i) = tx0(:, :, kl)
+      END DO
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, full, SIZE(full), MPI_DOUBLE_COMPLEX, MPI_SUM, &
+                         fmpi%mpi_comm, ierr)
+#endif
+
+      IF (fmpi%irank == 0) THEN
+         OPEN (newunit=iu, file=wannierlib_export_file('updown.perpmag'), status='replace', &
+               recl=1000)
+         WRITE (iu, *) 'Overlaps of the wavefunct. with Beff'
+         WRITE (iu, '(i5,i7,i5)') nb, kpts%nkptf, nb
+         DO k = 1, kpts%nkptf
+            DO j = 1, nb
+               DO i = 1, nb
+                  WRITE (iu, *) i, j, k, REAL(full(i, j, k)), AIMAG(full(i, j, k))
+               END DO
+            END DO
+         END DO
+         CLOSE (iu)
+         WRITE (oUnit, '(a,i0,a,i0,a)') &
+            'wannierlib: wrote updown.perpmag (exchange torque, Bloch basis, ', nb, &
+            ' bands, ', kpts%nkptf, ' k-points)'
+      END IF
+      DEALLOCATE (full)
+   END SUBROUTINE wgauge_perpmag_collinear
 
 END MODULE m_wgauge_spin_collinear

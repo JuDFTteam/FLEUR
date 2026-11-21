@@ -136,12 +136,163 @@ CONTAINS
       CHARACTER(len=7) :: str
       REAL :: tempTaual(3, atoms%nat), scpos(3)
       REAL :: amatTemp(3, 3), bmatTemp(3, 3)
+      LOGICAL :: l_wannOpt
+      INTEGER :: wannNumBands, wannMinBand, wannMaxBand, wannSemicore
+      INTEGER :: ityp_w, ilo_w, ios_w
+      CHARACTER(len=1000) :: wannArg
+      LOGICAL :: l_wannProj, wannSeen(0:103), wannChan(0:3, 0:103)
+      INTEGER :: wannNumWann, wannNbReq, wannSpinM, wannNat, wannSub
+      INTEGER :: iEl_w, iCh_w, iPos_w, iSep_w, iCut_w, l_w, nz_w
+      CHARACTER(len=1000) :: wannSpec, wannItem, wannMod
+      CHARACTER(len=8) :: wannChStr
 
       l_include = l_includeIn .or. .not. present(filename)
       l_explicit = l_explicitIn .OR. .not. present(filename)
       l_nocoOpt = noco%l_noco .OR. juDFT_was_argument("-noco")
       l_gfOpt = gfinp%n>0 .OR. juDFT_was_argument("-greensf")
       l_dfptOpt = dfpt%l_dfpt .OR. juDFT_was_argument("-dfpt")
+
+      !-wann asks for a <wannierlib> band window around the bands to
+      !wannierize. The window opens above the semicore states, which are the
+      !local orbitals written as type SCLO further down: a positive qn_ello,
+      !and neither a relLO nor an APW LO. Each contributes 2l+1 states per
+      !equivalent atom, and twice that where the eigenvectors are spinors.
+      l_wannOpt = juDFT_was_argument("-wann")
+      wannNumBands = 0
+      wannMinBand = 0
+      wannMaxBand = 0
+      wannSemicore = 0
+      l_wannProj = .FALSE.
+      wannSpinM = 1
+      IF (l_wannOpt) THEN
+         wannArg = juDFT_string_for_argument("-wann")
+         l_wannProj = INDEX(wannArg, ':') > 0
+         wannChan = .FALSE.
+         wannSeen = .FALSE.
+         wannNumWann = 0
+         wannNbReq = 0
+         wannSpinM = MERGE(2, 1, noco%l_soc .OR. noco%l_noco)
+
+         IF (l_wannProj) THEN
+            !A value carrying a colon is a projection list, not a count:
+            !ELEMENT:channels items separated by commas, channels a subset of
+            !s, p, d and f, and an optional #nbands=N at the end. The key is the
+            !element symbol, so one item reaches every species of that element.
+            !The channels are therefore held per atomic number, which also lets
+            !num_wann be summed over atom types -- the species list does not
+            !exist yet here, and is built further down.
+            wannSpec = ADJUSTL(wannArg)
+            iCut_w = INDEX(wannSpec, '#')
+            IF (iCut_w > 0) THEN
+               wannMod = ADJUSTL(wannSpec(iCut_w + 1:))
+               wannSpec = wannSpec(:iCut_w - 1)
+               IF (wannMod(1:7) /= 'nbands=') CALL juDFT_error( &
+                    "-wann: the only modifier is #nbands=N", calledby="w_inpXML", &
+                    hint="Write it as -wann Fe:spd#nbands=48")
+               READ (wannMod(8:), *, iostat=ios_w) wannNbReq
+               IF (ios_w /= 0 .OR. wannNbReq < 1) CALL juDFT_error( &
+                    "-wann: #nbands needs a positive number", calledby="w_inpXML")
+            END IF
+
+            DO WHILE (LEN_TRIM(wannSpec) > 0)
+               iPos_w = INDEX(wannSpec, ',')
+               IF (iPos_w > 0) THEN
+                  wannItem = wannSpec(:iPos_w - 1)
+                  wannSpec = wannSpec(iPos_w + 1:)
+               ELSE
+                  wannItem = wannSpec
+                  wannSpec = ''
+               END IF
+               wannItem = ADJUSTL(wannItem)
+               IF (LEN_TRIM(wannItem) == 0) CYCLE
+
+               iSep_w = INDEX(wannItem, ':')
+               IF (iSep_w < 2) CALL juDFT_error( &
+                    "-wann: every item needs ELEMENT:channels", calledby="w_inpXML", &
+                    hint="Write it as -wann Cu:spd,Mn:spd,Ge:sp")
+
+               nz_w = -1
+               DO iEl_w = 0, 103
+                  IF (TRIM(ADJUSTL(namat_const(iEl_w))) == &
+                      TRIM(ADJUSTL(wannItem(:iSep_w - 1)))) THEN
+                     nz_w = iEl_w
+                     EXIT
+                  END IF
+               END DO
+               IF (nz_w < 0) CALL juDFT_error( &
+                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " is not an element symbol", calledby="w_inpXML")
+               !A key that matches nothing would write a species without
+               !projections, and the run would only fail later, in wannierlib_amn.
+               IF (.NOT. ANY(atoms%nz(:) == nz_w)) CALL juDFT_error( &
+                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " is not in this structure", calledby="w_inpXML")
+               IF (wannSeen(nz_w)) CALL juDFT_error( &
+                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " appears twice", calledby="w_inpXML", &
+                    hint="Put all of its channels in one item, as Fe:spd.")
+               wannSeen(nz_w) = .TRUE.
+
+               DO iCh_w = iSep_w + 1, LEN_TRIM(wannItem)
+                  SELECT CASE (wannItem(iCh_w:iCh_w))
+                  CASE ('s')
+                     wannChan(0, nz_w) = .TRUE.
+                  CASE ('p')
+                     wannChan(1, nz_w) = .TRUE.
+                  CASE ('d')
+                     wannChan(2, nz_w) = .TRUE.
+                  CASE ('f')
+                     wannChan(3, nz_w) = .TRUE.
+                  CASE (' ')
+                  CASE DEFAULT
+                     CALL juDFT_error("-wann: "//wannItem(iCh_w:iCh_w)// &
+                          " is not one of s, p, d, f", calledby="w_inpXML")
+                  END SELECT
+               END DO
+               IF (.NOT. ANY(wannChan(:, nz_w))) CALL juDFT_error( &
+                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+                    " was given no channels", calledby="w_inpXML")
+            END DO
+
+            !num_wann exactly as init_wannierlib counts it: the 2l+1 of every
+            !channel, over the atoms of each type, doubled where the eigenvectors
+            !are spinors. The sum runs over TYPES, which is what makes it blind
+            !to how the species were split.
+            DO ityp_w = 1, atoms%ntype
+               DO l_w = 0, 3
+                  IF (wannChan(l_w, atoms%nz(ityp_w))) wannNumWann = &
+                     wannNumWann + (2*l_w + 1)*atoms%neq(ityp_w)
+               END DO
+            END DO
+            wannNumWann = wannSpinM*wannNumWann
+
+            !numbands defaults to twice num_wann, so the disentanglement has
+            !states to choose the subspace from. A window as narrow as num_wann
+            !is a one-shot projection with no freedom left. #nbands overrides it.
+            wannNumBands = MERGE(wannNbReq, 2*wannNumWann, wannNbReq > 0)
+            IF (wannNumBands < wannNumWann) CALL juDFT_error( &
+                 "-wann: #nbands is smaller than num_wann", calledby="w_inpXML", &
+                 hint="Wannier90 needs at least as many bands as Wannier functions.")
+         ELSE
+            READ (wannArg, *, iostat=ios_w) wannNumBands
+            IF (ios_w /= 0 .OR. wannNumBands < 1) CALL juDFT_error( &
+                 "-wann needs a positive number of bands, or an ELEMENT:channels list", &
+                 calledby="w_inpXML", hint="Write it as -wann 36 or as "// &
+                 "-wann Cu:spd,Mn:spd,Ge:sp. A flag passed as the value is swallowed silently.")
+         END IF
+         wannSemicore = 0
+         DO ityp_w = 1, atoms%ntype
+            DO ilo_w = 1, atoms%nlo(ityp_w)
+               IF (enpara%qn_ello(ilo_w, ityp_w, 1) < 0) CYCLE
+               IF (atoms%l_relLO(ilo_w, ityp_w)) CYCLE
+               IF (atoms%l_dulo(ilo_w, ityp_w)) CYCLE
+               wannSemicore = wannSemicore + atoms%neq(ityp_w)*(2*atoms%llo(ilo_w, ityp_w) + 1)
+            END DO
+         END DO
+         IF (noco%l_soc .OR. noco%l_noco) wannSemicore = 2*wannSemicore
+         wannMinBand = wannSemicore + 1
+         wannMaxBand = wannSemicore + wannNumBands
+      END IF
 
       band = .false.
       nw = 1
@@ -165,6 +316,12 @@ CONTAINS
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
 110   FORMAT('      <cutoffs Kmax="', a, '" Gmax="', a, '" GmaxXC="', a, '" numbands="', i0, '"/>')
       
+      !> numbands is what the SCF KEEPS, and the SCF does not need the empty bands the
+      !> wannierization reads: writing maxBand here makes every iteration carry them. On
+      !> bcc Fe that is 22 bands where the SCF picks 13 -- 1.7x the bands, and 1.11x the
+      !> time in H generation and diagonalization, over 30 iterations with everything else
+      !> held equal. It is raised at the wannierization step instead, where it is needed,
+      !> and wannierlib says so by name if it was forgotten.
       WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
@@ -537,9 +694,45 @@ WRITE (fileNum, 242) fr(1.0)
             WRITE (fileNum, 324) TRIM(ADJUSTL(loType)), l, n, atoms%ulo_der(ilo, iAtomType)
          END DO
 
+         IF (l_wannProj) THEN
+            nz_w = atoms%nz(iAtomType)
+            !Atoms of this species: the same sum over types that init_wannierlib
+            !makes, because more than one type can carry the same species name.
+            wannNat = 0
+            DO ityp_w = 1, atoms%ntype
+               IF (TRIM(atoms%speciesname(ityp_w)) == TRIM(speciesNames(iSpecies))) &
+                  wannNat = wannNat + atoms%neq(ityp_w)
+            END DO
+            wannChStr = ''
+            wannSub = 0
+            DO l_w = 0, 3
+               IF (.NOT. wannChan(l_w, nz_w)) CYCLE
+               WRITE (fileNum, 901) l_w
+               wannChStr = TRIM(wannChStr)//' '//'spdf'(l_w + 1:l_w + 1)
+               wannSub = wannSub + (2*l_w + 1)*wannNat*wannSpinM
+            END DO
+            !Printed before anything runs: the only way to see that the
+            !element-to-species translation hit the species it was meant to.
+            IF (wannSub > 0) THEN
+               WRITE (*, 902) iSpecies, TRIM(speciesName), &
+                  TRIM(ADJUSTL(namat_const(nz_w))), wannNat, &
+                  TRIM(ADJUSTL(wannChStr)), wannSub
+            ELSE
+               WRITE (*, 903) iSpecies, TRIM(speciesName), &
+                  TRIM(ADJUSTL(namat_const(nz_w)))
+            END IF
+901         FORMAT('         <wannierproj l="', i0, '" m="0" spin=""/>')
+902         FORMAT('   species ', i0, '  "', a, '"  ', a, '  atoms ', i0, &
+                   '   ', a, ' -> ', i0)
+903         FORMAT('   species ', i0, '  "', a, '"  ', a, &
+                   '   no projections')
+         END IF
+
          WRITE (fileNum, '(a)') '      </species>'
       END DO
       WRITE (fileNum, '(a)') '   </atomSpecies>'
+      IF (l_wannProj) WRITE (*, '(a,i0,a,i0)') &
+         '   num_wann = ', wannNumWann, ',  numbands = ', wannNumBands
 
       if (.not. l_include(3)) then
          close (99)
@@ -711,6 +904,43 @@ WRITE (fileNum, 242) fr(1.0)
 430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', a, '" energyUp="', a, '"/>')
       WRITE (fileNum, 430) banddos%l_mcd,fr(banddos%e_mcd_lo), fr(banddos%e_mcd_up)
 
+      IF (l_wannOpt) THEN
+446      FORMAT('         <bands numBands="', i0, '" minBand="', i0, '" maxBand="', i0, '"/>')
+         WRITE (fileNum, '(a)') '      <!-- Set wannierize="T" once the SCF has converged. disFrozMax is an'
+         WRITE (fileNum, '(a)') '           absolute energy in Htr: E_F + 0.1837 is a frozen window at E_F + 5 eV.'
+         WRITE (fileNum, '(a)') '           Raise numbands in <cutoffs> to maxBand at the same time: the SCF picks'
+         WRITE (fileNum, '(a)') '           what it needs and pays for no more, the wannierization reads these. -->'
+         IF (.NOT. l_wannProj) THEN
+            WRITE (fileNum, '(a)') '      <!-- num_wann comes from the <wannierproj> of each species, which this'
+            WRITE (fileNum, '(a)') '           form of -wann does not write: use -wann Fe:spd and inpgen does it. -->'
+         END IF
+         WRITE (fileNum, '(a)') '      <wannierlib wannierize="F">'
+         WRITE (fileNum, 446) wannNumBands, wannMinBand, wannMaxBand
+         WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" numIter="3000" convTol="0.00000000001" convWindow="10" mixRatio="0.5"/>'
+         WRITE (fileNum, '(a)') '         <wannierization numIter="10000" convTol="0.00000000001" convWindow="10" precond="F"/>'
+         WRITE (fileNum, '(a)') '         <operatorsRs>'
+         WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
+         WRITE (fileNum, '(a)') '            <operator name="position"/>'
+         WRITE (fileNum, '(a)') '            <operator name="positionPw90"/>'
+         WRITE (fileNum, '(a)') '            <operator name="bmn"/>'
+         WRITE (fileNum, '(a)') '            <operator name="fmn"/>'
+         WRITE (fileNum, '(a)') '            <operator name="cmn"/>'
+         WRITE (fileNum, '(a)') '            <operator name="spin"/>'
+         WRITE (fileNum, '(a)') '            <operator name="orbital"/>'
+         WRITE (fileNum, '(a)') '            <operator name="spinOrbit"/>'
+         WRITE (fileNum, '(a)') '            <!-- exchangeTorque needs every site to share one moment direction: a global rotation is fine, a texture is not -->'
+         WRITE (fileNum, '(a)') '            <operator name="exchangeTorque"/>'
+         !> Only on the spinor route, because that is where it exists: the projection on
+         !> the moment is taken over a spinor, and offering it in a collinear template
+         !> would put a name in the file that the run then refuses.
+         IF (judft_was_argument("-spinor")) THEN
+            WRITE (fileNum, '(a)') '            <!-- exchangeField is the same exchange field projected ON the moment, which is the exchange Hamiltonian rather than the torque -->'
+            WRITE (fileNum, '(a)') '            <operator name="exchangeField"/>'
+         END IF
+         WRITE (fileNum, '(a)') '         </operatorsRs>'
+         WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" orbitrans="F" juwip="F" plotWF="F" plotGrid="40 40 40"/>'
+         WRITE (fileNum, '(a)') '      </wannierlib>'
+      END IF
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN
          WRITE (fileNum, '(a)') '  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->'

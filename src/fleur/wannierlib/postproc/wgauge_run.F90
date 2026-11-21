@@ -24,6 +24,7 @@ MODULE m_wgauge_run
    USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, melem_exposed_find
    USE m_types_wgauge_domains, ONLY: t_wgauge_domains
    USE m_wgauge_operators_r, ONLY: wgauge_write_operators_r
+   USE m_wgauge_coeff_b, ONLY: wgauge_build_bk
    USE m_wgauge_coeff_a, ONLY: wgauge_build_berry_aw_r, wgauge_check_berry_centres
    USE m_wgauge_hamk, ONLY: t_wgauge_hgauge, wgauge_build_hamk, wgauge_hgauge_domain
    USE m_wgauge_bands_io, ONLY: wgauge_bands_labels
@@ -40,7 +41,7 @@ MODULE m_wgauge_run
 CONTAINS
 
    SUBROUTINE wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, coarse, f0_loc, c0_loc, &
-                        mmn, bmesh, distk, fmpi, wf_channel, spin_suffix)
+                        mmn, bmesh, distk, fmpi, wf_channel, spin_suffix, b0k_out, gk_loc_out)
       TYPE(t_melem_request), INTENT(IN) :: request
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       TYPE(t_wgauge_domains), INTENT(IN) :: domains
@@ -61,11 +62,17 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN), OPTIONAL :: wf_channel            !< collinear spin channel (1/2); default 1
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix  !< '_spin1'/'_spin2' collinear; empty otherwise
+      !> B(k) and this rank's global-k list, handed up for the <operatorsKs> file. The file
+      !> is written by the driver because the writer lives in export/, which this directory
+      !> does not reach into: what belongs here is building B(k), not writing it.
+      COMPLEX, ALLOCATABLE, INTENT(OUT), OPTIONAL :: b0k_out(:, :, :, :)
+      INTEGER, ALLOCATABLE, INTENT(OUT), OPTIONAL :: gk_loc_out(:)
 
       INTEGER :: iop, wf_ch, irank, mpi_comm
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
+      COMPLEX, ALLOCATABLE :: b0k(:, :, :, :)          ! (nw,nw,3,nk_loc) B(k) for the k-space export
       !> H_W(k) and H(R): the Hamiltonian side of every interpolation, built once here.
       COMPLEX, ALLOCATABLE :: ham_k(:, :, :), ham_r(:, :, :)
       INTEGER, ALLOCATABLE :: h_irvec(:, :), h_ndegen(:)
@@ -85,7 +92,7 @@ CONTAINS
       IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
       wf_ch = 1
       IF (PRESENT(wf_channel)) wf_ch = wf_channel
-      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
+      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operatorsRs (WF1/WF2)
 
       CALL timestart('wgauge_run')
 
@@ -95,6 +102,7 @@ CONTAINS
       DO iop = 1, SIZE(distk)
          IF (distk(iop) == irank) THEN; jkl = jkl + 1; gk_loc(jkl) = iop; END IF
       END DO
+      IF (PRESENT(gk_loc_out)) gk_loc_out = gk_loc
 
       ! ---- output domains: one per <domain>, in the order they were declared ----
       !> A suffixed domain's files are renamed after it runs, so an unsuffixed domain
@@ -112,8 +120,23 @@ CONTAINS
 
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
       CALL wgauge_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
-                                   coarse%s0, coarse%l0, coarse%soc4, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
+                                   coarse%s0, coarse%l0, coarse%soc4, coarse%t0, coarse%hxc0, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
+
+      !> (2b) <operatorsKs> can also ask for B, C and F. They are not in the Bloch basis
+      !> the other half of that block promises: contracting over PAIRS of neighbours needs
+      !> a band index that means the same state at k+b1 and at k+b2, and the Bloch one does
+      !> not, so these three carry the Wannier gauge and go to a file of their own. The
+      !> request is independent of <operatorsRs> -- either block may ask for a tensor and
+      !> neither obliges the other -- so this runs whether or not the pass above did.
+      !>
+      !> C and F arrive already built, so only B is made here; the three travel up to the
+      !> driver, which writes them.
+      IF (request%has_op_k('bmn')) &
+         CALL wgauge_build_bk(manifold, kpts, eig, u_matrix, u_opt, mmn, gk_loc, bmesh, &
+                             b0k, irank)
+      IF (PRESENT(b0k_out) .AND. ALLOCATED(b0k)) CALL MOVE_ALLOC(b0k, b0k_out)
+      IF (ALLOCATED(b0k)) DEALLOCATE (b0k)
 
       !> MDRS, switched on once for every operator and every output domain rather than per
       !> call: interpolating H with it and an operator without it would put the two in
@@ -184,19 +207,22 @@ CONTAINS
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
                ! bound=1: <sigma> of a normalised spinor cannot exceed 1, so the driver can
                ! say so when the interpolation overshoots. Only spin has a bound this simple.
-               IF (request%op_total(iop) == 1) &
-                  CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                                  coarse%s0, gk_loc, 3, kfrac, hg, outname(iop, 1), irank, mpi_comm, &
-                                                  bound=1.0)
+               CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                               coarse%s0, gk_loc, 3, kfrac, hg, outname(iop, 1), irank, mpi_comm, &
+                                               bound=1.0)
             CASE ('orbital')
                ! total (site-summed) orbital moment
-               IF (request%op_total(iop) == 1) &
-                  CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                                  SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, kfrac, &
-                                                  hg, outname(iop, 1), irank, mpi_comm)
-            CASE ('spin_orbit')
+               CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                               SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, kfrac, &
+                                               hg, outname(iop, 1), irank, mpi_comm)
+            CASE ('spinOrbit')
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, kfrac, hg, outname(iop, 1), irank, mpi_comm)
+            CASE ('exchangeTorque')
+               ! T = -(s x m), three Cartesian components like the spin, and like it
+               ! only defined with spinors -- the collinear case is refused upstream.
+               CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                               coarse%t0, gk_loc, 3, kfrac, hg, outname(iop, 1), irank, mpi_comm)
             CASE ('velocity')
                ! Wannier Berry connection A^(W)_alpha(R): built distributed from the local overlaps
                ! and reduced (collective, all ranks); the centre check (rank 0) calibrates conj/sign.

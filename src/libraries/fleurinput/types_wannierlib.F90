@@ -7,7 +7,8 @@
 ! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
 MODULE m_types_wannierlib
-  USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, melem_exposed_find
+  USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, WANNIERLIB_OPK, &
+                                  melem_exposed_find
   USE m_types_kpts
   USE m_juDFT
   USE m_types_atoms
@@ -16,6 +17,7 @@ MODULE m_types_wannierlib
   USE m_constants,ONLY: ounit
   USE m_mpi_bc_tool
   USE m_types_xml
+  USE m_calculator, ONLY: evaluateList
   USE m_constants
   IMPLICIT NONE
   PRIVATE
@@ -46,28 +48,40 @@ MODULE m_types_wannierlib
     CHARACTER(LEN=20) :: species = ''
   END TYPE t_wannierlib_proj
 
-  !> One <operator> of <interpolation>: which operator, which components of it, and
-  !> whether the site-summed projection is wanted.
+  !> One <operator> of <interpolation>: which operator to project onto the
+  !> interpolated bands. Declaring it is what asks for it.
   TYPE t_wannierlib_op
     SEQUENCE
-    CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spin_orbit/velocity/...
-    CHARACTER(LEN=32) :: comp = ''   ! requested components; '' = all of the operator rank
-    INTEGER :: total = 1             ! 1 = write the summed-over-atoms projection
+    CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spinOrbit/velocity/...
   END TYPE t_wannierlib_op
 
   !> The <export> block: copy out matrices the run already holds, for someone outside.
   !>
   !> PROVISIONAL. Nothing inside FLEUR reads any of these back. They exist so a run can be
   !> cross-checked against a standalone wannier90.x, and so tools that consume Wannier data
-  !> -- WannierBerri, irrep -- can be fed without recomputing. Grouped rather than left as
-  !> four loose flags precisely because it is provisional: one object is one seam, whether
+  !> -- WannierBerri, irrep -- can be fed without recomputing. Grouped rather than left
+  !> as loose flags precisely because it is provisional: one object is one seam, whether
   !> the block is later promoted or dropped.
   TYPE t_wannierlib_export
     SEQUENCE
-    LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
-    LOGICAL :: basis = .FALSE.   ! <export wannierberri="T"/>:   WF<n>_basis.hdf
-    LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
-    LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
+    !> The five files a standalone wannier90.x needs, as one set: the .win that declares
+    !> the run, the three matrices, and the .chk Wannier90 writes itself in its own format.
+    LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:  .win/.amn/.mmn/.eig/.chk
+    !> Not a consumer but a fact about the run: the b-shells and the neighbour topology,
+    !> fixed before any gauge exists and shared by everything built from them.
+    LOGICAL :: bmesh = .FALSE.   ! <export bmesh="T"/>:          WF<spin>_bmesh.hdf
+    LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    input/, renamed, + four structural
+    LOGICAL :: juwip = .FALSE.   ! <export juwip="T"/>:         w90files/, names unchanged
+    !> The field keeps the content as its name and the attribute names the consumer, as
+    !> w90 does for wannier90.
+    LOGICAL :: basis = .FALSE.        ! <export irrep="T"/>:   WF<spin>_basis.hdf
+    !> The one flag here that names no consumer: .xsf and .vts are read by XCrySDen and
+    !> by ParaView, and by more than those two, so the file says what it holds instead.
+    LOGICAL :: plot = .FALSE.    ! <export plotWF="T"/>:          WF<n>_<nnn>.xsf and .vts
+    !> Cost is one wann_real per grid point per band per k-point, so this number is the
+    !> whole price of the plot: 40^3 is 500x the work of 8^3. Left at 40^3, what it was
+    !> before it could be asked for.
+    INTEGER :: plot_grid(3) = [40, 40, 40]  ! <export plotGrid="40 40 40"/>
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -77,24 +91,19 @@ MODULE m_types_wannierlib
     LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
     LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
-    LOGICAL :: l_socop = .FALSE.           ! an <operator name="spin_orbit"> is requested
-    LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
+    LOGICAL :: l_socop = .FALSE.           ! an <operator name="spinOrbit"> is requested
+    LOGICAL :: l_operators_r = .FALSE.     ! an <operatorsRs> block (real-space O(R) export) is present
+    LOGICAL :: l_operators_k = .FALSE.     ! an <operatorsKs> block (Bloch basis, no gauge) is present
     !> The <export> block: one boolean per artefact, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own
-    !> matrices to someone outside -- and differ only in who reads them. What <operators_r>
+    !> matrices to someone outside -- and differ only in who reads them. What <operatorsRs>
     !> and <interpolation> write is NOT here: those compute something first and writing it
     !> is the last step, while these copy out what the run already holds.
     TYPE(t_wannierlib_export) :: export
-    !> Opt-in: put the Wannier functions themselves on a real-space grid and write them
-    !> as XSF. Off by default because it costs a second pass over the k-points, reading
-    !> the states back once the gauge is known; nothing else in the run needs it.
-    !> XML @plotWF.
-    LOGICAL :: l_plot_wf = .FALSE.
-
     ! --- opt-in output domains (<domain> children of <interpolation>) ---
     ! One <domain> per set of k-points the operators are evaluated on, repeatable and
     ! without kinds: @listName (required) names a kPointList of kpts.xml, @suffix tails the
-    ! output names, @npts subdivides each segment of the list. Operators declared with no
+    ! output names, @refinementPoints subdivides each segment of the list. Operators declared with no
     ! domain are an error rather than a silent no-op.
     !> One entry per <domain>. The count and the suffixes ARE broadcast -- the first sets
     !> the domain loop bound on every rank, the second is read inside that loop, where the
@@ -103,6 +112,13 @@ MODULE m_types_wannierlib
     INTEGER :: n_domains = 0
     TYPE(t_kpts), ALLOCATABLE :: dom_kset(:)
     CHARACTER(LEN=64), ALLOCATABLE :: dom_suffix(:)
+
+    !> The path <export orbitrans="T"/> falls back to when the run declares no <domain>.
+    !> Read here rather than in the export so the XML is opened once, and broadcast no more
+    !> than dom_kset is: only rank 0 reaches the writer, and l_kpath stays false elsewhere.
+    LOGICAL :: l_kpath = .FALSE.
+    CHARACTER(LEN=64) :: kpath_name = ''
+    TYPE(t_kpts) :: kpath_kset
 
     !> Minimum distance replica selection (W90 use_ws_distance); XML @useWsDistance on
     !> <interpolation>. Off by default; Wannier90's own default is on, and the difference is
@@ -123,10 +139,15 @@ MODULE m_types_wannierlib
     !> come apart. One entry per <operator> of <interpolation>.
     TYPE(t_wannierlib_op), ALLOCATABLE :: ops(:)
 
-    ! --- operators_r table: one entry per <operators_r>/<operator name=".."> child ---
-    !> One name per <operator> of <operators_r>. A list of names is all this is, so it
+    ! --- operatorsRs table: one entry per <operatorsRs>/<operator name=".."> child ---
+    !> One name per <operator> of <operatorsRs>. A list of names is all this is, so it
     !> stays a list of names rather than a record with one field in it.
     CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
+
+    ! --- operatorsKs table: one entry per <operatorsKs>/<operator name=".."> child.
+    !     Kept apart from the list above for the same reason the request keeps them
+    !     apart: neither one implies the other. ---
+    CHARACTER(LEN=20), ALLOCATABLE :: op_k_name(:)
 
     INTEGER :: num_wann = 0
     INTEGER :: num_bands = 0
@@ -140,8 +161,30 @@ MODULE m_types_wannierlib
     REAL :: dis_win_max = 0.0
     REAL :: dis_froz_min = 0.0
     REAL :: dis_froz_max = 0.0
-    INTEGER :: dis_num_iter = 0
-    INTEGER :: num_iter = 0      ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
+    !> -1 and not 0 for "the input did not say", because for both counts ZERO IS A VALUE:
+    !> the schema types each numIter as nonNegativeInteger, and 0 means do not minimise --
+    !> for the wannierise count keep the gauge the projections give, for the disentanglement
+    !> keep the subspace the projections and the frozen window define. With 0 as the
+    !> sentinel neither of the two could be asked for.
+    INTEGER :: dis_num_iter = -1
+    INTEGER :: num_iter = -1     ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
+    !> <transport>: Wannier90's ballistic conductance stage. The element's presence is the
+    !> switch, so there is no separate flag to fall out of step with it. The axis is held as
+    !> 1/2/3 rather than a character because every other field here is numeric and a scalar
+    !> string would be the only one of its kind crossing mpi_bc; 0 means the input named no
+    !> axis, which the adapter refuses rather than guessing.
+    LOGICAL :: l_transport = .FALSE.
+    INTEGER :: tran_axis = 0            ! 1=x, 2=y, 3=z; W90 one_dim_axis
+    REAL    :: tran_win_min = 0.0       ! Hartree, absolute; min == max means "not given"
+    REAL    :: tran_win_max = 0.0
+    REAL    :: tran_energy_step = 0.0   ! Hartree; 0 means "not given"
+    !> The two cutoffs that decide the principal layer: Wannier90 zeroes every hopping below
+    !> hrCutoff and every one reaching beyond distCutoff, and the largest |R| left along the
+    !> axis is the layer. Negative is the sentinel here too, because zero is a value for
+    !> both: it is Wannier90's own default for hr_cutoff, and for dist_cutoff it would cut
+    !> every hopping there is.
+    REAL    :: tran_hr_cutoff = -1.0    ! Hartree; < 0 means "not given"
+    REAL    :: tran_dist_cutoff = -1.0  ! Bohr;    < 0 means "not given"
     !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
     !> Off by default, as in Wannier90. The criterion is meaningful here because the
     !> projections are the atomic ones this code builds, which a reader of an arbitrary
@@ -160,12 +203,49 @@ MODULE m_types_wannierlib
     REAL :: dis_mix_ratio = 0.0
     REAL :: dis_conv_tol = 0.0
     REAL :: conv_tol = 0.0       ! MLWF/wannierise convergence (W90 conv_tol); XML @wannConvTol
+    !> Wannier90 only tests convergence when its window is above one, and ITS TWO WINDOWS
+    !> DO NOT START FROM THE SAME PLACE. For the MLWF iteration the reader forces -1 before
+    !> reading the keyword (wannier90_readwrite.F90), so silence there means it never tests
+    !> and runs the whole iteration count out. The disentanglement is not in that position:
+    !> its own default is 3 and its reader rejects a negative one, so it does test.
+    !> Zero here means we say nothing and leave each of them where it already was.
+    INTEGER :: dis_conv_window = 0   ! disentanglement (W90 dis_conv_window); XML @convWindow
+    INTEGER :: conv_window = 0       ! MLWF/wannierise (W90 conv_window);     XML @convWindow
     !> Preconditioned gradient in the spread minimisation (W90 precond); XML @precond.
     !> Off by default, which is also Wannier90's default.
     !>
     !> It changes the descent inside a valley, not the functional, so it cannot move the
     !> minimum.
     LOGICAL :: precond = .FALSE.
+    !> The rest of Wannier90's minimisation controls. Each one is inert unless its
+    !> attribute is present, so silence leaves Wannier90 on its own default and an older
+    !> inp.xml keeps its numbers. None of them is stored in the checkpoint either, so a
+    !> wannier90.x resuming from one takes them from the .win and not from here.
+    INTEGER :: num_cg_steps = -1          ! W90 num_cg_steps;      XML @numCgSteps
+    REAL    :: trial_step = -1.0          ! W90 trial_step;        XML @trialStep
+    REAL    :: fixed_step = -1.0          ! W90 fixed_step;        XML @fixedStep
+    LOGICAL :: guiding_centres = .FALSE.  ! W90 guiding_centres;   XML @guidingCentres
+    INTEGER :: num_guide_cycles = -1      ! W90 num_guide_cycles;  XML @numGuideCycles
+    INTEGER :: num_no_guide_iter = -1     ! W90 num_no_guide_iter; XML @numNoGuideIter
+    REAL    :: conv_noise_amp = -1.0      ! W90 conv_noise_amp;    XML @convNoiseAmp
+    INTEGER :: conv_noise_num = -1        ! W90 conv_noise_num;    XML @convNoiseNum
+    !> Order of the finite-difference stencil for the k derivatives (W90 higher_order_n);
+    !> XML @fdOrder. Zero is our sentinel for "say nothing", so Wannier90 keeps its own
+    !> default of 1 -- the single-shell formula with an O(b^2) error. The quantities that
+    !> feel it are the ones defined as k derivatives: A, and above all C and F, which are
+    !> second derivatives and therefore carry the error squared.
+    INTEGER :: fd_order = 0
+    !> Tolerance Wannier90 groups the b-vectors into shells with, and checks the completeness
+    !> relation sum_b w_b b_a b_b = delta_ab with -- Eq. (B1) of Marzari and Vanderbilt. A
+    !> wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the
+    !> lattice is the first suspect and not the mesh: a slightly distorted cell splits one
+    !> shell into several, or fails (B1), and Wannier90 stops there with nothing left to
+    !> turn. Nothing here checks the mesh, though -- mp_grid is taken from kpts%nkpt3 and the
+    !> k-list from whichever list was selected -- so a shifted list would reach Wannier90 as
+    !> a Monkhorst-Pack grid it is not, and would land in the same place. Negative is the
+    !> sentinel for "say nothing", since zero is a value -- under it no two distances would
+    !> ever count as equal and every shell would hold one vector.
+    REAL :: kmesh_tol = -1.0
 
     LOGICAL :: l_intp = .FALSE.         ! Do interpolation
     REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
@@ -408,16 +488,25 @@ CONTAINS
 #endif
     DO iop = 1, nops
       CALL mpi_bc(rank, mpi_comm, this%ops(iop)%name)
-      CALL mpi_bc(rank, mpi_comm, this%ops(iop)%comp)
-      CALL mpi_bc(this%ops(iop)%total, rank, mpi_comm)
     END DO
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
     CALL mpi_bc(this%export%w90, rank, mpi_comm)
+    CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
+    CALL mpi_bc(this%export%juwip, rank, mpi_comm)
+    CALL mpi_bc(this%export%plot, rank, mpi_comm)
+    CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
-    CALL mpi_bc(this%export%gauge, rank, mpi_comm)
-    CALL mpi_bc(this%export%bloch, rank, mpi_comm)
-    CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
+    CALL mpi_bc(this%export%bmesh, rank, mpi_comm)
+    CALL mpi_bc(this%l_transport, rank, mpi_comm)
+    CALL mpi_bc(this%tran_axis, rank, mpi_comm)
+    CALL mpi_bc(this%tran_win_min, rank, mpi_comm)
+    CALL mpi_bc(this%tran_win_max, rank, mpi_comm)
+    CALL mpi_bc(this%tran_energy_step, rank, mpi_comm)
+    CALL mpi_bc(this%tran_hr_cutoff, rank, mpi_comm)
+    CALL mpi_bc(this%tran_dist_cutoff, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
+    CALL mpi_bc(this%l_operators_k, rank, mpi_comm)
+    CALL mpi_bc(this%op_k_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
     CALL mpi_bc(this%min_band, rank, mpi_comm)
@@ -434,7 +523,19 @@ CONTAINS
     CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%conv_tol, rank, mpi_comm)
+    CALL mpi_bc(this%dis_conv_window, rank, mpi_comm)
+    CALL mpi_bc(this%conv_window, rank, mpi_comm)
     CALL mpi_bc(this%precond, rank, mpi_comm)
+    CALL mpi_bc(this%num_cg_steps, rank, mpi_comm)
+    CALL mpi_bc(this%trial_step, rank, mpi_comm)
+    CALL mpi_bc(this%fixed_step, rank, mpi_comm)
+    CALL mpi_bc(this%guiding_centres, rank, mpi_comm)
+    CALL mpi_bc(this%num_guide_cycles, rank, mpi_comm)
+    CALL mpi_bc(this%num_no_guide_iter, rank, mpi_comm)
+    CALL mpi_bc(this%conv_noise_amp, rank, mpi_comm)
+    CALL mpi_bc(this%conv_noise_num, rank, mpi_comm)
+    CALL mpi_bc(this%fd_order, rank, mpi_comm)
+    CALL mpi_bc(this%kmesh_tol, rank, mpi_comm)
     !> An array of a derived type does not go through the generic mpi_bc, which sizes the
     !> receivers from the message itself. The count travels first, then each record field by
     !> field -- the shape t_atoms uses for lda_u.
@@ -478,17 +579,17 @@ CONTAINS
 
     CHARACTER(LEN=200) :: xPathA
     CHARACTER(LEN=200) :: xPathP
-    CHARACTER(LEN=32) :: spin_label
     CHARACTER(LEN=64) :: dom_name
     INTEGER :: idom, jdom, dom_npts
     CHARACTER(LEN=255) :: sbuf
     INTEGER :: numberNodes, ios
     INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal, iRow
-    INTEGER :: nOpsRead = 0, nOprRead = 0
+    INTEGER :: nOpsRead = 0, nOprRead = 0, nOpkRead = 0
     LOGICAL :: has_wannierize
     CHARACTER(LEN=20) :: species_name
     TYPE(t_kpts) :: kpts_temp
     CHARACTER(len=40) :: kptsPath
+    REAL, ALLOCATABLE :: gridlist(:)
 
 
     xPathA = '/fleurInput/output/wannierlib'
@@ -501,8 +602,6 @@ CONTAINS
     IF (has_wannierize) THEN
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
     END IF
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotWF') == 1) &
-      this%l_plot_wf = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotWF'))
 
     ! Operator selection is now the <interpolation>/<operator> list (parsed below),
     ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.
@@ -557,16 +656,84 @@ CONTAINS
       this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
       this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convWindow') == 1) &
+        this%dis_conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convWindow'))
     END IF
 
     ! --- wannierization (MLWF iteration controls); defaults to the disentanglement values ---
     this%num_iter = this%dis_num_iter
     this%conv_tol = this%dis_conv_tol
+    this%conv_window = this%dis_conv_window
     xPathA = '/fleurInput/output/wannierlib/wannierization'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
       this%num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convWindow') == 1) &
+        this%conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convWindow'))
       this%precond = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@precond'))
+      !> Like convWindow: read only when the attribute is present, so that silence
+      !> leaves Wannier90 on its own default and an older inp.xml keeps its numbers.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fdOrder') == 1) &
+        this%fd_order = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fdOrder'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@kmeshTol') == 1) &
+        this%kmesh_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kmeshTol'))
+
+      !> Same rule for all of these: read only when present.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numCgSteps') == 1) &
+        this%num_cg_steps = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numCgSteps'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@trialStep') == 1) &
+        this%trial_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@trialStep'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fixedStep') == 1) &
+        this%fixed_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fixedStep'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@guidingCentres') == 1) &
+        this%guiding_centres = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@guidingCentres'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numGuideCycles') == 1) &
+        this%num_guide_cycles = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numGuideCycles'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@numNoGuideIter') == 1) &
+        this%num_no_guide_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numNoGuideIter'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convNoiseAmp') == 1) &
+        this%conv_noise_amp = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convNoiseAmp'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convNoiseNum') == 1) &
+        this%conv_noise_num = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convNoiseNum'))
+    END IF
+
+    ! --- transport (Landauer); the element being there is what switches it on ---
+    xPathA = '/fleurInput/output/wannierlib/transport'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      this%l_transport = .TRUE.
+      !> The schema restricts this to x, y or z, so the default arm cannot be reached from a
+      !> validated input. It is left to fall through to 0 all the same, and the adapter says
+      !> so: an axis that never arrived must not become a silent guess at the direction.
+      SELECT CASE (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@axis'))))
+      CASE ('x')
+        this%tran_axis = 1
+      CASE ('y')
+        this%tran_axis = 2
+      CASE ('z')
+        this%tran_axis = 3
+      END SELECT
+      !> Both ends of the window, or neither. With exactly one given the other keeps its
+      !> default of zero, the pair is still unequal, and it is passed on as a window running
+      !> from eight electron volts down to nothing: Wannier90 takes the floor of a negative
+      !> number of steps, never enters its energy loop, and writes two files holding their
+      !> header and no data while reporting success. Equal ends already mean "say nothing",
+      !> so only the half-given pair has to be refused.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMin') /= &
+          xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMax')) &
+        CALL juDFT_error('wannierlib: <transport> needs energyMin and energyMax together', &
+                         calledby='read_xml_wannierlib')
+      !> Same convention as the disentanglement windows: absent means equal, equal means
+      !> "say nothing", and silence leaves Wannier90 on its own range.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMin') == 1) &
+        this%tran_win_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyMin'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyMax') == 1) &
+        this%tran_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyMax'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@energyStep') == 1) &
+        this%tran_energy_step = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyStep'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@hrCutoff') == 1) &
+        this%tran_hr_cutoff = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@hrCutoff'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@distCutoff') == 1) &
+        this%tran_dist_cutoff = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@distCutoff'))
     END IF
 
     ! --- interpolation domain + operator list ---
@@ -589,8 +756,8 @@ CONTAINS
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@suffix') == 1) &
             this%dom_suffix(idom) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@suffix'))
           dom_npts = 0
-          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@npts') == 1) &
-            dom_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@npts'))
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@refinementPoints') == 1) &
+            dom_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@refinementPoints'))
           ! Pulled now, while the XML is still open.
           CALL read_domain_kset_wannierlib(this%dom_kset(idom), xml, dom_name, dom_npts)
         END DO
@@ -614,13 +781,6 @@ CONTAINS
     DO iProj = 1, nOpsRead
       WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/interpolation/operator[', iProj, ']'
       this%ops(iProj)%name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
-      this%ops(iProj)%comp = ''
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@comp') == 1) &
-         this%ops(iProj)%comp = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@comp'))
-      this%ops(iProj)%total = 1
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@total') == 1) THEN
-        IF (.NOT. evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@total'))) this%ops(iProj)%total = 0
-      END IF
 
       ! derive convenience flags that gate the coarse-mesh provider calls.
       ! Class-C operators auto-request their prerequisite coarse matrices:
@@ -635,7 +795,7 @@ CONTAINS
         SELECT CASE (TRIM(WANNIERLIB_INTERP(iRow)%operator))
         CASE ('spin');       this%l_spin = .TRUE.
         CASE ('orbital');    this%l_orbmom = .TRUE.
-        CASE ('spin_orbit'); this%l_socop = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
         END SELECT
       END IF
     END DO
@@ -648,31 +808,102 @@ CONTAINS
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%export%w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannier90'))
+      this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
+      this%export%juwip = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@juwip'))
+      this%export%plot = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@plotWF'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotGrid') == 1) THEN
+        !> Through a variable and not straight from the call: evaluateList takes its
+        !> string as INTENT(INOUT), as types_sliceplot does for the same attribute.
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotGrid')
+        CALL evaluateList(gridlist, sbuf)
+        IF (SIZE(gridlist) /= 3) CALL juDFT_error( &
+          'wannierlib: <export plotGrid=".."/> takes three numbers', &
+          calledby='read_xml_wannierlib')
+        !> Two points per direction is the least that spans the cell at all: the step is
+        !> v/(n-1), so n=1 divides by zero and n<1 is not a grid.
+        IF (ANY(NINT(gridlist) < 2)) CALL juDFT_error( &
+          'wannierlib: <export plotGrid=".."/> needs at least two points per direction', &
+          calledby='read_xml_wannierlib')
+        this%export%plot_grid = NINT(gridlist)
+      END IF
       this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
-      this%export%gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@gauge'))
-      this%export%bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
+        TRIM(ADJUSTL(xPathA))//'/@irrep'))
+      this%export%bmesh = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@bmesh'))
+      !> wannierberri="T" is a superset of the two flags above rather than a third artefact:
+      !> that wannierization consumes the .amn/.mmn/.eig/.chk and takes its symmetry table
+      !> from what irrep reads out of the interstitial, so one flag asks for everything the
+      !> route needs and nobody has to remember to light two.
+      IF (evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))) THEN
+        this%export%w90 = .TRUE.
+        this%export%basis = .TRUE.
+      END IF
     END IF
 
-    ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
+    !> No <domain>, but somebody downstream still has to be told which k to resolve on.
+    !> Tied to the orbitrans flag and not made general because orbitrans is the only reader
+    !> that opens input/kpts today: a run exporting for anyone else gains no file and pays
+    !> no time, and the day a second consumer wants a path it asks here by name.
+    !>
+    !> The path is not invented. It is the first list the input already carries with
+    !> type="path" -- the one inpgen writes for every case -- so the default names something
+    !> the caller can read off kpts.xml, and a run with no path list keeps today's silence.
+    IF (this%export%orbitrans .AND. this%n_domains < 1) THEN
+      xPathA = '/fleurInput/cell/bzIntegration/kPointLists/kPointList[@type="path"]'
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) > 0) THEN
+        dom_name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'[1]/@name'))
+        IF (LEN_TRIM(dom_name) > 0) THEN
+          CALL read_domain_kset_wannierlib(this%kpath_kset, xml, dom_name, 0)
+          this%kpath_name = dom_name
+          this%l_kpath = .TRUE.
+        END IF
+      END IF
+    END IF
+
+    ! --- operatorsKs: what the run holds in k, before the Fourier sum to R. The four
+    !     Bloch-basis matrices come straight out of the coarse pass and need no gauge, so
+    !     asking only for those costs no wannierisation; bmn, cmn and fmn are pair
+    !     contractions and do carry the gauge, so they go to a file of their own. ---
+    xPathA = '/fleurInput/output/wannierlib/operatorsKs'
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
+      this%l_operators_k = .TRUE.
+      nOpkRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
+    END IF
+    ALLOCATE(this%op_k_name(nOpkRead))
+    DO iProj = 1, nOpkRead
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operatorsKs/operator[', iProj, ']'
+      this%op_k_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
+      iRow = melem_exposed_find(this%op_k_name(iProj), WANNIERLIB_OPK)
+      IF (iRow > 0) THEN
+        SELECT CASE (TRIM(WANNIERLIB_OPK(iRow)%operator))
+        CASE ('spin');      this%l_spin = .TRUE.
+        CASE ('orbital');   this%l_orbmom = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
+        END SELECT
+      END IF
+    END DO
+
+    ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).
     !     Groups <operator name=".."> children written to standalone-format files. ---
-    xPathA = '/fleurInput/output/wannierlib/operators_r'
+    xPathA = '/fleurInput/output/wannierlib/operatorsRs'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%l_operators_r = .TRUE.
       nOprRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
     ALLOCATE(this%op_r_name(nOprRead))
     DO iProj = 1, nOprRead
-      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operators_r/operator[', iProj, ']'
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operatorsRs/operator[', iProj, ']'
       this%op_r_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
       iRow = melem_exposed_find(this%op_r_name(iProj), WANNIERLIB_OPR)
       IF (iRow > 0) THEN
         SELECT CASE (TRIM(WANNIERLIB_OPR(iRow)%operator))
         CASE ('spin');       this%l_spin = .TRUE.
         CASE ('orbital');    this%l_orbmom = .TRUE.
-        CASE ('spin_orbit'); this%l_socop = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
         END SELECT
       END IF
     END DO
@@ -713,6 +944,12 @@ CONTAINS
           !> copies carry the same (l, j, m_j), and the j-resolved builder ignores the spin
           !> index, so the pair came out as two identical columns and A(k) lost rank.
           !> 0 means "either", which is what makes the expansion split it in two.
+          !> The only place @spin is read. A second, unguarded read used to follow the
+          !> rest of the attributes and overwrite this one by its first character, which
+          !> turned the accepted "1", "+1" and "-1" back into 0 -- a projection asked for
+          !> on one channel came out on both. It also asked for the attribute whether or
+          !> not it was there, and an absent xPath goes through judft_warn, which is fatal
+          !> unless -warn_only: a <wannierproj> written without spin= aborted the run.
           this%proj(ip)%spin = 0
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@spin') == 1) THEN
             sbuf = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
@@ -781,16 +1018,6 @@ CONTAINS
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftZ') == 1) THEN
             this%proj(ip)%shift(3) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftZ'))
           END IF
-
-          spin_label = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
-          SELECT CASE (spin_label(1:1))
-          CASE ('u', 'U')
-            this%proj(ip)%spin = 1
-          CASE ('d', 'D')
-            this%proj(ip)%spin = -1
-          CASE DEFAULT
-            this%proj(ip)%spin = 0
-          END SELECT
         END DO
       END DO
     END IF
@@ -827,7 +1054,7 @@ CONTAINS
     IF (nraw < 1) CALL juDFT_error('wannierlib: <domain>/@listName "'//TRIM(listname)// &
                                    '" is empty', calledby='read_domain_kset_wannierlib')
     IF (nraw < 2 .AND. npts > 1) &
-      CALL juDFT_error('wannierlib: @npts needs a list with at least two k-points to subdivide', &
+      CALL juDFT_error('wannierlib: @refinementPoints needs a list with at least two k-points to subdivide', &
                        calledby='read_domain_kset_wannierlib')
     ALLOCATE(raw(3, nraw))
     raw = raw_kset%bk(:, 1:nraw)

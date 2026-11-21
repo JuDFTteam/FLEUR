@@ -193,5 +193,11 @@ Testset: Wannier
 | +   | fcc Fe AFM collinear+SOC, wannierlib O(R)    | wannier/WannFeAFMColSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | bcc Fe FM collinear no-SOC, wannierlib O(R)  | wannier/WannFeBcc | wannierlib,bulk |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib O(R)         | wannier/WannFeAFMSOCOps | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, k-list in [-1/2,1/2)    | wannier/WannFeAFMSOCKfold | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe AFM collinear no-SOC, wannierlib O(R) | wannier/WannFeAFMCol | wannierlib,bulk |         |         | 1   |
 | +   | bcc Fe FM collinear, Wannier interpolation   | wannier/WannFeBccInterp | wannierlib,bulk,band |         |         | 1   |
+| +   | Si diamond, two equivalent atoms in one group | wannier/WannSiDiamond | wannierlib,bulk |         |         | 1   |
+| +   | MoS2 monolayer, mirror (det=-1) and vacuum   | wannier/WannMoS2 | wannierlib,film |         |         | 1   |
+| +   | AlN wurtzite, screw axis (tau!=0)            | wannier/WannAlN | wannierlib,bulk |         |         | 1   |
+| +   | bcc Fe collinear, exchange torque (perpmag)  | wannier/WannFeBccTorque | wannierlib,bulk |         |         | 1   |
+| +   | fcc Fe noco, torque with the moment tilted   | wannier/WannFeTilt | wannierlib,bulk |         |         | 1   |

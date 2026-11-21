@@ -19,7 +19,7 @@ MODULE m_wannierlib_request
    USE m_types_input
    USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
    USE m_types_melem_request, ONLY: t_melem_request
-   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, &
+   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, WANNIERLIB_OPK, &
                                     melem_exposed_find, melem_exposed_names
    IMPLICIT NONE
    PRIVATE
@@ -33,10 +33,10 @@ CONTAINS
       TYPE(t_melem_request), INTENT(OUT) :: request
 
       !> The catalogue entry each requested name needs built, one per name.
-      CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:), op_r_needs(:)
+      CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:), op_r_needs(:), op_k_needs(:)
       INTEGER :: iop, krow
 
-      !> The two lists are resolved against the exposure tables HERE, because those tables
+      !> The three lists are resolved against the exposure tables HERE, because those tables
       !> say how the wannierization spells things and that is not a fact about the layer
       !> being asked. What it receives is the catalogue entry each name needs built. A name
       !> no table carries stops the run with the accepted names, rather than leaving an
@@ -56,34 +56,38 @@ CONTAINS
             hint=melem_exposed_names(WANNIERLIB_OPR), calledby='wannierlib_main')
          op_r_needs(iop) = WANNIERLIB_OPR(krow)%operator
       END DO
+      ALLOCATE (op_k_needs(SIZE(this%op_k_name)))
+      DO iop = 1, SIZE(this%op_k_name)
+         krow = melem_exposed_find(this%op_k_name(iop), WANNIERLIB_OPK)
+         IF (krow == 0) CALL juDFT_error('wannierlib: "'//TRIM(this%op_k_name(iop))// &
+            '" has no Bloch-basis form', hint=melem_exposed_names(WANNIERLIB_OPK), &
+            calledby='wannierlib_build_request')
+         op_k_needs(iop) = WANNIERLIB_OPK(krow)%operator
+      END DO
 
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
-                        this%op_r_name, this%ops%name, this%ops%total, &
-                        op_r_needs, op_needs, this%l_ws_distance)
-      !> On a film, refuse by name rather than as a whole. The pair overlap has its vacuum
-      !> half now, so the wannierization itself works and with it everything built from mmn:
-      !> hamiltonian, eigenstates, position, velocity, bmn. Three quantities still stop at
-      !> the interstitial and would come out short without saying so.
-      IF (input%film) THEN
-         !> wannierlib_uiu and wannierlib_uhu ask melem_overlap_states for the pair overlap
-         !> without the vacuum expansions, and C also needs a momentum that has no vacuum
-         !> part at all.
-         IF (request%has_op_r('fmn') .OR. request%has_op_r('cmn')) CALL juDFT_error( &
-            'wannierlib: fmn and cmn have no vacuum contribution and cannot be asked for on a film', &
-            hint='everything built from the neighbour overlaps does work on a film; these two '// &
-                 'need the vacuum halves of the pair overlap and of the momentum', &
-            calledby='wannierlib_main')
-         !> The spin operator sums the muffin tins and the interstitial. In a film there is a
-         !> third region carrying spin density and this layer does not reach it. The orbital
-         !> moment and the spin-orbit operator are muffin-tin quantities by construction, not
-         !> by omission, so they are unaffected.
-         IF (request%has_op('spin') .OR. request%has_op_r('spin')) CALL juDFT_error( &
-            'wannierlib: the spin operator has no vacuum contribution and cannot be asked for on a film', &
-            hint='it sums the muffin tins and the interstitial only; orbital and spin_orbit are '// &
-                 'muffin-tin quantities and do work on a film', &
-            calledby='wannierlib_main')
-      END IF
-
+                        this%op_r_name, this%ops%name, &
+                        op_r_needs, op_needs, this%l_ws_distance, &
+                        this%l_operators_k, this%op_k_name, op_k_needs)
+      !> On a film the three regions are all covered now: the pair overlap, the spin
+      !> operator and the momentum each have their vacuum half, so nothing is refused by
+      !> geometry any more. What each of the two needed, and why one without the other
+      !> would have been worse than nothing:
+      !>
+      !>   F is the pair overlap contracted with the gauge, so the vacuum expansions were
+      !>   all it ever needed. C needs those AND a momentum; and adding one without the
+      !>   other would not have been a partial fix but a wrong answer, because
+      !>   <u_{k+b1}|H_k|u_{k+b2}> = E.M - b1.P - (b1^2/2).M replaces H by the eigenvalue of
+      !>   the bra and so holds only over the whole cell. An M reaching the vacuum next to a
+      !>   P that did not would have been off by exactly b1.P_vac, with nothing to say so.
+      !>
+      !>   The spin operator does reach the vacuum: t_matelements_spin adds the third
+      !>   region to each of its four blocks, one t_melem_vacabc per spin channel, in the
+      !>   same pairing the interstitial uses. The orbital moment, the spin-orbit operator
+      !>   and the exchange torque never needed one, being muffin-tin quantities by
+      !>   construction: on the Fe3GeTe2 monolayer the vacuum carries three parts per
+      !>   million of the moment the spheres carry, because B_xc follows the spin density
+      !>   and the two decay together.
 
       !> Two channels are two eigenproblems, wannierised one after the other, so there is
       !> no single spin matrix over them to interpolate: within a channel sigma_z is +/-1 by
@@ -94,14 +98,28 @@ CONTAINS
          IF (request%needs_op('spin', interp_only=.TRUE.)) CALL judft_error( &
             "the spin operator cannot be interpolated when the two spin channels are "// &
             "wannierised separately", &
-            hint="ask for it in <operators_r>: there both channels are combined into the "// &
+            hint="ask for it in <operatorsRs>: there both channels are combined into the "// &
                  "2N rspauli.1, which is the only form this operator has here", &
             calledby="wannierlib_main")
-         IF (request%needs_op('spin_orbit', interp_only=.TRUE.)) CALL judft_error( &
+         IF (request%needs_op('spinOrbit', interp_only=.TRUE.)) CALL judft_error( &
             "the spin-orbit operator cannot be interpolated when the two spin channels are "// &
             "wannierised separately", &
-            hint="ask for it in <operators_r>: there both channels are combined into the "// &
+            hint="ask for it in <operatorsRs>: there both channels are combined into the "// &
                  "2N rssocmat.1, which is the only form this operator has here", &
+            calledby="wannierlib_main")
+         IF (request%needs_op('exchangeTorque', interp_only=.TRUE.)) CALL judft_error( &
+            "the exchange torque cannot be interpolated when the two spin channels "// &
+            "are wannierised separately", &
+            hint="ask for it in <operatorsRs>: collinearly this operator is the "// &
+                 "up-down Bloch block alone, written to updown.perpmag", &
+            calledby="wannierlib_main")
+         !> Not an interpolation restriction like the three above but a plain absence:
+         !> collinearly there is no spinor to take <sigma.m_hat B_xc> over, the same
+         !> reason soc0 is not assembled there either.
+         IF (request%has_op_r('exchangeField')) CALL judft_error( &
+            "the exchange field matrix needs a spinor calculation", &
+            hint="its projection on the moment is taken over a spinor, and two spin "// &
+                 "channels wannierised separately do not form one: use the spinor route", &
             calledby="wannierlib_main")
       END IF
 

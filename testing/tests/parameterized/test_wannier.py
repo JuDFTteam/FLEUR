@@ -1,4 +1,5 @@
 
+import math
 import os
 import re
 import subprocess
@@ -14,10 +15,17 @@ pass (<operators_r>). WannFeAFMCol is the only case that reaches that collinear
 path with more than one atom type, which is what distinguishes an index mix-up
 between spin and atom type from a layout that happens to coincide in memory.
 WannFeBccInterp covers the interpolation drivers, on three output domains.
+The two torque cases cover the two branches of the exchange torque, which share no
+code past the provider: WannFeBccTorque is collinear and writes the cross-spin block
+in the Bloch basis (updown.perpmag), WannFeTilt is noco with the moment off the
+Cartesian axes and writes the three Cartesian components in real space.
 """
 from read_tests import read_tests
 from wannier_files import (anglmom_r0,
+                            gauge_unitarity,
                             onsite_weight,
+                            perpmag_census,
+                            torque_perp_residual,
                             anglmom_r0_hermiticity,
                             anglmom_r0_traces,
                             as_tuple,
@@ -30,23 +38,6 @@ from wannier_files import (anglmom_r0,
                             spin_sumrule_values)
 all_tests = read_tests("wannier")
 
-_REFERENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
-                              "inputfiles")
-
-#: How far the total spread may sit from the reference's, as a fraction of it.
-#:
-#: Omega is the gauge-DEPENDENT part, and it is not reproducible. The MLWF landscape has many
-#: near-degenerate minima and which one the iteration reaches is decided by the order of the
-#: floating-point reductions, so any refactor that changes a summation order -- or a different
-#: rank count -- moves Omega without changing one bit of the physics. Measured over the cases
-#: here the scatter reaches 6.0 %, with Omega_I identical to its last printed digit throughout.
-#:
-#: Comparing the INDIVIDUAL spreads is therefore not a test of this code. It was tried, and it
-#: reds four cases whose Omega_I is exact: sorting the values rescues WannFeBccSOC (0.71 -> 0.04)
-#: and does nothing for WannFeAFMColSOC, because there the iteration genuinely stopped in another
-#: minimum. No single tolerance covers both, and the quantity worth bounding is the total.
-#:
-#: What this still catches is the failure that matters: a runaway Wannier function inflates
 # ---------------------------------------------------------------- optional feature
 # Wannier90 is optional. A FLEUR configured without it carries no w90_library, and every
 # case here would stop with "wannierlib requires Wannier90 module API" -- a feature that
@@ -76,6 +67,31 @@ def _skip_without_wannier90(fleur_binary):
 # part is what is asserted here and the total is not. Values measured at mpi=1 with
 # MKL_CBWR=AVX2 / I_MPI_CBWR=1, 2x2x2 mesh, itmax=1.
 EXPECTED_OMEGA_I = {
+    # The only case whose atoms are not all in groups of their own: one species, two
+    # equivalent atoms. abcof expands the matching coefficients about the LOCAL frame of
+    # each atom so that they can share one radial set, and a quantity that carries no atom
+    # index cannot be contracted against them in that form. Every other case here has one
+    # atom per group, where that frame is the global one and the distinction cannot show.
+    # The two atoms are also each other's inversion partner, so this reaches the shortcut
+    # that fills one of them from the other instead of expanding it.
+    "WannSiDiamond": 3.622612240,
+    # The only film, and the only case whose point group has a mirror (det = -1 with
+    # R != -I). That is the one operation where det(R).R is neither +I nor -I, which is
+    # what the axial rotation of L rests on; no bulk case here can reach it. Three atoms
+    # in two groups, the two S equivalent, so it also takes the local-frame path, and the
+    # vacuum is exercised for the first time. Mo d plus S p, 11 Wannier functions,
+    # jspins=2 without SOC because the orbital operator has no producer otherwise.
+    # Its on-site share is 97.8 %, and it does not move when the same cell is run with
+    # the symmetry switched off: the rotations land where not having to rotate does.
+    "WannMoS2":      16.089990243,
+    # The only non-symmorphic group here: wurtzite AlN has a screw axis, tau != 0. The
+    # rotation of a coefficient uses mrot and never the translation, and this is the only
+    # case that can show that ignoring tau is right. Both species sit in groups of two,
+    # so it also exercises firstAtom(n)+na-1 with n > 1. Sixteen valence electrons give
+    # eight occupied bands, isolated by the gap, and N s+p over two atoms gives exactly
+    # eight Wannier functions: no disentanglement, so the window needs no measuring.
+    # Its on-site share is 98.0 %, and the same cell without symmetry agrees to 1e-9.
+    "WannAlN":        5.003795238,
     "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
     "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor)
     "WannPtSOCOps":  9.754340102,  # same system + <operators_r>; identical to WannPtSOC
@@ -85,6 +101,10 @@ EXPECTED_OMEGA_I = {
     # Omega_I is identical to the last digit, as it must be: without SOC the physics is
     # isotropic and turning the moment cannot change the optimal subspace.
     "WannFeFMy":    16.711628612,
+    # WannFeFM with the moment off the Cartesian axes (alpha=0.6, beta=0.9) and the
+    # exchange torque asked for. Omega_I is again identical: without SOC nothing in the
+    # subspace knows where the moment points.
+    "WannFeTilt":   16.711628612,
     "WannFeAFM":    16.718923683,  # fcc Fe AFM, noco (jspins=2), no SOC
     # fcc Fe AFM, noco (jspins=2) + SOC. This is the only case that is both noco and SOC, so
     # it is the only one that exercises hsmt_soc_offdiag -- the SOC block between the two
@@ -98,6 +118,10 @@ EXPECTED_OMEGA_I = {
     # separate eigenproblems, so each is wannierised on its own and there is one Omega per
     # channel. Values in channel order. This is the only test of that combination.
     "WannFeBcc": (2.606816455, 2.686252738),
+    # Same system and the same two channels as WannFeBcc, with <operator
+    # name="exchangeTorque"/> added. Identical to the last digit, as it must be: asking
+    # for one more operator cannot move the subspace the disentanglement picked.
+    "WannFeBccTorque": (2.606816455, 2.686252738),
     # Same run as WannFeBcc; this case exists for the interpolation files beside it, and the
     # two report Omega_I to the last digit alike.
     "WannFeBccInterp": (2.606816455, 2.686252738),
@@ -109,8 +133,31 @@ EXPECTED_OMEGA_I = {
     "WannFeAFMSOCOps": 16.719550182,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
                                       # only coverage of the spin operator on the noco branch.
                                       # Same system as WannFeAFMSOC, so it moved with it.
+    # Same system, same mesh and same reference as WannFeAFMSOC: the only difference is
+    # that its k-point list is written in the [-1/2,1/2) convention rather than [0,1).
+    # gen_bz folds kpts%bkf into [0,1) while lapw%bkpt keeps the numbers as the file spells
+    # them, so the two disagree by a lattice vector exactly when the list is written this
+    # way, and a rotation folded against the wrong one lands in the wrong G shell. Every
+    # other mesh here is asked for with #gamma@grid=, which writes [0,1) and cannot show it.
+    # Omega_I has to come out unchanged: how a k-point is spelled is not physics.
+    "WannFeAFMSOCKfold": 16.719550182,
 }
 OMEGA_I_TOL = 1.0e-5
+
+# The gauge the run hands to results has exactly one consumer -- interpolate_bandstructure,
+# on the electron-phonon path in dfpt/superconductivity -- and nothing in this suite reaches
+# it. What can be asserted from here is the property that consumer depends on: V = u_opt .
+# u_mlwf has orthonormal columns, so V^H V is the num_wann identity at every k of the mesh.
+#
+# The failure this catches is the one the data path invites. run_w90 leaves each rank holding
+# its own k-points and zeros elsewhere, and store_gauge completes the mesh by summing over
+# ranks; a k-point that sum misses stays at zero and gives the null matrix, a deviation of 1.
+# Nothing else here would notice, because the operators are built from the local arrays and
+# never from the completed copy -- the gauge in results is written and read by no one else.
+#
+# 1e-10 is ten orders of magnitude below that 1, and the runs sit at the rounding of a
+# product of this size. Neither population is anywhere near the threshold.
+GAUGE_UNITARY_TOL = 1.0e-10
 
 
 # Real-space operator files written by <operators_r>, per test id. Their presence is
@@ -124,6 +171,37 @@ _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vect
 # alone.
 _OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1",
                    "rspauli.1", "wig_vectors"]
+# <export orbitrans="T"/> and juwip="T" do not copy the operator files: they decide where
+# <operatorsRs> writes them and under which name. The map is repeated here on purpose --
+# this is the only thing that can fail if the Fortran side stops moving them, because a
+# file that stays behind is simply a file the fixture does not find.
+#
+# orbitrans opens a relative input/ and INQUIREs for generic names; JuWIP opens w90files/
+# and reads ours unchanged. A second channel keeps its own name either way: WF2_hr.dat has
+# no counterpart in a code that wants one 2N basis.
+ORBITRANS_DIR, JUWIP_DIR = "input", "w90files"
+ORBITRANS_NAME = {"rspauli.1": "spin", "anglmomrs.1": "orbital", "rssocmat.1": "spin_orbit",
+                  "WF1_hr.dat": "hoppings", "wig_vectors": "rpts",
+                  "WF1_r.dat": "position", "WF1_bmn.dat": "bmn",
+                  "WF1_cmn.dat": "cmn", "WF1_fmn.dat": "fmn"}
+#> The four names below the first row were missing here while they were present in the
+#> Fortran, and the omission could not fail: with WF1_r.dat absent from the map, op() asked
+#> for input/WF1_r.dat -- which is exactly what the run left behind, because the Fortran
+#> table had no entry for it either. A map repeated by hand agrees with the code it checks
+#> only as long as both are right, so what is asserted below is also the CONTENT.
+ORBITRANS_CASES = ("WannFeBcc", "WannSiDiamond", "WannMoS2")
+JUWIP_CASES = ("WannPtSOCOps",)
+
+
+def op(test_id, canonical):
+    """Where this case leaves that operator file."""
+    if test_id in ORBITRANS_CASES:
+        return f"{ORBITRANS_DIR}/{ORBITRANS_NAME.get(canonical, canonical)}"
+    if test_id in JUWIP_CASES:
+        return f"{JUWIP_DIR}/{canonical}"
+    return canonical
+
+
 OPERATOR_FILES = {
     "WannPtSOCOps": _OP_R_FILES,
     "WannFeBccSOC":     _OP_R_FILES,
@@ -134,21 +212,103 @@ OPERATOR_FILES = {
     "WannFeFMy": ["rspauli.1", "wig_vectors"],
     "WannFeBcc":        _OP_R_FILES_2CH,
     "WannFeAFMCol":     _OP_R_FILES_2CH,
+    # Hamiltonian per spin channel and the orbital operator. No spin was asked for, so
+    # there is no rspauli.1: this case is here for the mirror and the vacuum, and the
+    # spin sum rule is already covered by the cases above.
+    "WannMoS2": ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
+    "WannAlN":  ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "wig_vectors"],
+    # WannFeBcc plus the exchange torque. Collinearly that operator is the cross-spin
+    # block in the BLOCH basis -- the object the classic route writes as updown.perpmag,
+    # byte for byte -- so it is not one of the O(R) files and has no R index.
+    "WannFeBccTorque": _OP_R_FILES_2CH + ["updown.perpmag"],
+    # Over spinors the same operator is three Cartesian components in real space, so
+    # here it IS an O(R) file. No spin or orbital asked for: this case exists for the
+    # perpendicularity identity and the rest is covered above.
+    "WannFeTilt": ["WF1_hr.dat", "rstorque.1", "wig_vectors"],
 }
+
+# Which case exercises each flag of <export>, and what it has to leave behind. One flag per
+# case, put where the case already holds what that writer needs: the projection list for
+# orbitrans, a full-zone mesh for wannierberri and for the symmetrizer. Before this, six of the seven writers in the block ran in no test at
+# all -- they were reachable only by hand, and only the symmetrizer was ever checked.
+_W90_FILES = ["WF1.amn", "WF1.mmn", "WF1.eig"]
+EXPORT_FILES = {
+    # The only case that asks for the Wannier90 set on its own, and the only one of these
+    # with two spin channels, so the per-channel seedname is exercised at the same time.
+    "WannFeAFMCol":  _W90_FILES + ["WF2.amn", "WF2.mmn", "WF2.eig"],   # wannier90
+    # orbitrans writes a directory, and the fixture lists what is inside it by relative
+    # path. All five are named: orbitrans reads all five, and a missing one stops it
+    # long after the run that should have produced it is gone.
+    "WannFeBcc": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
+                  f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom",
+                  f"{ORBITRANS_DIR}/ndegen"],
+    #> Here for the two formats no other export case carries: it asks for position and for
+    #> cmn, so the operator the table above was missing a name for is the one this case
+    #> writes, beside one that was already headerless. What it does NOT cover is the
+    #> per-atom count -- see WannMoS2 below.
+    "WannSiDiamond": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
+                      f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom",
+                      f"{ORBITRANS_DIR}/ndegen", f"{ORBITRANS_DIR}/hoppings",
+                      f"{ORBITRANS_DIR}/position", f"{ORBITRANS_DIR}/cmn",
+                      f"{ORBITRANS_DIR}/rpts"],
+    #> The case that tells a per-atom count apart from a per-class one, which takes MORE
+    #> THAN ONE atom group and nothing else: with a single group the index within the class
+    #> IS the index in the cell, whatever the size of that group, so WannSiDiamond -- two
+    #> equivalent atoms in one group -- comes out the same under either reading. This one
+    #> has groups of one and two atoms, so the first atom of the second group is not atom
+    #> one, and a count indexed by the within-class number lands in the wrong line and
+    #> leaves the file a line short.
+    #>
+    #> Two spin channels as well, so the per-atom counts are summed over channels and the
+    #> centres of the second are appended after the first.
+    "WannMoS2": [f"{ORBITRANS_DIR}/lattice", f"{ORBITRANS_DIR}/atom_centers",
+                 f"{ORBITRANS_DIR}/wann_centers", f"{ORBITRANS_DIR}/N_wann_atom",
+                 f"{ORBITRANS_DIR}/ndegen"],
+}
+
+# Every artefact the block can write. A case that asked for none of them must come out
+# WITHOUT them, and that is the half which makes the other half an assertion: the .amn and
+# .mmn used to be written by any serial run whether or not the flag was set, so demanding
+# them where the flag is on would have passed with the flag removed.
+#> plotWF has no case of its own: on the default 40x40x40 grid it costs one wann_real per
+#> grid point per band per k-point, which took WannAlN from 20 seconds to over nine
+#> minutes -- too much for a suite that runs on every change, for a picture that feeds no
+#> other code. What stays here is the half that is free: no case asks for it, so no case
+#> may draw. The writer itself is checked by hand, with <export plotGrid="8 8 8"/>.
+_PLOT_FILES = ("WF1_001.xsf", "WF1_001.vts", "WF2_001.xsf", "WF2_001.vts")
+EXPORT_ARTEFACTS = sorted({name for names in EXPORT_FILES.values() for name in names}
+                          | set(_PLOT_FILES)
+                          | {f"{ORBITRANS_DIR}/{n}" for n in ORBITRANS_NAME.values()}
+                          | {op(c, n) for c in JUWIP_CASES for n in _OP_R_FILES})
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
-GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
+GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1", "rstorque.1")
 
 # An operator that is conjugated with respect to the gauge it is paired with is invisible to
 # every other check here: conj(O) is Hermitian when O is, keeps its eigenvalues, obeys the
 # same sum rules and respects the same bounds. What it does break is the decay in real
 # space, because the Wannier gauge is built in one convention and the operator arrives in
 # the other. Measured over the thirteen cases, the on-site share runs 73-100 % for the spin,
-# 86-99 % for the orbital and 73-91 % for the spin-orbit operator; the two conjugation bugs
-# this guards against left 13 % and 2 %. Fifty is the gap between the two populations, not a
-# tolerance on any one of them.
+# 86-99 % for the orbital and 73-91 % for the spin-orbit; the exchange torque has a single
+# case and sits at 95 %. The two conjugation bugs this guards against left 13 % and 2 %.
+# Fifty is the gap between the two populations, not a tolerance on any one of them.
 ONSITE_MIN = 50.0
+
+# Localization in R is gauge-dependent by construction: Omega_I is the invariant part of the
+# spread and Omega_D + Omega_OD are not. Where the minimization leaves the gauge undetermined,
+# the share at R = 0 reports which gauge the run landed in, not whether the operator decays.
+#
+# WannFeAFMCol is such a case. Its two spin channels reach the same Omega to nine decimals
+# from gauges that leave 32-41 % at R = 0 and ones that leave 88 %, with the same L(k)
+# behind both, so there the share says which gauge the run found and nothing more. Both of
+# its operators move.
+#
+# The guard is kept rather than dropped, because the two conjugation bugs it was built for
+# left 13 % and 2 %, well under the 32 % the wobble reaches here. A case that wobbles gets
+# its own floor, below the wobble and above the bugs. The gauge-invariant rules further
+# down -- hermiticity, the vanishing traces -- apply unchanged either way.
+ONSITE_MIN_GAUGE_LABILE = {"WannFeAFMCol": 25.0}
 
 # <w_0n|sigma_a|w_0n> is a Pauli expectation value on a normalized Wannier function, so
 # |.| <= 1 holds elementwise -- for any gauge, which makes it basin-independent. This is
@@ -218,6 +378,11 @@ INTERP_EXACT_TOL = 1.0e-8
 # spin channel. Absence is the check: a driver that silently stops writing is otherwise
 # invisible, since every value test below would pass on a file that is not there.
 INTERP_FILES = {
+    #> The torque interpolates only with spinors, so this case writes ONE channel and the
+    #> names carry no _spin suffix. Measured, not assumed: guessing "_spin1" here would
+    #> have made the assertion below fail for the wrong reason.
+    "WannFeTilt": ["bands_wann_interpol.dat", "bands_wann_interpol_ev.dat",
+                   "bands_wann_torque.dat"],
     "WannFeBccInterp": [
         "bands_wann_%s%s_spin%d.dat" % (base, dom, ch)
         for base in ("interpol", "interpol_ev", "orbmom", "velocity", "berrycurv",
@@ -266,6 +431,54 @@ L_TRANSVERSE_ZERO = ("WannFeBccSOC",)
 # exactly zero even though the individual |<w_n|L|w_n>| are not (the Wannier gauge is
 # complex). num_wann == num_bands == 6, so the caveat below does not apply.
 L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
+
+
+# T = -(s x m_hat), so T.m_hat vanishes identically -- a rule with no reference attached,
+# which is what makes it worth asserting: it cannot go stale and it fails on a sign in the
+# Pauli assembly, on blocks taken in the conjugate convention, and on an axis that does not
+# match the one the blocks were rotated into.
+#
+# IT IS ONLY A TEST OFF THE CARTESIAN AXES. With m_hat = z the third component is computed
+# as -(s_x*0 - s_y*0): zero by arithmetic, without ever reading s, and the projection is
+# then exactly 0.0 whatever the assembly did. Measured both ways on this case -- 0.000E+00
+# at beta=0 against 1.36E-16 at beta=0.9 -- so a passing check at beta=0 says nothing. The
+# moment here is at alpha=0.6, beta=0.9, where m_hat = (0.647, 0.442, 0.622) has no zero
+# component and the projection is a cancellation of six non-zero terms.
+#
+# The tolerance is set by the FILE, not by the physics: O(R) is written with eight
+# decimals, so with |T|max = 3.4e-2 the ratio cannot resolve below 3e-7. Measured residual
+# 2.2e-7, right at that floor; with the sign of T_x flipped it is 1.1e+00, so the margin
+# to a real error is six orders.
+TORQUE_PERP = {"WannFeTilt": (0.6, 0.9)}      # (alpha, beta) of <nocoParams>
+# <T>_nn on the interpolated bands VANISHES in this case, and that is the prediction rather
+# than an empty file: both atoms share (alpha, beta) and l_soc="F", so the moment is collinear
+# and the eigenstates are eigenstates of sigma.m_hat. Then <s> || m_hat and <T> = -<s> x m_hat
+# is zero exactly. What keeps this from being a check on a file of zeros is the energy column
+# of the same rows, asserted beside it: that is what proves the driver ran at all.
+# To exercise a NON-zero interpolated torque the case needs SOC, which tilts <s> off m_hat.
+TORQUE_INTERP_ZERO = ("WannFeTilt",)
+TORQUE_INTERP_ZERO_TOL = 1.0e-8
+TORQUE_PERP_TOL = 1.0e-6
+
+
+# sum_k Tr(M M+) of the cross-spin block, pinned loosely on purpose. The trace is invariant
+# under a unitary rotation within either spin's degenerate multiplets, but that is not the
+# only freedom a run has. Measured on this case at w222, itmax=1, changing nothing but the
+# toolchain and the parallel layout, as (ranks, threads) -> value:
+#
+#   ifx 2026.1.0   (1,1) 5.197337e-02   (1,20) 5.191069e-02
+#                  (2,1) 5.193487e-02   (2,20) 5.188908e-02
+#   ifx 2025.0.1   (1,1) 5.204809e-02   (1,20) 5.204118e-02
+#                  (2,1) 5.198472e-02   (2,20) 5.204978e-02
+#
+# The reduction order reaches the density that itmax=1 diagonalises, so the compiler moves
+# this as much as the rank count does: 1.4e-3 between the two toolchains at a fixed layout,
+# 1.6e-3 across layouts within one. The value above is the first row, and one percent covers
+# the whole table with room to spare -- including gfortran at the two threads the CI uses,
+# which no tolerance tied to one toolchain would survive. That makes this an order check and
+# not a reference: a conjugation or an index slip in the cross-spin block moves it by orders.
+PERPMAG_TRACE = {"WannFeBccTorque": 5.197337e-02}
+PERPMAG_TRACE_TOL = 1.0e-2
 # Both rules need num_wann == num_bands. A disentangled manifold does not inherit time
 # reversal, so the sum over it is not the physical moment: on w222 every k is its own
 # time-reversal partner, the cancellation has to happen within each k, and that needs the
@@ -288,13 +501,78 @@ L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 @pytest.mark.parametrize(("dir", "desc", "cmdline", "mpi_procs"), all_tests)
 def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number):
     """Run the wannierlib test and, on top of the default out.xml checks, verify the
-    gauge-invariant spread Omega_I (tight) and the total Omega (bounded, not reproduced). Tests that
-    request <operators_r> also get their O(R) exports checked."""
+    gauge-invariant spread Omega_I, tight, with Omega >= Omega_I beside it. Tests that
+    request <operators_r> or <export> also get what those wrote checked."""
     test_id = dir.split("/")[-1]
-    want_files = list(OPERATOR_FILES.get(test_id, ()))
+    want_files = [op(test_id, f) for f in OPERATOR_FILES.get(test_id, ())]
     want_files += INTERP_FILES.get(test_id, [])
+    want_files += EXPORT_FILES.get(test_id, [])
     res = default_fleur_test(dir, files=want_files or None,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
+
+    expected = set(EXPORT_FILES.get(test_id, ()))
+    #> A consumer flag renames and moves what <operatorsRs> asked for, and only that. A
+    #> run that asks for three operators gets three files: nothing stands in for the one
+    #> it did not ask for. WannFeBcc asks for no spinOrbit, so input/spin_orbit is in the
+    #> census above and in no expected set, which is what turns that into an assertion.
+    expected.update(op(test_id, f) for f in OPERATOR_FILES.get(test_id, ()))
+    #> How many channels a run writes is a property of the run -- a collinear jspins=2 case
+    #> wannierises each channel on its own -- and not of the flag, so a case that exports the
+    #> set at all may leave the second channel beside the first. Asserted by name where it is
+    #> expected (WannFeAFMCol), tolerated here rather than listed per case.
+    if expected & set(_W90_FILES):
+        expected.update("WF2." + ext for ext in ("amn", "mmn", "eig"))
+    for name in EXPORT_ARTEFACTS:
+        if name not in expected:
+            assert name not in res, (
+                f"{name} was written although this case asks for no such export. The flag "
+                f"in <export> is what decides, and a writer that runs anyway puts files no "
+                f"one wanted beside the run -- the .mmn of a large mesh is hundreds of "
+                f"megabytes of text, which is the whole reason these are opt-in")
+
+    #> A matrix the transport code reads is taken with list-directed input from the first
+    #> line, so a Wannier90 header reaching it is a syntax error in the middle of a run --
+    #> and in a file whose leading columns still parse as numbers it would be worse than an
+    #> error: plausible values and no complaint. Asserting that the FIRST line is data
+    #> catches the class rather than the case, for whichever operator wrote the file.
+    for name in (f"{ORBITRANS_DIR}/{n}" for n in ("hoppings", "position", "bmn")):
+        if name not in res:
+            continue
+        with open(res[name]) as fh:
+            head = fh.readline().split()
+        assert len(head) >= 7 and all(w.lstrip("-").isdigit() for w in head[:5]), (
+            f"{name} opens with {' '.join(head[:6])!r} rather than a data line. The "
+            f"consumer reads it from line one and has nothing to skip a header with")
+
+    #> ndegen is a file of its own precisely because the block it used to sit in is
+    #> ceil(N_R/15) lines wide: a reader that skips a fixed count instead gets it right for
+    #> one N_R and silently wrong for the next. One value per R-vector is the check.
+    if f"{ORBITRANS_DIR}/ndegen" in res:
+        degen = open(res[f"{ORBITRANS_DIR}/ndegen"]).read().split()
+        n_rpts = sum(1 for line in open(res[f"{ORBITRANS_DIR}/rpts"]) if line.split())
+        assert len(degen) == n_rpts, (
+            f"ndegen holds {len(degen)} values for the {n_rpts} R-vectors in rpts")
+
+    #> The per-atom Wannier counts, checked against the two files written beside them so
+    #> that nothing here is a number to keep up to date: one count per atom of the cell,
+    #> and together they account for every Wannier function.
+    #>
+    #> A projection carries its atom as (ntype, atom) with `atom` counting within the
+    #> equivalence class of its type. Reading that as the index of the atom in the cell
+    #> agrees with this file exactly when there is ONE atom group, because only then is
+    #> firstAtom of every group 1 -- and the size of that group does not matter. So the
+    #> case that makes these two assertions bite is WannMoS2, with its groups of one and
+    #> two atoms, and not a single group holding two.
+    if f"{ORBITRANS_DIR}/N_wann_atom" in res:
+        counts = [int(v) for v in open(res[f"{ORBITRANS_DIR}/N_wann_atom"]).read().split()]
+        n_at = sum(1 for line in open(res[f"{ORBITRANS_DIR}/atom_centers"]) if line.split())
+        n_wf = sum(1 for line in open(res[f"{ORBITRANS_DIR}/wann_centers"]) if line.split())
+        assert len(counts) == n_at, (
+            f"N_wann_atom holds {len(counts)} counts for the {n_at} atoms of atom_centers. "
+            f"orbitrans reads one per atom and runs off the end of a shorter file")
+        assert sum(counts) == n_wf, (
+            f"N_wann_atom accounts for {sum(counts)} of the {n_wf} Wannier functions "
+            f"listed in wann_centers")
 
     omega_i_got = ()
     if test_id in EXPECTED_OMEGA_I:
@@ -319,6 +597,20 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"total spread Omega {omega} of channel {ch} is below its own invariant part "
                 f"Omega_I {omega_i}, which is impossible: Omega = Omega_I + Omega_OD")
 
+    # Not scoped to a case list: every wannierised run hands its gauge over, so every case
+    # reports, and a case that does not is itself the finding.
+    devs = gauge_unitarity(res["out"])
+    assert devs, (
+        "no 'wannierlib gauge' line in the output, so store_gauge never ran and the "
+        "matrices the electron-phonon interpolation reads were never completed over the "
+        "mesh -- that path would read whatever the previous run left, or nothing")
+    for spin, dev in devs:
+        assert dev < GAUGE_UNITARY_TOL, (
+            f"spin {spin}: max |V^H V - 1| = {dev} over the full mesh, but V = u_opt . "
+            f"u_mlwf has orthonormal columns at every k by construction (tol "
+            f"{GAUGE_UNITARY_TOL}). A value near 1 is a k-point the rank sum left at zero, "
+            f"not a tolerance to widen")
+
     # Omega_total is NOT compared against the reference, at any tolerance. Which of the
     # near-degenerate MLWF minima the iteration reaches follows the order of the
     # floating-point reductions, and that order is a property of the BUILD. Measured on
@@ -337,31 +629,32 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # Every other rule here is an upper bound -- the Pauli bound, the vanishing spin
         # sums, the vanishing orbital traces -- and a file of zeros satisfies all of them,
         # so an operator that computes nothing passes every check made on its output.
+        onsite_floor = ONSITE_MIN_GAUGE_LABILE.get(test_id, ONSITE_MIN)
         for name in [f for f in OPERATOR_FILES[test_id] if f in GENERIC_OP_FILES]:
-            assert onsite_weight(res[name]) > ONSITE_MIN, (
-                f"{name}: only {onsite_weight(res[name]):.2f} % of |O(R)|^2 sits at R = 0 "
-                f"(expected above {ONSITE_MIN}). The operator no longer decays in real "
+            assert onsite_weight(res[op(test_id, name)]) > onsite_floor, (
+                f"{name}: only {onsite_weight(res[op(test_id, name)]):.2f} % of |O(R)|^2 sits at R = 0 "
+                f"(expected above {onsite_floor}). The operator no longer decays in real "
                 f"space, which is what a conjugation convention that disagrees with the "
                 f"gauge looks like -- and nothing else in this file would see it.")
-            assert nonzero_entries(res[name]) > 0, (
+            assert nonzero_entries(res[op(test_id, name)]) > 0, (
                 f"{name}: every entry is zero, so the operator wrote a correctly shaped "
                 "file with nothing in it")
 
     if "rspauli.1" in OPERATOR_FILES.get(test_id, ()):
-        worst = rspauli_r0_diagonal_max(res["rspauli.1"])
+        worst = rspauli_r0_diagonal_max(res[op(test_id, "rspauli.1")])
         assert worst < PAULI_BOUND, (
             f"rspauli.1: max |<w_0n|sigma|w_0n>| = {worst} exceeds the Pauli bound 1; "
             "the coarse operator pass is using an inconsistent (zMat, jspin) pairing")
 
     if test_id in NONMAGNETIC:
-        sums = rspauli_r0_diagonal_sums(res["rspauli.1"])
+        sums = rspauli_r0_diagonal_sums(res[op(test_id, "rspauli.1")])
         for comp, total in sorted(sums.items()):
             assert abs(total) < SPIN_SUM_TOL, (
                 f"rspauli.1: sum over the R=0 diagonal of component {comp} is {total}, "
                 f"but a non-magnetic system must give 0 (tol {SPIN_SUM_TOL})")
 
     if test_id in COLLINEAR_Z:
-        sums = rspauli_r0_diagonal_sums(res["rspauli.1"])
+        sums = rspauli_r0_diagonal_sums(res[op(test_id, "rspauli.1")])
         for comp in ("1", "2"):
             total = sums.get(comp, 0.0)
             assert abs(total) < SPIN_SUM_TOL, (
@@ -369,7 +662,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"collinear magnet along z must give 0 (tol {SPIN_SUM_TOL})")
 
     if test_id in SIGMA_Z_UNIT:
-        diag = [v for (i, j), v in anglmom_r0(res["rspauli.1"]).get("3", {}).items() if i == j]
+        diag = [v for (i, j), v in anglmom_r0(res[op(test_id, "rspauli.1")]).get("3", {}).items() if i == j]
         assert diag, "rspauli.1: no sigma_z entries on the R=0 diagonal"
         worst = max(abs(abs(v.real) - 1.0) for v in diag)
         assert worst < SIGMA_Z_TOL, (
@@ -377,14 +670,14 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"function lies wholly in one spin channel (tol {SIGMA_Z_TOL})")
 
     for name in [f for f in OPERATOR_FILES.get(test_id, ()) if f.startswith("anglmomrs")]:
-        worst = anglmom_r0_hermiticity(res[name])
+        worst = anglmom_r0_hermiticity(res[op(test_id, name)])
         assert worst < L_HERM_TOL, (
             f"{name}: L(R=0) is off hermitian by {worst}; <w_0i|L|w_0j> and "
             f"<w_0j|L|w_0i>* must agree (tol {L_HERM_TOL})")
 
     if test_id in L_SUM_ZERO:
         for name in [f for f in OPERATOR_FILES[test_id] if f.startswith("anglmomrs")]:
-            for comp, total in sorted(anglmom_r0_traces(res[name]).items()):
+            for comp, total in sorted(anglmom_r0_traces(res[op(test_id, name)]).items()):
                 assert abs(total) < L_SUM_TOL, (
                     f"{name}: trace of component {comp} is {total}, but this manifold "
                     f"carries no net orbital moment (tol {L_SUM_TOL})")
@@ -425,7 +718,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             "wrote a correctly shaped file with nothing in it")
 
     if test_id in L_TRANSVERSE_ZERO:
-        traces = anglmom_r0_traces(res["anglmomrs.1"])
+        traces = anglmom_r0_traces(res[op(test_id, "anglmomrs.1")])
         for comp in ("1", "2"):
             total = traces.get(comp, 0.0)
             assert abs(total) < L_SUM_TOL, (
@@ -442,3 +735,55 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"without SOC every Bloch state is a pure spinor, so |<s>| must be 1; the "
             f"smallest of {len(vals)} values is {worst:.6f}. The azimuthal rotation of the "
             f"spin operator is the usual cause -- it only shows up when alpha != 0.")
+
+    # The exchange torque is perpendicular to the moment: see TORQUE_PERP above.
+    if test_id in TORQUE_PERP:
+        alpha, beta = TORQUE_PERP[test_id]
+        axis = (math.sin(beta) * math.cos(alpha),
+                math.sin(beta) * math.sin(alpha),
+                math.cos(beta))
+        # The premise of the check, asserted rather than assumed: on a Cartesian axis the
+        # projection is zero by arithmetic and this would pass without measuring anything.
+        assert min(abs(c) for c in axis) > 0.1, (
+            f"m_hat = {axis} has a near-zero component, so T.m_hat is zero by arithmetic "
+            f"and this assertion cannot fail -- put the moment off the Cartesian axes")
+        worst = torque_perp_residual(res[op(test_id, "rstorque.1")], axis)
+        assert worst < TORQUE_PERP_TOL, (
+            f"rstorque.1: max |T.m| / max|T| = {worst}, but T = -(s x m_hat) is "
+            f"perpendicular to m_hat by construction (tol {TORQUE_PERP_TOL}, which is the "
+            f"resolution of the eight-decimal file, not a physical bound)")
+
+    # Collinearly the torque is the cross-spin block in the Bloch basis: updown.perpmag.
+    if test_id in PERPMAG_TRACE:
+        name = op(test_id, "updown.perpmag")
+        nb, nk, nw, rows, complete, trace, peak = perpmag_census(res[name])
+        assert complete, (
+            f"{name}: {rows} rows for {nb}x{nw} bands over {nk} k-points, and not every "
+            f"(band, band, k) is present. The classic route writes the block whole and a "
+            f"consumer indexes it by position, so a gap is silently read as a zero")
+        assert peak > 0.0, (
+            f"{name}: every entry is zero, so the run wrote a correctly shaped file with "
+            f"nothing in it")
+        ref = PERPMAG_TRACE[test_id]
+        assert abs(trace - ref) < PERPMAG_TRACE_TOL * max(abs(ref), 1.0), (
+            f"{name}: sum_k Tr(M M+) = {trace} against reference {ref} "
+            f"(tol {PERPMAG_TRACE_TOL} relative)")
+
+    # The interpolated torque, projected on the Wannier-Hamiltonian eigenstates.
+    if test_id in TORQUE_INTERP_ZERO:
+        rows = dat_rows(res["bands_wann_torque.dat"])
+        assert rows, "bands_wann_torque.dat has no data rows"
+        nw = (len(rows[0]) - 1) // 4        # kdist + per band: E and three components
+        assert nw > 0 and len(rows[0]) == 1 + 4 * nw, (
+            f"bands_wann_torque.dat has {len(rows[0])} columns, which is not 1 + 4*num_wann: "
+            f"the layout is kdist then E_n and three Cartesian components per band")
+        energies = [r[1 + n * 4] for r in rows for n in range(nw)]
+        assert max(abs(e) for e in energies) > 1.0, (
+            "bands_wann_torque.dat: the energy column is zero too, so this file is empty "
+            "rather than vanishing -- the zero torque below would mean nothing")
+        worst = max(abs(r[1 + n * 4 + 1 + c])
+                    for r in rows for n in range(nw) for c in range(3))
+        assert worst < TORQUE_INTERP_ZERO_TOL, (
+            f"bands_wann_torque.dat: max |<T>_nn| = {worst}, but with a collinear moment and "
+            f"no SOC the eigenstates are eigenstates of sigma.m_hat, so <s> is parallel to "
+            f"m_hat and <T> = -<s> x m_hat vanishes (tol {TORQUE_INTERP_ZERO_TOL})")

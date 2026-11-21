@@ -15,8 +15,74 @@ MODULE m_wannierlib_band_window
    USE m_types_misc
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wannierlib_default_windows, wannierlib_create_eig
+   PUBLIC :: wannierlib_default_windows, wannierlib_create_eig, wannierlib_check_bands
 CONTAINS
+
+   !> That the bands the wannierization is about to read were actually computed.
+   !>
+   !> `numbands` in <cutoffs> and `maxBand` in <wannierlib><bands> are two different knobs
+   !> with nearly the same name: the first is how many bands FLEUR KEEPS, the second how
+   !> many the wannierization READS. Asking for a band that is not there reports nothing --
+   !> the read runs past the end of the record and the run dies with
+   !>
+   !>      Signal 11 detected on PE: 0
+   !>      Last timer: IO (read)  /  Timer: wannierlib
+   !>
+   !> which names neither bands nor windows, and which is insensitive to num_wann, to the
+   !> disentanglement and to the operators, so the search goes everywhere except here. On
+   !> Si in October 2026 that cost five runs: numbands was left at 0, FLEUR chose seven
+   !> bands for the eight valence electrons, and maxBand asked for the eighth.
+   !>
+   !> Counted from results%neig, which is how many eigenvalues each k-point actually has.
+   !> That is the one count free of convention: `numbands` means spinor bands with SOC and
+   !> no noco, and per-channel bands under noco, where FLEUR doubles it -- so comparing
+   !> against the input value would be right in one case and wrong in the other.
+   SUBROUTINE wannierlib_check_bands(this, results, kpts, input, l_spinors)
+      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+      TYPE(t_results), INTENT(IN) :: results
+      TYPE(t_kpts),    INTENT(IN) :: kpts
+      TYPE(t_input),   INTENT(IN) :: input
+      LOGICAL,         INTENT(IN) :: l_spinors
+
+      INTEGER :: ikpt, jsp, nsp, navail, kworst, jworst
+
+      IF (this%min_band < 1 .OR. this%max_band < this%min_band) CALL juDFT_error( &
+         'wannierlib: <bands> has minBand and maxBand the wrong way round or below one', &
+         calledby='wannierlib_check_bands')
+
+      IF (.NOT. ALLOCATED(results%eig) .OR. .NOT. ALLOCATED(results%neig)) CALL juDFT_error( &
+         'wannierlib: the eigenvalues of the SCF are not available to the wannierization', &
+         hint='run the wannierization as a separate step on a converged density', &
+         calledby='wannierlib_check_bands')
+
+      !> The scarcest k-point of the wannierization mesh, not the first: the count may
+      !> differ between k, and the one that crashes is the one with fewest bands.
+      nsp = MERGE(1, input%jspins, l_spinors)
+      navail = HUGE(navail)
+      kworst = 0; jworst = 0
+      DO jsp = 1, nsp
+         DO ikpt = 1, kpts%nkptf
+            IF (results%neig(kpts%bkp(ikpt), jsp) < navail) THEN
+               navail = results%neig(kpts%bkp(ikpt), jsp)
+               kworst = ikpt; jworst = jsp
+            END IF
+         END DO
+      END DO
+
+      IF (this%max_band > navail .OR. this%max_band > SIZE(results%eig, 1)) THEN
+         WRITE (oUnit, '(/,a)')   'wannierlib: maxBand asks for bands that were not computed'
+         WRITE (oUnit, '(a,2i8)') '   bands asked for (min, max) :', this%min_band, this%max_band
+         WRITE (oUnit, '(a,i8)')  '   bands available, worst k    :', navail
+         WRITE (oUnit, '(a,2i8)') '   at k-point / spin           :', kworst, jworst
+         WRITE (oUnit, '(a,i8)')  '   room in results%eig         :', SIZE(results%eig, 1)
+         CALL juDFT_error( &
+            'wannierlib: maxBand is above the number of bands the calculation has', &
+            hint='raise numbands in <cutoffs> to at least maxBand and rerun; '// &
+                 'numbands="0" lets FLEUR pick, and it picks what the SCF needs, not what '// &
+                 'the wannierization reads', &
+            calledby='wannierlib_check_bands')
+      END IF
+   END SUBROUTINE wannierlib_check_bands
 
    ! Fill in the energy windows the input did not state, from the range the selected bands
    ! actually span ON THE WANNIERIZATION MESH. That is what Wannier90 falls back to when the
