@@ -116,8 +116,15 @@ In `k`, from `<operatorsKs>`:
 
 | File | Content |
 |---|---|
-| `WF<n>_operators_ks.hdf` | `spin`, `orbital`, `spinOrbit`, `exchangeTorque` in the Bloch basis, no gauge, with the b-shells beside them |
+| `WF<n>_operators_ks.hdf` | `spin`, `orbital`, `spinOrbit`, `exchangeTorque` in the Bloch basis, no gauge, with the b-shells beside them. Carries the k-list every dataset is indexed by |
 | `WF<n>_modern_k.hdf` | `B(k)`, `C(k)`, `F(k)` in the Wannier gauge, one Fourier sum from the three `.dat` files above and in the same units, so the step between them is a plain phase sum. Carries the k-list it was built on, so that sum needs no second file |
+
+Each of the three HDF files above also carries, on its root group, what the Wannier90
+checkpoint beside it cannot say about itself: the route, the band range, the energy
+windows that were actually used, and `chkCRC32`, a CRC32 of the checkpoint's own bytes.
+Wannier90's ten load-time checks answer "is this checkpoint shaped like this case"; these
+answer "is it from this run". Checking the stamp costs a consumer one `zlib.crc32` call.
+Strings are stored the way every FLEUR attribute is, as an array of one-character strings.
 
 Interpolated, from `<interpolation>`: `bands_wann_<what>[_domain][_spinN].dat`, one row per
 k-point, `kdist` first and then the bands. `<n>` and `_spinN` are the collinear spin

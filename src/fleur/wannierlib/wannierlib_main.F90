@@ -50,6 +50,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
    USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
+   USE m_wannierlib_chkinfo, ONLY: wl_chkinfo_set, wl_chkinfo_stamp
    USE m_wgauge_check_mw, ONLY: wgauge_check_mw
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans, orbitrans_assemble_2n
@@ -146,6 +147,8 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
       COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) the same one with H inside
       LOGICAL :: l_wannierlib_spinors
+      CHARACTER(LEN=16) :: wl_route       ! scalar/collinear/spinor, for the witness
+      CHARACTER(LEN=80) :: chk_name       ! the checkpoint this channel handed out
       TYPE(t_melem_request) :: request
       TYPE(t_wgauge_manifold) :: manifold
       TYPE(t_wgauge_domains) :: domains
@@ -190,6 +193,21 @@ CONTAINS
       !> results%eig at maxBand, and before anything reads an eigenvector.
       CALL wannierlib_check_bands(wl, results, kpts, input, l_wannierlib_spinors)
       CALL wannierlib_default_windows(wl, results, kpts, input, l_wannierlib_spinors)
+
+      !> The witness that rides in every file we write: what this gauge was built from.
+      !> Here, because this is the line after which the windows stop being optional -- a
+      !> window left out of the input has just been filled in from the bands -- and
+      !> before the first export. What goes down is therefore what the run USED.
+      IF (l_wannierlib_spinors) THEN
+         wl_route = 'spinor'
+      ELSE IF (input%jspins == 2) THEN
+         wl_route = 'collinear'
+      ELSE
+         wl_route = 'scalar'
+      END IF
+      CALL wl_chkinfo_set(wl_route, wl%num_bands, wl%min_band, wl%max_band, wl%num_wann, &
+                          fmpi%isize, wl%dis_win_min, wl%dis_win_max, wl%dis_froz_min, &
+                          wl%dis_froz_max)
 
       CALL manifold%init(wl%num_bands, wl%num_wann, wl%dis_win_min, wl%dis_win_max, &
                          wl%min_band, wl%max_band)
@@ -314,7 +332,7 @@ CONTAINS
                                       request%has_op_k('exchangeTorque'), &
                                       melem%s0, melem%l0, melem%soc4, melem%t0, melem%x0, &
                                       melem%n_channels, atoms%nat, &
-                                      distk, kpts%nkptf, wl%num_bands, eig, jspin, fmpi)
+                                      distk, kpts, cell, wl%num_bands, eig, jspin, fmpi)
             !> Read it back and require it to reproduce what it was written from. The
             !> reader is outside FLEUR and will never have the eigenvectors to check it
             !> against, so this is the only place the question can still be asked.
@@ -395,6 +413,18 @@ CONTAINS
          !> Rank 0 owns `out` and `out.xml`, and the centres are plain data on every
          !> rank, so the report is written whatever the number of ranks.
          IF (fmpi%irank == 0) CALL report_w90(this)
+
+         !> Last in the channel, because this is the first point at which every file it
+         !> writes exists: WF<n>_bmesh.hdf and WF<n>_operators_ks.hdf go out before
+         !> run_w90 and WF<n>_modern_k.hdf after it. Only under <export wannier90="T"/>:
+         !> with no checkpoint handed out there is nothing to pair with, and an absent
+         !> stamp says that rather than a zero that has to be interpreted. The name comes
+         !> from the adapter, which is what decides it; this module does not rebuild the
+         !> rule and does not read it back out of Wannier90's own state.
+         IF (this%export%w90) THEN
+            chk_name = TRIM(wl_w90_seedname(jspin, melem%n_channels))//'.chk'
+            CALL wl_chkinfo_stamp(jspin, TRIM(chk_name), fmpi%irank)
+         END IF
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)

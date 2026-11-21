@@ -36,6 +36,11 @@ error. This one closes the loop through a second, already-trusted writer:
 with V read back out of the Wannier90 checkpoint the same run wrote. Measured
 residual on this case is ~7e-9, which is the precision rspauli.1 is printed with.
 
+Each of the three files also carries what the checkpoint cannot say about itself -- the
+windows, the band range, the route -- and a CRC32 of the checkpoint's own bytes, so a
+consumer holding both can tell whether they are from one run. That is checked here with
+zlib, which is how a consumer outside FLEUR has to check it.
+
 WF<n>_modern_k.hdf carries the k-list it was built on, so the phase sum needs nothing
 but that one file; the test reads the list from there, checks it against the b-mesh
 writer, and sums with it, which is what makes a drifting order visible.
@@ -195,6 +200,45 @@ def _check_bmesh(path, np, h5py):
     return bkf
 
 
+def _check_witness(res, np, h5py):
+    """Every file we write names the checkpoint it belongs to, and names it by its bytes.
+
+    Wannier90 checks ten fields when it loads a .chk, and they answer "is this checkpoint
+    shaped like this case". None of them answers "is it from this run": the energy windows
+    never enter the file, only the lwindow mask they produced, and minBand/maxBand shifted
+    in step leave numBands untouched. Such a .chk passes all ten checks and hands over a
+    gauge built on other bands. CRC32 over its bytes is what separates the two, and it is
+    checked here the way a consumer outside FLEUR has to check it -- one zlib call, no
+    agreement with FLEUR about anything but the number.
+
+    #> Signed because Fortran holds it in a default INTEGER and HDF5 stores what it holds.
+    """
+    import zlib
+    raw = zlib.crc32(open(res["WF1.chk"], "rb").read())
+    crc = raw - (1 << 32) if raw >= (1 << 31) else raw
+
+    for name in ("WF1_bmesh.hdf", "WF1_operators_ks.hdf", "WF1_modern_k.hdf"):
+        with h5py.File(res[name], "r") as handle:
+            a = handle.attrs
+            for key in ("route", "numBands", "minBand", "maxBand", "numWann", "nranks",
+                        "disWinMin", "disWinMax", "disFrozMin", "disFrozMax",
+                        "chkCRC32", "chkFile"):
+                assert key in a, (
+                    f"{name} does not carry {key}. These are what the checkpoint beside it "
+                    f"cannot say about itself, so a file without them leaves a consumer "
+                    f"with no way to tell which run its gauge came from")
+            assert int(np.ravel(a["chkCRC32"])[0]) == crc, (
+                f"{name} is stamped with CRC32 {int(np.ravel(a['chkCRC32'])[0])} and "
+                f"WF1.chk hashes to {crc}, so the file and the checkpoint this run wrote "
+                f"together no longer agree about which checkpoint that was")
+            #> Stored as an array of one-character strings, which is what FLEUR's
+            #> attribute writer does with every string it writes. Joining is the whole of
+            #> the convention, and a consumer that compares the array to b"WF1.chk"
+            #> instead gets False with no error -- so the join is asserted, not assumed.
+            assert b"".join(np.ravel(a["chkFile"])).decode().strip() == "WF1.chk", (
+                f"{name} names a checkpoint that is not the one this run wrote")
+
+
 def _read_bmn_dat(path, num_wann, np):
     """WF<n>_bmn.dat in the 'bmn' layout: R1 R2 R3  i j  then the three components.
 
@@ -292,6 +336,8 @@ def test_operators_ks_reproduces_the_real_space_route(execute_fleur):
     #> The tolerance is ABSOLUTE and does not scale: the .dat is printed with six
     #> decimals, so 5e-7 of disagreement is the file's own rounding whatever the size of
     #> B, and anything that breaks the join is O(1).
+    _check_witness(res, np, h5py)
+
     irvec, theirs = _read_bmn_dat(res["WF1_bmn.dat"], num_wann, np)
     with h5py.File(res["WF1_modern_k.hdf"], "r") as handle:
         #> Written through io_write_attint0, which stores a scalar as a length-1 array;

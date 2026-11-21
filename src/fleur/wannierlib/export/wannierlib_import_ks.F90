@@ -102,11 +102,15 @@ CONTAINS
       l_found = (hdr(1) == 1)
       IF (.NOT. l_found) RETURN
 
-      !> Version 2 only adds eigval, so a version 1 file is still readable in full -- what
-      !> it cannot do is answer whether it came from this density.
-      IF (hdr(2) /= 1 .AND. hdr(2) /= 2) &
+      !> Each version only ADDS a record, so every older file is still readable in full:
+      !> version 2 added eigval, without which a file cannot answer whether it came from
+      !> this density, and version 3 added the k-list and the lattice, without which a
+      !> consumer outside FLEUR has to find the mesh somewhere else. This reader is inside
+      !> FLEUR and has the mesh already, so it needs neither -- it widens the gate and
+      !> nothing more.
+      IF (hdr(2) < 1 .OR. hdr(2) > 3) &
          CALL juDFT_error("wannierlib: the Bloch-basis operator file has layout version "// &
-                          i2s(hdr(2))//", and this build knows 1 and 2", &
+                          i2s(hdr(2))//", and this build knows 1 to 3", &
                           calledby="wannierlib_import_ks")
       !> The number of k-points is written TWICE, in the root attribute and in the dims
       !> record. Both are checked, separately and under different names, so that the day

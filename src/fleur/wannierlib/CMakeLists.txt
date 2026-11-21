@@ -9,6 +9,7 @@ src/fleur/wannierlib/wannierlib_mmnkb.F90
 src/fleur/wannierlib/wannierlib_w90_adapter.F90
 src/fleur/wannierlib/wannierlib_build_amn_mmn.F90
 src/fleur/wannierlib/wannierlib_band_window.F90
+src/fleur/wannierlib/wannierlib_chkinfo.F90
 src/fleur/wannierlib/wannierlib_request.F90
 src/fleur/wannierlib/wannierlib_main.F90
 src/fleur/wannierlib/wannierlib_tlmw.F90

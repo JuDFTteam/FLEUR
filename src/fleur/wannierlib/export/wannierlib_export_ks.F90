@@ -22,6 +22,13 @@
 !> a run can ask for them and no operators -- so <export bmesh="T"/> publishes them once,
 !> in their own file. Taking a derivative in k needs both.
 !>
+!> WHAT DOES. The k-list the last index runs over, and the lattice. Every dataset here is
+!> indexed by k and nothing else in the file says which k an index is, so without the list
+!> a consumer has to go and find it: in WF<n>_bmesh.hdf, which is a separate opt-in flag a
+!> run need not have set, or rebuilt from inp.xml, which is a convention of its own to get
+!> wrong. Any list of the right length leaves every operation on this file well defined, so
+!> picking one up in another order is wrong with no error. It costs 3*nkpt reals.
+!>
 !> LAYOUT. One rank-5 dataset per operator, (2, nb, nb, ncomp, nkpt) in Fortran order, real
 !> part then imaginary. It is written one component at a time: the whole array and the
 !> buffer it is gathered through do not fit side by side for an orbital moment on many
@@ -38,6 +45,8 @@ MODULE m_wannierlib_export_ks
    USE m_juDFT
    USE m_constants, ONLY: oUnit
    USE m_types_mpi, ONLY: t_mpi
+   USE m_types_kpts, ONLY: t_kpts
+   USE m_types_cell, ONLY: t_cell
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_export_ks
@@ -47,7 +56,7 @@ CONTAINS
    !> over the ranks by k and have to be gathered -- but only rank 0 holds the file open.
    SUBROUTINE wannierlib_export_ks(l_spin, l_orbital, l_spinorbit, l_torque, &
                                    s0, l0, soc4, t0, x0, n_channels, nat, &
-                                   distk, nkptf, nb, eig, jspin, fmpi)
+                                   distk, kpts, cell, nb, eig, jspin, fmpi)
 #ifdef CPP_HDF
       USE hdf5
       USE m_wannierlib_hdf_util
@@ -60,15 +69,18 @@ CONTAINS
       COMPLEX, ALLOCATABLE, INTENT(IN) :: x0(:, :, :)             !< (nb,nb,nk_loc)
       INTEGER,              INTENT(IN) :: n_channels, nat
       INTEGER,              INTENT(IN) :: distk(:)                !< (nkptf) owning rank of each k
-      INTEGER,              INTENT(IN) :: nkptf, nb, jspin
+      TYPE(t_kpts),         INTENT(IN) :: kpts                    !< the full-zone list the last index runs over
+      TYPE(t_cell),         INTENT(IN) :: cell
+      INTEGER,              INTENT(IN) :: nb, jspin
       REAL,                 INTENT(IN) :: eig(:, :)              !< (nb,nkptf) the band energies
       TYPE(t_mpi),          INTENT(IN) :: fmpi
 #ifdef CPP_HDF
       INTEGER(HID_T)    :: fid, gid, did
       CHARACTER(LEN=80) :: filename
-      INTEGER           :: ic, iat, ich, icomp, ncomp, e
+      INTEGER           :: ic, iat, ich, icomp, ncomp, e, nkptf
       LOGICAL           :: l_root
 
+      nkptf = kpts%nkptf
       l_root = (fmpi%irank == 0)
 
       !> The band count travels as an argument because the caller knows it as the width of
@@ -102,8 +114,13 @@ CONTAINS
 
       IF (l_root) THEN
          CALL wl_hdf_create('operators_ks', jspin, fid, filename)
-         CALL wl_hdf_root(fid, 2, nkptf, gid)
+         CALL wl_hdf_root(fid, 3, nkptf, gid)
          CALL wr_i1(gid, 'dims', [4], [nb, nkptf, nat, n_channels])
+         !> Fractional, in the order every dataset below is indexed in -- that order is
+         !> the contract, not the values. amat goes with them, in Bohr as FLEUR holds it.
+         !> Layout version 3 is these two; version 2 is the same file without them.
+         CALL wr_r2(gid, 'kpts', [3, nkptf], kpts%bkf(:, 1:nkptf))
+         CALL wr_r2(gid, 'amat', [3, 3], cell%amat)
          !> The band energies of the manifold, on the whole mesh. They are not here to be
          !> consumed: a later run gets them from its own diagonalisation, which it does
          !> anyway. They are here as a witness. Everything else in this file, and in the

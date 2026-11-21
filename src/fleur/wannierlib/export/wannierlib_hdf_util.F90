@@ -42,10 +42,14 @@ CONTAINS
       CALL h5fcreate_f(TRIM(filename), H5F_ACC_TRUNC_F, fid, e, H5P_DEFAULT_F, H5P_DEFAULT_F)
    END SUBROUTINE wl_hdf_create
 
-   !> The root group with the two attributes a reader needs before it can read anything
-   !> else. Returned OPEN: what else belongs on the root is the exporter's own business,
-   !> and it closes the group when it has written it.
+   !> The root group with the attributes a reader needs before it can read anything else:
+   !> the layout version and the k-point count, and beside them what the run this file
+   !> came out of was -- the bands, the windows and the route, which is what a consumer
+   !> holding our file and a Wannier90 checkpoint has no other way of learning. Returned
+   !> OPEN: what else belongs on the root is the exporter's own business, and it closes
+   !> the group when it has written it.
    SUBROUTINE wl_hdf_root(fid, version, nkpt, gid)
+      USE m_wannierlib_chkinfo, ONLY: wl_chkinfo_write
       INTEGER(HID_T), INTENT(IN) :: fid
       INTEGER, INTENT(IN) :: version, nkpt
       INTEGER(HID_T), INTENT(OUT) :: gid
@@ -53,6 +57,9 @@ CONTAINS
       CALL h5gopen_f(fid, '/', gid, e)
       CALL io_write_attint0(gid, 'version', version)
       CALL io_write_attint0(gid, 'nkpt', nkpt)
+      !> Here and not in each exporter: this is the one call all three of our files pass
+      !> through, so none of them can be written without saying where it came from.
+      CALL wl_chkinfo_write(gid)
    END SUBROUTINE wl_hdf_root
 
    !> A rank-5 dataset filled one slab at a time. The arrays this serves are an operator

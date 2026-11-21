@@ -43,6 +43,7 @@ MODULE m_wannierlib_w90_adapter
 
   PRIVATE
   PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90, WANNIERLIB_SEARCH_SHELLS
+  PUBLIC :: wl_w90_seedname
 #ifdef CPP_WANNLIB_API
   TYPE(lib_common_type), SAVE, PUBLIC :: wannierlib_w90main
 #endif
@@ -232,13 +233,29 @@ CONTAINS
           CALL w90_set_option(wannierlib_w90main, 'dist_cutoff', bohr_to_angstrom_const*this%tran_dist_cutoff)
     END IF
 
-    !> The stem the checkpoint and its witness are named after. It is the same stem the
-    !> .amn, .mmn, .eig and .win carry, so that the five files a standalone wannier90.x
-    !> reads sit side by side under one name and none of them has to be renamed first.
+    !> The stem the checkpoint is named after. It is the same stem the .amn, .mmn, .eig
+    !> and .win carry, so that the five files a standalone wannier90.x reads sit side by
+    !> side under one name and none of them has to be renamed first. The default; the
+    !> per-channel rule is wl_w90_seedname, which run_w90 applies once it knows the spin.
     seedname = 'WF1'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='set_w90_options')
   END SUBROUTINE set_w90_options
+
+  !> The stem this adapter hands Wannier90, and therefore the name of the checkpoint it
+  !> writes: <stem>.chk. A single channel is WF1; two channels are WF1 and WF2, one per
+  !> spin. Asked rather than rebuilt by whoever needs to name that file, so the rule stays
+  !> here -- naming what Wannier90 gets is this module's job, and reading the stem back out
+  !> of Wannier90's own state from outside would make that state everybody's business.
+  FUNCTION wl_w90_seedname(jspin, n_channels) RESULT(seed)
+    INTEGER, INTENT(IN) :: jspin, n_channels
+    CHARACTER(LEN=32)   :: seed
+    IF (n_channels > 1) THEN
+      WRITE (seed, '(a,i0)') 'WF', jspin
+    ELSE
+      seed = 'WF1'
+    END IF
+  END FUNCTION wl_w90_seedname
 
   !> The neighbour topology Wannier90 chose, read back out. It is available only once the
   !> options are committed, because that is when the k-mesh exists.
@@ -314,7 +331,7 @@ CONTAINS
     !> A single channel is WF1, the same stem the one set of Bloch files carries; two
     !> channels are WF1 and WF2, one per spin, as those files already are.
     IF (n_channels > 1) THEN
-      WRITE (seedname, '(a,i0)') 'WF', jspin
+      seedname = wl_w90_seedname(jspin, n_channels)
       !> Assigned, not set through w90_input_setopt: that call PROCESSES the option store
       !> and empties it on the way out ("must be empty here; emptied by w90_input_setopt
       !> call", library_interface.F90:458), so a second call fails. The field is the one
