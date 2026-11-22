@@ -3811,7 +3811,7 @@
       </xsd:attribute>
       <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts. Not available for spinor Wannier functions.</xsd:documentation>
+            <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute default="40 40 40" name="plotGrid" type="xsd:string" use="optional">
