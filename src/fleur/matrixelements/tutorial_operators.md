@@ -10,7 +10,7 @@ from the code drifts, and this document has drifted before:
 |---|---|
 | the provider contract, and a kernel whose answer you know in advance | `types_matelements_template.F90` |
 | the same shape with a real operator in it | `types_matelements_orbital.F90` |
-| what the two tables are for and who owns them | `fleurinput/types_melem_optable.f90` |
+| what the two tables are for and who owns them | `src/libraries/fleurinput/types_melem_optable.f90` |
 | the Fourier core, and why it is operator-agnostic | `postproc/wgauge_ft.F90` |
 | `H_W(k)`, and why every driver shares one | `postproc/wgauge_hamk.F90` |
 | `A(R)`, `B(R)`, `F(R)`, `C(R)` and their references | `postproc/melem_coeff_{a,b,tensor}.F90` |

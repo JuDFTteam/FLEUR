@@ -3,6 +3,21 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  Spin-orbit matrix elements <psi_m | H_so | psi_n> at one k-point, as the four
+!>  2x2 spinor blocks.
+!>
+!>  Muffin-tin only: the operator lives inside the spheres, so the plane-wave
+!>  coefficients are never touched. zMat and radfun arrive unused -- the radial
+!>  integrals are precomputed in rsoc%rso and the angular part in rsoc%soangl, so
+!>  what is left here is contracting both against the abc coefficients, site by
+!>  site and l by l.
+!>
+!>  The ket band index is distributed row-cyclically over sub_comm; with one rank
+!>  the loop is the serial one.
+!>
+!>  Like the spin and orbital providers, the accumulation forms c_i * conj(c_j),
+!>  which is the conjugate of the <i|H_so|j> this type documents. The consumer
+!>  undoes it.
 MODULE m_types_matelements_soc
     USE m_types_matelements
     USE m_types_mat
