@@ -69,7 +69,6 @@ contains
     LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
-    !COMPLEX,            INTENT(INOUT)            :: sigma_disc(2)
     type(t_results),    intent(inout), optional  :: results
 
     type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
@@ -79,34 +78,28 @@ contains
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
-    !COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
 
-    complex                                      :: vintcza, xint, rhobar,vslope
-    integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
-    integer                                      :: lh, n, nzst1, first_star
-    integer                                      :: imz, imzxy, ichsmrg, ivfft
-    integer                                      :: l, nat , ncsh
-    real                                         :: ani, g3, z , sigmaa(2)
-    complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is, constantShift
-    !complex                                      :: sigma_loc(2), sigma_loc2(2)
-    complex, allocatable                         :: alphm(:,:), psq(:)
-    real,    allocatable                         :: af1(:), bf1(:)
+    complex                                      :: vintcza, rhobar,vslope
+    integer                                      :: i, i3, irec2, irec3, k3
+    integer                                      :: nzst1, first_star
+    integer                                      :: ivfft
+    integer                                      :: ncsh
+    real                                         :: ani, z , sigmaa(2)
+    complex                                      :: sig1dh, vz1dh, constantShift
+    complex, allocatable                         :: alphm(:,:), psq(:), vsum(:), xstar(:,:)
+    real,    allocatable                         :: af1(:), bf1(:) ! private work arrays of the threads
+    logical                                      :: l_fastsum, l_center0
     real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film
     real                                         :: wgtEdge, zMir ! blend across the +-dTilda/2 cell edge
     complex                                      :: vintczMir
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord, l_corr , l_gradientEfield
+    LOGICAL :: l_gradientEfield
 
 #ifdef CPP_MPI
     integer:: ierr
 #endif
 
     l_dfptvgen = PRESENT(stars2)
-    l_2ndord = PRESENT(iDir2)
-    !l_corr = .FALSE. !ALL(ABS(den%vac)<1e-12)
-    !vmz1dh_is = cmplx(0.0,0.0)
-    !sigma_loc = CMPLX(0.0,0.0) !sigma_disc
-    !sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
     l_gradientEfield = .FALSE. 
     if (present(iDtype)) then 
       if (iDtype==0 .and. .not. ALL(ABS(den%pw)<1e-12)) l_gradientEfield = .TRUE. 
@@ -115,11 +108,10 @@ contains
     vintcza = cmplx(0.0,0.0)
     sig1dh = cmplx(0.0,0.0)
     vz1dh = cmplx(0.0,0.0)
-    vmz1dh = cmplx(0.0,0.0)
     vslope = cmplx(0.0,0.0)
     constantShift = cmplx(0.0,0.0)
 
-    allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
+    allocate ( alphm(stars%ng2,2), psq(stars%ng3)  )
     sigma = (cell%amat(3,3) - 2*cell%z1)/8.0
     vCoul%iter = den%iter
 
@@ -142,10 +134,10 @@ contains
           ! If we do DPFT AND q/=0, there is no G_||+q_||=0 part! So all components are
           ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
-          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,vmz1dh,l_dfptvgen )
+          call vvac( vacuum, stars, cell, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh, vslope, l_dfptvgen )
         end if
-        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
-        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
+        call vvacis( stars, vacuum, cell, psq, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
+        call vvacxy( stars, vacuum, cell, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
         if ( l_dfptvgen ) then 
           if (dfpt%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
@@ -169,21 +161,37 @@ contains
             call juDFT_error( "Vacuum mesh too short for the film potential edge blend", &
                               hint="Increase nmz or reduce dTilda-dVac", calledby="vgen_coulomb" )
         end if
+        ! The stars are independent of each other: the loop over them is threaded. The
+        ! contributions to vCoul%pw are stored per star and summed up afterwards in the
+        ! original order, so the result does not depend on the number of threads.
+        l_center0 = norm2( stars%center ) < 1e-8
+        allocate( xstar(-stars%mx3:stars%mx3,stars%ng2) )
+        xstar = cmplx( 0.0, 0.0 )
+        !$OMP PARALLEL DEFAULT(SHARED) &
+        !$OMP PRIVATE(irec2,i,i3,k3,z,gaussian,vintcza,wgtEdge,zMir,vintczMir,af1,bf1,vsum,l_fastsum)
+        allocate( af1(ivfft), bf1(ivfft), vsum(0:ivfft-1) )
+        !$OMP DO SCHEDULE(dynamic)
         do irec2 = 1, stars%ng2
-          ! If we do DFPT, we want to fix the second vacuum at infinity to 0. This is WIP,
-          ! as to how we want to do it eventually. Here, we calculate the necessary offset.
-          !IF (l_dfptvgen.AND.irec2 == 1) vmz1dh_is = vintcz( stars, vacuum, cell,  input, field, -cell%z1+1e-15, irec2, psq, &
-          !                    vCoul%vac(:,:,:,ispin), &
-          !                    rhobar, sig1dh, vz1dh, alphm, vslope, .TRUE., CMPLX(0.0,0.0) )
+          ! For stars with G_par /= 0 (and Neumann conditions) the sum over q_z of vintcz is
+          ! evaluated for the whole z-grid at once (one FFT) instead of once per z-point.
+          l_fastsum = ( .not. field%efield%dirichlet ) .and. &
+                      ( .not. ( irec2 == 1 .and. ( ( .not. l_dfptvgen ) .or. l_center0 ) ) )
+          if ( l_fastsum ) call vintcz_sumgrid( stars, cell, irec2, psq, ivfft, vsum )
           i = 0
           do i3 = 0, ivfft - 1
             i = i + 1
             z = cell%amat(3,3) * i3 * ani
             if (l_dfptvgen) gaussian = 1 - exp( -(z-cell%amat(3,3)/2.0)**2 / ( 2 * sigma**2 )    )
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
-            vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
-                              vCoul%vac(:,:,:,ispin), &
-                                rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
+            if ( l_fastsum ) then
+              vintcza = vintcz( stars, vacuum, cell, field, z, irec2, psq, &
+                                vCoul%vac(:,:,:,ispin), &
+                                  rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen, vsum(i3) )
+            else
+              vintcza = vintcz( stars, vacuum, cell, field, z, irec2, psq, &
+                                vCoul%vac(:,:,:,ispin), &
+                                  rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
+            end if
             ! vintcz returns the vacuum-1 solution for z >= z1 and the vacuum-2 solution
             ! for z <= -z1. The two differ, so the periodic continuation that this FFT
             ! represents jumps at the cell edge z = +-amat(3,3)/2. Blend the two sides of
@@ -201,7 +209,7 @@ contains
               wgtEdge = 0.5 * ( 1.0 + erf( ( cell%amat(3,3) / 2.0 - abs( z ) ) &
                                          / ( sqrt( 2.0 ) * sigma ) ) )
               zMir = z - sign( cell%amat(3,3), z )   ! same distance into the other vacuum
-              vintczMir = vintcz( stars, vacuum, cell,  input, field, zMir, irec2, psq, &
+              vintczMir = vintcz( stars, vacuum, cell, field, zMir, irec2, psq, &
                                   vCoul%vac(:,:,:,ispin), &
                                     rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
               vintcza = wgtEdge * vintcza + ( 1.0 - wgtEdge ) * vintczMir
@@ -221,7 +229,7 @@ contains
           !            ENDIF
 
 
-          !        --> 1-d fourier transform and store the coefficients in vTot%pw( ,1)
+          !        --> 1-d fourier transform of v(z) for this star
           call cfft( af1, bf1, ivfft, ivfft, ivfft, -1 )
           !            delta = ivfft * delta * 2 / fpi ! * amat(3,3)**2 * ani
           i = 0
@@ -230,6 +238,20 @@ contains
             if ( k3 > floor( ivfft / 2. ) ) k3 = k3 - ivfft
             i = i + 1
             if ( ( k3 >= -stars%mx3 ) .and. ( k3 <= stars%mx3 ) ) then
+              xstar(k3,irec2) = cmplx( af1(i), bf1(i) ) * ani * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),k3) )
+            end if
+          end do
+        end do
+        !$OMP END DO
+        deallocate( af1, bf1, vsum )
+        !$OMP END PARALLEL
+
+        ! store the coefficients in vCoul%pw( ,1)
+        do irec2 = 1, stars%ng2
+          do i3 = 0, ivfft - 1
+            k3 = i3
+            if ( k3 > floor( ivfft / 2. ) ) k3 = k3 - ivfft
+            if ( ( k3 >= -stars%mx3 ) .and. ( k3 <= stars%mx3 ) ) then
               irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),k3)
               !                 IF ( (irec2 == 1).AND.(i3 > 0) ) THEN                 ! smooth potential
               !                   corr = 2.0*mod(abs(k3),2) - 1.0
@@ -237,17 +259,16 @@ contains
               !                 ENDIF
               !       ----> only stars within g_max sphere (shz oct.97)
               if ( irec3 /= 0 ) then
-                xint = cmplx( af1(i), bf1(i) ) * ani * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),k3) )
                 nzst1 = stars%nstr(irec3) / stars%nstr2(irec2)
-                vCoul%pw(irec3,1) = vCoul%pw(irec3,1) + xint / nzst1
+                vCoul%pw(irec3,1) = vCoul%pw(irec3,1) + xstar(k3,irec2) / nzst1
               end if
             end if
           end do
         end do
+        deallocate( xstar )
         if (l_dfptvgen) then 
           if  (dfpt%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
         end if 
-        !sigma_disc = sigma_loc
         if (l_gradientEfield) then 
           if (iDir == 3 ) then 
                 sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area

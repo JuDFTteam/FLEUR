@@ -27,6 +27,8 @@ src/fleur/global/starf.f90
 src/fleur/global/utility.F90
 src/fleur/global/find_enpara.f90
 src/fleur/global/rotMMPmat.f90
+src/fleur/global/desym_potden.F90
+src/fleur/global/desym_eigvec.F90
 src/fleur/global/symMMPmat.f90
 src/fleur/global/spin_sym.f90
 )

@@ -572,6 +572,19 @@ CONTAINS
          CALL fftBack%free()
          CALL fftForw%free()
       END IF
+      if (allocated(state%grid)) deallocate(state%grid)
+      if (allocated(stateB%grid)) deallocate(stateB%grid)
+      if (allocated(stateq%grid)) deallocate(stateq%grid)
+      if (allocated(stateBq%grid)) deallocate(stateBq%grid)
+      if (allocated(statemq%grid)) deallocate(statemq%grid)
+      if (allocated(stateBmq%grid)) deallocate(stateBmq%grid)
+      if (allocated(stateDeriv%grid)) deallocate(stateDeriv%grid)
+      if (allocated(accR)) deallocate(accR)
+      if (allocated(accC)) deallocate(accC)
+      if (allocated(ekR)) deallocate(ekR)
+      if (allocated(cwkS)) deallocate(cwkS)
+      if (allocated(starCharges)) deallocate(starCharges)
+      if (allocated(tempState)) deallocate(tempState)
 #ifndef _OPENACC
       !$OMP END PARALLEL
 #endif

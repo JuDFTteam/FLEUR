@@ -7,6 +7,7 @@ src/fleur/wannierlib/postproc/wgauge_io.F90
 src/fleur/wannierlib/postproc/wgauge_bands_io.F90
 src/fleur/wannierlib/postproc/wgauge_hamk.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_a.F90
+src/fleur/wannierlib/postproc/wgauge_check_mw.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_tensor.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_b.F90
 src/fleur/wannierlib/postproc/wgauge_operators_r.F90
@@ -17,4 +18,5 @@ src/fleur/wannierlib/postproc/wgauge_interpolate_op.F90
 src/fleur/wannierlib/postproc/wgauge_interpolate_velocity.F90
 src/fleur/wannierlib/postproc/wgauge_interpolate_eigenstates.F90
 src/fleur/wannierlib/postproc/wgauge_run.F90
+src/fleur/wannierlib/postproc/wannierlib_export_paths.F90
 )

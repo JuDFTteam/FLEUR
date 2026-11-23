@@ -7,7 +7,7 @@
 !>  the ab-initio eigenstates and BEFORE any Wannier gauge exists.
 !>
 !>    %init   allocate the per-rank slices and decide which of them the requested
-!>            <operator>/<operators_r> lists actually need
+!>            <operator>/<operatorsRs> lists actually need
 !>    %calc   ONE k-pass that builds every requested operator through
 !>            matrix_element_factory, which reads the states and their coefficients and
 !>            keeps them, so one k is read once however many operators ask for it
@@ -34,9 +34,14 @@ MODULE m_melem_coarse
    USE m_types_melem_window, ONLY: t_melem_window
    USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
+   USE m_types_vacuum
    USE m_types_matelements_soc, ONLY: t_matelements_soc
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
+   USE m_types_matelements_torque, ONLY: t_matelements_torque
+   USE m_melem_torque, ONLY: melem_torque_axis, melem_torque_from_blocks, &
+                             melem_torque_perp_check
+   USE m_types_sphhar, ONLY: t_sphhar
    USE m_matrix_element_factory, ONLY: matrix_element_factory
    USE m_melem_check, ONLY: melem_check_provider, melem_check_matrix
    IMPLICIT NONE
@@ -58,6 +63,15 @@ MODULE m_melem_coarse
       !> is built here with the other coarse matrices even though the operator itself cannot
       !> be assembled until both channels are wannierised.
       COMPLEX, ALLOCATABLE :: x0(:, :, :)         !< (nb,nb,nk_loc)
+      !> Exchange torque T = -mu_B sigma x Omega_xc, muffin-tin only. Over spinors the
+      !> three Cartesian components; collinearly only the cross-spin block, for the same
+      !> reason x0 is only that: the combined 2N operator needs both gauges.
+      COMPLEX, ALLOCATABLE :: t0(:, :, :, :)      !< (nb,nb,3,nk_loc)
+      !> <sigma.m_hat B_xc>, the half of <sigma B_xc> the torque discards. Kept in the
+      !> four-index shape with one component so the real-space writer takes it with no
+      !> special case.
+      COMPLEX, ALLOCATABLE :: hxc0(:, :, :, :)    !< (nb,nb,1,nk_loc)
+      COMPLEX, ALLOCATABLE :: tx0(:, :, :)        !< (nb,nb,nk_loc)
       !> How many independent eigenproblems the states come from: two when jspins=2 without
       !> spinors, one otherwise. It is a fact about the calculation, where the flags it
       !> replaces were a copy of what the request already said, kept next to it and able to
@@ -88,14 +102,15 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_spinors   !< noco%l_noco .OR. noco%l_soc
 
       INTEGER :: nkc_loc
-      LOGICAL :: l_ch_orb, l_ch_spin, l_ch_soc
+      LOGICAL :: l_ch_orb, l_ch_spin, l_ch_soc, l_ch_torque
 
       ! Operator Bloch matrices on the coarse mesh: the k-loop is DISTRIBUTED over ranks (each
       ! its distk slice, so the reads the factory does for it are parallel too) into per-rank
       ! local arrays. Every consumer works on those slices plus a distributed FT-reduce, so the
       ! full mesh is never assembled.
       this%n_channels = MERGE(2, 1, input%jspins == 2 .AND. .NOT. l_spinors)
-      this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop) .AND. l_spinors
+      this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop &
+                       .OR. request%needs_op('exchangeTorque')) .AND. l_spinors
       !> L is spin-diagonal, so each channel has its own and either list is reason enough
       !> to build it. The cross-spin overlap is only ever wanted by the real-space export:
       !> the interpolated spin operator does not exist here, see the guard below.
@@ -107,7 +122,10 @@ CONTAINS
       !> first variation the states are spinors, nothing in the spread functional penalises
       !> a spin character that varies with k, and the exported S(R) and L(R) stop being
       !> localised. Like the spin, it needs both gauges, so it is a real-space export only.
-      l_ch_soc  = this%n_channels == 2 .AND. request%has_op_r('spin_orbit')
+      l_ch_soc  = this%n_channels == 2 .AND. request%has_op_r('spinOrbit')
+      !> Collinearly the torque is the cross-spin block and nothing else, exactly as the
+      !> spin operator is: the Cartesian components need both gauges.
+      l_ch_torque = this%n_channels == 2 .AND. request%has_op_r('exchangeTorque')
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
       IF (this%l_active) THEN
@@ -147,7 +165,7 @@ CONTAINS
             calledby="melem_coarse_init")
          IF (request%l_spin .AND. .NOT. l_ch_spin) CALL judft_error( &
             "melem_coarse: the spin operator has no producer in this spin configuration", &
-            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
+            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operatorsRs> block", &
             calledby="melem_coarse_init")
       END IF
 
@@ -155,10 +173,21 @@ CONTAINS
          ALLOCATE (this%x0(window%num_bands, window%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
                    source=cmplx(0.0, 0.0))
       END IF
+      IF (this%l_active .AND. request%needs_op('exchangeTorque')) THEN
+         ALLOCATE (this%t0(window%num_bands, window%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
+      !> Asked for by name: exchangeField names exchangeTorque as its provider, so the
+      !> blocks and t0 above are there either way, and this is the only extra array.
+      IF (this%l_active .AND. request%has_op_r('exchangeField')) THEN
+         ALLOCATE (this%hxc0(window%num_bands, window%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
+      IF (l_ch_torque) THEN
+         ALLOCATE (this%tx0(window%num_bands, window%num_bands, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
    END SUBROUTINE melem_coarse_init
 
    SUBROUTINE melem_coarse_calc(this, request, window, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                stars, enpara, fmpi, vtot, eig_id, distk)
+                                stars, enpara, fmpi, vtot, eig_id, distk, vacuum, sphhar)
       !> One pass over this rank's k-slice, building every requested operator through the
       !> factory. Spin channels that wannierise separately are a loop, not a second pass:
       !> what differs between one spinor and two channels is which index the result carries
@@ -179,29 +208,85 @@ CONTAINS
       TYPE(t_potden), INTENT(IN) :: vtot
       INTEGER, INTENT(IN) :: eig_id
       INTEGER, INTENT(IN) :: distk(:)   ! rank owner of each global k (distributes the loop)
+      !> Only a film has one, and only the spin operator needs it here: its four blocks are
+      !> overlaps over the whole cell, and on a film that is three regions and not two.
+      TYPE(t_vacuum), INTENT(IN), OPTIONAL :: vacuum
+      !> The lattice-harmonic expansion. Only the exchange torque needs it here: its
+      !> weight is the non-spherical exchange field, where every other operator weighs
+      !> either a plain overlap or the spherical channel alone.
+      TYPE(t_sphhar), INTENT(IN), OPTIONAL :: sphhar
 
       TYPE(t_lapw) :: lapw
       TYPE(t_matelements_spin) :: spinop
       TYPE(t_matelements_soc) :: socop
       TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)   ! (nat, channel)
+      TYPE(t_matelements_torque) :: torqop
       TYPE(t_rsoc) :: rsoc
       INTEGER, ALLOCATABLE :: ev_list(:)
-      LOGICAL :: l_spinor_records, l_do_spin, l_do_orb, l_do_soc
-      INTEGER :: ikpt, itype, il, na, iatom, ib, ch
+      LOGICAL :: l_spinor_records, l_do_spin, l_do_orb, l_do_soc, l_do_torque
+      LOGICAL :: l_taxis_common, l_tperp
+      REAL    :: taxis(3)
+      INTEGER :: ikpt, itype, il, na, iatom, ib, ch, a
 
       !> With two channels only the real-space list can be served, since the interpolated
       !> forms need a gauge that does not exist yet; with one, either list can. Asking the
       !> right question per case is what keeps this loop from having to know which is which.
+      !> WHICH SYMMETRY OPERATION TAKES EACH ATOM ONTO ITS REPRESENTATIVE, and of which
+      !> class, reported once per run.
+      !>
+      !> The class is reported and not just the operation, because p and L do NOT transform
+      !> alike:
+      !>     p' = R.p              (polar)
+      !>     L' = det(R).R.L       (axial)
+      !> Under inversion det(R) = -1, and that factor is exactly what leaves L alone while
+      !> flipping p. Anything that treated the two alike would be right about one of them.
+      IF (fmpi%irank == 0) THEN
+         WRITE (oUnit, '(/,a)') 'melem symmetry: how each atom maps onto its representative'
+         WRITE (oUnit, '(a)')   '   atom type neq  ngopr invtab invsat  det(R_cart)   R_cart (rows)'
+         DO na = 1, atoms%nat
+            iatom = 0
+            DO itype = 1, atoms%ntype
+               IF (na >= atoms%firstAtom(itype) .AND. &
+                   na < atoms%firstAtom(itype) + atoms%neq(itype)) iatom = itype
+            END DO
+            CALL melem_report_sym(sym, cell, atoms, na, iatom)
+         END DO
+      END IF
+
       IF (this%n_channels == 2) THEN
          l_do_spin = request%has_op_r('spin')
          l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital')
-         l_do_soc  = request%has_op_r('spin_orbit')
-         IF (.NOT. (l_do_spin .OR. l_do_orb .OR. l_do_soc)) RETURN
+         l_do_soc  = request%has_op_r('spinOrbit')
+         l_do_torque = request%has_op_r('exchangeTorque')
+         IF (.NOT. (l_do_spin .OR. l_do_orb .OR. l_do_soc .OR. l_do_torque)) RETURN
       ELSE
          IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinors -> slices are stubs
          l_do_spin = request%l_spin
          l_do_orb  = request%l_orbmom
          l_do_soc  = request%l_socop
+         l_do_torque = request%needs_op('exchangeTorque')
+      END IF
+
+      !> The torque writes whole band matrices per k, like the spin and orbital
+      !> operators and unlike spinOrbit, which distributes its column index itself.
+      !> With n_size > 1 init_mat would hand it t_mpimat blocks holding only part of
+      !> each column block, and it would fill them as if they were whole.
+      IF (l_do_torque) THEN
+         IF (fmpi%n_size /= 1) CALL judft_error( &
+            "melem_coarse_calc: the exchange-torque operator needs whole matrices per rank", &
+            hint="run k-parallel (n_size = 1); eigenvector parallelism is not supported here", &
+            calledby="melem_coarse_calc")
+         IF (.NOT.PRESENT(sphhar)) CALL judft_error( &
+            "melem_coarse: the exchange torque needs the lattice harmonics", &
+            hint="pass sphhar down to melem_coarse_calc; without it the non-spherical "// &
+                 "part of the exchange field is not there", calledby="melem_coarse_calc")
+         IF (input%jspins /= 2) CALL judft_error( &
+            "melem_coarse: the exchange torque needs a spin-polarised calculation", &
+            hint="B_xc = (V_up - V_dn)/2 vanishes identically for jspins=1", &
+            calledby="melem_coarse_calc")
+         !> Nothing in it depends on k: the weight is a property of the potential and
+         !> the radial functions, and the states arrive through the factory.
+         CALL torqop%init(atoms, sym, sphhar, nococonv, vtot)
       END IF
 
       !> The relativistic radial SOC integrals and the L.S angular matrix depend on the
@@ -261,7 +346,15 @@ CONTAINS
             !> Pauli components follow from them and are what the export wants; over two
             !> channels only the cross-spin block is wanted, since the combined 2N operator
             !> cannot be assembled until both channels have wannierised.
-            CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
+            IF (input%film) THEN
+               IF (.NOT.PRESENT(vacuum)) CALL judft_error( &
+                  'melem_coarse: the spin operator on a film needs the vacuum', &
+                  hint='pass vacuum down to melem_coarse_calc', calledby='melem_coarse_calc')
+               CALL spinop%init(atoms, stars, lapw, nococonv, input, noco, &
+                                vacuum=vacuum, cell=cell, enpara=enpara, vtot=vtot)
+            ELSE
+               CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
+            END IF
             CALL matrix_element_factory(spinop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
@@ -288,11 +381,56 @@ CONTAINS
             END IF
          END IF
 
+         IF (l_do_torque) THEN
+            CALL matrix_element_factory(torqop, eig_id, ikpt, input, atoms, sym, cell, noco, &
+                                        nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
+                                        l_both_spinors=l_spinor_records, kpts=kpts)
+            IF (ikpt == 1) CALL melem_check_provider(torqop, 'exchangeTorque', ikpt)
+            IF (this%n_channels == 1) THEN
+               !> The cross product is site-local, so the components only mean anything
+               !> when every site shares a moment direction. Refuse rather than pick one.
+               CALL melem_torque_axis(atoms, nococonv, taxis, l_taxis_common)
+               IF (.NOT. l_taxis_common) CALL judft_error( &
+                  "melem_coarse: the exchange torque needs every site to share a moment "// &
+                  "direction", hint="the cross product with Omega_xc is site-local, and "// &
+                  "the provider has already summed the sites", calledby="melem_coarse_calc")
+               IF (ALLOCATED(this%hxc0)) THEN
+                  CALL melem_torque_from_blocks(torqop%mat(1,1)%data_c, torqop%mat(2,2)%data_c, &
+                                                torqop%mat(1,2)%data_c, torqop%mat(2,1)%data_c, &
+                                                taxis, this%t0(:, :, :, il), &
+                                                h0=this%hxc0(:, :, 1, il))
+                  !> Hermitian, unlike the torque components: it is the expectation of a
+                  !> Hermitian operator and not a cross product of them.
+                  IF (ikpt == 1) CALL melem_check_matrix(this%hxc0(:, :, :, il), &
+                                                         'exchangeField (assembled)', ikpt)
+               ELSE
+                  CALL melem_torque_from_blocks(torqop%mat(1,1)%data_c, torqop%mat(2,2)%data_c, &
+                                                torqop%mat(1,2)%data_c, torqop%mat(2,1)%data_c, &
+                                                taxis, this%t0(:, :, :, il))
+               END IF
+               IF (ikpt == 1) CALL melem_check_matrix(this%t0(:, :, :, il), &
+                                                      'exchangeTorque (assembled)', ikpt)
+               !> T.m = 0 holds by construction, so this needs no reference to compare
+               !> against. It fails on a sign in the Pauli assembly and on a wrong axis.
+               IF (ikpt <= 3) CALL melem_torque_perp_check(this%t0(:, :, :, il), taxis, &
+                                                           ikpt, 1.0e-8, l_tperp)
+            ELSE
+               !> This block IS updown.perpmag of the classic route.
+               this%tx0(:, :, il) = torqop%mat(1, 2)%data_c
+               IF (ikpt == 1) CALL melem_check_matrix(this%tx0(:, :, il:il), &
+                                 'exchangeTorque cross-block', ikpt, l_hermitian=.FALSE.)
+            END IF
+         END IF
+
          IF (l_do_orb) THEN
-            !> L is spin-diagonal, so a channel has its own and neither needs the other. Each
-            !> instance covers one site and one channel; whoever wants a total sums the sites,
-            !> and that sum needs no local-to-global rotation, L being spin-diagonal with a
-            !> frame-invariant trace.
+            !> L is spin-diagonal, so a channel has its own and neither needs the other.
+            !> Each instance covers one site and one channel, and whoever wants a total sums
+            !> the sites -- wgauge_run.F90 does SUM(l0, DIM=4).
+            !>
+            !> That sum is a plain one because every site's components come out in the same
+            !> frame. Were each in its own it would be wrong: L is axial,
+            !> L' = det(R) . R . L, and under a proper rotation the components mix, so only
+            !> for inversion -- det(R) = -1, R = -I -- would a plain sum happen to hold.
             DO ch = 1, this%n_channels
                DO na = 1, atoms%nat
                   CALL matrix_element_factory(orbop(na, ch), eig_id, ikpt, input, atoms, sym, &
@@ -300,12 +438,46 @@ CONTAINS
                                               ev_list=ev_list, l_both_spinors=l_spinor_records, &
                                               kpts=kpts)
                   this%l0(:, :, 1:3, na, ch, il) = orbop(na, ch)%comp(:, :, 1:3)
-                  IF (ikpt == 1 .AND. na == 1 .AND. ch == 1) THEN
+                  IF (ikpt == 1 .AND. ch == 1) THEN
                      CALL melem_check_provider(orbop(na, ch), 'orbital', ikpt)
                      CALL melem_check_matrix(this%l0(:, :, 1:3, na, ch, il), &
                                              'orbital (assembled)', ikpt)
                   END IF
+                  !> How |L|^2 is shared between the three components, SITE BY SITE.
+                  !>
+                  !> Hermiticity is no use here: each site's L is already hermitian whatever
+                  !> frame it comes in, since a real orthogonal rotation preserves that.
+                  !> The momentum was only detectable because its anti-hermitian part is a
+                  !> surface term that has to cancel AGAINST ANOTHER REGION, and L is pure
+                  !> muffin-tin.
+                  !>
+                  !> What a lost rotation does move is the SHARE: a rotation mixes the
+                  !> components and conserves their sum. So the same crystal described with
+                  !> the equivalent atoms grouped (neq=2) and split (neq=1,1) must give the
+                  !> SAME total and, if the rotation is missing, a DIFFERENT share.
+                  IF (ikpt == 1 .AND. ch == 1) THEN
+                     WRITE (oUnit, '(a,i3,a,3es13.5,a,es13.5)') &
+                        'melem orbital |L_a|_F  site  ', na, ' :', &
+                        (SQRT(SUM(ABS(this%l0(:, :, a, na, ch, il))**2)), a=1, 3), &
+                        '   total ', SQRT(SUM(ABS(this%l0(:, :, 1:3, na, ch, il))**2))
+                  END IF
                END DO
+               !> The SITE SUM, which is the quantity the consumers actually take and the
+               !> only one here that a missing rotation can move.
+               !>
+               !> The per-site norms above cannot see it. A C3 about z mixes x with y, and
+               !> in the test cell |L_x| and |L_y| agree to five digits, so each norm comes
+               !> back unchanged whether the frames were rotated or not -- the metric is
+               !> nearly invariant under the very operation it is meant to probe. The sum
+               !> over sites has no such symmetry: if sites 2 and 3 are left in their local
+               !> frames, their contributions add along the wrong axes.
+               IF (ikpt == 1 .AND. ch == 1) THEN
+                  WRITE (oUnit, '(a,3es13.5,a,es13.5)') &
+                     'melem orbital |SUM_sites L_a|_F     :', &
+                     (SQRT(SUM(ABS(SUM(this%l0(:, :, a, :, ch, il), DIM=3))**2)), a=1, 3), &
+                     '   total ', &
+                     SQRT(SUM(ABS(SUM(this%l0(:, :, 1:3, :, ch, il), DIM=4))**2))
+               END IF
             END DO
          END IF
 
@@ -317,7 +489,7 @@ CONTAINS
             CALL matrix_element_factory(socop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
-            IF (ikpt == 1) CALL melem_check_provider(socop, 'spin_orbit', ikpt)
+            IF (ikpt == 1) CALL melem_check_provider(socop, 'spinOrbit', ikpt)
             !> The blocks arrive as conj(<i|H_so|j>) and are restored to the convention
             !> the type documents here, where the real-space export consumes them.
             this%soc4(:, :, 1, il) = CONJG(socop%mat(1, 1)%data_c)
@@ -328,11 +500,33 @@ CONTAINS
             !> spinor operator, and with two channels there is no spinor to take it over.
             IF (this%l_active) this%soc0(:, :, 1, il) = CONJG(socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
                                    + socop%mat(2, 1)%data_c + socop%mat(2, 2)%data_c)
+            !> The four blocks and their sum at one k, for the grouped-against-split
+            !> control.
+            !>
+            !> SOC contracts its coefficients against soangl, which is built in the GLOBAL
+            !> frame and carries no atom index, so they have to be in that frame too --
+            !> which is how they arrive. secvar_soc arranges the same for its own call by
+            !> forcing sym%ngopr = 1 before the coefficients are made.
+            !>
+            !> Reading this: the DIAGONAL spin blocks set the noise floor and the CROSS
+            !> blocks carry the signal. A local-frame rotation about z inserts exp(-i m a)
+            !> into the lm coefficients; L_z S_z connects m to m and the phases cancel,
+            !> while L_+ S_- and L_- S_+ connect m to m+-1 and leave exp(-+i a) behind.
+            !> Tilting the spin axis off the rotation axis is not an option anyway: the
+            !> rotation then leaves the symmetry group and the atoms stop being equivalent.
+            IF (ikpt == 1) THEN
+               WRITE (oUnit, '(a,4es13.5)') &
+                  'melem soc |H_so block|_F 11 12 21 22 :', &
+                  (SQRT(SUM(ABS(this%soc4(:, :, a, il))**2)), a=1, 4)
+               IF (this%l_active) WRITE (oUnit, '(a,es13.5)') &
+                  'melem soc |H_so summed|_F            :', &
+                  SQRT(SUM(ABS(this%soc0(:, :, 1, il))**2))
+            END IF
             IF (ikpt == 1 .AND. this%l_active) THEN
                !> The sum over the four blocks is Hermitian even though two of them are not:
                !> 12 + 21 is, being a matrix plus its adjoint.
-               CALL melem_check_matrix(this%soc0(:, :, 1:1, il), 'spin_orbit (assembled)', ikpt)
-               CALL melem_check_matrix(this%soc4(:, :, :, il), 'spin_orbit blocks', ikpt, &
+               CALL melem_check_matrix(this%soc0(:, :, 1:1, il), 'spinOrbit (assembled)', ikpt)
+               CALL melem_check_matrix(this%soc4(:, :, :, il), 'spinOrbit blocks', ikpt, &
                                        l_hermitian=.FALSE.)
             END IF
          END IF
@@ -350,10 +544,65 @@ CONTAINS
       IF (ALLOCATED(this%soc0)) DEALLOCATE (this%soc0)
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
+      IF (ALLOCATED(this%t0)) DEALLOCATE (this%t0)
+      IF (ALLOCATED(this%hxc0)) DEALLOCATE (this%hxc0)
+      IF (ALLOCATED(this%tx0)) DEALLOCATE (this%tx0)
       this%n_channels = 1
       !> l_active gates both the allocations above and the calc pass, so leaving it set
       !> would describe slices that are no longer there.
       this%l_active = .FALSE.
    END SUBROUTINE melem_coarse_free
+
+   !>  One line per atom: the operation that takes it onto its representative, in cartesian
+   !>  form, with its determinant. det = +1 is a proper rotation, which mixes the components
+   !>  of p and of L alike; det = -1 is improper, and there p changes sign relative to L.
+   !>
+   !>  invsat is reported too because the local-to-global rotation of the spin-orbit
+   !>  coefficients takes a different branch for an atom reached through inversion
+   !>  (invsat == 2): it borrows its partner's operation and picks up (-1)**l.
+   SUBROUTINE melem_report_sym(sym, cell, atoms, na, itype)
+      TYPE(t_sym),   INTENT(IN) :: sym
+      TYPE(t_cell),  INTENT(IN) :: cell
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      INTEGER,       INTENT(IN) :: na, itype
+      INTEGER :: nap, inap, i, isat
+      REAL    :: rl(3,3), rc(3,3), ainv(3,3), det
+
+      nap  = sym%ngopr(na)
+      inap = sym%invtab(nap)
+      isat = -1
+      IF (ALLOCATED(sym%invsat)) isat = sym%invsat(na)
+      rl = REAL(sym%mrot(:, :, nap))
+      !> mrot is in LATTICE coordinates. A cartesian vector transforms with
+      !> amat . mrot . amat^-1, and amat carries the lattice vectors as COLUMNS.
+      ainv = inverse3(cell%amat)
+      rc = MATMUL(cell%amat, MATMUL(rl, ainv))
+      det = rc(1,1)*(rc(2,2)*rc(3,3) - rc(2,3)*rc(3,2)) &
+          - rc(1,2)*(rc(2,1)*rc(3,3) - rc(2,3)*rc(3,1)) &
+          + rc(1,3)*(rc(2,1)*rc(3,2) - rc(2,2)*rc(3,1))
+      WRITE (oUnit, '(3i5,3i7,f12.4,a,3f8.4)') na, itype, atoms%neq(itype), nap, inap, isat, det, &
+         '   ', (rc(1, i), i = 1, 3)
+      WRITE (oUnit, '(51x,a,3f8.4)') '   ', (rc(2, i), i = 1, 3)
+      WRITE (oUnit, '(51x,a,3f8.4)') '   ', (rc(3, i), i = 1, 3)
+   END SUBROUTINE melem_report_sym
+
+   PURE FUNCTION inverse3(a) RESULT(b)
+      REAL, INTENT(IN) :: a(3,3)
+      REAL :: b(3,3), d
+      d = a(1,1)*(a(2,2)*a(3,3) - a(2,3)*a(3,2)) &
+        - a(1,2)*(a(2,1)*a(3,3) - a(2,3)*a(3,1)) &
+        + a(1,3)*(a(2,1)*a(3,2) - a(2,2)*a(3,1))
+      b(1,1) =  (a(2,2)*a(3,3) - a(2,3)*a(3,2))/d
+      b(1,2) = -(a(1,2)*a(3,3) - a(1,3)*a(3,2))/d
+      b(1,3) =  (a(1,2)*a(2,3) - a(1,3)*a(2,2))/d
+      b(2,1) = -(a(2,1)*a(3,3) - a(2,3)*a(3,1))/d
+      b(2,2) =  (a(1,1)*a(3,3) - a(1,3)*a(3,1))/d
+      b(2,3) = -(a(1,1)*a(2,3) - a(1,3)*a(2,1))/d
+      b(3,1) =  (a(2,1)*a(3,2) - a(2,2)*a(3,1))/d
+      b(3,2) = -(a(1,1)*a(3,2) - a(1,2)*a(3,1))/d
+      b(3,3) =  (a(1,1)*a(2,2) - a(1,2)*a(2,1))/d
+   END FUNCTION inverse3
+
+
 
 END MODULE m_melem_coarse

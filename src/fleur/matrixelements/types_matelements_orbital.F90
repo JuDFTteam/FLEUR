@@ -52,10 +52,14 @@ MODULE m_types_matelements_orbital
 CONTAINS
 
    !> Bind the object to one atom. All three Cartesian components come out of one pass,
-   !> since L_x and L_y are both built from the same L_+ and L_-. The site is not summed over
-   !> here: an instance covers one site, and the caller adds them up if it wants the
-   !> total. For L that is a plain sum, since it is spin-diagonal and its trace is
-   !> invariant under the local-to-global frame rotation.
+   !> since L_x and L_y are both built from the same L_+ and L_-. The site is not summed
+   !> over here: an instance covers one site, and the caller adds them up if it wants the
+   !> total.
+   !>
+   !> That sum is a plain one because every site's components come out in the same frame.
+   !> Were each in its own it would be wrong: L is axial, L' = det(R) . R . L, so under a
+   !> proper rotation the Cartesian components mix, and only for inversion -- det(R) = -1,
+   !> R = -I -- would the rotation be the identity and a plain sum happen to hold.
    SUBROUTINE init(this, atoms, ntyp, iat, channel)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
@@ -93,6 +97,7 @@ CONTAINS
       INTEGER :: nb, i, j, l, ll1, mm, lm, n_r, n_r2, s, s_lo, s_hi, slot(2)
       REAL    :: lplus, lminus, w
       COMPLEX :: cz, cp, cm     ! L_z, L_+ and L_- for one (i,j) of this atom
+      COMPLEX :: lx, ly, lz     ! the Cartesian triple before the frame rotation
 
       IF (.NOT.ALLOCATED(this%mat)) &
          CALL judft_bug("calc_matrix_elements: the result matrix is not allocated")
@@ -127,16 +132,20 @@ CONTAINS
                   lm = ll1 + mm
                   lplus  = SQRT(REAL((l - mm)*(l + mm + 1)))   ! <m+1|L+|m>
                   lminus = SQRT(REAL((l + mm)*(l - mm + 1)))   ! <m-1|L-|m>
+                  !> The raw product is c_i * conj(c_j), so the m that the ladder shifts
+                  !> belongs to the BRA: c_i(m+1) conj(c_j(m)) conjugates into <i|L_+|j>.
+                  !> Shifting the ket instead accumulates L_- into cp and L_+ into cm, a
+                  !> swap L_x is blind to, being their sum, and that leaves L_y negated.
                   DO s = s_lo, s_hi    ! L is spin-diagonal: a spinor sums, a channel stands alone
                      DO n_r = 1, abc(s, this%ntyp)%n_r(l)
                         DO n_r2 = 1, abc(s, this%ntyp)%n_r(l)
                            w = radfun(this%ntyp)%integral(n_r, n_r2, l, slot(s), slot(s))
                            cz = cz + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
                                    * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*REAL(mm)*w
-                           IF (mm < l) cp = cp + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
-                                   * CONJG(abc(s, this%ntyp)%cof(j, lm + 1, n_r2, this%iat))*lplus*w
-                           IF (mm > -l) cm = cm + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
-                                   * CONJG(abc(s, this%ntyp)%cof(j, lm - 1, n_r2, this%iat))*lminus*w
+                           IF (mm < l) cp = cp + abc(s, this%ntyp)%cof(i, lm + 1, n_r, this%iat) &
+                                   * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*lplus*w
+                           IF (mm > -l) cm = cm + abc(s, this%ntyp)%cof(i, lm - 1, n_r, this%iat) &
+                                   * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*lminus*w
                         END DO
                      END DO
                   END DO
@@ -152,9 +161,12 @@ CONTAINS
             !> exchanges them, so conjugating L_x, L_y, L_z instead leaves L_y with the
             !> wrong sign -- which no localisation measure can see, a global sign being
             !> harmless to the decay.
-            this%comp(i, j, 1) = 0.5 * CONJG(cp + cm)               ! L_x = (L+ + L-)/2
-            this%comp(i, j, 2) = -0.5 * ImagUnit * CONJG(cp - cm)   ! L_y = (L+ - L-)/(2i)
-            this%comp(i, j, 3) = CONJG(cz)                          ! L_z
+            lx = 0.5 * CONJG(cp + cm)               ! L_x = (L+ + L-)/2
+            ly = -0.5 * ImagUnit * CONJG(cp - cm)   ! L_y = (L+ - L-)/(2i)
+            lz = CONJG(cz)                          ! L_z
+            this%comp(i, j, 1) = lx
+            this%comp(i, j, 2) = ly
+            this%comp(i, j, 3) = lz
          END DO
       END DO
    END SUBROUTINE calc_matrix_elements

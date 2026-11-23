@@ -65,6 +65,7 @@ CONTAINS
         this%spinoroperator = .TRUE.
         this%spinorwavefcts = .FALSE.
 
+
         this%atoms  => atoms
         this%noco   => noco
         this%input  => input

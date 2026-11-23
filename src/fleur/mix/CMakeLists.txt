@@ -9,6 +9,7 @@ src/fleur/mix/mixing_history.F90
 src/fleur/mix/distance.F90
 src/fleur/mix/pulay.F90
 src/fleur/mix/a_pulay.F90
+src/fleur/mix/anderson_sf.F90
 #src/fleur/mix/broyden2.F90
 #src/fleur/mix/brysh1.f90
 #src/fleur/mix/brysh2.f90

@@ -41,11 +41,13 @@ MODULE m_types_spinor_layout
       INTEGER :: nrec      = -1       !> records to read from the eig file: 1 or 2
       LOGICAL :: l_stacked = .FALSE.  !> a spinor that already arrives as one 2N matrix
       INTEGER :: row_dn    = 0        !> first spin-down row of a stacked spinor, else 0
+      INTEGER :: row_n(2)  = 0        !> rows of each spin block of a stacked spinor
       INTEGER :: n_radial  = -1       !> radial sets available to contract with
    CONTAINS
       PROCEDURE :: init       => spinor_layout_init
       PROCEDURE :: nbasfcn    => spinor_layout_nbasfcn
       PROCEDURE :: row_offset => spinor_layout_row_offset
+      PROCEDURE :: row_size   => spinor_layout_row_size
    END TYPE t_spinor_layout
 
    PUBLIC :: t_spinor_layout, radial_slot, melem_stack_spinor
@@ -98,6 +100,17 @@ CONTAINS
       this%row_dn = 0
       IF (this%layout == LAYOUT_SPINOR) this%row_dn = lapw%nv(1) + atoms%nlotot
 
+      !> How many rows each block holds, which is NOT row_dn whenever the two differ.
+      !> A spin spiral selects each channel with |G + k + (isp-1.5) qss| < rkmax, so
+      !> the two counts come out different; lapw%init sets nv(2) = nv(1) for every
+      !> other jspins=2 case and leaves nv(2) at zero for jspins=1, which is why the
+      !> second block reads nv(1) unless there are two channels to read.
+      this%row_n = 0
+      IF (this%layout == LAYOUT_SPINOR) THEN
+         this%row_n(1) = lapw%nv(1) + atoms%nlotot
+         this%row_n(2) = lapw%nv(MERGE(2, 1, input%jspins == 2)) + atoms%nlotot
+      END IF
+
       IF (PRESENT(radfun)) THEN
          this%n_radial = n_radial_of(radfun)
       ELSE
@@ -146,6 +159,19 @@ CONTAINS
       spinor_layout_row_offset = 0
       IF (this%l_stacked .AND. isp == 2) spinor_layout_row_offset = this%row_dn
    END FUNCTION spinor_layout_row_offset
+
+
+   PURE INTEGER FUNCTION spinor_layout_row_size(this, isp)
+      !> Rows the spin component isp occupies inside one record.
+      !>
+      !> row_offset still answers where the second block STARTS; this answers how long
+      !> each one is, and the two are the same number only while the blocks match. A
+      !> caller that slices both halves with row_dn is right everywhere except under a
+      !> spin spiral, where it reads past one block and stops short of the other.
+      CLASS(t_spinor_layout), INTENT(IN) :: this
+      INTEGER,                INTENT(IN) :: isp
+      spinor_layout_row_size = this%row_n(MIN(MAX(isp, 1), 2))
+   END FUNCTION spinor_layout_row_size
 
 
    PURE INTEGER FUNCTION spinor_layout_nbasfcn(this, lapw, atoms)

@@ -613,7 +613,7 @@ CONTAINS
       REAL    :: tec, qint, phi0, angss
       INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
       INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
-      LOGICAL :: twodim, cartesian, xsf, polar,unwind
+      LOGICAL :: twodim, cartesian, xsf, polar,unwind,l_unitOpen
 
       TYPE(t_potden),     ALLOCATABLE :: den(:)
       REAL,               ALLOCATABLE :: xdnout(:)
@@ -783,7 +783,13 @@ CONTAINS
 
          IF (xsf) THEN
             DO i = 1, numOutFiles
-               IF (fmpi%irank .EQ.0) CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+               IF (fmpi%irank .EQ.0) THEN
+                  ! the file is closed after the output of the previous plot
+                  INQUIRE(unit=nfile+i,opened=l_unitOpen)
+                  IF (.NOT.l_unitOpen) OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',&
+                                            position="append",action="write")
+                  CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+               END IF
             END DO
          ELSE
                IF (fmpi%irank .EQ. 0) OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
@@ -1007,6 +1013,7 @@ CONTAINS
 
          DEALLOCATE(tempResults)
          DEALLOCATE(points)
+         DEALLOCATE(tempVecs)
       END DO !nplo
 
       DEALLOCATE(xdnout, outFilenames)

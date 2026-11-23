@@ -23,7 +23,6 @@ src/fleur/dfpt/matrix_pref.F90
 src/fleur/dfpt/dfpt_cdnval.F90
 src/fleur/dfpt/dfpt_cdngen.F90
 src/fleur/dfpt/dfpt_fermie.F90
-src/fleur/dfpt/desymmetrizer.f90
 src/fleur/dfpt/dfpt_eigen.F90
 src/fleur/dfpt/dfpt_dynmat_fourier.f90
 src/fleur/dfpt/dfpt_sumrules.F90
