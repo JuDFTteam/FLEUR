@@ -242,21 +242,6 @@ CONTAINS
     IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='set_w90_options')
   END SUBROUTINE set_w90_options
 
-  !> The stem this adapter hands Wannier90, and therefore the name of the checkpoint it
-  !> writes: <stem>.chk. A single channel is WF1; two channels are WF1 and WF2, one per
-  !> spin. Asked rather than rebuilt by whoever needs to name that file, so the rule stays
-  !> here -- naming what Wannier90 gets is this module's job, and reading the stem back out
-  !> of Wannier90's own state from outside would make that state everybody's business.
-  FUNCTION wl_w90_seedname(jspin, n_channels) RESULT(seed)
-    INTEGER, INTENT(IN) :: jspin, n_channels
-    CHARACTER(LEN=32)   :: seed
-    IF (n_channels > 1) THEN
-      WRITE (seed, '(a,i0)') 'WF', jspin
-    ELSE
-      seed = 'WF1'
-    END IF
-  END FUNCTION wl_w90_seedname
-
   !> The neighbour topology Wannier90 chose, read back out. It is available only once the
   !> options are committed, because that is when the k-mesh exists.
   SUBROUTINE get_w90_topology(kpts, nntot_w90, nnkp, gkpb)
@@ -283,6 +268,24 @@ CONTAINS
     IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='get_w90_topology')
   END SUBROUTINE get_w90_topology
 #endif
+
+  !> The stem this adapter hands Wannier90, and therefore the name of the checkpoint it
+  !> writes: <stem>.chk. A single channel is WF1; two channels are WF1 and WF2, one per
+  !> spin. Asked rather than rebuilt by whoever needs to name that file, so the rule stays
+  !> here -- naming what Wannier90 gets is this module's job, and reading the stem back out
+  !> of Wannier90's own state from outside would make that state everybody's business.
+  !> Outside the Wannier90 guard on purpose: it builds a name out of two integers and
+  !> touches nothing of the library, and wannierlib_main asks for it to name the
+  !> checkpoint whether or not w90_library is linked in.
+  FUNCTION wl_w90_seedname(jspin, n_channels) RESULT(seed)
+    INTEGER, INTENT(IN) :: jspin, n_channels
+    CHARACTER(LEN=32)   :: seed
+    IF (n_channels > 1) THEN
+      WRITE (seed, '(a,i0)') 'WF', jspin
+    ELSE
+      seed = 'WF1'
+    END IF
+  END FUNCTION wl_w90_seedname
 
   !> Run the Wannier90 library: hand over the eigenvalues, the overlaps M and the projections A,
   !> then disentangle -> project -> wannierise. Returns the resulting gauge factors, which is all
@@ -322,6 +325,10 @@ CONTAINS
     DEALLOCATE(u_matrix, u_opt, mw_chk)
     num_kpts = SIZE(amn, 3)
 
+#ifndef CPP_WANNLIB_API
+    CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &
+                     calledby='run_w90')
+#else
     !> One checkpoint per spin channel. Collinearly the two channels are two separate
     !> wannierisations with two gauges, and both used to write the one name the seedname
     !> carries, so the second silently overwrote the first and only one channel was ever
@@ -341,10 +348,6 @@ CONTAINS
       wannierlib_w90main%seedname = seedname
     END IF
 
-#ifndef CPP_WANNLIB_API
-    CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &
-                     calledby='run_w90')
-#else
     call timestart('run_w90')
 
     ALLOCATE(u_matrix(this%num_wann, this%num_wann, num_kpts), stat=ierr)
