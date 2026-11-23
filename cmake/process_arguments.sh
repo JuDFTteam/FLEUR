@@ -27,6 +27,7 @@ do
 	  -gpu) shift; CLI_USE_GPU=$1;;
 	  -chase) shift; CLI_USE_CHASE=$1;;
     -libxc) shift; CLI_USE_LIBXC=$1;;
+    -gfleur) shift; CLI_USE_GFLEUR=$1;;
 	  -link) shift; CLI_LIBRARIES=$1;;
     -libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
     -rpath) shift; CLI_USE_RPATH=$1;;
@@ -104,6 +105,7 @@ Additional features:
   -libxc    [TRUE|FALSE] : use libxc library
   -libxml2   true        : try to download libxml2 and compile it (experimental). No 'false' option exists here as the libxml2 is required.
   -wannier  [TRUE|FALSE] : use Wannier90 module API (wannierlib)
+  -gfleur   [TRUE|FALSE] : build the Green's-function embedding executables gfleur and gfprep (requires HDF5, default: FALSE)
   
 
 Command line options to switch on/off features. These options overwrite the results of

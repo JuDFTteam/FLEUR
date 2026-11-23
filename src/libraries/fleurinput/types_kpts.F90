@@ -250,6 +250,8 @@ CONTAINS
          if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
             line=line(index(line,'href="')+6:)
             line=line(:index(line,'"')-1)
+            !relative paths are relative to the including file
+            if (line(1:1)/='/') line=filename(:index(filename,'/',back=.true.))//line
             read_kpts_by_name=this%read_kpts_by_name(line,name,l_lab)
          endif
       enddo

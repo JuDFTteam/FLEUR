@@ -71,6 +71,7 @@ message("${Red}  Physics libraries:${CReset}")
 message("${Green}    LibXC Library               : ${CReset}    ${FLEUR_USE_LIBXC}")
 message("${Green}    EDSolver Library            : ${CReset}    ${FLEUR_USE_EDSOLVER}")
 message("${Green}    Wannier90 module API        : ${CReset}    ${FLEUR_USE_WANNLIB_API}")
+message("${Green}    gfleur/gfprep (embedding)   : ${CReset}    ${FLEUR_USE_GFLEUR}")
 #message("${Green}    KPLIB interface             : ${CReset}    ${FLEUR_USE_KPLIB}")
 
 message("${Red}  Other optional features:${CReset}")
