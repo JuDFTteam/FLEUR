@@ -65,6 +65,7 @@ CONTAINS
       CALL new_argument(0, "-noco", "write out noco parameters into the layer inp.xml", "")
       CALL new_argument(0, "-greensf", "write out green's function parameters into the layer inp.xml", "")
       CALL new_argument(0, "-dfpt", "write out dfpt input into the layer inp.xml", "")
+      CALL new_argument(1, "-wann", "wannierlib window (queried by the inp.xml writer, not used by gfprep)", "")
       OPEN (oUnit, FILE="gfprep.out", FORM="formatted", STATUS="replace")
       xml_add = "gfprep_"
       CALL startFleur_XMLOutput(xml_add)
