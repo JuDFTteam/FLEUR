@@ -22,13 +22,14 @@ MODULE m_dfpt_potdenLocal
     USE m_types_noco
     USE m_types_potden
     USE m_types_sphhar
+    USE m_types_sternheimerJob
     IMPLICIT NONE 
     PRIVATE
     PUBLIC :: create_typeslocal, cast_smaller_grid, cast_onto_larger_grid
 
 
 CONTAINS
-    SUBROUTINE create_typesLocal(fi,fmpi,sym,cell,input,sphhar,vacuum,noco,stars,potdenLocal,atomsLocal,qvec,iDir,iDtype,l_dfpt)
+    SUBROUTINE create_typesLocal(fi,fmpi,sym,cell,input,sphhar,vacuum,noco,stars,potdenLocal,atomsLocal,qvec,iDir,iDtype,l_dfpt,sternheimerJob)
         
         ! This subroutine creates the types with a bigger Gmaxz Cutoff
         ! Nessesary for the Film-Mode Calcaultion 
@@ -46,6 +47,7 @@ CONTAINS
         REAL, OPTIONAL, INTENT(IN)    :: qvec(3)
         INTEGER, OPTIONAL, INTENT(IN) :: iDir,iDtype
         LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
+        TYPE(t_sternheimerJob), OPTIONAL, INTENT(IN) :: sternheimerJob
 
         LOGICAL :: l_dfptLocal
 
@@ -53,7 +55,7 @@ CONTAINS
         l_dfptLocal = .FALSE.
         IF (PRESENT(l_dfpt)) l_dfptLocal = l_dfpt
 
-        call make_stars(stars,sym,fi%atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,gmaxzLocal=fi%dfpt%gmaxzLocal)
+        call make_stars(stars,sym,fi%atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,sternheimerJob=sternheimerJob,gmaxzLocal=fi%dfpt%gmaxzLocal)
         atomsLocal = fi%atoms
         call convn(fmpi%irank == 0, atomsLocal, stars)
         call potdenLocal%init(stars,atomsLocal,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT,l_dfpt=l_dfptLocal)

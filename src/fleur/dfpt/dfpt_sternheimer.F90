@@ -116,13 +116,13 @@ CONTAINS
       
       banddosdummy = fi%banddos
       ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
-      CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+      CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob)
       starsq%ufft = stars%ufft
 
       ! Initialize the density perturbation; the imaginary MT part rides in denIn1%mtIm
       CALL denIn1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
       IF (l_minusq) THEN
-         CALL make_stars(starsmq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, -qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+         CALL make_stars(starsmq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, -qpts%bk(:,iQ), iDtype, iDir,sternheimerJob)
          starsmq%ufft = stars%ufft
 
          CALL denIn1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)

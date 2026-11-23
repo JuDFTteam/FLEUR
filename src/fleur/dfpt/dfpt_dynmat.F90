@@ -162,7 +162,7 @@ CONTAINS
 
       ! For the response of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
       ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
-      CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsqLocal, potden1dummy,atomsLocal,qvec=qvec,iDir=iDir_row,iDtype=iDtype_row,l_dfpt=.TRUE.)
+      CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsqLocal, potden1dummy,atomsLocal,qvec=qvec,iDir=iDir_row,iDtype=iDtype_row,l_dfpt=.TRUE.,sternheimerJob=sternheimerJob)
       CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsLocal, potdendummy,atomsLocal)
       CALL potden1dummyLocal%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, &
                                 & fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)

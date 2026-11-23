@@ -19,13 +19,14 @@ MODULE m_make_stars
    USE m_types_stars
    USE m_step_function
    USE m_types_fftgrid
+   USE m_types_sternheimerJob
 
    IMPLICIT NONE
 
    PRIVATE
    PUBLIC :: make_stars
 CONTAINS
-   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,l_efield,gmaxzLocal)
+   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,sternheimerJob,gmaxzLocal)
 
       CLASS(t_stars),INTENT(INOUT) :: stars
       TYPE(t_sym),INTENT(in)::sym
@@ -40,19 +41,17 @@ CONTAINS
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
 
-      LOGICAL, OPTIONAL, INTENT(IN) :: l_efield
+      TYPE(t_sternheimerJob), OPTIONAL, INTENT(IN) :: sternheimerJob
       REAL, OPTIONAL, INTENT(IN)    :: gmaxzLocal ! Cutoff for Vext responses in DFPT (Film) 
-      LOGICAL       :: l_ef
+      LOGICAL       :: l_IBScorrection
 
       INTEGER :: ierr
 
       TYPE(t_fftgrid) :: fftgrid
 
-      !changes for efield:
-      l_ef = .FALSE. 
-      IF (PRESENT(l_efield)) THEN
-         l_ef = l_efield
-      END IF
+      ! ufft1 (perturbed step function) is only needed with IBS corrections (phonons, BEC)
+      l_IBScorrection = .FALSE.
+      IF (PRESENT(sternheimerJob)) l_IBScorrection = sternheimerJob%l_IBScorrection
 
       ! Dimensioning of stars
       IF (fmpi%irank==0) THEN
@@ -74,15 +73,15 @@ CONTAINS
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
          IF (fmpi%irank == 0) THEN
-            IF (l_ef) THEN !only allocate uff1 to avoid memory error in dfpt_vgen_finalize
-               !ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
-               ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-               stars%ufft1= 0.0
-            ELSE
+            IF (l_IBScorrection) THEN
                ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
                ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
                CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, 1)
                CALL stepf_stars(stars,fftgrid,qvec)
+            ELSE !only allocate uff1 to avoid memory error in dfpt_vgen_finalize
+               !ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
+               ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+               stars%ufft1= 0.0
             END IF
          END IF
       ELSE

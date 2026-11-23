@@ -108,7 +108,7 @@ contains
                 CALL starsq_vextpho%reset_stars()
                 print*,"shape(q_vec)",shape(fi%dfpt%qvec_efield)
                 qvec_int= 0.0!fi%dfpt%qvec_efield(1,:)
-                CALL make_stars(starsq_vextpho, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, iDtype, iDir)
+                CALL make_stars(starsq_vextpho, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, iDtype, iDir, sternheimerJob)
                 starsq_vextpho%ufft = stars%ufft
 
                 CALL den1_dummy%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)

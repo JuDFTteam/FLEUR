@@ -81,7 +81,7 @@ contains
             tempval_pw = CMPLX(0.0,0.0)
             qvec_int=fi%dfpt%qvec_efield(:,iDir_col)
             CALL starsq_vext%reset_stars()
-            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,sternheimerJob%l_efield)
+            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,sternheimerJob)
             starsq_vext%ufft = starsq%ufft
 
             call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)

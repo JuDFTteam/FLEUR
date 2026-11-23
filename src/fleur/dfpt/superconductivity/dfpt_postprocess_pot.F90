@@ -161,7 +161,7 @@ contains
                     iPerturb = iDir+3*(iDtype-1)
 
 
-                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%dfpt%qvec%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%dfpt%qvec%bk(:,iQ), iDtype, iDir,sternheimerJob)
                     starsq%ufft = stars%ufft
 
                     call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
