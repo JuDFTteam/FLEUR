@@ -79,19 +79,23 @@ are dropped before the eigenvalue problem is solved, e.g. `s_eps=1e-10`.
 
 ## Energy grid
 
-`gf_en` may contain explicitly listed energies or generated intervals.  For
-example, a three-point list is:
+`gf_en` contains records of fixed format. The first line of a record has the type
+in column 1 and the number of energies right-aligned in columns 9-18. The record
+type `l` lists the energies, each line has four numbers of width 10: real and
+imaginary part of the energy (Htr) and of the weight (a weight of zero is
+replaced by one). A three-point list is:
 
 ```text
-list 3
--0.10 0.01
- 0.00 0.01
- 0.10 0.01
+l               3
+  -0.10000   0.01000   1.00000   0.00000
+   0.00000   0.01000   1.00000   0.00000
+   0.10000   0.01000   1.00000   0.00000
 ```
 
-Each energy is specified by real and imaginary parts in the units expected by
-FLEUR.  `inter` and `circle` records can instead generate linear and
-semicircular contours; formats may be combined in one file.
+The types `i` (equidistant) and `n` (equidistant, Simpson weights) take two
+lines with the first and last energy, `c` takes two real energies and
+generates a semicircle in the complex plane (the number of points must be
+2**n-1). Records can be combined in one file.
 
 ## Embedding-potential I/O: `gf_io`
 
