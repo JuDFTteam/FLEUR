@@ -103,7 +103,7 @@ CONTAINS
       LOGICAL,        INTENT(IN) :: l_dfptvgen
       COMPLEX, OPTIONAL, INTENT(IN) :: vsum ! sum over q_z (G_par /= 0, Neumann) at this z, from vintcz_sumgrid
 
-      COMPLEX                    :: argr,sumrr,vcons1,test,c_ph,phas
+      COMPLEX                    :: sumrr,vcons1,test,c_ph,phas
       REAL                       :: bj0,dh,fit,g,g3,q,qdh,vcons2,zf
       REAL                       :: e_m,e_p,cos_q,sin_q
       INTEGER                    :: ig3n,im,iq,ivac,k1,k2,nrec2r
@@ -150,8 +150,7 @@ CONTAINS
                q = iq*cell%bmat(3,3)
                qdh = q*dh
                bj0 = SIN(qdh)/qdh
-               argr = ImagUnit*q*z
-               sumrr = (EXP(argr)-EXP(ImagUnit*qdh))/ (q*q) + ImagUnit*COS(qdh)* (dh-z)/q + bj0* (z*z-dh*dh)/2.
+               sumrr = (cmplx(cos(q*z),sin(q*z)) - cmplx(cos(qdh),sin(qdh)))/(q*q) + ImagUnit*cos(qdh)*(dh-z)/q + bj0*(z*z-dh*dh)/2.
                vintcz = vintcz + fpi_const*psq(ig3n)*sumrr
             END IF
          END DO
