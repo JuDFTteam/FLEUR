@@ -954,8 +954,11 @@
             if (l_band) write(99,*)
          ENDDO 
       ENDDO 
-      DEALLOCATE(tmp) 
-      IF (l_band) THEN 
+      DEALLOCATE(tmp)
+      !the muffin-tin matrices are -Im G, the DOS has the factor 1/pi
+      !(as the interstitial DOS and the gf_band_ files)
+      dos = dos/pi_const
+      IF (l_band) THEN
          DEALLOCATE(band) 
          CLOSE(99) 
       ENDIF 
