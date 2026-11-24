@@ -868,8 +868,9 @@ CONTAINS
     !> no time, and the day a second consumer wants a path it asks here by name.
     !>
     !> The path is not invented. It is the first list the input already carries with
-    !> type="path" -- the one inpgen writes for every case -- so the default names something
-    !> the caller can read off kpts.xml, and a run with no path list keeps today's silence.
+    !> type="path", which inpgen writes for the higher-symmetry Bravais lattices and for
+    !> films but not for a monoclinic or triclinic cell, so the default names something the
+    !> caller can read off kpts.xml, and a run with no path list keeps today's silence.
     IF (this%export%orbitrans .AND. this%n_domains < 1) THEN
       xPathA = '/fleurInput/cell/bzIntegration/kPointLists/kPointList[@type="path"]'
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) > 0) THEN
