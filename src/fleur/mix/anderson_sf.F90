@@ -10,23 +10,23 @@ MODULE m_anderson_sf
    !! a saddle point of the free energy. There the Jacobian of G = rho_in - rho_out has a negative
    !! eigenvalue and the Newton step moves towards the saddle. This routine
    !!  1. computes the Anderson step from its least-squares coefficients,
-   !!  2. projects the Jacobian onto the mixing history, (dX^T w dG) v = lambda (dX^T w dX) v, and
-   !!     accepts a mode as unstable only if lambda is clearly negative, nearly real and consistent
-   !!     with the history, the residual is above the noise level of the run, and the direction was not
-   !!     rejected recently,
+   !!  2. once |F| has fallen below detection_fraction of its maximum in the run, projects the Jacobian
+   !!     onto the mixing history, (dX^T w dG) v = lambda (dX^T w dX) v, and accepts a mode as unstable
+   !!     only if lambda is clearly negative, nearly real and consistent with the history, the residual
+   !!     is above the noise level of the run, and the direction was not rejected recently. Far from
+   !!     convergence the history does not describe the neighbourhood of a solution, and an escape
+   !!     started there selects an arbitrary state,
    !!  3. escapes along an unstable direction u: the Anderson step is restricted to the complement of u,
    !!     and along u the saddle-free Newton step F_u/|lambda_u| is taken (F_u: residual along u,
-   !!     lambda_u: curvature along u, updated by secants of the escape steps). The step leads away from
-   !!     the saddle while lambda_u < 0 and towards the minimum along u once lambda_u > 0,
-   !!  4. ends the escape when F_u has fallen below 20% of its maximum after a confirmed negative
-   !!     curvature (minimum along u reached), rejects u as a false detection when the first escape step
-   !!     shows a positive curvature, and aborts it when |F| grows too much. When |F| exceeds a bound
-   !!     given by |F| at the start of the escape and by the largest |F| of the run before the escape, the
-   !!     push along u pauses and only the Anderson step in the complement of u is taken, until |F| has
-   !!     fallen to half of the bound or for at most max_pause_steps,
-   !!  5. limits the step outside of the escape direction to max_step_factor times alpha*|F| during an
-   !!     escape and for the first steps after its end, where the history mixes both regimes.
-   !! Without an unstable mode and outside of these phases the step is the Anderson step.
+   !!     lambda_u: curvature along u, updated by secants of the escape steps), limited to max_push_growth
+   !!     times the previous push. The step leads away from the saddle while lambda_u < 0 and towards
+   !!     the minimum along u once lambda_u > 0,
+   !!  4. ends the escape when F_u has fallen below completion_fraction of its maximum after a confirmed
+   !!     negative curvature (minimum along u reached), rejects u as a false detection when the first
+   !!     escape step shows a positive curvature, and aborts it after max_escape_steps. Rejected and
+   !!     aborted directions are not accepted again for rejection_lifetime mixing steps. The end of an
+   !!     escape restarts the history.
+   !! Without an unstable mode the step is the Anderson step.
    !! Notation: dX and dF are the differences of successive input densities and residuals
    !! F = rho_out - rho_in in the history, dG = -dF, w is the mixing metric.
    USE m_juDFT
@@ -36,6 +36,7 @@ MODULE m_anderson_sf
    PUBLIC :: anderson_sf
 
    ! Acceptance of an unstable mode
+   REAL,    PARAMETER :: detection_fraction = 0.1      !! detection only for |F| < detection_fraction*max|F|
    REAL,    PARAMETER :: neg_eig_tolerance = 0.01      !! Re(lambda) < -neg_eig_tolerance*max|lambda|
    REAL,    PARAMETER :: imag_part_tolerance = 0.5     !! |Im(lambda)| <= imag_part_tolerance*|Re(lambda)|
    REAL,    PARAMETER :: max_mode_inconsistency = 1.0  !! |dG v - lambda dX v| <= this*|lambda dX v|
@@ -46,17 +47,8 @@ MODULE m_anderson_sf
    ! Escape control
    REAL,    PARAMETER :: min_eig_fraction = 0.1        !! |lambda_u| >= this*|lambda| of the detection
    REAL,    PARAMETER :: max_push_growth = 2.0         !! growth limit of the push per escape step
-   REAL,    PARAMETER :: max_res_growth = 3.0          !! push paused if |F| > this*|F| at the start
-   REAL,    PARAMETER :: max_res_fraction = 0.3        !! ... and |F| > this*max|F| before the escape
-   REAL,    PARAMETER :: abort_res_growth = 10.0       !! escape aborted if |F| > this*|F| at the start
-   REAL,    PARAMETER :: abort_res_fraction = 0.6      !! ... and |F| > this*max|F| before the escape
-   REAL,    PARAMETER :: resume_fraction = 0.5         !! push resumed when |F| < this*bound
-   INTEGER, PARAMETER :: max_pause_steps = 5
    REAL,    PARAMETER :: completion_fraction = 0.2     !! minimum reached when F_u < this*max(F_u)
    INTEGER, PARAMETER :: max_escape_steps = 50
-   ! Step limit
-   REAL,    PARAMETER :: max_step_factor = 16.0        !! step limit in units of alpha*|F|
-   INTEGER, PARAMETER :: limited_steps_after_escape = 3 !! number of limited steps after an escape
 
    ! Escape state, kept between iterations
    LOGICAL, SAVE           :: l_escape = .FALSE.
@@ -69,13 +61,9 @@ MODULE m_anderson_sf
    REAL, SAVE              :: res_along_dir_prev     !! F_u in the previous escape step
    REAL, SAVE              :: coord_prev             !! coordinate of the input density along u, previous step
    REAL, SAVE              :: push_prev              !! push of the previous escape step
-   REAL, SAVE              :: res_bound              !! push paused above this |F|
-   REAL, SAVE              :: res_abort_bound        !! escape aborted above this |F|
    INTEGER, SAVE           :: n_escape_steps
-   INTEGER, SAVE           :: n_pause_steps          !! steps of the current pause, 0: pushing
-   INTEGER, SAVE           :: n_limited_steps = 0    !! remaining limited steps after an escape
    INTEGER, SAVE           :: n_mix_steps = 0        !! number of calls, clock for the rejected directions
-   REAL, SAVE              :: max_res_norm = 0.0     !! largest |F| of the run, reference for the noise level
+   REAL, SAVE              :: max_res_norm = 0.0     !! largest |F| of the run, reference for the detection
    TYPE(t_mixvector), SAVE :: w_rejected_dirs(max_rejected_dirs)  !! w*u of rejected directions
    INTEGER, SAVE           :: rejection_step(max_rejected_dirs) = -rejection_lifetime - 1 !! step of the rejection
 
@@ -88,10 +76,9 @@ CONTAINS
       TYPE(t_mixvector), INTENT(INOUT) :: rho_in(:)    !! input densities of the history; the last one is updated
       LOGICAL, INTENT(IN)              :: l_dfpt
       REAL, INTENT(OUT)                :: mode_eig     !! curvature along u (detected or measured), else 0
-      REAL, INTENT(OUT)                :: step_rel     !! |step|/|alpha*F| before the step limit
+      REAL, INTENT(OUT)                :: step_rel     !! |step|/|alpha*F| outside of the escape direction
       LOGICAL, INTENT(OUT)             :: l_restart    !! the history has to be restarted
-      INTEGER, INTENT(OUT)             :: escape_state !! 0 none, 1 escaping, 2 completed, 3 rejected, 4 aborted,
-                                                       !! 5 escape paused
+      INTEGER, INTENT(OUT)             :: escape_state !! 0 none, 1 escaping, 2 completed, 3 rejected, 4 aborted
       REAL, INTENT(OUT)                :: push_rel     !! push length along u in units of alpha*|F|
       REAL, INTENT(OUT)                :: res_along_dir_rel !! F_u relative to its maximum
 
@@ -99,7 +86,7 @@ CONTAINS
       TYPE(t_mixvector) :: step, w_res, mode_dir
       REAL, ALLOCATABLE :: dx_dx(:,:), dx_dg(:,:), df_df(:,:), df_res(:), anderson_coef(:)
       REAL    :: res_norm, res_along_dir, coord, d_coord, mode_dir_norm
-      REAL    :: step_norm, step_limit, push_length
+      REAL    :: step_norm, push_length
       INTEGER :: n_hist, n_diff, i, j
 
       n_hist = SIZE(res)
@@ -121,7 +108,7 @@ CONTAINS
          coord = w_escape_dir.dot.rho_in(n_hist)
          res_along_dir_max = MAX(res_along_dir_max, res_along_dir)
          res_along_dir_rel = res_along_dir/res_along_dir_max
-         IF (n_escape_steps > 0 .AND. n_pause_steps == 0) THEN ! last step was a push
+         IF (n_escape_steps > 0) THEN
             d_coord = coord - coord_prev
             IF (d_coord /= 0.0) THEN
                eig_along_dir = -(res_along_dir - res_along_dir_prev)/d_coord
@@ -134,23 +121,16 @@ CONTAINS
             CALL add_rejected_dir(w_escape_dir)
          ELSE IF (l_confirmed .AND. res_along_dir < completion_fraction*res_along_dir_max) THEN
             escape_state = 2 ! minimum along u reached
-         ELSE IF (res_norm > res_abort_bound .OR. n_escape_steps >= max_escape_steps) THEN
+         ELSE IF (n_escape_steps >= max_escape_steps) THEN
             escape_state = 4
             CALL add_rejected_dir(w_escape_dir)
-         ELSE IF (n_pause_steps > 0) THEN
-            n_pause_steps = n_pause_steps + 1
-            IF (res_norm < resume_fraction*res_bound .OR. n_pause_steps > max_pause_steps) n_pause_steps = 0
-         ELSE IF (res_norm > res_bound) THEN
-            n_pause_steps = 1
          END IF
          IF (escape_state > 1) THEN
             l_escape = .FALSE.
             l_restart = .TRUE.
-            n_limited_steps = limited_steps_after_escape
             rho_in(n_hist) = rho_in(n_hist) + alpha*res(n_hist)
             RETURN
          END IF
-         IF (n_pause_steps > 0) escape_state = 5
       END IF
 
       step = alpha*res(n_hist)
@@ -182,7 +162,8 @@ CONTAINS
             END DO
 
             ! Start of an escape along a newly detected unstable mode
-            IF (.NOT.l_escape .AND. res_norm >= noise_level*max_res_norm) THEN
+            IF (.NOT.l_escape .AND. res_norm >= noise_level*max_res_norm .AND. &
+                res_norm < detection_fraction*max_res_norm) THEN
                IF (find_unstable_mode(dx, df, dx_dx, dx_dg, l_dfpt, mode_dir, mode_eig)) THEN
                   mode_dir_norm = SQRT(ABS(mode_dir.dot.mode_dir%apply_metric(l_dfpt)))
                   escape_dir = (1.0/mode_dir_norm)*mode_dir
@@ -201,31 +182,22 @@ CONTAINS
                   eig_along_dir = mode_eig
                   res_along_dir_max = res_along_dir
                   res_along_dir_rel = 1.0
-                  res_bound = MAX(max_res_growth*res_norm, max_res_fraction*max_res_norm)
-                  res_abort_bound = MAX(abort_res_growth*res_norm, abort_res_fraction*max_res_norm)
                   push_prev = 0.0
                   n_escape_steps = 0
-                  n_pause_steps = 0
                END IF
             END IF
          END IF
       END IF
 
-      step_limit = max_step_factor*alpha*res_norm
       IF (l_escape) THEN
          ! Anderson in the complement of u, saddle-free Newton step along u
          step = step - (w_escape_dir.dot.step)*escape_dir
          step_norm = SQRT(ABS(step.dot.step%apply_metric(l_dfpt)))
          IF (alpha*res_norm > 0.0) step_rel = step_norm/(alpha*res_norm)
-         IF (step_norm > step_limit) step = (step_limit/step_norm)*step
-         IF (n_pause_steps == 0) THEN
-            push_length = res_along_dir/MAX(ABS(eig_along_dir), min_eig_fraction*ABS(eig_detected))
-            IF (push_prev > 0.0) push_length = MIN(push_length, max_push_growth*push_prev)
-            step = step + push_length*escape_dir
-            push_prev = push_length
-         ELSE
-            push_length = 0.0
-         END IF
+         push_length = res_along_dir/MAX(ABS(eig_along_dir), min_eig_fraction*ABS(eig_detected))
+         IF (push_prev > 0.0) push_length = MIN(push_length, max_push_growth*push_prev)
+         step = step + push_length*escape_dir
+         push_prev = push_length
          res_along_dir_prev = res_along_dir
          coord_prev = coord
          n_escape_steps = n_escape_steps + 1
@@ -233,10 +205,6 @@ CONTAINS
       ELSE
          step_norm = SQRT(ABS(step.dot.step%apply_metric(l_dfpt)))
          IF (alpha*res_norm > 0.0) step_rel = step_norm/(alpha*res_norm)
-         IF (n_limited_steps > 0) THEN
-            IF (step_norm > step_limit) step = (step_limit/step_norm)*step
-            n_limited_steps = n_limited_steps - 1
-         END IF
       END IF
       rho_in(n_hist) = rho_in(n_hist) + step
    END SUBROUTINE anderson_sf
