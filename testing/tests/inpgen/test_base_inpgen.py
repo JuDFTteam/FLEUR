@@ -97,6 +97,18 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     root = ET.parse(res['inp.xml']).getroot()
     assert root.find('.//interpolation') is not None
     assert root.find('.//interpolation/domain').get('listName') == 'path-2'
+    # The two stages no longer share attribute names: <disentanglement> carries the dis
+    # prefix of the Wannier90 keywords it sets and <wannierization> the bare ones. Asserted
+    # on the elements and in both directions, because the bare names still exist one element
+    # away and a substring check would pass on those.
+    dis = root.find('.//disentanglement')
+    wan = root.find('.//wannierization')
+    assert dis.get('disNumIter') == '10000' and dis.get('numIter') is None
+    assert dis.get('disConvWindow') == '10' and dis.get('convWindow') is None
+    assert dis.get('disConvTol') is not None and dis.get('convTol') is None
+    assert dis.get('disMixRatio') is not None and dis.get('mixRatio') is None
+    assert wan.get('numIter') == '10000' and wan.get('disNumIter') is None
+    assert wan.get('convWindow') == '10' and wan.get('disConvWindow') is None
     clean_workdir()
 
     res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:d'])

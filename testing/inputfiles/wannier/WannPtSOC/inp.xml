@@ -58,7 +58,7 @@
    <output dos="F" band="F" slice="F">
       <wannierlib wannierize="T">
         <bands numBands="36" minBand="7" maxBand="42"/>
-        <disentanglement disWinMin="0.097264375" disWinMax="2.669716927" disFrozMin="0.097264375" disFrozMax="0.661487799" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+        <disentanglement disWinMin="0.097264375" disWinMax="2.669716927" disFrozMin="0.097264375" disFrozMax="0.661487799" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

@@ -26,7 +26,7 @@ once per channel.
   <bands numBands="36" minBand="7" maxBand="42"/>
   <disentanglement disWinMin="0.097" disWinMax="2.670"
                    disFrozMin="0.097" disFrozMax="0.661"
-                   numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+                   disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
   <wannierization numIter="3000" convTol="0.00001"/>
   <operatorsRs>
     <operator name="hamiltonian"/>

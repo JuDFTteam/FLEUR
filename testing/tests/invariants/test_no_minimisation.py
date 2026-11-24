@@ -112,7 +112,7 @@ def test_num_iter_zero_keeps_the_projection_gauge(execute_fleur):
 @pytest.mark.wannierlib
 @pytest.mark.bulk
 def test_dis_num_iter_zero_keeps_the_projection_subspace(execute_fleur):
-    """<disentanglement numIter="0"> must be expressible, and must reach Wannier90.
+    """<disentanglement disNumIter="0"> must be expressible, and must reach Wannier90.
 
     The schema used to type this attribute as positiveInteger, so zero could not even be
     written down. That was stricter than the library it drives: Wannier90 rejects
@@ -129,14 +129,14 @@ def test_dis_num_iter_zero_keeps_the_projection_subspace(execute_fleur):
     out = open(res["out"]).read()
 
     #> If the two windows coincided there would be nothing to disentangle and the count
-    #> below would be zero for a reason that has nothing to do with numIter.
+    #> below would be zero for a reason that has nothing to do with disNumIter.
     assert "Frozen states" in out or "<-- DIS" in out, (
         "this run shows no sign of a disentanglement stage at all, so a count of zero "
         "iterations says nothing")
 
     dis = [int(n) for n in DIS_ROW.findall(out)]
     assert not dis, (
-        f'<disentanglement numIter="0"> was asked for and Wannier90 ran '
+        f'<disentanglement disNumIter="0"> was asked for and Wannier90 ran '
         f"{len(dis)} iterations, up to {max(dis)}. The zero did not reach it")
 
     #> The wannierise count is zero here too, so the same signature as the other test

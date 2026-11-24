@@ -928,7 +928,7 @@ WRITE (fileNum, 242) fr(1.0)
          END DO
          WRITE (fileNum, '(a)') '      <wannierlib wannierize="F">'
          WRITE (fileNum, 446) wannNumBands, wannMinBand, wannMaxBand
-         WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" numIter="10000" convTol="0.000000001" convWindow="10" mixRatio="0.5"/>'
+         WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" disNumIter="10000" disConvTol="0.000000001" disConvWindow="10" disMixRatio="0.5"/>'
          WRITE (fileNum, '(a)') '         <wannierization numIter="10000" convTol="0.000000001" convWindow="10" precond="F"/>'
          !> The stages below are off because they are not there: a commented block is the
          !> switch, the same thing the absence of the element says. None of them carries an

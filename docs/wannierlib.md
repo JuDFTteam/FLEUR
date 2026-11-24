@@ -65,7 +65,7 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 
     <disentanglement disWinMin="0.097" disWinMax="2.670"
                      disFrozMin="0.097" disFrozMax="0.661"
-                     numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+                     disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
 
     <wannierization numIter="3000" convTol="0.00001"/>
 
@@ -115,9 +115,10 @@ the whole mesh enters the window, which is what excludes the semicore.
 | attribute | required | default | |
 |---|---|---|---|
 | `disFrozMax` | **yes** | | top of the frozen window |
-| `numIter` | **yes** | | disentanglement iterations |
-| `convTol` | **yes** | | convergence threshold |
-| `mixRatio` | **yes** | | mixing |
+| `disNumIter` | **yes** | | disentanglement iterations |
+| `disConvTol` | **yes** | | convergence threshold |
+| `disMixRatio` | **yes** | | mixing |
+| `disConvWindow` | no | | iterations the change must stay below `disConvTol` |
 | `disWinMin` | no | derived | bottom of the outer window |
 | `disWinMax` | no | derived | top of the outer window |
 | `disFrozMin` | no | `disWinMin` | bottom of the frozen window |
@@ -459,7 +460,7 @@ https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#ang
       <disentanglement
         disWinMin="0.020" disWinMax="3.000"
         disFrozMin="0.020" disFrozMax="0.562"
-        numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+        disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
       <wannierization numIter="3000" convTol="0.00001"/>
       <operatorsRs>
         <operator name="hamiltonian"/>

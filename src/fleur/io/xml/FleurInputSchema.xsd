@@ -3583,14 +3583,14 @@
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="disFrozMax" type="FleurDouble" use="required"/>
-      <xsd:attribute name="numIter" type="xsd:nonNegativeInteger" use="required">
+      <xsd:attribute name="disNumIter" type="xsd:nonNegativeInteger" use="required">
          <xsd:annotation>
             <xsd:documentation>Iterations of the Omega_I minimisation. numIter="0" is legal and means: take the subspace the projections define, constrained to the frozen window, and leave it unoptimised. Wannier90 accepts it -- its own guard rejects dis_num_iter &lt; 0, not 0 -- and its iteration loop runs from 1, so it simply does not execute, while the projection and frozen-window steps that construct the subspace run before the loop and always. Omega_I is then the invariant of that subspace rather than its minimum over subspaces.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
-      <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>
+      <xsd:attribute name="disConvTol" type="FleurDouble" use="required"/>
+      <xsd:attribute name="disConvWindow" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="disMixRatio" type="FleurDouble" use="required"/>
       <xsd:attribute default="F" name="disFrozProj" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.01" name="disProjMin" type="FleurDouble" use="optional"/>
       <xsd:attribute default="0.95" name="disProjMax" type="FleurDouble" use="optional"/>
@@ -3644,7 +3644,7 @@
             <xsd:documentation>How many times the convNoiseAmp kick may be applied (Wannier90 conv_noise_num). Inert without convNoiseAmp.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="fdOrder" type="xsd:positiveInteger" use="optional">
+      <xsd:attribute name="higherOrderN" type="xsd:positiveInteger" use="optional">
          <xsd:annotation>
             <xsd:documentation>Order of the finite-difference stencil Wannier90 builds the b-shells with (its higher_order_n). The default 1 is the one-shell formula of Marzari and Vanderbilt, whose error in the k derivative is O(b^2); 2 and 3 combine more shells and reduce it to O(b^4) and O(b^6), at the cost of more neighbours per k point and therefore more overlap matrices. It matters for every quantity built as a k derivative - the Berry connection A, and above all C and F, which are second derivatives. Silence leaves Wannier90 on its own default, so an existing input keeps its numbers.</xsd:documentation>
          </xsd:annotation>

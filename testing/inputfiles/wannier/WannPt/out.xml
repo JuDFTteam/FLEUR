@@ -1268,7 +1268,7 @@
      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
         <wannierlib wannierize="T">
   	<bands numBands="18" minBand="4" maxBand="21"/>
-  	<disentanglement disWinMin="0.093551146" disWinMax="2.666003698" disFrozMin="0.093551146" disFrozMax="0.534543012" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+  	<disentanglement disWinMin="0.093551146" disWinMax="2.666003698" disFrozMin="0.093551146" disFrozMax="0.534543012" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
   	<wannierization numIter="3000" convTol="0.00001"/>
         </wannierlib>
         <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
