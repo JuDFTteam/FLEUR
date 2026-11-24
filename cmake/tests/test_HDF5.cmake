@@ -58,6 +58,24 @@ endforeach()
 
 
 
+#An HDF5 that exports the MPI_F08 interface cannot be combined with 'use mpi'
+set(FLEUR_HDF5_MPI_CLASH FALSE)
+if (FLEUR_USE_HDF5 AND FLEUR_USE_MPI)
+   unset(FLEUR_HDF5_MPI_COMPAT CACHE)
+   try_compile(FLEUR_HDF5_MPI_COMPAT ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5_MPI_clash.f90
+               LINK_LIBRARIES ${FLEUR_LIBRARIES};${FLEUR_HDF5_LIBRARIES} OUTPUT_VARIABLE compile_output
+               )
+   if ("$ENV{VERBOSE}")
+      message("HDF5/MPI module compatibility test: ${FLEUR_HDF5_MPI_COMPAT}\n${compile_output}")
+   endif()
+   if (NOT FLEUR_HDF5_MPI_COMPAT)
+      message(WARNING "The HDF5 library found cannot be used together with the MPI module (probably it was built with the mpi_f08 interface exposed in the hdf5 module). Ignoring this HDF5 library.")
+      set(FLEUR_HDF5_MPI_CLASH TRUE)
+      set(FLEUR_USE_HDF5 FALSE)
+      set(FLEUR_USE_HDF5MPI FALSE)
+   endif()
+endif()
+
 message("HDF5 Library found:${FLEUR_USE_HDF5}")
 
 #By default we always compile hdf5 if not found
@@ -69,6 +87,10 @@ if (DEFINED CLI_FLEUR_USE_HDF5)
    if (CLI_FLEUR_USE_HDF5)
        if (NOT FLEUR_USE_HDF5)
            if (NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+                if (FLEUR_HDF5_MPI_CLASH)
+                   message(FATAL_ERROR "The HDF5 library found is incompatible with the MPI module (see warning above), and no HDF5 can be downloaded automatically.\n"
+                   "Please provide an HDF5 library built without the mpi_f08 interface, or use a git-version of FLEUR to download HDF5 automatically")
+                endif()
                 message(FATAL_ERROR "You asked for HDF5 to be used, but it cannot be found.\n"
                 "Please either provide correct include and link directories for HDF5 manually, or use a git-version of FLEUR to download HDF5 automatically")
            endif()     
