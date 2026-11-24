@@ -1,0 +1,5 @@
+monoclinic Si, a cell inpgen gives no k path
+&input cartesian=f /
+&lattice latsys='mP' a0=1.0 a=5.0 b=6.0 c=7.0 gamma=100.0 /
+1
+14 0.0 0.0 0.0

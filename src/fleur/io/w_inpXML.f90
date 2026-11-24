@@ -75,6 +75,10 @@ CONTAINS
       CLASS(t_enparaxml), INTENT(IN)   :: enpara
       CLASS(t_forcetheo), INTENT(IN):: forcetheo !nothing is done here so far....
       CHARACTER(LEN=40)          :: kptsSelection(3) ! 1: default selection, 2: alternative for band structures, alternative for GW
+      !> The type="path" list this run wrote, empty when it wrote none. inpgen does not
+      !> write one for every lattice -- a monoclinic or triclinic cell gets a mesh only --
+      !> so the -wann template cannot name a path it has not made.
+      CHARACTER(LEN=40)          :: wannPathName
       LOGICAL, INTENT(IN)        :: l_explicitIn, l_includeIn(4)
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: add_filename
@@ -907,17 +911,41 @@ WRITE (fileNum, 242) fr(1.0)
       IF (l_wannOpt) THEN
 446      FORMAT('         <bands numBands="', i0, '" minBand="', i0, '" maxBand="', i0, '"/>')
          WRITE (fileNum, '(a)') '      <!-- Set wannierize="T" once the SCF has converged. disFrozMax is an'
-         WRITE (fileNum, '(a)') '           absolute energy in Htr: E_F + 0.1837 is a frozen window at E_F + 5 eV.'
-         WRITE (fileNum, '(a)') '           Raise numbands in <cutoffs> to maxBand at the same time: the SCF picks'
-         WRITE (fileNum, '(a)') '           what it needs and pays for no more, the wannierization reads these. -->'
+         WRITE (fileNum, '(a)') '           absolute energy in Htr: E_F + 0.1837 is a frozen window at E_F + 5 eV. -->'
          IF (.NOT. l_wannProj) THEN
             WRITE (fileNum, '(a)') '      <!-- num_wann comes from the <wannierproj> of each species, which this'
             WRITE (fileNum, '(a)') '           form of -wann does not write: use -wann Fe:spd and inpgen does it. -->'
          END IF
+         !> Which k list the <interpolation> below may name. The template is written in the
+         !> same run that generates kpts.xml, so it can say the name instead of guessing it,
+         !> and can fall back to a commented block when this lattice got no path at all.
+         wannPathName = ''
+         DO iKpts = 1, SIZE(kptsArray)
+            IF (kptsArray(iKpts)%kptsKind == KPTS_KIND_PATH) THEN
+               wannPathName = TRIM(ADJUSTL(kptsArray(iKpts)%kptsName))
+               EXIT
+            END IF
+         END DO
          WRITE (fileNum, '(a)') '      <wannierlib wannierize="F">'
          WRITE (fileNum, 446) wannNumBands, wannMinBand, wannMaxBand
-         WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" numIter="3000" convTol="0.00000000001" convWindow="10" mixRatio="0.5"/>'
-         WRITE (fileNum, '(a)') '         <wannierization numIter="10000" convTol="0.00000000001" convWindow="10" precond="F"/>'
+         WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" numIter="10000" convTol="0.000000001" convWindow="10" mixRatio="0.5"/>'
+         WRITE (fileNum, '(a)') '         <wannierization numIter="10000" convTol="0.000000001" convWindow="10" precond="F"/>'
+         !> The stages below are off because they are not there: a commented block is the
+         !> switch, the same thing the absence of the element says. None of them carries an
+         !> inner comment, because an XML comment does not nest and a double hyphen inside
+         !> one ends it early -- which would truncate the file at that point.
+         WRITE (fileNum, '(a)') '         <!--'
+         WRITE (fileNum, '(a)') '         <operatorsKs>'
+         WRITE (fileNum, '(a)') '            <operator name="spin"/>'
+         WRITE (fileNum, '(a)') '            <operator name="orbital"/>'
+         WRITE (fileNum, '(a)') '            <operator name="spinOrbit"/>'
+         WRITE (fileNum, '(a)') '            <operator name="exchangeTorque"/>'
+         WRITE (fileNum, '(a)') '            <operator name="bmn"/>'
+         WRITE (fileNum, '(a)') '            <operator name="cmn"/>'
+         WRITE (fileNum, '(a)') '            <operator name="fmn"/>'
+         WRITE (fileNum, '(a)') '         </operatorsKs>'
+         WRITE (fileNum, '(a)') '         -->'
+         WRITE (fileNum, '(a)') '         <!--'
          WRITE (fileNum, '(a)') '         <operatorsRs>'
          WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
          WRITE (fileNum, '(a)') '            <operator name="position"/>'
@@ -928,17 +956,43 @@ WRITE (fileNum, 242) fr(1.0)
          WRITE (fileNum, '(a)') '            <operator name="spin"/>'
          WRITE (fileNum, '(a)') '            <operator name="orbital"/>'
          WRITE (fileNum, '(a)') '            <operator name="spinOrbit"/>'
-         WRITE (fileNum, '(a)') '            <!-- exchangeTorque needs every site to share one moment direction: a global rotation is fine, a texture is not -->'
          WRITE (fileNum, '(a)') '            <operator name="exchangeTorque"/>'
          !> Only on the spinor route, because that is where it exists: the projection on
          !> the moment is taken over a spinor, and offering it in a collinear template
          !> would put a name in the file that the run then refuses.
          IF (judft_was_argument("-spinor")) THEN
-            WRITE (fileNum, '(a)') '            <!-- exchangeField is the same exchange field projected ON the moment, which is the exchange Hamiltonian rather than the torque -->'
             WRITE (fileNum, '(a)') '            <operator name="exchangeField"/>'
          END IF
          WRITE (fileNum, '(a)') '         </operatorsRs>'
-         WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" orbitrans="F" juwip="F" plotWF="F" plotGrid="40 40 40" plotCells="1 1 1"/>'
+         WRITE (fileNum, '(a)') '         -->'
+447      FORMAT('            <domain listName="', a, '" suffix="dense" refinementPoints="10"/>')
+         !> Two branches, and not one with a conditional wrapper, because an XML comment
+         !> does not nest: a commented stage may not carry the comment that explains it,
+         !> whose own close would end the wrapper early and leave the element live. With a
+         !> path the stage runs and the explanation sits above it; without one the
+         !> explanation is a closed comment and only the element is wrapped.
+         IF (LEN_TRIM(wannPathName) > 0) THEN
+            WRITE (fileNum, '(a)') '         <!-- listName names a list of kpts.xml, suffix names the output files,'
+            WRITE (fileNum, '(a)') '              and refinementPoints subdivides each segment of a path. -->'
+            WRITE (fileNum, '(a)') '         <interpolation useWsDistance="F">'
+            WRITE (fileNum, 447) TRIM(ADJUSTL(wannPathName))
+            WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
+            WRITE (fileNum, '(a)') '         </interpolation>'
+         ELSE
+            WRITE (fileNum, '(a)') '         <!-- This cell got no type="path" list, so the stage has nothing to resolve'
+            WRITE (fileNum, '(a)') '              on. Add a path list to kpts.xml and uncomment it; path-2 is the name'
+            WRITE (fileNum, '(a)') '              inpgen gives it for the lattices where it does write one. -->'
+            WRITE (fileNum, '(a)') '         <!--'
+            WRITE (fileNum, '(a)') '         <interpolation useWsDistance="F">'
+            WRITE (fileNum, '(a)') '            <domain listName="path-2" suffix="dense" refinementPoints="10"/>'
+            WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
+            WRITE (fileNum, '(a)') '         </interpolation>'
+            WRITE (fileNum, '(a)') '         -->'
+         END IF
+         WRITE (fileNum, '(a)') '         <!--'
+         WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" bmesh="F" orbitrans="F"'
+         WRITE (fileNum, '(a)') '                 juwip="F" plotWF="F" plotGrid="40 40 40" plotCells="1 1 1"/>'
+         WRITE (fileNum, '(a)') '         -->'
          WRITE (fileNum, '(a)') '      </wannierlib>'
       END IF
       WRITE (fileNum, '(a)') '   </output>'
