@@ -938,7 +938,7 @@ WRITE (fileNum, 242) fr(1.0)
             WRITE (fileNum, '(a)') '            <operator name="exchangeField"/>'
          END IF
          WRITE (fileNum, '(a)') '         </operatorsRs>'
-         WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" orbitrans="F" juwip="F" plotWF="F" plotGrid="40 40 40"/>'
+         WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" orbitrans="F" juwip="F" plotWF="F" plotGrid="40 40 40" plotCells="1 1 1"/>'
          WRITE (fileNum, '(a)') '      </wannierlib>'
       END IF
       WRITE (fileNum, '(a)') '   </output>'

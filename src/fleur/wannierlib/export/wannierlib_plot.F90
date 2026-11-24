@@ -127,7 +127,8 @@ CONTAINS
       !> norm of the pair. A scalar state has one component and the loop below runs once.
       ncomp = MERGE(2, 1, l_wannierlib_spinors)
 
-      CALL plot_region(cell, this%export%plot_grid, twodim, grid, vec1, vec2, vec3, zero)
+      CALL plot_region(cell, this%export%plot_grid, this%export%plot_cells, &
+                       twodim, grid, vec1, vec2, vec3, zero)
       mesh = grid(1)*grid(2)*grid(3)
 
       ALLOCATE (wf(nw, mesh, ncomp), source=CMPLX(0.0, 0.0), stat=ierr)
@@ -308,18 +309,23 @@ CONTAINS
    !> slice of somebody else's plot instead of the Wannier function. A region that is
    !> always the same is one less thing to get wrong; whether it is big enough is measured
    !> and reported rather than left to be assumed.
-   SUBROUTINE plot_region(cell, want_grid, twodim, grid, vec1, vec2, vec3, zero)
+   SUBROUTINE plot_region(cell, want_grid, want_cells, twodim, grid, vec1, vec2, vec3, zero)
       TYPE(t_cell), INTENT(IN)  :: cell
       INTEGER, INTENT(IN)  :: want_grid(3)
+      INTEGER, INTENT(IN)  :: want_cells(3)
       LOGICAL, INTENT(OUT) :: twodim
       INTEGER, INTENT(OUT) :: grid(3)
       REAL,    INTENT(OUT) :: vec1(3), vec2(3), vec3(3), zero(3)
 
       twodim = .FALSE.
-      grid   = want_grid
-      vec1   = cell%amat(:, 1)
-      vec2   = cell%amat(:, 2)
-      vec3   = cell%amat(:, 3)
+      !> The region is what the input asks for, not one cell. A Wannier function wider than
+      !> the cell is cut by the walls, and the loop below already evaluates anywhere: the
+      !> Bloch phase comes from the real coordinate and the muffin-tin search spans +-3
+      !> cells. The grid scales with the region, so the resolution is the one asked for.
+      grid   = want_grid*want_cells
+      vec1   = cell%amat(:, 1)*want_cells(1)
+      vec2   = cell%amat(:, 2)*want_cells(2)
+      vec3   = cell%amat(:, 3)*want_cells(3)
       zero   = -0.5*(vec1 + vec2 + vec3)
    END SUBROUTINE plot_region
 

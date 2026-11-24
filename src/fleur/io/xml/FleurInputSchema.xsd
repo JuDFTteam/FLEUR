@@ -3819,6 +3819,11 @@
             <xsd:documentation>Resolution of the plotWF grid, "nx ny nz"; the cost is one state per grid point, band and k-point.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute default="1 1 1" name="plotCells" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many unit cells the plotWF region spans, "nx ny nz". A Wannier function wider than the cell is cut by the default single cell; the grid is scaled along, so the resolution is kept and the cost grows with the product.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:simpleType name="WannierlibAxisType">

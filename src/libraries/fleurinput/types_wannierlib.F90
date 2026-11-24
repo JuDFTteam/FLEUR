@@ -82,6 +82,11 @@ MODULE m_types_wannierlib
     !> whole price of the plot: 40^3 is 500x the work of 8^3. Left at 40^3, what it was
     !> before it could be asked for.
     INTEGER :: plot_grid(3) = [40, 40, 40]  ! <export plotGrid="40 40 40"/>
+    !> How many cells the region spans. plot_region used to hardwire one, which cuts any
+    !> function wider than the cell: in graphene (a = 2.46 A) a sigma function still holds
+    !> half its maximum at the cell wall. The grid is scaled with it, so the resolution is
+    !> the one plotGrid asked for and the cost grows with the product of the three.
+    INTEGER :: plot_cells(3) = [1, 1, 1]    ! <export plotCells="1 1 1"/>
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -495,6 +500,7 @@ CONTAINS
     CALL mpi_bc(this%export%juwip, rank, mpi_comm)
     CALL mpi_bc(this%export%plot, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
+    CALL mpi_bc(rank, mpi_comm, this%export%plot_cells)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%export%bmesh, rank, mpi_comm)
     CALL mpi_bc(this%l_transport, rank, mpi_comm)
@@ -828,6 +834,18 @@ CONTAINS
           'wannierlib: <export plotGrid=".."/> needs at least two points per direction', &
           calledby='read_xml_wannierlib')
         this%export%plot_grid = NINT(gridlist)
+      END IF
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotCells') == 1) THEN
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotCells')
+        CALL evaluateList(gridlist, sbuf)
+        IF (SIZE(gridlist) /= 3) CALL juDFT_error( &
+          'wannierlib: <export plotCells=".."/> takes three numbers', &
+          calledby='read_xml_wannierlib')
+        !> One cell is the whole cell; zero or less is not a region.
+        IF (ANY(NINT(gridlist) < 1)) CALL juDFT_error( &
+          'wannierlib: <export plotCells=".."/> needs at least one cell per direction', &
+          calledby='read_xml_wannierlib')
+        this%export%plot_cells = NINT(gridlist)
       END IF
       this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@irrep'))
