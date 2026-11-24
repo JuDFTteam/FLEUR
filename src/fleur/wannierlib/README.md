@@ -42,7 +42,7 @@ once per channel.
 ```
 
 `<disentanglement>` is optional and is left out when `numBands == num_wann`. The initial
-guesses are `<wannierproj l=".." m=".." spin=".."/>` children of a `<species>`; their total
+guesses are `<wannierproj l=".." m=".."/>` children of a `<species>`; their total
 count over all atoms is `num_wann`.
 
 The three operator blocks are independent: `<operatorsKs>` hands over what the run holds in
