@@ -186,7 +186,7 @@ contains
         complex                            :: offset_out,tempval_pw,tempval_mt,tempval_SF_IR,tempval_grrho,tempval_SF
         real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:),rho_mt(:,:,:), grRho_mt(:,:,:)!,mt_r(:,:),mt_Im(:,:)
         integer                            :: iType,iDir
-        real                               :: qvec_int(3),int_mt_r,int_mt_Im
+        real                               :: qvec_int(3),int_mt_r,int_mt_Im,phase_arg
         
 
         
@@ -223,6 +223,7 @@ contains
 
         call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
         call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,iQ)
+        phase_arg = tpi_const*dot_product(fi%dfpt%qvec_efield(:,iQ),fi%atoms%taual(:,fi%atoms%firstAtom(iDType)))
 
         !interstitial
         pwwq2 = CMPLX(0.0,0.0)
@@ -273,7 +274,7 @@ contains
 
             !print*,"offset_out",offset_out
             !CALL intgr3(denIn1_mt_Im(:,0,iDType),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_Im)
-            BEC_element = BEC_element+fi%atoms%zatom(iDType)-int_mt_r*sfp_const!+int_mt_Im)
+            BEC_element = BEC_element+exp(ImagUnit*phase_arg)*(fi%atoms%zatom(iDType)-int_mt_r*sfp_const)!+int_mt_Im)
             !BEC_element = BEC_element+fi%atoms%econf(iDType)%valence_electrons-int_mt_r*sfp_const!+int_mt_Im)
             BEC_contributions_element(3) =  BEC_contributions_element(3)  -int_mt_r*sfp_const!+int_mt_Im)
             BEC_contributions_element(7) =  BEC_contributions_element(7)  -int_mt_r*sfp_const
@@ -330,6 +331,8 @@ contains
         BEC_contributions_element(5) = BEC_contributions_element(5) + tempval_grrho
         BEC_contributions_element(7) =  BEC_contributions_element(7)  +2*tempval_grrho
         BEC_contributions_element(8) = BEC_contributions_element(8)-2*tempval_grrho
+        
+        BEC_element = BEC_element*exp(-ImagUnit*phase_arg)
         
         8000  FORMAT (a,2E19.8E2)
     end subroutine dfpt_born_eff_charge_element
