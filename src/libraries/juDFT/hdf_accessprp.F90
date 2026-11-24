@@ -41,7 +41,7 @@ module m_hdf_accessprp
       character(len=128)::path
 #ifdef CPP_HDFMPI
       LOGICAL :: l_mpi
-      CALL MPI_INITALIZED(l_mpi,ierr)
+    CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
 
       IF (.not.present(setupfile)) THEN

@@ -53,6 +53,7 @@ MODULE m_types_lapw
       procedure       :: lapw_init => t_lapw_init
       procedure       :: lapw_init_fi => t_lapw_init_fi
       GENERIC         :: init => lapw_init, lapw_init_fi
+      PROCEDURE       :: init_lo => lapw_init_lo
       PROCEDURE, PASS :: alloc => lapw_alloc
       PROCEDURE, PASS :: phase_factors => lapw_phase_factors
       procedure, pass :: hyb_num_bas_fun => hyb_num_bas_fun
@@ -344,7 +345,7 @@ CONTAINS
          END IF
       END DO
 
-      IF (ANY(atoms%nlo > 0)) CALL priv_lo_basis_setup(lapw, atoms, input, sym, noco, nococonv, cell)
+      IF (ANY(atoms%nlo > 0)) CALL lapw%init_lo(atoms, input, sym, noco, nococonv, cell)
 
       lapw%nv_tot = lapw%nv(1)
       lapw%nmat = lapw%nv(1) + atoms%nlotot
@@ -353,60 +354,62 @@ CONTAINS
 
 
       call timestop("t_lapw_init")
-   CONTAINS
+   END SUBROUTINE t_lapw_init
 
-      SUBROUTINE priv_lo_basis_setup(lapw, atoms, input, sym, noco, nococonv, cell)
+   SUBROUTINE lapw_init_lo(lapw, atoms, input, sym, noco, nococonv, cell)
+      !Completes an initialized plane-wave basis with the local-orbital
+      !bookkeeping (kvec/nkvec/index_lo). Public so that codes filling a
+      !t_lapw with a non-standard G-vector set (e.g. the cylinder basis
+      !of the Green-function embedding) can reuse the LO setup.
 
-         IMPLICIT NONE
-         TYPE(t_lapw), INTENT(INOUT):: lapw
-         TYPE(t_atoms), INTENT(IN)  :: atoms
-         TYPE(t_input), INTENT(IN)  :: input
-         TYPE(t_sym), INTENT(IN)    :: sym
-         TYPE(t_cell), INTENT(IN)   :: cell
-         TYPE(t_noco), INTENT(IN)   :: noco
-         TYPE(t_nococonv), INTENT(IN)   :: nococonv
+      IMPLICIT NONE
+      CLASS(t_lapw), INTENT(INOUT):: lapw
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      TYPE(t_input), INTENT(IN)  :: input
+      TYPE(t_sym), INTENT(IN)    :: sym
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_noco), INTENT(IN)   :: noco
+      TYPE(t_nococonv), INTENT(IN)   :: nococonv
 
-         INTEGER:: n, na, na1, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
-         IF (.NOT. ALLOCATED(lapw%kvec)) THEN
-            ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
-            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat))
-            ALLOCATE (lapw%index_lo(atoms%nlod, atoms%nat))
-         ENDIF
-         lapw%kvec = 0
-         lapw%nkvec = 0
-         lapw%index_lo = 0
-         iindex = 0
-         na = 0
-         nkvec_sv = 0
-         DO n = 1, atoms%ntype
-            DO nn = 1, atoms%neq(n)
-               na = na + 1
-               if (sym%invsat(na) > 1) then
-                  ! Copy LO setup from inversion partner (atom1).
-                  ! When the invsat shortcut is active, atom2 is skipped in
-                  ! calc_abc so this data is unused. When the shortcut is
-                  ! disabled (e.g. SOC), atom2 is computed directly and needs
-                  ! valid nkvec/index_lo/kvec pointing to the same z-vector
-                  ! positions as atom1 (the invsat LO block covers both atoms).
-                  na1 = sym%invsatnr(na)
-                  DO lo = 1, atoms%nlo(n)
-                     lapw%nkvec(lo, na)   = lapw%nkvec(lo, na1)
-                     lapw%index_lo(lo, na) = lapw%index_lo(lo, na1)
-                     lapw%kvec(:, lo, na)  = lapw%kvec(:, lo, na1)
-                  END DO
-                  cycle
-               end if
-               np = sym%invtab(sym%ngopr(na))
-               CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
+      INTEGER:: n, na, na1, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
+      IF (.NOT. ALLOCATED(lapw%kvec)) THEN
+         ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
+         ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat))
+         ALLOCATE (lapw%index_lo(atoms%nlod, atoms%nat))
+      ENDIF
+      lapw%kvec = 0
+      lapw%nkvec = 0
+      lapw%index_lo = 0
+      iindex = 0
+      na = 0
+      nkvec_sv = 0
+      DO n = 1, atoms%ntype
+         DO nn = 1, atoms%neq(n)
+            na = na + 1
+            if (sym%invsat(na) > 1) then
+               ! Copy LO setup from inversion partner (atom1).
+               ! When the invsat shortcut is active, atom2 is skipped in
+               ! calc_abc so this data is unused. When the shortcut is
+               ! disabled (e.g. SOC), atom2 is computed directly and needs
+               ! valid nkvec/index_lo/kvec pointing to the same z-vector
+               ! positions as atom1 (the invsat LO block covers both atoms).
+               na1 = sym%invsatnr(na)
                DO lo = 1, atoms%nlo(n)
-                  lapw%index_lo(lo, na) = iindex
-                  iindex = iindex + lapw%nkvec(lo, na)
-               ENDDO
+                  lapw%nkvec(lo, na)   = lapw%nkvec(lo, na1)
+                  lapw%index_lo(lo, na) = lapw%index_lo(lo, na1)
+                  lapw%kvec(:, lo, na)  = lapw%kvec(:, lo, na1)
+               END DO
+               cycle
+            end if
+            np = sym%invtab(sym%ngopr(na))
+            CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
+            DO lo = 1, atoms%nlo(n)
+               lapw%index_lo(lo, na) = iindex
+               iindex = iindex + lapw%nkvec(lo, na)
             ENDDO
          ENDDO
-      END SUBROUTINE priv_lo_basis_setup
-
-   END SUBROUTINE t_lapw_init
+      ENDDO
+   END SUBROUTINE lapw_init_lo
 
    SUBROUTINE lapw_phase_factors(lapw, iintsp, tau, qss, cph)
       IMPLICIT NONE

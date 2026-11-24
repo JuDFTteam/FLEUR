@@ -139,7 +139,7 @@ CONTAINS
                               cof_lm = CMPLX(0.,0.)
                               DO m1 = -l,l
                                  lm1 = ll1 + m1
-                                 cof_lm = cof_lm + this%rsoc%soangl(l,m,i1,l,m1,j1)*conjg(abc(j1,n)%cof(j,lm1,jcof,na))
+                                 cof_lm = cof_lm + this%rsoc%soangl(l,m1,j1,l,m,i1)*conjg(abc(j1,n)%cof(j,lm1,jcof,na))
                               ENDDO
                               DO icof=1,abc(1,n)%n_r(l)
                                  DO i=1, num_bands
@@ -156,8 +156,8 @@ CONTAINS
          ENDDO !!j1 spin
       ENDDO !n atom types
 
-      !> The accumulation forms c_i * conj(c_j), the conjugate of the <i|H_so|j> the type
-      !> documents. A consumer that needs the documented convention undoes it.
+      !> The result is conj(<i|H_so|j>) = sum c_i*conj(c_j)*conj(soangl(i-part,j-part)),
+      !> and conj(soangl(a,b)) = soangl(b,a) as soangl is Hermitian.
 
     END SUBROUTINE calc_matrix_elements
 END MODULE m_types_matelements_soc  
