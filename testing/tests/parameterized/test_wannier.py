@@ -382,6 +382,9 @@ INTERP_FILES = {
     #> names carry no _spin suffix. Measured, not assumed: guessing "_spin1" here would
     #> have made the assertion below fail for the wrong reason.
     "WannFeTilt": ["WF1_interp.hdf"],
+    #> Collinear 2N + SOC: l_spinors is true because l_soc is, so ONE channel is written
+    #> and the name carries no _spin suffix. Measured, not assumed.
+    "WannFeBccSOC": ["WF1_interp.hdf"],
     "WannFeBccInterp": [
         "WF1_interp.hdf", "WF2_interp.hdf",
     ] + [# The only A(R) written: the WYSV A^(W)(R) that feeds the Berry curvature and the
@@ -403,6 +406,29 @@ INTERP_FILES = {
 # high-symmetry point, where dE/dk vanishes by symmetry, so a file of zeros is the correct
 # answer there. The _plane domain is the 240-point path-2 list.
 VELOCITY_FINE = {"WannFeBccInterp": ("WF1_interp.hdf", "/plane/velocity")}
+
+# WannFeBccSOC interpolates the spin-orbit operator on w222 -- the very mesh it was
+# wannierised on, so num_wann == num_bands == 12 and nothing is discarded. Two exact
+# statements pin the driver down, and neither needs a reference value nor rssocmat.1,
+# whose format JuWIP and orbitrans read and which is left alone on purpose:
+#
+#   AN l=0 PROJECTION CARRIES NO SPIN-ORBIT. <s|xi L.S|s> vanishes identically, because
+#   L = 0 for l = 0, and this case asks for a single <wannierproj l="0">, which with
+#   spinors is two states. Measured: two of the 96 values come out at 4.6e-14 and
+#   2.6e-14 eV, at one and the same k, against 0.114 eV for the largest of the rest --
+#   eleven orders down, so these are structural zeros and not small numbers. At one k
+#   only: elsewhere the energy ordering mixes the s character in and nothing is left to
+#   assert.
+#
+#   SYMMETRY-EQUIVALENT k MUST AGREE DIGIT FOR DIGIT. The 2x2x2 mesh falls into the stars
+#   {0}, {1,6}, {2,3,4,5}, {7}, and the measured agreement is 1e-13. A wrong phase on an
+#   R vector breaks that degeneracy while leaving every value finite and plausible --
+#   exactly the failure a tolerance on the values themselves cannot see.
+SOC_INTERP = {"WannFeBccSOC": ("WF1_interp.hdf", "/default/spinOrbit")}
+SOC_INTERP_ZEROS = 2                   # one l=0 projection x two spinor components
+SOC_INTERP_ZERO_TOL = 1.0e-10          # measured 4.6e-14; the rest start at 1.1e-3
+SOC_INTERP_STARS = [(1, 6), (2, 3), (2, 4), (2, 5)]
+SOC_INTERP_STAR_TOL = 1.0e-9           # measured 1.1e-13
 
 # One file now holds what used to be one .dat per quantity per domain, so counting files no
 # longer catches a driver that quietly stops writing one of them. The datasets are counted
@@ -750,6 +776,37 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         assert worst > 0.0, (
             "every velocity component on the fine path is exactly zero, so the driver "
             "wrote a correctly shaped file with nothing in it")
+
+    if test_id in SOC_INTERP:
+        sf, sds = SOC_INTERP[test_id]
+        shape, vals = interp_hdf(res[sf], sds)
+        if shape is None:
+            pytest.skip("no h5dump, so the interpolation output cannot be read")
+        #> C order, so the Fortran (1, num_wann, npoints) reads back the other way round.
+        assert len(shape) == 3 and shape[2] == 1, (
+            f"{sds} has shape {shape}, not (npoints, num_wann, 1)")
+        npt, nw = shape[0], shape[1]
+        o = [[vals[k * nw + n] for n in range(nw)] for k in range(npt)]
+        zero = [(k, n) for k in range(npt) for n in range(nw)
+                if abs(o[k][n]) < SOC_INTERP_ZERO_TOL]
+        assert len(zero) == SOC_INTERP_ZEROS, (
+            f"{sds}: {len(zero)} values fall below {SOC_INTERP_ZERO_TOL}, not "
+            f"{SOC_INTERP_ZEROS} -- the l=0 projection contributes one per spinor "
+            f"component and nothing else may vanish")
+        assert len({k for k, _ in zero}) == 1, (
+            f"{sds}: the zeros sit at k {sorted({k for k, _ in zero})}; the s character "
+            f"is pure only where the band ordering keeps it so, which is one k")
+        big = max(abs(o[k][n]) for k, n in zero)
+        small = min(abs(o[k][n]) for k in range(npt) for n in range(nw)
+                    if (k, n) not in zero)
+        assert small > 1.0e3 * big, (
+            f"{sds}: the zeros reach {big:.2e} and the smallest of the rest is "
+            f"{small:.2e}, so no scale separates them and the zeros prove nothing")
+        for a, b in SOC_INTERP_STARS:
+            d = max(abs(o[a][n] - o[b][n]) for n in range(nw))
+            assert d < SOC_INTERP_STAR_TOL, (
+                f"{sds}: k={a} and k={b} are one star of the 2x2x2 mesh, but they differ "
+                f"by {d:.2e} (tol {SOC_INTERP_STAR_TOL}) -- a phase on an R vector")
 
     if test_id in L_TRANSVERSE_ZERO:
         traces = anglmom_r0_traces(res[op(test_id, "anglmomrs.1")])
