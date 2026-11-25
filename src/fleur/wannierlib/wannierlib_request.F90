@@ -41,6 +41,17 @@ CONTAINS
       !> being asked. What it receives is the catalogue entry each name needs built. A name
       !> no table carries stops the run with the accepted names, rather than leaving an
       !> operator silently absent from the output.
+#ifndef CPP_HDF
+      !> The interpolation writes one HDF5 file per spin channel, so a build without HDF5
+      !> cannot produce its output at all. Refused HERE and not at the writer because this
+      !> runs before the minimisation, which is most of the run: what the user loses is an
+      !> input check and not the whole wannierization.
+      IF (SIZE(this%ops) > 0) CALL juDFT_error( &
+         'wannierlib: <interpolation> needs a build with HDF5', &
+         hint='configure with HDF5, or drop <interpolation> from inp.xml', &
+         calledby='wannierlib_build_request')
+#endif
+
       ALLOCATE (op_needs(SIZE(this%ops)), op_r_needs(SIZE(this%op_r_name)))
       DO iop = 1, SIZE(this%ops)
          krow = melem_exposed_find(this%ops(iop)%name, WANNIERLIB_INTERP)
