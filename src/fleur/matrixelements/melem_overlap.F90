@@ -26,7 +26,6 @@ MODULE m_melem_overlap
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_overlap_interstitial, melem_overlap_states
-   PUBLIC :: melem_overlap_check_identity
    PUBLIC :: melem_overlap_identity_add, melem_overlap_identity_report
 
 CONTAINS
@@ -245,67 +244,5 @@ CONTAINS
       END IF
       IF (PRESENT(l_ok)) l_ok = (dmax <= t .AND. omax <= t)
    END SUBROUTINE melem_overlap_identity_report
-
-   SUBROUTINE melem_overlap_check_identity(stars, atoms, cell, lapw, zmat, abc, radfun, &
-                                           jspin_rad, ioff, nbnd, ik, vac, tol, l_ok)
-      TYPE(t_stars), INTENT(IN) :: stars
-      TYPE(t_atoms), INTENT(IN) :: atoms
-      TYPE(t_cell),  INTENT(IN) :: cell
-      TYPE(t_lapw),  INTENT(IN) :: lapw
-      TYPE(t_mat),   INTENT(IN) :: zmat
-      TYPE(t_abc),   INTENT(IN) :: abc(:)
-      TYPE(t_radfun), INTENT(IN) :: radfun(:)
-      INTEGER, INTENT(IN) :: jspin_rad, ioff, nbnd, ik
-      TYPE(t_melem_vacabc), INTENT(IN), OPTIONAL :: vac
-      REAL, INTENT(IN), OPTIONAL :: tol
-      LOGICAL, INTENT(OUT), OPTIONAL :: l_ok
-
-      REAL :: kdiff0(3, 1), t, dmax, omax, d
-      COMPLEX, ALLOCATABLE :: ujug0(:, :, :, :, :, :), ovl(:, :)
-      INTEGER :: i, j
-      CHARACTER(LEN=12) :: reg
-
-      t = MELEM_CHECK_TOL
-      IF (PRESENT(tol)) t = tol
-      reg = 'MT+int'
-      !> Two statements: an unbuilt expansion may be passed in bulk, and Fortran does not
-      !> promise to stop at the first .AND.
-      IF (PRESENT(vac)) THEN
-         IF (vac%nv2 > 0) reg = 'MT+int+vac'
-      END IF
-
-      !> b = 0 needs its own one-entry table: the muffin-tin half finds b in kdiff BY VALUE,
-      !> and the neighbour table has no zero in it.
-      kdiff0 = 0.0
-      CALL melem_ujugaunt(atoms, cell, 1, kdiff0, radfun, radfun, jspin_rad, jspin_rad, &
-                          .FALSE., 1, ujug0)
-
-      ALLOCATE (ovl(nbnd, nbnd), source=CMPLX(0.0, 0.0))
-      CALL melem_overlap_states(stars, atoms, lapw, lapw, zmat, zmat, abc, abc, &
-                                jspin_rad, jspin_rad, lapw%bkpt, lapw%bkpt, [0, 0, 0], &
-                                ujug0, kdiff0, 1, ioff, ioff, ovl, vac_a=vac, vac_b=vac)
-
-      dmax = 0.0; omax = 0.0
-      DO j = 1, nbnd
-         DO i = 1, nbnd
-            IF (i == j) THEN
-               d = ABS(ovl(i, j) - CMPLX(1.0, 0.0)); dmax = MAX(dmax, d)
-            ELSE
-               d = ABS(ovl(i, j)); omax = MAX(omax, d)
-            END IF
-         END DO
-      END DO
-
-      IF (dmax > t .OR. omax > t) THEN
-         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'melem overlap check [k=', ik, ', '// &
-            TRIM(reg)//']: M(k,k) is not the identity', '  diagonal ', dmax, '  off-diagonal ', omax
-      ELSE
-         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'melem overlap check [k=', ik, ', '// &
-            TRIM(reg)//']: M(k,k) = 1 ok', '  diagonal ', dmax, '  off-diagonal ', omax
-      END IF
-      IF (PRESENT(l_ok)) l_ok = (dmax <= t .AND. omax <= t)
-
-      DEALLOCATE (ovl, ujug0)
-   END SUBROUTINE melem_overlap_check_identity
 
 END MODULE m_melem_overlap

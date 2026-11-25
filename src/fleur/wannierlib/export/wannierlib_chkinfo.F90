@@ -47,7 +47,7 @@ MODULE m_wannierlib_chkinfo
    USE m_wannierlib_hdf_names, ONLY: wl_hdf_name, WL_HDF_WHAT
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wl_chkinfo_set, wl_chkinfo_stamp, wl_crc32_file
+   PUBLIC :: wl_chkinfo_set, wl_chkinfo_stamp
 #ifdef CPP_HDF
    PUBLIC :: wl_chkinfo_write
 #endif
