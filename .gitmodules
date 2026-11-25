@@ -6,7 +6,7 @@
 	url = gitlab@iffgit.fz-juelich.de:fleur/katacoda-tutorials.git
 [submodule "external/wannier90"]
 	path = external/wannier90
-	url = https://github.com/nanoguido/wannier90.git
+	url = https://iffgit.fz-juelich.de/saez/wannier90.git
 [submodule "edsolver-library"]
 	path = external/edsolver-library
 	url = gitlab@iffgit.fz-juelich.de:janssen/edsolver-library.git
