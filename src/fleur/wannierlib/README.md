@@ -76,9 +76,9 @@ evaluated on. There is no limit and no kinds: a domain is a **named `kPointList`
 when there is more than one, a suffix that keeps their files apart.
 
 ```xml
-<domain listName="path-2"/>                 <!-- bands_wann_*.dat        -->
-<domain listName="kz0"    suffix="_plane"/> <!-- bands_wann_*_plane.dat  -->
-<domain listName="w222"   suffix="_grid"/>  <!-- bands_wann_*_grid.dat   -->
+<domain listName="path-2"/>                 <!-- group "default"         -->
+<domain listName="kz0"    suffix="_plane"/> <!-- group "plane"           -->
+<domain listName="w222"   suffix="_grid"/>  <!-- group "grid"            -->
 ```
 
 Whether a list traces a line, covers a plane or fills the zone is a property of the list,
@@ -126,9 +126,9 @@ Wannier90's ten load-time checks answer "is this checkpoint shaped like this cas
 answer "is it from this run". Checking the stamp costs a consumer one `zlib.crc32` call.
 Strings are stored the way every FLEUR attribute is, as an array of one-character strings.
 
-Interpolated, from `<interpolation>`: `bands_wann_<what>[_domain][_spinN].dat`, one row per
-k-point, `kdist` first and then the bands. `<n>` and `_spinN` are the collinear spin
-channel; with spinors there is only `WF1` and no suffix.
+Interpolated, from `<interpolation>`: `WF<channel>_interp.hdf`, one group per domain.
+Each group carries `kdist`, `energy` and a `kpts` subgroup, plus one dataset per operator
+asked for. `<channel>` is the collinear spin channel; with spinors there is only `WF1`.
 
 ## Running it
 

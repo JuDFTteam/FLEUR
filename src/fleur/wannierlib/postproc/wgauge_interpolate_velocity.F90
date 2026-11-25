@@ -13,8 +13,8 @@
 !>    <v_alpha>_n = [ C^dagger v_W,alpha(k') C ]_nn   (diagonal band velocity, exact)
 !>
 !>  The diagonal <n|v|n> = dE_n/dk needs no gauge (Berry-connection) correction, so
-!>  it is exact here. Output bands_wann_velocity.dat: kdist, [ E_n(eV), vx, vy, vz ]
-!>  per band, with v in eV*bohr (dE/dk). Master rank only.
+!>  it is exact here. Output: the domain's 'velocity' dataset, (3, num_wann, npoints),
+!>  in eV*Ang -- dE/dk comes out in eV*bohr and is converted. Master rank only.
 MODULE m_wgauge_interpolate_velocity
   USE m_juDFT
   USE m_wgauge_bands_io, ONLY: WL_BANDS_HID, t_wgauge_bands_ds, wgauge_bands_open, &

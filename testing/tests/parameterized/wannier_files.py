@@ -53,7 +53,7 @@ def outxml_eigenvalues(path):
 
 
 def dat_rows(path):
-    """Numeric rows of a bands_wann_*.dat: kdist first, then the per-band payload."""
+    """Numeric rows of an O(R) .dat: the leading column first, then the per-band payload."""
     rows = []
     for line in open(path):
         if line.lstrip().startswith("#"):

@@ -50,7 +50,7 @@ only route with no provider to copy.
                                     |                        +----------+----------+
                                     +----------------------> |                     |
                                               wgauge_interpolate_op        wgauge_operators_r
-                                              bands_wann_*.dat                 O(R)
+                                              WF<n>_interp.hdf                 O(R)
 ```
 
 Three consumers — the reader, the driver and the dispatch — ask the same question of the
@@ -151,7 +151,7 @@ The coarse matrix already exists and you want another quantity derived from it. 
 no new slice: one row pointing at the existing catalogue entry.
 
 ```fortran
-t_melem_exposed('spinOrbit', 'spinOrbit', 1, 'bands_wann_spin_orbit', '', .FALSE.)
+t_melem_exposed('spinOrbit', 'spinOrbit', 1, .FALSE.)
 ```
 
 That row says three things at once: the name is accepted in `<interpolation>`, serving it

@@ -3676,7 +3676,7 @@
 
    <xsd:complexType name="WannierlibDomainType">
       <xsd:annotation>
-         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' distinguishes this domain's bands_wann_*.dat files and may be left off for at most one domain. 'refinementPoints' optionally subdivides each segment of an ordered list into refinementPoints pieces (refinementPoints&lt;=1 = list as-is).</xsd:documentation>
+         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' names this domain's group in the interpolation's HDF5 file and may be left off for at most one domain, which takes the group 'default'. 'refinementPoints' optionally subdivides each segment of an ordered list into refinementPoints pieces (refinementPoints&lt;=1 = list as-is).</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="listName" type="xsd:string" use="required"/>
       <xsd:attribute name="suffix" type="xsd:string" use="optional"/>
@@ -3755,7 +3755,7 @@
 
    <xsd:complexType name="WannierlibInterpolationType">
       <xsd:annotation>
-         <xsd:documentation>Wannier interpolation: the output domains to interpolate on and the operators to interpolate. Declare one &lt;domain&gt; per set of k-points; each writes its own suffixed set of bands_wann_*.dat files.</xsd:documentation>
+         <xsd:documentation>Wannier interpolation: the output domains to interpolate on and the operators to interpolate. Declare one &lt;domain&gt; per set of k-points; each takes its own group in WF&lt;channel&gt;_interp.hdf.</xsd:documentation>
       </xsd:annotation>
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="domain" type="WannierlibDomainType"/>

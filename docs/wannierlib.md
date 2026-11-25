@@ -209,7 +209,7 @@ carrying spin density.
 | attribute | required | |
 |---|---|---|
 | `listName` | **yes** | an existing kPointList, in `kpts.xml` or any included file |
-| `suffix` | no | distinguishes this domain's `bands_wann_*.dat`; may be left off for at most one domain |
+| `suffix` | no | names this domain's group inside `WF<channel>_interp.hdf`; may be left off for at most one domain, which takes the group `default` |
 | `refinementPoints` | no | subdivides each segment of an ordered list into `refinementPoints` pieces (`refinementPoints<=1` = list as-is) |
 
 Whether a list is a line, a plane or a mesh is a property of the list, not of FLEUR.
@@ -220,13 +220,18 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 
 `<operator>` — what to interpolate, repeatable:
 
-| name | output |
-|---|---|
-| `hamiltonian` | `bands_wann_interpol.dat`, `bands_wann_interpol_ev.dat` |
-| `spin` | `bands_wann_spin.dat` |
-| `orbital` | `bands_wann_orbmom.dat` |
-| `spinOrbit` | `bands_wann_spin_orbit.dat` |
-| `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
+| name | dataset in the domain's group | components | units |
+|---|---|---|---|
+| `hamiltonian` | — | | |
+| `spin` | `spin` | 3 | hbar/2 |
+| `orbital` | `orbital` | 3 | hbar |
+| `spinOrbit` | `spinOrbit` | 1 | eV |
+| `exchangeTorque` | `exchangeTorque` | 3 | eV |
+| `velocity` | `velocity`, `berryCurvature` | 3, 3 | eV*Ang, Ang^2 |
+
+Every domain carries `kdist` (1/Ang), `energy` (eV, `num_wann` x `npoints`) and a `kpts`
+subgroup whatever operators are asked for, so **`hamiltonian` writes no dataset of its
+own**: the bands are there either way and the name only notes them in `out`.
 
 > The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
 > particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
