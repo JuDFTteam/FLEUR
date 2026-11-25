@@ -209,12 +209,12 @@
          <sumValenceSingleParticleEnergies value="1.5018300479" units="Htr"/>
          <FermiEnergy value="0.3985834385" units="Htr"/>
          <DFPTEfield>
-            <borneffcharge iDtype="1" iDir="1">7.2243328294        0.0005918159        0.0005435408</borneffcharge>
-            <borneffcharge iDtype="1" iDir="2">0.0005918094        7.2243329557        0.0005066158</borneffcharge>
-            <borneffcharge iDtype="1" iDir="3">0.0005428558        0.0005727724        7.2243327544</borneffcharge>
-            <borneffcharge iDtype="2" iDir="1">-21.1528742734        0.0007869856        0.0003979039</borneffcharge>
-            <borneffcharge iDtype="2" iDir="2">0.0007870034      -21.1528755971        0.0004037363</borneffcharge>
-            <borneffcharge iDtype="2" iDir="3">0.0003978614        0.0003654362      -21.1530975561</borneffcharge>
+            <borneffcharge iDtype="1" iDir="1">7.2245429786        0.0005919176        0.0005436427</borneffcharge>
+            <borneffcharge iDtype="1" iDir="2">0.0005919368        7.2245431248        0.0005067377</borneffcharge>
+            <borneffcharge iDtype="1" iDir="3">0.0005429798        0.0005728981        7.2245429053</borneffcharge>
+            <borneffcharge iDtype="2" iDir="1">-21.1541228488        0.0007869891        0.0003978947</borneffcharge>
+            <borneffcharge iDtype="2" iDir="2">0.0007870261      -21.1541241617        0.0004037388</borneffcharge>
+            <borneffcharge iDtype="2" iDir="3">0.0003978373        0.0003654104      -21.1543461612</borneffcharge>
          </DFPTEfield>
       </iteration>
    </scfLoop>
