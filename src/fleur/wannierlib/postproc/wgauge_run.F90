@@ -21,7 +21,6 @@ MODULE m_wgauge_run
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
    USE m_types_melem_request, ONLY: t_melem_request
-   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, melem_exposed_find
    USE m_types_wgauge_domains, ONLY: t_wgauge_domains
    USE m_wgauge_operators_r, ONLY: wgauge_write_operators_r
    USE m_wgauge_coeff_b, ONLY: wgauge_build_bk
@@ -33,7 +32,6 @@ MODULE m_wgauge_run
    USE m_wgauge_interpolate_ham, ONLY: wgauge_interpolate_ham
    USE m_wgauge_interpolate_op, ONLY: wgauge_interpolate_operator
    USE m_wgauge_interpolate_velocity, ONLY: wgauge_interpolate_velocity
-   USE m_wgauge_interpolate_eigenstates, ONLY: wgauge_interpolate_eigenstates
    USE m_wgauge_ft, ONLY: wgauge_mdrs_set, wgauge_mdrs_clear, wgauge_ft_to_real
    IMPLICIT NONE
    PRIVATE
@@ -87,11 +85,8 @@ CONTAINS
       TYPE(t_wgauge_hgauge) :: hg                      ! the current domain's bands and C(k')
       CHARACTER(LEN=16) :: ssfx
       CHARACTER(LEN=80) :: dsfx
-      INTEGER :: np_dom, iRow
+      INTEGER :: np_dom
       REAL, ALLOCATABLE :: kfrac(:, :)
-      !> (n_ops, 2) the two output basenames of each operator, already carrying the domain
-      !> suffix. Built from the exposure table so the table stays the one place a name lives.
-      CHARACTER(LEN=80), ALLOCATABLE :: outname(:, :)
       LOGICAL :: l_collinear
 
       irank = fmpi%irank; mpi_comm = fmpi%mpi_comm
@@ -202,14 +197,6 @@ CONTAINS
          IF (irank == 0) CALL wgauge_hgauge_domain(cell, kfrac, ham_r, h_irvec, h_ndegen, h_nrpts, hg)
 
          dsfx = TRIM(domains%suffix(idom))//TRIM(ssfx)
-         IF (.NOT. ALLOCATED(outname)) ALLOCATE(outname(MAX(1, request%n_ops), 2))
-         DO iop = 1, request%n_ops
-            iRow = melem_exposed_find(request%op_name(iop), WANNIERLIB_INTERP)
-            IF (iRow == 0) CALL judft_bug('wgauge_run: "'//TRIM(request%op_name(iop))// &
-               '" is not in the exposure table')
-            outname(iop, 1) = TRIM(WANNIERLIB_INTERP(iRow)%out1)//TRIM(dsfx)
-            outname(iop, 2) = TRIM(WANNIERLIB_INTERP(iRow)%out2)//TRIM(dsfx)
-         END DO
          !> The domain's own group: its abscissa, its band energies and where its
          !> high-symmetry points sit along it. Written once here, so that no quantity below
          !> repeats them and whoever plots the bands derives nothing from kpts.xml.
@@ -262,9 +249,6 @@ CONTAINS
                CALL wgauge_interpolate_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, &
                                                aw_r, aw_irvec, aw_ndegen, aw_nrpts, kfrac, hg, &
                                                dgid, irank)
-            CASE ('eigenstates')
-               ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
-               CALL wgauge_interpolate_eigenstates(hg, kfrac, outname(iop, 1), irank)
             CASE DEFAULT
                !> The name is in WANNIERLIB_INTERP or it would not have got past the request,
                !> so what is missing is the branch here, not the operator.

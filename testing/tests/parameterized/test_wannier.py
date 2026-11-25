@@ -384,11 +384,6 @@ INTERP_FILES = {
     "WannFeTilt": ["WF1_interp.hdf"],
     "WannFeBccInterp": [
         "WF1_interp.hdf", "WF2_interp.hdf",
-    ] + [
-        #> eigenstates is the one quantity still on a .dat: it writes a matrix per
-        #> k-point, not a band, so it has no place in the per-band HDF layout.
-        "bands_wann_eigenstates%s_spin%d.dat" % (dom, ch)
-        for dom in ("", "_plane", "_grid") for ch in (1, 2)
     ] + [# The only A(R) written: the WYSV A^(W)(R) that feeds the Berry curvature and the
          # anomalous velocity. Presence only, no value is checked here.
          "WF1_r.dat", "berry_centre_check.dat",

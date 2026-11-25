@@ -655,7 +655,6 @@
             <operator name="hamiltonian" total="T"/>
             <operator name="orbital" total="T"/>
             <operator name="velocity" total="T"/>
-            <operator name="eigenstates" total="T"/>
           </interpolation>
         </wannierlib>
         <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>

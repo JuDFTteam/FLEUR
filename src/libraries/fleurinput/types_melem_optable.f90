@@ -52,56 +52,50 @@ MODULE m_types_melem_optable
       CHARACTER(LEN=20) :: operator = ''
       !> Components the generic interpolation driver writes; 0 = it has a driver of its own.
       INTEGER :: ncomp = 0
-      !> Output basenames, without .dat and without the domain or channel suffix.
-      CHARACTER(LEN=24) :: out1 = ''
-      CHARACTER(LEN=24) :: out2 = ''
       !> Honours the total="T" attribute, i.e. it has a site-summed projection to choose.
       !> Only the two site-resolved ones do; spinOrbit and the currents have nothing to sum over.
       LOGICAL :: honours_total = .FALSE.
    END TYPE t_melem_exposed
 
    !> <interpolation>/<operator name="..">
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(7) = [ &
-      t_melem_exposed('hamiltonian',    '',           0, 'bands_wann_interpol',     &
-                      'bands_wann_interpol_ev', .FALSE.), &
-      t_melem_exposed('spin',           'spin',       3, 'bands_wann_spin',         '', .TRUE.), &
-      t_melem_exposed('orbital',        'orbital',    3, 'bands_wann_orbmom',       '', .TRUE.), &
-      t_melem_exposed('spinOrbit',     'spinOrbit', 1, 'bands_wann_spin_orbit',   '', .FALSE.), &
-      t_melem_exposed('velocity',       '',           0, 'bands_wann_velocity',     &
-                      'bands_wann_berrycurv', .FALSE.), &
-      t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.), &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(6) = [ &
+      t_melem_exposed('hamiltonian',     '',                0, .FALSE.), &
+      t_melem_exposed('spin',            'spin',            3, .TRUE.), &
+      t_melem_exposed('orbital',         'orbital',         3, .TRUE.), &
+      t_melem_exposed('spinOrbit',       'spinOrbit',       1, .FALSE.), &
+      t_melem_exposed('velocity',        '',                0, .FALSE.), &
       !> Only with spinors: collinearly the torque is the cross-spin Bloch block and
       !> there is no single matrix over the two channels to interpolate, exactly as
       !> for the spin. T(R) decays like the other on-site operators (95-98 % of
       !> |T(R)|^2 at R = 0), so the interpolation has something local to resum.
-      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, 'bands_wann_torque', '', .FALSE.)]
+      t_melem_exposed('exchangeTorque',  'exchangeTorque',  3, .FALSE.)]
 
    !> <operatorsRs>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
    TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(11) = [ &
-      t_melem_exposed('hamiltonian', '',           0, '', '', .FALSE.), &
-      t_melem_exposed('position',    '',           0, '', '', .FALSE.), &
+      t_melem_exposed('hamiltonian',     '',                0, .FALSE.), &
+      t_melem_exposed('position',        '',                0, .FALSE.), &
       !> Second Berry connection, in the postw90 convention: Eq. (44) WYSV06 on the
       !> diagonal as well (no log branch) and A <- (A + A^dagger)/2 at each k. It is a
       !> separate name rather than a flag on `position` because both are needed at once:
       !> `position` writes the _r.dat that orbitrans reads and that carries the Wannier
       !> centres, while berry.F90 refuses that form for the orbital magnetisation
       !> ("transl_inv=T disabled for morb"). Writes WF*_rpw.dat.
-      t_melem_exposed('positionPw90', '',         0, '', '', .FALSE.), &
-      t_melem_exposed('bmn',         '',           0, '', '', .FALSE.), &
-      t_melem_exposed('fmn',         '',           0, '', '', .FALSE.), &
-      t_melem_exposed('cmn',         '',           0, '', '', .FALSE.), &
-      t_melem_exposed('spin',        'spin',       3, '', '', .FALSE.), &
-      t_melem_exposed('orbital',     'orbital',    3, '', '', .FALSE.), &
-      t_melem_exposed('spinOrbit',  'spinOrbit', 4, '', '', .FALSE.), &
+      t_melem_exposed('positionPw90',    '',                0, .FALSE.), &
+      t_melem_exposed('bmn',             '',                0, .FALSE.), &
+      t_melem_exposed('fmn',             '',                0, .FALSE.), &
+      t_melem_exposed('cmn',             '',                0, .FALSE.), &
+      t_melem_exposed('spin',            'spin',            3, .FALSE.), &
+      t_melem_exposed('orbital',         'orbital',         3, .FALSE.), &
+      t_melem_exposed('spinOrbit',       'spinOrbit',       4, .FALSE.), &
       !> Collinearly this writes the cross-spin block, which is the same object the
       !> classic route writes as updown.perpmag. Over spinors it writes the three
       !> Cartesian components.
-      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.), &
+      t_melem_exposed('exchangeTorque',  'exchangeTorque',  3, .FALSE.), &
       !> The part of <sigma B_xc> ALONG the moment, which the torque throws away: one
       !> matrix and not three components. It names the same provider as the torque, so
       !> asking for it builds the same exchange-field blocks and nothing more.
-      t_melem_exposed('exchangeField', 'exchangeTorque', 1, '', '', .FALSE.)]
+      t_melem_exposed('exchangeField',   'exchangeTorque',  1, .FALSE.)]
 
    !> <operatorsKs>/<operator name="..">. What the run holds in k, one step before the
    !> Fourier sum <operatorsRs> takes. That, and not "no gauge", is what the block
@@ -115,15 +109,15 @@ MODULE m_types_melem_optable
    !> and neither is the position operator, which is a finite difference over the
    !> b-shells rather than a matrix, which is why the shells travel in the file instead.
    TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPK(7) = [ &
-      t_melem_exposed('spin',           'spin',           3, '', '', .FALSE.), &
-      t_melem_exposed('orbital',        'orbital',        3, '', '', .FALSE.), &
-      t_melem_exposed('spinOrbit',      'spinOrbit',      4, '', '', .FALSE.), &
-      t_melem_exposed('exchangeTorque', 'exchangeTorque', 3, '', '', .FALSE.), &
+      t_melem_exposed('spin',            'spin',            3, .FALSE.), &
+      t_melem_exposed('orbital',         'orbital',         3, .FALSE.), &
+      t_melem_exposed('spinOrbit',       'spinOrbit',       4, .FALSE.), &
+      t_melem_exposed('exchangeTorque',  'exchangeTorque',  3, .FALSE.), &
       !> B(k), C(k) and F(k) of the modern theory, in the Wannier gauge. No provider of
       !> their own: they are built from the neighbour overlaps and the gauge.
-      t_melem_exposed('bmn',            '',               0, '', '', .FALSE.), &
-      t_melem_exposed('cmn',            '',               0, '', '', .FALSE.), &
-      t_melem_exposed('fmn',            '',               0, '', '', .FALSE.)]
+      t_melem_exposed('bmn',             '',                0, .FALSE.), &
+      t_melem_exposed('cmn',             '',                0, .FALSE.), &
+      t_melem_exposed('fmn',             '',                0, .FALSE.)]
 
    PUBLIC :: melem_exposed_find, melem_exposed_names
 

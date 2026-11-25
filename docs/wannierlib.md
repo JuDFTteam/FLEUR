@@ -227,7 +227,6 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 | `orbital` | `bands_wann_orbmom.dat` |
 | `spinOrbit` | `bands_wann_spin_orbit.dat` |
 | `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
-| `eigenstates` | `bands_wann_eigenstates.dat` |
 
 > The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
 > particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
