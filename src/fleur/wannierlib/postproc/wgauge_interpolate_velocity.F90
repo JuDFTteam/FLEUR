@@ -17,8 +17,9 @@
 !>  per band, with v in eV*bohr (dE/dk). Master rank only.
 MODULE m_wgauge_interpolate_velocity
   USE m_juDFT
-  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
-  USE m_constants, ONLY : oUnit, hartree_to_ev_const
+  USE m_wgauge_bands_io, ONLY: WL_BANDS_HID, t_wgauge_bands_ds, wgauge_bands_open, &
+                              wgauge_bands_comp, wgauge_bands_close
+  USE m_constants, ONLY : oUnit, hartree_to_ev_const, bohr_to_angstrom_const
   USE m_types_cell
   USE m_wgauge_hamk, ONLY : t_wgauge_hgauge
   USE m_wgauge_ft, ONLY : wgauge_ft_rtok_velocity, wgauge_ft_rtok
@@ -28,7 +29,7 @@ MODULE m_wgauge_interpolate_velocity
 CONTAINS
 
   SUBROUTINE wgauge_interpolate_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, &
-                                        aw_r, irvec, ndegen, nrpts, kfrac, hg, out1, out2, irank)
+                                        aw_r, irvec, ndegen, nrpts, kfrac, hg, dgid, irank)
     TYPE(t_cell), INTENT(IN) :: cell
     !> H(R) and its Wigner-Seitz mesh, transformed once by the caller: the derivative is
     !> taken off the same real-space Hamiltonian the bands were interpolated from, so the
@@ -43,11 +44,13 @@ CONTAINS
     !> domain suffix. Unallocated off rank 0, which never reaches them.
     REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
     TYPE(t_wgauge_hgauge), INTENT(IN) :: hg   !> the domain's bands, already diagonalized
-    CHARACTER(LEN=*), INTENT(IN) :: out1
-    CHARACTER(LEN=*), INTENT(IN) :: out2
+    !> The group of the output domain, which already holds the abscissa and the band
+    !> energies. This writes only its own two quantities into it.
+    INTEGER(WL_BANDS_HID), INTENT(IN) :: dgid
     INTEGER, INTENT(IN) :: irank
 
-    INTEGER :: num_wann, m, n, ip, np, iu, iuc, a
+    INTEGER :: num_wann, m, n, ip, np, a
+    TYPE(t_wgauge_bands_ds) :: dsv, dsc
     INTEGER :: ax(3), ay(3)
     LOGICAL :: l_berry
     REAL    :: de
@@ -84,10 +87,8 @@ CONTAINS
                           vfull(num_wann, num_wann, 3), omega(3, num_wann))
     ax = (/ 2, 3, 1 /)   ! Omega_gamma = eps_{gamma,alpha,beta}: (Ox<-yz, Oy<-zx, Oz<-xy)
     ay = (/ 3, 1, 2 /)
-    CALL wgauge_bands_open(iu, out1, &
-      '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann')
-    IF (l_berry) CALL wgauge_bands_open(iuc, out2, &
-      '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann')
+    CALL wgauge_bands_open(dgid, 'velocity', 3, num_wann, np, 'eV*Ang', dsv)
+    IF (l_berry) CALL wgauge_bands_open(dgid, 'berryCurvature', 3, num_wann, np, 'Ang^2', dsc)
     DO ip = 1, np
       cvec = hg%cvec(:, :, ip)
       DO a = 1, 3
@@ -99,7 +100,10 @@ CONTAINS
           vrow(a, m) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), vc(:, m, a)))
         END DO
       END DO
-      CALL wgauge_bands_row(iu, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), vrow, '2x,f12.6')
+      !> dE/dk comes out in eV*bohr and the curvature in bohr^2. Both carry a length, and
+      !> this file is in angstroem, so the conversion happens where the numbers are handed
+      !> over rather than being left to whoever reads them.
+      CALL wgauge_bands_comp(dsv, ip, bohr_to_angstrom_const*vrow)
 
       ! ---- interband velocity matrix + Berry curvature (a.u.: v in Ha*bohr, Omega in bohr^2) ----
       IF (l_berry) THEN
@@ -130,12 +134,13 @@ CONTAINS
             omega(a, n) = -2.0 * AIMAG(acc)
           END DO
         END DO
-        CALL wgauge_bands_row(iuc, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), omega, '2x,es14.6')
+        CALL wgauge_bands_comp(dsc, ip, (bohr_to_angstrom_const**2)*omega)
       END IF
     END DO
-    CLOSE(iu)
-    IF (l_berry) CLOSE(iuc)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
+    CALL wgauge_bands_close(dsv)
+    IF (l_berry) CALL wgauge_bands_close(dsc)
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: '// &
+      'velocity and berryCurvature written (', np, ' k-points)'
     CALL timestop('wgauge_interpolate_velocity')
   END SUBROUTINE wgauge_interpolate_velocity
 

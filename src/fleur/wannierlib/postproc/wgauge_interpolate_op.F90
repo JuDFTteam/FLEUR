@@ -20,8 +20,9 @@
 !>  right ncomp/outfile -- steps above are never rewritten. Master rank only.
 MODULE m_wgauge_interpolate_op
   USE m_juDFT
-  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
-  USE m_constants, ONLY : oUnit, hartree_to_ev_const
+  USE m_wgauge_bands_io, ONLY: WL_BANDS_HID, t_wgauge_bands_ds, wgauge_bands_open, &
+                              wgauge_bands_comp, wgauge_bands_close
+  USE m_constants, ONLY : oUnit
   USE m_types_cell
   USE m_types_kpts
   USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
@@ -33,7 +34,8 @@ MODULE m_wgauge_interpolate_op
 CONTAINS
 
   SUBROUTINE wgauge_interpolate_operator(this, cell, kpts, u_matrix, u_opt, o0_loc, gk_loc, &
-                                        ncomp, kfrac, hg, outfile, irank, mpicm, bound)
+                                        ncomp, kfrac, hg, dgid, dsname, units, irank, mpicm, bound, &
+                                        scale)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -43,7 +45,11 @@ CONTAINS
     INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
     INTEGER, INTENT(IN) :: ncomp
     TYPE(t_wgauge_hgauge), INTENT(IN) :: hg   !> the domain's bands, already diagonalized
-    CHARACTER(LEN=*), INTENT(IN) :: outfile
+    !> The group of the output domain, the name this quantity takes as a dataset inside
+    !> it, and what its numbers are in. The name and the unit come from the caller for the
+    !> same reason ncomp does: this driver serves every operator and knows none of them.
+    INTEGER(WL_BANDS_HID), INTENT(IN) :: dgid
+    CHARACTER(LEN=*), INTENT(IN) :: dsname, units
     !> The domain's k-set and the names its files take, both decided by the caller: the
     !> k-points come from a named kPointList and the names from the exposure table plus the
     !> domain suffix. Unallocated off rank 0, which never reaches them.
@@ -71,12 +77,19 @@ CONTAINS
     !> does its O(R) decay? Integrated quantities survive anyway (the spin moment comes out
     !> at 2.252 against 2.254 on the converged coarse mesh); pointwise values do not.
     REAL, INTENT(IN), OPTIONAL :: bound
+    !> What the raw expectation value has to be multiplied by to be in `units`. The
+    !> operators reach here in whatever the matrix elements were built in, so the
+    !> caller that names the unit is the one that has to supply the factor -- an
+    !> energy is written in eV like the bands, while <sigma> and <L> are already in
+    !> their own natural units and take the default.
+    REAL, INTENT(IN), OPTIONAL :: scale
 
-    INTEGER :: num_wann, num_bands, m, ip, np, iu, a
+    INTEGER :: num_wann, num_bands, m, ip, np, a
+    TYPE(t_wgauge_bands_ds) :: ds
     INTEGER :: nkl, kl, nrpts
     REAL    :: omax
     REAL,    ALLOCATABLE :: oexp(:), orow(:, :)
-    CHARACTER(LEN=120) :: hdr
+    REAL :: sc
     COMPLEX, ALLOCATABLE :: o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: vloc(:, :, :), tmp(:, :), oc(:, :, :)
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
@@ -133,8 +146,9 @@ CONTAINS
     ALLOCATE(oc(num_wann, num_wann, ncomp), oexp(ncomp), orow(ncomp, num_wann))
 
     omax = 0.0
-    WRITE(hdr,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
-    CALL wgauge_bands_open(iu, outfile, hdr)
+    sc = 1.0
+    IF (PRESENT(scale)) sc = scale
+    CALL wgauge_bands_open(dgid, TRIM(dsname), ncomp, num_wann, np, TRIM(units), ds)
     DO ip = 1, np
       DO a = 1, ncomp
         oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), hg%cvec(:, :, ip))
@@ -143,12 +157,16 @@ CONTAINS
         DO a = 1, ncomp
           oexp(a) = REAL(DOT_PRODUCT(hg%cvec(:, m, ip), oc(:, m, a)))
         END DO
+        !> Scaled before omax, so that the maximum reported in the log and the numbers
+        !> written to the file are in the same unit; the bound on <sigma> still holds
+        !> because its scale is one.
+        oexp(:) = sc*oexp(:)
         omax = MAX(omax, SQRT(SUM(oexp(:)**2)))
         orow(:, m) = oexp(:)
       END DO
-      CALL wgauge_bands_row(iu, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), orow, '2x,f14.9')
+      CALL wgauge_bands_comp(ds, ip, orow)
     END DO
-    CLOSE(iu)
+    CALL wgauge_bands_close(ds)
     WRITE(oUnit,'(a,es12.5)') 'wannierlib operator interpolation: max |<O>| over the domain = ', omax
     IF (PRESENT(bound)) THEN
       IF (omax > bound*(1.0 + 1.0e-6)) THEN
@@ -160,7 +178,8 @@ CONTAINS
           '   the values ON the coarse mesh do respect it. Do not trust pointwise values.'
       END IF
     END IF
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '//TRIM(outfile)//'.dat (', np, ' k-points)'
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '// &
+      TRIM(dsname)//' (', np, ' k-points)'
     CALL timestop('wgauge_interpolate_operator')
   END SUBROUTINE wgauge_interpolate_operator
 

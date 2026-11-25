@@ -13,7 +13,7 @@
 !>  the same service for any caller.
 MODULE m_wgauge_run
    USE m_juDFT
-   USE m_constants, ONLY: oUnit
+   USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_cell
    USE m_types_kpts
    USE m_types_mpi
@@ -27,7 +27,9 @@ MODULE m_wgauge_run
    USE m_wgauge_coeff_b, ONLY: wgauge_build_bk
    USE m_wgauge_coeff_a, ONLY: wgauge_build_berry_aw_r, wgauge_check_berry_centres
    USE m_wgauge_hamk, ONLY: t_wgauge_hgauge, wgauge_build_hamk, wgauge_hgauge_domain
-   USE m_wgauge_bands_io, ONLY: wgauge_bands_labels
+   USE m_wgauge_bands_io, ONLY: WL_BANDS_HID, t_wgauge_bands_file, &
+                                wgauge_bands_file_open, wgauge_bands_file_close, &
+                                wgauge_bands_domain, wgauge_bands_domain_close
    USE m_wgauge_interpolate_ham, ONLY: wgauge_interpolate_ham
    USE m_wgauge_interpolate_op, ONLY: wgauge_interpolate_operator
    USE m_wgauge_interpolate_velocity, ONLY: wgauge_interpolate_velocity
@@ -70,6 +72,11 @@ CONTAINS
 
       INTEGER :: iop, wf_ch, irank, mpi_comm
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
+      !> The one interpolation file of this spin channel, and the group of the domain being
+      !> written into it. Rank 0 only: no other rank opens either.
+      TYPE(t_wgauge_bands_file) :: ifh
+      INTEGER(WL_BANDS_HID) :: dgid
+      CHARACTER(LEN=40) :: dgrp
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
       COMPLEX, ALLOCATABLE :: b0k(:, :, :, :)          ! (nw,nw,3,nk_loc) B(k) for the k-space export
@@ -162,7 +169,13 @@ CONTAINS
       !> tables, so anything interpolated ahead of the switch would be in the other gauge.
       !>
       !> Rank 0 only, which is where the full U(k) lives and where every driver interpolates.
-      IF (irank == 0 .AND. request%n_ops > 0) THEN
+      !> ndom and not n_ops: what needs H(R) is the loop over domains below, which runs
+      !> whether or not any quantity was asked for on them. An <interpolation> with a domain
+      !> and no <operator> used to reach wgauge_hgauge_domain with ham_r unallocated, and
+      !> that dummy is an assumed-shape array rather than an allocatable, so it was read
+      !> before it existed. Asking for no operator is how a run says it wants the bands and
+      !> nothing else, so it has to work.
+      IF (irank == 0 .AND. ndom > 0) THEN
          CALL wgauge_build_hamk(manifold, eig, u_matrix, u_opt, ham_k)
          CALL wgauge_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
          DEALLOCATE (ham_k)
@@ -171,6 +184,10 @@ CONTAINS
       ! (3) Wannier-gauge interpolation: dispatch by looping over the requested operator list.
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);
       ! the remaining steps are the shared generic driver m_wgauge_interpolate_op.
+      !> One file for the whole pass, holding every domain and every quantity asked for on
+      !> it. Opened before the loop, because a domain is a group inside it.
+      IF (irank == 0) CALL wgauge_bands_file_open(wf_ch, kpts%nkpt, ifh)
+
       DO idom = 1, ndom
          !> The domain's k-points and the tail its files carry. Both are rank-0 material:
          !> kfrac stays unallocated elsewhere and every driver returns before touching it,
@@ -186,11 +203,6 @@ CONTAINS
 
          dsfx = TRIM(domains%suffix(idom))//TRIM(ssfx)
          IF (.NOT. ALLOCATED(outname)) ALLOCATE(outname(MAX(1, request%n_ops), 2))
-         !> Where this domain's high-symmetry points sit along its own abscissa, so that
-         !> whoever plots the bands does not have to derive it from kpts.xml.
-         IF (irank == 0) CALL wgauge_bands_labels(domains%kset(idom), hg%kdist, &
-                                                  'bands_wann_labels'//TRIM(dsfx))
-
          DO iop = 1, request%n_ops
             iRow = melem_exposed_find(request%op_name(iop), WANNIERLIB_INTERP)
             IF (iRow == 0) CALL judft_bug('wgauge_run: "'//TRIM(request%op_name(iop))// &
@@ -198,31 +210,46 @@ CONTAINS
             outname(iop, 1) = TRIM(WANNIERLIB_INTERP(iRow)%out1)//TRIM(dsfx)
             outname(iop, 2) = TRIM(WANNIERLIB_INTERP(iRow)%out2)//TRIM(dsfx)
          END DO
+         !> The domain's own group: its abscissa, its band energies and where its
+         !> high-symmetry points sit along it. Written once here, so that no quantity below
+         !> repeats them and whoever plots the bands derives nothing from kpts.xml.
+         !> Named for the domain and not for the spin channel: the file is already
+         !> WF<channel>_interp.hdf, so carrying the channel in the group as well would put
+         !> it in the path twice. The domain that declares no suffix is the base one, and a
+         !> group cannot be called nothing, so it is the one that takes 'default'.
+         dgrp = TRIM(domains%suffix(idom))
+         IF (dgrp(1:1) == '_') dgrp = dgrp(2:)
+         IF (LEN_TRIM(dgrp) == 0) dgrp = 'default'
+         IF (irank == 0) CALL wgauge_bands_domain(ifh, TRIM(dgrp), TRIM(domains%suffix(idom)), &
+                                                  domains%kset(idom), &
+                                                 hg%kdist, hg%evals, dgid)
 
          DO iop = 1, request%n_ops
             SELECT CASE (TRIM(request%op_name(iop)))
             CASE ('hamiltonian')
-               CALL wgauge_interpolate_ham(hg, outname(iop, 1), outname(iop, 2), irank)
+               CALL wgauge_interpolate_ham(hg, irank)
             CASE ('spin')
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
                ! bound=1: <sigma> of a normalised spinor cannot exceed 1, so the driver can
                ! say so when the interpolation overshoots. Only spin has a bound this simple.
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                               coarse%s0, gk_loc, 3, kfrac, hg, outname(iop, 1), irank, mpi_comm, &
+                                               coarse%s0, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
                                                bound=1.0)
             CASE ('orbital')
                ! total (site-summed) orbital moment
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
                                                SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, kfrac, &
-                                               hg, outname(iop, 1), irank, mpi_comm)
+                                               hg, dgid, 'orbital', 'hbar', irank, mpi_comm)
             CASE ('spinOrbit')
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                               coarse%soc0, gk_loc, 1, kfrac, hg, outname(iop, 1), irank, mpi_comm)
+                                               coarse%soc0, gk_loc, 1, kfrac, hg, dgid, 'spinOrbit', 'eV', irank, mpi_comm, &
+                                               scale=hartree_to_ev_const)
             CASE ('exchangeTorque')
                ! T = -(s x m), three Cartesian components like the spin, and like it
                ! only defined with spinors -- the collinear case is refused upstream.
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                               coarse%t0, gk_loc, 3, kfrac, hg, outname(iop, 1), irank, mpi_comm)
+                                               coarse%t0, gk_loc, 3, kfrac, hg, dgid, 'exchangeTorque', 'eV', irank, mpi_comm, &
+                                               scale=hartree_to_ev_const)
             CASE ('velocity')
                ! Wannier Berry connection A^(W)_alpha(R): built distributed from the local overlaps
                ! and reduced (collective, all ranks); the centre check (rank 0) calibrates conj/sign.
@@ -234,7 +261,7 @@ CONTAINS
                END IF
                CALL wgauge_interpolate_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, &
                                                aw_r, aw_irvec, aw_ndegen, aw_nrpts, kfrac, hg, &
-                                               outname(iop, 1), outname(iop, 2), irank)
+                                               dgid, irank)
             CASE ('eigenstates')
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
                CALL wgauge_interpolate_eigenstates(hg, kfrac, outname(iop, 1), irank)
@@ -245,7 +272,13 @@ CONTAINS
                   '" is an accepted operator with no branch in this pass')
             END SELECT
          END DO
+         IF (irank == 0) CALL wgauge_bands_domain_close(dgid)
       END DO   ! idom
+      IF (irank == 0) THEN
+         CALL wgauge_bands_file_close(ifh)
+         WRITE (oUnit, '(a,i0,a)') 'wannierlib interpolation: wrote '//TRIM(ifh%name)// &
+            ' (', ndom, ' domain(s))'
+      END IF
 
 
       CALL wgauge_mdrs_clear()   ! the state must not outlive the wannierization it describes

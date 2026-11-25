@@ -18,7 +18,8 @@ MODULE m_wgauge_interp_util
 CONTAINS
 
   !>  Cumulative distance along the interpolation mesh: the abscissa written as
-  !>  the first column of every bands_wann_*.dat, in the units of cell%bmat.
+  !>  the kdist dataset of each domain group, in the units of cell%bmat -- the
+  !>  writer converts it to Angstrom^-1 on the way out.
   !>
   !>  Only a path gives this a physical meaning. On a domain that is not one -- a
   !>  plane, a grid -- the number still grows monotonically but is not a coordinate,

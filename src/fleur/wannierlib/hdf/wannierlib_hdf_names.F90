@@ -26,8 +26,8 @@ MODULE m_wannierlib_hdf_names
    PUBLIC :: wl_hdf_name, wl_hdf_check_what, WL_HDF_WHAT
 
    !> Every HDF file this writes, by the stem that goes after WF<n>_. Add one here first.
-   CHARACTER(LEN=*), PARAMETER :: WL_HDF_WHAT(3) = &
-      [CHARACTER(LEN=12) :: 'bmesh', 'operators_ks', 'modern_k']
+   CHARACTER(LEN=*), PARAMETER :: WL_HDF_WHAT(4) = &
+      [CHARACTER(LEN=12) :: 'bmesh', 'operators_ks', 'modern_k', 'interp']
 
 CONTAINS
 
