@@ -10,7 +10,7 @@ from the code drifts, and this document has drifted before:
 |---|---|
 | the provider contract, and a kernel whose answer you know in advance | `types_matelements_template.F90` |
 | the same shape with a real operator in it | `types_matelements_orbital.F90` |
-| what the two tables are for and who owns them | `fleurinput/types_melem_optable.f90` |
+| what the two tables are for and who owns them | `src/libraries/fleurinput/types_melem_optable.f90` |
 | the Fourier core, and why it is operator-agnostic | `postproc/wgauge_ft.F90` |
 | `H_W(k)`, and why every driver shares one | `postproc/wgauge_hamk.F90` |
 | `A(R)`, `B(R)`, `F(R)`, `C(R)` and their references | `postproc/melem_coeff_{a,b,tensor}.F90` |
@@ -50,7 +50,7 @@ only route with no provider to copy.
                                     |                        +----------+----------+
                                     +----------------------> |                     |
                                               wgauge_interpolate_op        wgauge_operators_r
-                                              bands_wann_*.dat                 O(R)
+                                              WF<n>_interp.hdf                 O(R)
 ```
 
 Three consumers — the reader, the driver and the dispatch — ask the same question of the
@@ -151,7 +151,7 @@ The coarse matrix already exists and you want another quantity derived from it. 
 no new slice: one row pointing at the existing catalogue entry.
 
 ```fortran
-t_melem_exposed('spinOrbit', 'spinOrbit', 1, 'bands_wann_spin_orbit', '', .FALSE.)
+t_melem_exposed('spinOrbit', 'spinOrbit', 1, .FALSE.)
 ```
 
 That row says three things at once: the name is accepted in `<interpolation>`, serving it

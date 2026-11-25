@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 !>  Scaffolding shared by the Wannier-gauge interpolation drivers
-!>  (m_wgauge_interpolate_ham / _eigenstates / _op / _velocity).
+!>  (m_wgauge_interpolate_ham / _op / _velocity).
 !>
 !>  Nothing here is operator-specific: it is the bookkeeping every driver repeats
 !>  around its own loop over the interpolation mesh. The Fourier transforms
@@ -18,13 +18,13 @@ MODULE m_wgauge_interp_util
 CONTAINS
 
   !>  Cumulative distance along the interpolation mesh: the abscissa written as
-  !>  the first column of every bands_wann_*.dat, in the units of cell%bmat.
+  !>  the kdist dataset of each domain group, in the units of cell%bmat -- the
+  !>  writer converts it to Angstrom^-1 on the way out.
   !>
   !>  Only a path gives this a physical meaning. On a domain that is not one -- a
   !>  plane, a grid -- the number still grows monotonically but is not a coordinate,
-  !>  and of the drivers only the eigenstates one writes kx,ky,kz beside it. The
-  !>  others write the abscissa alone, so such an output is matched to its input
-  !>  kPointList by row order and by nothing else.
+  !>  and no driver writes kx,ky,kz beside it, so such an output is matched to its
+  !>  input kPointList by row order and by nothing else.
   SUBROUTINE wgauge_kpath(cell, kfrac, kdist)
     TYPE(t_cell), INTENT(IN) :: cell
     REAL, INTENT(IN) :: kfrac(:, :)                 ! (3, np) fractional mesh, in path order

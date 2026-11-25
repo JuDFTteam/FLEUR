@@ -94,7 +94,7 @@ contains
     TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix, l_firstItU, l_firstItV, l_densitymatrixV, ldavLinMix, l_dfpt
     INTEGER                          :: it,maxiter
-    REAL                             :: sf_mode_eig,sf_step_rel,sf_push_rel,sf_res_along_dir_rel
+    REAL                             :: sf_new_mode_eig,sf_step_rel,sf_push_rel,sf_res_along_dir_rel
     INTEGER                          :: sf_escape_state
     LOGICAL                          :: sf_restart
     INTEGER                          :: indStart_noDenmatmixing, indEnd_noDenmatmixing
@@ -196,11 +196,11 @@ contains
             'GENERALIZED ANDERSON MIXING: alpha=',input%alpha," History-length=",it-1
        Call broyden(input%alpha,fsm,sm,l_dfpt)
     CASE(6)
-       CALL anderson_sf(input%alpha,fsm,sm,l_dfpt,sf_mode_eig,sf_step_rel,sf_restart,sf_escape_state, &
+       CALL anderson_sf(input%alpha,fsm,sm,l_dfpt,sf_new_mode_eig,sf_step_rel,sf_restart,sf_escape_state, &
                         sf_push_rel,sf_res_along_dir_rel)
        IF (fmpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,es10.3,a,es10.3,a,i0,a,es10.3,a,f8.4,a,l1)' ) &
             'SADDLE-FREE ANDERSON MIXING: alpha=',input%alpha," History-length=",it-1, &
-            " lambda_u=",sf_mode_eig," step/(alpha*|F|)=",sf_step_rel," escape state=",sf_escape_state, &
+            " new unstable mode=",sf_new_mode_eig," step/(alpha*|F|)=",sf_step_rel," escape state=",sf_escape_state, &
             " push/(alpha*|F|)=",sf_push_rel," F_u/F_u,max=",sf_res_along_dir_rel," history restarted=",sf_restart
        IF (sf_restart) CALL mixing_history_limit(1)
     CASE(9)

@@ -4,7 +4,10 @@ The operator exports and the interpolation output are FLEUR's own formats, not X
 testset has to parse them itself. They live here rather than in the test module so that
 test_wannier.py reads as what it is -- the run plus the claims made about it.
 """
+import os
 import re
+import shutil
+import subprocess
 
 
 def gauge_unitarity(path):
@@ -50,7 +53,7 @@ def outxml_eigenvalues(path):
 
 
 def dat_rows(path):
-    """Numeric rows of a bands_wann_*.dat: kdist first, then the per-band payload."""
+    """Numeric rows of an O(R) .dat: the leading column first, then the per-band payload."""
     rows = []
     for line in open(path):
         if line.lstrip().startswith("#"):
@@ -216,3 +219,103 @@ def perpmag_census(path):
             peak = max(peak, abs(v))
             rows += 1
     return nb, nk, nw, rows, len(seen) == nb * nk * nw, trace, peak
+
+
+def _h5dump():
+    """Where h5dump is, or None.
+
+    h5dump and not h5py, for the interpolation output: testing/requirements.txt installs
+    pytest alone, so neither numpy nor h5py is present in CI, and a reader built on them
+    would turn every check below into a skip exactly where it matters most. h5dump ships
+    with HDF5, so it is available precisely when the output it reads exists at all --
+    without an HDF5 build the interpolation refuses to run and there is nothing to check.
+    """
+    w = shutil.which("h5dump")
+    if w:
+        return w
+    #> The build tree's own copy, for a Fleur that built HDF5 itself.
+    for root in (os.environ.get("FLEUR_BUILD_DIR", ""), os.getcwd(), ".."):
+        if not root:
+            continue
+        p = os.path.join(root, "external", "hdf5-git", "bin", "h5dump")
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def interp_datasets(path):
+    """Every dataset in an interpolation file, by its full path inside it.
+
+    Presence is a check in its own right: one file now holds what used to be one .dat per
+    quantity per domain, so a driver that silently stops writing would be invisible unless
+    the datasets themselves are counted.
+    """
+    h5 = _h5dump()
+    if h5 is None:
+        return None
+    out = subprocess.run([h5, "-n", path], capture_output=True, text=True).stdout
+    return [m.group(1) for m in re.finditer(r"^\s*dataset\s+(\S+)\s*$", out, re.M)]
+
+
+def interp_hdf(path, dataset):
+    """One dataset of an interpolation file, as (shape, flat values).
+
+    The shape comes back in C order, which is the reverse of what Fortran wrote: a Fortran
+    (ncomp, num_wann, npoints) reads here as (npoints, num_wann, ncomp), and the flat list
+    runs with the LAST axis of that shape fastest.
+
+    %.17g and not h5dump's default: the default prints six significant digits, which is
+    coarser than every tolerance these checks use -- a test reading it would pass or fail
+    on the rounding rather than on the physics.
+    """
+    h5 = _h5dump()
+    if h5 is None:
+        return None, None
+    #> -A 0 leaves the attributes out. Every dataset here carries a units attribute, and
+    #> h5dump prints it as a block of its own after the data, so without this the values
+    #> and the word 'eV' arrive in the same text.
+    r = subprocess.run([h5, "-A", "0", "-d", dataset, "-y", "-w", "0", "-m", "%.17g", path],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None, None
+    m = re.search(r"DATASPACE\s+SIMPLE\s*\{\s*\(([^)]*)\)", r.stdout)
+    if not m:
+        return None, None
+    shape = [int(x) for x in m.group(1).split(",")]
+    #> The brace that CLOSES the data block, found by counting rather than by taking the
+    #> last one in the file: h5dump nests DATASET inside the file and may nest more inside
+    #> DATASET, so the last brace is never the right one.
+    body = r.stdout[r.stdout.index("DATA {") + 6:]
+    depth, end = 1, None
+    for i, c in enumerate(body):
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end is None:
+        raise AssertionError("%s:%s has no closing brace on its data block" % (path, dataset))
+    body = body[:end]
+    vals = [float(x) for x in re.split(r"[,\s]+", body.strip()) if x]
+    n = 1
+    for s in shape:
+        n *= s
+    if len(vals) != n:
+        raise AssertionError("%s:%s has %d values for shape %s"
+                             % (path, dataset, len(vals), shape))
+    return shape, vals
+
+
+def interp_band(shape, vals, ip, comp=None):
+    """The num_wann values of one point of the domain.
+
+    With comp it is one Cartesian component of a (npoints, num_wann, ncomp) quantity; with
+    comp None it is a (npoints, num_wann) one, which is what energy is.
+    """
+    if comp is None:
+        np_, nw = shape
+        return [vals[ip * nw + m] for m in range(nw)]
+    np_, nw, nc = shape
+    return [vals[(ip * nw + m) * nc + comp] for m in range(nw)]

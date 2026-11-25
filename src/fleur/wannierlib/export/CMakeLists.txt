@@ -10,9 +10,7 @@ src/fleur/wannierlib/export/wannierlib_export_orbitrans.F90
 src/fleur/wannierlib/export/wannierlib_plot.F90
 src/fleur/wannierlib/export/wannierlib_cf.F90
 src/fleur/wannierlib/export/wannierlib_export_modern_k.F90
-src/fleur/wannierlib/export/wannierlib_hdf_names.F90
 src/fleur/wannierlib/export/wannierlib_chkinfo.F90
-src/fleur/wannierlib/export/wannierlib_hdf_util.F90
 src/fleur/wannierlib/export/wannierlib_export_basis.F90
 src/fleur/wannierlib/export/wannierlib_export_ks.F90
 src/fleur/wannierlib/export/wannierlib_import_ks.F90

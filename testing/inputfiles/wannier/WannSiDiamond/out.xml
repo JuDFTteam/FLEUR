@@ -1142,7 +1142,7 @@
      <output dos="F" band="F" slice="F" coreSpec="F" eig66="F">
         <wannierlib wannierize="T" plotWF="F">
           <bands numBands="8" minBand="1" maxBand="8"/>
-          <disentanglement disWinMin="-0.245" disWinMax="0.45" disFrozMin="-0.245" disFrozMax="0.205" numIter="3000" convTol="0.00001" mixRatio="0.5" disFrozProj="F" disProjMin="0.01" disProjMax="0.95"/>
+          <disentanglement disWinMin="-0.245" disWinMax="0.45" disFrozMin="-0.245" disFrozMax="0.205" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5" disFrozProj="F" disProjMin="0.01" disProjMax="0.95"/>
           <wannierization numIter="3000" convTol="0.00001" convWindow="3" precond="F"/>
           <operatorsRs>
             <operator name="hamiltonian"/>

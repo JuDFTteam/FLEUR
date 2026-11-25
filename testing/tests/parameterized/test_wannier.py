@@ -21,7 +21,7 @@ in the Bloch basis (updown.perpmag), WannFeTilt is noco with the moment off the
 Cartesian axes and writes the three Cartesian components in real space.
 """
 from read_tests import read_tests
-from wannier_files import (anglmom_r0,
+from wannier_files import (anglmom_r0, interp_band, interp_datasets, interp_hdf,
                             gauge_unitarity,
                             onsite_weight,
                             perpmag_census,
@@ -381,14 +381,12 @@ INTERP_FILES = {
     #> The torque interpolates only with spinors, so this case writes ONE channel and the
     #> names carry no _spin suffix. Measured, not assumed: guessing "_spin1" here would
     #> have made the assertion below fail for the wrong reason.
-    "WannFeTilt": ["bands_wann_interpol.dat", "bands_wann_interpol_ev.dat",
-                   "bands_wann_torque.dat"],
+    "WannFeTilt": ["WF1_interp.hdf"],
+    #> Collinear 2N + SOC: l_spinors is true because l_soc is, so ONE channel is written
+    #> and the name carries no _spin suffix. Measured, not assumed.
+    "WannFeBccSOC": ["WF1_interp.hdf"],
     "WannFeBccInterp": [
-        "bands_wann_%s%s_spin%d.dat" % (base, dom, ch)
-        for base in ("interpol", "interpol_ev", "orbmom", "velocity", "berrycurv",
-                     "eigenstates")
-        for dom in ("", "_plane", "_grid")
-        for ch in (1, 2)
+        "WF1_interp.hdf", "WF2_interp.hdf",
     ] + [# The only A(R) written: the WYSV A^(W)(R) that feeds the Berry curvature and the
          # anomalous velocity. Presence only, no value is checked here.
          "WF1_r.dat", "berry_centre_check.dat",
@@ -407,7 +405,49 @@ INTERP_FILES = {
 # The velocity must be checked on the FINE path and nowhere else: every point of w222 is a
 # high-symmetry point, where dE/dk vanishes by symmetry, so a file of zeros is the correct
 # answer there. The _plane domain is the 240-point path-2 list.
-VELOCITY_FINE = {"WannFeBccInterp": "bands_wann_velocity_plane_spin1.dat"}
+VELOCITY_FINE = {"WannFeBccInterp": ("WF1_interp.hdf", "/plane/velocity")}
+
+# WannFeBccSOC interpolates the spin-orbit operator on w222 -- the very mesh it was
+# wannierised on, so num_wann == num_bands == 12 and nothing is discarded. Two exact
+# statements pin the driver down, and neither needs a reference value nor rssocmat.1,
+# whose format JuWIP and orbitrans read and which is left alone on purpose:
+#
+#   AN l=0 PROJECTION CARRIES NO SPIN-ORBIT. <s|xi L.S|s> vanishes identically, because
+#   L = 0 for l = 0, and this case asks for a single <wannierproj l="0">, which with
+#   spinors is two states. Measured: two of the 96 values come out at 4.6e-14 and
+#   2.6e-14 eV, at one and the same k, against 0.114 eV for the largest of the rest --
+#   eleven orders down, so these are structural zeros and not small numbers. At one k
+#   only: elsewhere the energy ordering mixes the s character in and nothing is left to
+#   assert.
+#
+#   SYMMETRY-EQUIVALENT k MUST AGREE DIGIT FOR DIGIT. The 2x2x2 mesh falls into the stars
+#   {0}, {1,6}, {2,3,4,5}, {7}, and the measured agreement is 1e-13. A wrong phase on an
+#   R vector breaks that degeneracy while leaving every value finite and plausible --
+#   exactly the failure a tolerance on the values themselves cannot see.
+SOC_INTERP = {"WannFeBccSOC": ("WF1_interp.hdf", "/default/spinOrbit")}
+SOC_INTERP_ZEROS = 2                   # one l=0 projection x two spinor components
+SOC_INTERP_ZERO_TOL = 1.0e-10          # measured 4.6e-14; the rest start at 1.1e-3
+SOC_INTERP_STARS = [(1, 6), (2, 3), (2, 4), (2, 5)]
+SOC_INTERP_STAR_TOL = 1.0e-9           # measured 1.1e-13
+
+# One file now holds what used to be one .dat per quantity per domain, so counting files no
+# longer catches a driver that quietly stops writing one of them. The datasets are counted
+# instead, which is the same check at the level the data moved to.
+#> src/libraries/fleurinput/constants.f90, so the conversion here and the one the writer
+#> applied are the same number rather than two roundings of it.
+HARTREE_IN_EV = 27.211386245988
+
+INTERP_DATASETS = {
+    "WannFeTilt": {"WF1_interp.hdf": ["/default/kdist", "/default/energy",
+                                      "/default/exchangeTorque"]},
+    "WannFeBccInterp": {
+        "WF%d_interp.hdf" % ch: ["/%s/%s" % (dom, ds)
+                                 for dom in ("default", "plane", "grid")
+                                 for ds in ("kdist", "energy", "orbital", "velocity",
+                                            "berryCurvature")]
+        for ch in (1, 2)
+    },
+}
 
 SIGMA_Z_UNIT = ("WannFeBcc", "WannFeAFMCol")
 SIGMA_Z_TOL = 1.0e-8
@@ -509,6 +549,19 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     want_files += EXPORT_FILES.get(test_id, [])
     res = default_fleur_test(dir, files=want_files or None,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
+
+    #> The interpolation puts every quantity of every domain in one file per spin channel,
+    #> so the file being there says much less than a missing .dat used to. What a driver
+    #> stopping mid-way looks like now is a dataset that is not in it, and that is what is
+    #> counted here -- before any value below is read out of it.
+    for fname, want_ds in INTERP_DATASETS.get(test_id, {}).items():
+        have = interp_datasets(res[fname])
+        if have is None:
+            pytest.skip("no h5dump, so the interpolation output cannot be read")
+        missing = [d for d in want_ds if d not in have]
+        assert not missing, (
+            f"{fname} is missing {missing}. It holds {sorted(have)}, so the pass wrote the "
+            f"file and then stopped short of what the run asked for")
 
     expected = set(EXPORT_FILES.get(test_id, ()))
     #> A consumer flag renames and moves what <operatorsRs> asked for, and only that. A
@@ -688,11 +741,17 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         ref = outxml_eigenvalues(res["out.xml"])
         assert ref, "out.xml carries no <eigenvaluesAt> blocks to check the interpolation against"
         for ch in (1, 2):
-            rows = dat_rows(res["bands_wann_interpol_spin%d.dat" % ch])
-            assert rows, "bands_wann_interpol_spin%d.dat has no data rows" % ch
-            for ik, row in enumerate(rows, start=1):
+            f = "WF%d_interp.hdf" % ch
+            shape, vals = interp_hdf(res[f], "/default/energy")
+            if shape is None:
+                pytest.skip("no h5dump, so the interpolation output cannot be read")
+            assert shape[0] > 0, "%s:/default/energy has no points" % f
+            for ik in range(1, shape[0] + 1):
                 want = sorted(ref[(ch, ik)][lo - 1:hi])
-                have = sorted(row[1:])          # drop kdist
+                #> energy is in eV, the only unit this file carries now; out.xml is in
+                #> hartree. The factor is the comparison, not a tolerance.
+                have = sorted(e / HARTREE_IN_EV
+                              for e in interp_band(shape, vals, ik - 1))
                 assert len(want) == len(have), (
                     f"channel {ch}, k={ik}: {len(have)} interpolated bands against "
                     f"{len(want)} in the window {lo}..{hi}")
@@ -706,16 +765,48 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # Shape, and that it is not a file of zeros. dE/dk is only forced to vanish on the
         # high-symmetry mesh, so on the fine path an all-zero velocity means the driver
         # produced nothing -- which every other check here would accept.
-        rows = dat_rows(res[VELOCITY_FINE[test_id]])
-        assert rows, "the velocity file on the fine path has no data rows"
-        nw = (len(rows[0]) - 1) // 4          # per band: E, vx, vy, vz
-        assert nw >= 1 and len(rows[0]) == 1 + 4 * nw, (
-            f"velocity row has {len(rows[0])} columns, not 1 + 4*num_wann")
-        worst = max(abs(r[1 + 4 * b + 1 + a]) for r in rows for b in range(nw)
-                    for a in range(3))
+        vf, vds = VELOCITY_FINE[test_id]
+        shape, vals = interp_hdf(res[vf], vds)
+        if shape is None:
+            pytest.skip("no h5dump, so the interpolation output cannot be read")
+        #> C order, so the Fortran (3, num_wann, npoints) reads back the other way round.
+        assert len(shape) == 3 and shape[2] == 3, (
+            f"{vds} has shape {shape}, not (npoints, num_wann, 3)")
+        worst = max(abs(v) for v in vals)
         assert worst > 0.0, (
             "every velocity component on the fine path is exactly zero, so the driver "
             "wrote a correctly shaped file with nothing in it")
+
+    if test_id in SOC_INTERP:
+        sf, sds = SOC_INTERP[test_id]
+        shape, vals = interp_hdf(res[sf], sds)
+        if shape is None:
+            pytest.skip("no h5dump, so the interpolation output cannot be read")
+        #> C order, so the Fortran (1, num_wann, npoints) reads back the other way round.
+        assert len(shape) == 3 and shape[2] == 1, (
+            f"{sds} has shape {shape}, not (npoints, num_wann, 1)")
+        npt, nw = shape[0], shape[1]
+        o = [[vals[k * nw + n] for n in range(nw)] for k in range(npt)]
+        zero = [(k, n) for k in range(npt) for n in range(nw)
+                if abs(o[k][n]) < SOC_INTERP_ZERO_TOL]
+        assert len(zero) == SOC_INTERP_ZEROS, (
+            f"{sds}: {len(zero)} values fall below {SOC_INTERP_ZERO_TOL}, not "
+            f"{SOC_INTERP_ZEROS} -- the l=0 projection contributes one per spinor "
+            f"component and nothing else may vanish")
+        assert len({k for k, _ in zero}) == 1, (
+            f"{sds}: the zeros sit at k {sorted({k for k, _ in zero})}; the s character "
+            f"is pure only where the band ordering keeps it so, which is one k")
+        big = max(abs(o[k][n]) for k, n in zero)
+        small = min(abs(o[k][n]) for k in range(npt) for n in range(nw)
+                    if (k, n) not in zero)
+        assert small > 1.0e3 * big, (
+            f"{sds}: the zeros reach {big:.2e} and the smallest of the rest is "
+            f"{small:.2e}, so no scale separates them and the zeros prove nothing")
+        for a, b in SOC_INTERP_STARS:
+            d = max(abs(o[a][n] - o[b][n]) for n in range(nw))
+            assert d < SOC_INTERP_STAR_TOL, (
+                f"{sds}: k={a} and k={b} are one star of the 2x2x2 mesh, but they differ "
+                f"by {d:.2e} (tol {SOC_INTERP_STAR_TOL}) -- a phase on an R vector")
 
     if test_id in L_TRANSVERSE_ZERO:
         traces = anglmom_r0_traces(res[op(test_id, "anglmomrs.1")])
@@ -771,19 +862,25 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
 
     # The interpolated torque, projected on the Wannier-Hamiltonian eigenstates.
     if test_id in TORQUE_INTERP_ZERO:
-        rows = dat_rows(res["bands_wann_torque.dat"])
-        assert rows, "bands_wann_torque.dat has no data rows"
-        nw = (len(rows[0]) - 1) // 4        # kdist + per band: E and three components
-        assert nw > 0 and len(rows[0]) == 1 + 4 * nw, (
-            f"bands_wann_torque.dat has {len(rows[0])} columns, which is not 1 + 4*num_wann: "
-            f"the layout is kdist then E_n and three Cartesian components per band")
-        energies = [r[1 + n * 4] for r in rows for n in range(nw)]
-        assert max(abs(e) for e in energies) > 1.0, (
-            "bands_wann_torque.dat: the energy column is zero too, so this file is empty "
-            "rather than vanishing -- the zero torque below would mean nothing")
-        worst = max(abs(r[1 + n * 4 + 1 + c])
-                    for r in rows for n in range(nw) for c in range(3))
+        shape, vals = interp_hdf(res["WF1_interp.hdf"], "/default/exchangeTorque")
+        if shape is None:
+            pytest.skip("no h5dump, so the interpolation output cannot be read")
+        #> C order: the Fortran (3, num_wann, npoints) reads back as its reverse.
+        assert len(shape) == 3 and shape[2] == 3 and shape[1] > 0 and shape[0] > 0, (
+            f"/default/exchangeTorque has shape {shape}, not (npoints, num_wann, 3)")
+        nw = shape[1]
+        eshape, evals = interp_hdf(res["WF1_interp.hdf"], "/default/energy")
+        assert eshape == [shape[0], nw], (
+            f"/default/energy has shape {eshape} against the torque's {shape}")
+        #> What keeps this from being a check on a dataset of zeros: the energies of the
+        #> same domain, which have to be there and have to be non-trivial. energy is in
+        #> electronvolts, so a band structure spans more than 1 eV by a wide margin.
+        assert max(abs(e) for e in evals) > 1.0, (
+            "WF1_interp.hdf:/default/energy is zero too, so this file is empty rather "
+            "than vanishing -- the zero torque below would mean nothing")
+        worst = max(abs(v) for v in vals)
         assert worst < TORQUE_INTERP_ZERO_TOL, (
-            f"bands_wann_torque.dat: max |<T>_nn| = {worst}, but with a collinear moment and "
-            f"no SOC the eigenstates are eigenstates of sigma.m_hat, so <s> is parallel to "
-            f"m_hat and <T> = -<s> x m_hat vanishes (tol {TORQUE_INTERP_ZERO_TOL})")
+            f"WF1_interp.hdf:/default/exchangeTorque: max |<T>_nn| = {worst}, but with a "
+            f"collinear moment and no SOC the eigenstates are eigenstates of sigma.m_hat, "
+            f"so <s> is parallel to m_hat and <T> = -<s> x m_hat vanishes "
+            f"(tol {TORQUE_INTERP_ZERO_TOL})")

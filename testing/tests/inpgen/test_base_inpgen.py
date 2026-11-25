@@ -3,6 +3,8 @@ Collection of tests running only inpgen
 """
 
 import pytest
+import os
+import xml.etree.ElementTree as ET
 
 
 @pytest.mark.inpgen
@@ -85,18 +87,35 @@ def test_inpgen_wann_projection_counts(execute_inpgen, clean_workdir):
     with open(res['inp.xml']) as f:
         content = f.read()
     assert content.count('<wannierproj l=') == 2
-    assert '<wannierproj l="0" m="0" spin=""/>' in content
-    assert '<wannierproj l="1" m="0" spin=""/>' in content
+    assert '<wannierproj l="0" m="0"/>' in content
+    assert '<wannierproj l="1" m="0"/>' in content
     assert 'numBands="16"' in content
     assert 'minBand="1" maxBand="16"' in content
     assert 'numbands="0"' in content           # the <cutoffs> stay out of it
+    # The other side of the gate in test_inpgen_wann_without_a_path_list: this cell does
+    # get a k path, so the interpolation stage is live and names the list inpgen wrote.
+    root = ET.parse(res['inp.xml']).getroot()
+    assert root.find('.//interpolation') is not None
+    assert root.find('.//interpolation/domain').get('listName') == 'path-2'
+    # The two stages no longer share attribute names: <disentanglement> carries the dis
+    # prefix of the Wannier90 keywords it sets and <wannierization> the bare ones. Asserted
+    # on the elements and in both directions, because the bare names still exist one element
+    # away and a substring check would pass on those.
+    dis = root.find('.//disentanglement')
+    wan = root.find('.//wannierization')
+    assert dis.get('disNumIter') == '10000' and dis.get('numIter') is None
+    assert dis.get('disConvWindow') == '10' and dis.get('convWindow') is None
+    assert dis.get('disConvTol') is not None and dis.get('convTol') is None
+    assert dis.get('disMixRatio') is not None and dis.get('mixRatio') is None
+    assert wan.get('numIter') == '10000' and wan.get('disNumIter') is None
+    assert wan.get('convWindow') == '10' and wan.get('disConvWindow') is None
     clean_workdir()
 
     res = execute_inpgen(folder, ['-f', 'inp_simple', '-wann', 'Si:d'])
     with open(res['inp.xml']) as f:
         content = f.read()
     assert content.count('<wannierproj l=') == 1
-    assert '<wannierproj l="2" m="0" spin=""/>' in content
+    assert '<wannierproj l="2" m="0"/>' in content
     assert 'numBands="20"' in content
     clean_workdir()
 
@@ -179,3 +198,28 @@ def test_inpgen_wann_projections_refused(execute_inpgen, clean_workdir):
         with pytest.raises(BaseException):
             execute_inpgen(folder, ['-f', 'inp_simple', '-wann', bad])
         clean_workdir()
+
+
+@pytest.mark.inpgen
+@pytest.mark.bulk
+@pytest.mark.fast
+def test_inpgen_wann_without_a_path_list(execute_inpgen, clean_workdir):
+    """The -wann template stays well-formed for a cell that gets no k path.
+
+    inpgen writes a type="path" list for the higher-symmetry Bravais lattices and for
+    films, but a monoclinic or triclinic cell gets a mesh only, so the template cannot
+    name a path unconditionally: <interpolation> is written commented out instead. The
+    comment that explains the stage has to stay OUTSIDE that wrapper, because an XML
+    comment does not nest -- its close would end the wrapper early and leave the element
+    live with an empty listName. Parsing is what catches that; reading the file does not.
+    """
+    folder = './inputfiles/inpgen/mono_no_path/'
+
+    res = execute_inpgen(folder, ['-f', 'inp_mono', '-wann', 'Si:sp'])
+    kpts = os.path.join(os.path.dirname(res['inp.xml']), 'kpts.xml')
+    with open(kpts) as f:
+        assert 'type="path"' not in f.read()   # the premise: this cell really gets none
+    root = ET.parse(res['inp.xml']).getroot()  # raises if a comment ended up nested
+    assert root.find('.//wannierlib') is not None
+    assert root.find('.//interpolation') is None   # off, because it sits in a comment
+    clean_workdir()

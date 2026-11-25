@@ -18,15 +18,79 @@ MODULE m_wannierlib_hdf_util
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools
+   USE m_banddos_io, ONLY: io_write_string1
    USE m_juDFT
    USE m_wannierlib_hdf_names, ONLY: wl_hdf_name, wl_hdf_check_what
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wr_r1, wr_r2, wr_r3, wr_r4, wr_i1, wr_i2, wr_i3, wl_hdf_create, wl_hdf_root
    PUBLIC :: wl_ds5_open, wl_ds5_slab, wl_ds_close
+   PUBLIC :: wl_ds3_open, wl_ds3_slab, wl_str1, wl_grp, wl_grp_close
    PUBLIC :: wl_hdf_open, wl_hdf_root_read, rd_i1, wl_ds_exists
    PUBLIC :: wl_ds5_open_read, wl_ds5_read, wl_ds5_dims, rd_r2
 CONTAINS
+
+   !> Rank 3 in slabs, which is the shape an interpolated quantity comes in:
+   !> (ncomp, num_wann, npoints). Opened once with the full extent and then written one
+   !> k-point at a time, because the components are formed inside the loop over the domain
+   !> and never exist as one array to hand over.
+   SUBROUTINE wl_ds3_open(gid, name, n, did)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n(3)
+      INTEGER(HID_T), INTENT(OUT) :: did
+      INTEGER(HID_T) :: sid
+      INTEGER :: e
+      CALL h5screate_simple_f(3, INT(n, HSIZE_T), sid, e)
+      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
+      CALL h5sclose_f(sid, e)
+   END SUBROUTINE wl_ds3_open
+
+   SUBROUTINE wl_ds3_slab(did, name, start, cnt, dat)
+      INTEGER(HID_T), INTENT(IN) :: did
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: start(3), cnt(3)
+      REAL, INTENT(IN) :: dat(:, :, :)
+      CALL io_write_real3(did, start, cnt, name, dat)
+   END SUBROUTINE wl_ds3_slab
+
+   !> A dataset of fixed-length strings. The four type calls and the write are banddos.hdf's
+   !> recipe for the labels of the high-symmetry points, reused rather than restated: a reader
+   !> that already opens banddos.hdf meets no second convention here.
+   SUBROUTINE wl_str1(gid, name, n, slen, dat)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER, INTENT(IN) :: n, slen
+      CHARACTER(LEN=*), INTENT(IN) :: dat(:)
+      INTEGER(HID_T) :: sid, did, tid
+      INTEGER :: e
+      CALL h5screate_simple_f(1, (/INT(n, HSIZE_T)/), sid, e)
+      CALL h5tcopy_f(H5T_NATIVE_CHARACTER, tid, e)
+      CALL h5tset_size_f(tid, INT(slen, SIZE_T), e)
+      CALL h5tset_strpad_f(tid, H5T_STR_SPACEPAD_F, e)
+      CALL h5tset_cset_f(tid, H5T_CSET_ASCII_F, e)
+      CALL h5dcreate_f(gid, name, tid, sid, did, e)
+      CALL h5tclose_f(tid, e)
+      CALL h5sclose_f(sid, e)
+      CALL io_write_string1(did, (/n/), slen, dat)
+      CALL h5dclose_f(did, e)
+   END SUBROUTINE wl_str1
+
+   !> One group per domain. kdist and the k-points are a property of the domain alone, so they
+   !> are stored beside the quantities measured on them instead of once per quantity.
+   SUBROUTINE wl_grp(pid, name, gid)
+      INTEGER(HID_T), INTENT(IN) :: pid
+      CHARACTER(LEN=*), INTENT(IN) :: name
+      INTEGER(HID_T), INTENT(OUT) :: gid
+      INTEGER :: e
+      CALL h5gcreate_f(pid, name, gid, e)
+   END SUBROUTINE wl_grp
+
+   SUBROUTINE wl_grp_close(gid)
+      INTEGER(HID_T), INTENT(IN) :: gid
+      INTEGER :: e
+      CALL h5gclose_f(gid, e)
+   END SUBROUTINE wl_grp_close
 
    !> Make WF<jspin>_<what>.hdf and return it open. A stale file is removed rather than
    !> written over, so a shorter run cannot leave the tail of a longer one behind.
@@ -99,31 +163,41 @@ CONTAINS
       CALL h5dclose_f(did, e)
    END SUBROUTINE wl_ds_close
 
-   SUBROUTINE wr_r2(gid, name, n, dat)
+   SUBROUTINE wr_r2(gid, name, n, dat, units)
       INTEGER(HID_T), INTENT(IN) :: gid
       CHARACTER(LEN=*), INTENT(IN) :: name
       INTEGER, INTENT(IN) :: n(:)
       REAL, INTENT(IN) :: dat(:, :)
+      !> Optional because the three k-space files that also use this writer carry their
+      !> units in their own documented layout; the interpolation output states them per
+      !> dataset, so a reader needs nothing but the file.
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: units
       INTEGER(HID_T) :: sid, did
       INTEGER :: e
       CALL h5screate_simple_f(2, INT(n(:2), HSIZE_T), sid, e)
       CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
       CALL h5sclose_f(sid, e)
       CALL io_write_real2(did, (/1, 1/), n(:2), name, dat)
+      IF (PRESENT(units)) CALL io_write_attchar0(did, 'units', TRIM(units))
       CALL h5dclose_f(did, e)
    END SUBROUTINE wr_r2
 
-   SUBROUTINE wr_r1(gid, name, n, dat)
+   SUBROUTINE wr_r1(gid, name, n, dat, units)
       INTEGER(HID_T), INTENT(IN) :: gid
       CHARACTER(LEN=*), INTENT(IN) :: name
       INTEGER, INTENT(IN) :: n(:)
       REAL, INTENT(IN) :: dat(:)
+      !> Optional because the three k-space files that also use this writer carry their
+      !> units in their own documented layout; the interpolation output states them per
+      !> dataset, so a reader needs nothing but the file.
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: units
       INTEGER(HID_T) :: sid, did
       INTEGER :: e
       CALL h5screate_simple_f(1, INT(n(:1), HSIZE_T), sid, e)
       CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
       CALL h5sclose_f(sid, e)
       CALL io_write_real1(did, (/1/), n(:1), name, dat)
+      IF (PRESENT(units)) CALL io_write_attchar0(did, 'units', TRIM(units))
       CALL h5dclose_f(did, e)
    END SUBROUTINE wr_r1
 

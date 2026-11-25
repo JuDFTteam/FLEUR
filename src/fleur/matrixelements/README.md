@@ -57,7 +57,7 @@ the one to read before writing a line of it.
 |---|---|---|
 | 1 | `types_matelements_<name>.F90` | the provider. **Start from `types_matelements_template.F90`** |
 | 2 | `matrixelements/CMakeLists.txt` | one line, **with** the path prefix |
-| 3 | `fleurinput/types_melem_optable.f90` | a row in `MELEM_OPERATORS` |
+| 3 | `src/libraries/fleurinput/types_melem_optable.f90` | a row in `MELEM_OPERATORS` |
 | 4 | `melem_coarse.F90` | three places: the slice, the `ALLOCATE` behind `request%needs_op`, the fill inside the k loop |
 | 5 | `../wannierlib/postproc/wgauge_run.F90` and/or `wgauge_operators_r.F90` | a `CASE` branch |
 | 6 | `types_melem_optable.f90` | a row in `WANNIERLIB_INTERP` and/or `WANNIERLIB_OPR` |

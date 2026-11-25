@@ -3583,14 +3583,14 @@
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="disFrozMax" type="FleurDouble" use="required"/>
-      <xsd:attribute name="numIter" type="xsd:nonNegativeInteger" use="required">
+      <xsd:attribute name="disNumIter" type="xsd:nonNegativeInteger" use="required">
          <xsd:annotation>
             <xsd:documentation>Iterations of the Omega_I minimisation. numIter="0" is legal and means: take the subspace the projections define, constrained to the frozen window, and leave it unoptimised. Wannier90 accepts it -- its own guard rejects dis_num_iter &lt; 0, not 0 -- and its iteration loop runs from 1, so it simply does not execute, while the projection and frozen-window steps that construct the subspace run before the loop and always. Omega_I is then the invariant of that subspace rather than its minimum over subspaces.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
-      <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>
+      <xsd:attribute name="disConvTol" type="FleurDouble" use="required"/>
+      <xsd:attribute name="disConvWindow" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="disMixRatio" type="FleurDouble" use="required"/>
       <xsd:attribute default="F" name="disFrozProj" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.01" name="disProjMin" type="FleurDouble" use="optional"/>
       <xsd:attribute default="0.95" name="disProjMax" type="FleurDouble" use="optional"/>
@@ -3644,7 +3644,7 @@
             <xsd:documentation>How many times the convNoiseAmp kick may be applied (Wannier90 conv_noise_num). Inert without convNoiseAmp.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="fdOrder" type="xsd:positiveInteger" use="optional">
+      <xsd:attribute name="higherOrderN" type="xsd:positiveInteger" use="optional">
          <xsd:annotation>
             <xsd:documentation>Order of the finite-difference stencil Wannier90 builds the b-shells with (its higher_order_n). The default 1 is the one-shell formula of Marzari and Vanderbilt, whose error in the k derivative is O(b^2); 2 and 3 combine more shells and reduce it to O(b^4) and O(b^6), at the cost of more neighbours per k point and therefore more overlap matrices. It matters for every quantity built as a k derivative - the Berry connection A, and above all C and F, which are second derivatives. Silence leaves Wannier90 on its own default, so an existing input keeps its numbers.</xsd:documentation>
          </xsd:annotation>
@@ -3670,14 +3670,13 @@
          <xsd:enumeration value="orbital"/>
          <xsd:enumeration value="spinOrbit"/>
          <xsd:enumeration value="velocity"/>
-         <xsd:enumeration value="eigenstates"/>
          <xsd:enumeration value="exchangeTorque"/>
       </xsd:restriction>
    </xsd:simpleType>
 
    <xsd:complexType name="WannierlibDomainType">
       <xsd:annotation>
-         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' distinguishes this domain's bands_wann_*.dat files and may be left off for at most one domain. 'refinementPoints' optionally subdivides each segment of an ordered list into refinementPoints pieces (refinementPoints&lt;=1 = list as-is).</xsd:documentation>
+         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' names this domain's group in the interpolation's HDF5 file and may be left off for at most one domain, which takes the group 'default'. 'refinementPoints' optionally subdivides each segment of an ordered list into refinementPoints pieces (refinementPoints&lt;=1 = list as-is).</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="listName" type="xsd:string" use="required"/>
       <xsd:attribute name="suffix" type="xsd:string" use="optional"/>
@@ -3756,7 +3755,7 @@
 
    <xsd:complexType name="WannierlibInterpolationType">
       <xsd:annotation>
-         <xsd:documentation>Wannier interpolation: the output domains to interpolate on and the operators to interpolate. Declare one &lt;domain&gt; per set of k-points; each writes its own suffixed set of bands_wann_*.dat files.</xsd:documentation>
+         <xsd:documentation>Wannier interpolation: the output domains to interpolate on and the operators to interpolate. Declare one &lt;domain&gt; per set of k-points; each takes its own group in WF&lt;channel&gt;_interp.hdf.</xsd:documentation>
       </xsd:annotation>
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="domain" type="WannierlibDomainType"/>
@@ -3811,12 +3810,17 @@
       </xsd:attribute>
       <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts. Not available for spinor Wannier functions.</xsd:documentation>
+            <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute default="40 40 40" name="plotGrid" type="xsd:string" use="optional">
          <xsd:annotation>
             <xsd:documentation>Resolution of the plotWF grid, "nx ny nz"; the cost is one state per grid point, band and k-point.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="1 1 1" name="plotCells" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many unit cells the plotWF region spans, "nx ny nz". A Wannier function wider than the cell is cut by the default single cell; the grid is scaled along, so the resolution is kept and the cost grows with the product.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>

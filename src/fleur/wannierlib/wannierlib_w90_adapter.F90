@@ -169,7 +169,7 @@ CONTAINS
     !> derivative -- A, and above all C and F, which are second derivatives and so carry
     !> that error squared. Behind the sentinel, like everything optional: silence tells
     !> Wannier90 nothing and leaves it on its own default.
-    IF (this%fd_order > 0) CALL w90_set_option(wannierlib_w90main, 'higher_order_n', this%fd_order)
+    IF (this%higher_order_n > 0) CALL w90_set_option(wannierlib_w90main, 'higher_order_n', this%higher_order_n)
 
     !> The keywords are Wannier90's own, spelled as its .win reader spells them:
     !> w90_set_option only appends the pair to a settings store, and what interprets it

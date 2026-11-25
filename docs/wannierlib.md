@@ -65,7 +65,7 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 
     <disentanglement disWinMin="0.097" disWinMax="2.670"
                      disFrozMin="0.097" disFrozMax="0.661"
-                     numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+                     disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
 
     <wannierization numIter="3000" convTol="0.00001"/>
 
@@ -115,9 +115,10 @@ the whole mesh enters the window, which is what excludes the semicore.
 | attribute | required | default | |
 |---|---|---|---|
 | `disFrozMax` | **yes** | | top of the frozen window |
-| `numIter` | **yes** | | disentanglement iterations |
-| `convTol` | **yes** | | convergence threshold |
-| `mixRatio` | **yes** | | mixing |
+| `disNumIter` | **yes** | | disentanglement iterations |
+| `disConvTol` | **yes** | | convergence threshold |
+| `disMixRatio` | **yes** | | mixing |
+| `disConvWindow` | no | | iterations the change must stay below `disConvTol` |
 | `disWinMin` | no | derived | bottom of the outer window |
 | `disWinMax` | no | derived | top of the outer window |
 | `disFrozMin` | no | `disWinMin` | bottom of the frozen window |
@@ -208,7 +209,7 @@ carrying spin density.
 | attribute | required | |
 |---|---|---|
 | `listName` | **yes** | an existing kPointList, in `kpts.xml` or any included file |
-| `suffix` | no | distinguishes this domain's `bands_wann_*.dat`; may be left off for at most one domain |
+| `suffix` | no | names this domain's group inside `WF<channel>_interp.hdf`; may be left off for at most one domain, which takes the group `default` |
 | `refinementPoints` | no | subdivides each segment of an ordered list into `refinementPoints` pieces (`refinementPoints<=1` = list as-is) |
 
 Whether a list is a line, a plane or a mesh is a property of the list, not of FLEUR.
@@ -219,14 +220,18 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 
 `<operator>` — what to interpolate, repeatable:
 
-| name | output |
-|---|---|
-| `hamiltonian` | `bands_wann_interpol.dat`, `bands_wann_interpol_ev.dat` |
-| `spin` | `bands_wann_spin.dat` |
-| `orbital` | `bands_wann_orbmom.dat` |
-| `spinOrbit` | `bands_wann_spin_orbit.dat` |
-| `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
-| `eigenstates` | `bands_wann_eigenstates.dat` |
+| name | dataset in the domain's group | components | units |
+|---|---|---|---|
+| `hamiltonian` | — | | |
+| `spin` | `spin` | 3 | hbar/2 |
+| `orbital` | `orbital` | 3 | hbar |
+| `spinOrbit` | `spinOrbit` | 1 | eV |
+| `exchangeTorque` | `exchangeTorque` | 3 | eV |
+| `velocity` | `velocity`, `berryCurvature` | 3, 3 | eV*Ang, Ang^2 |
+
+Every domain carries `kdist` (1/Ang), `energy` (eV, `num_wann` x `npoints`) and a `kpts`
+subgroup whatever operators are asked for, so **`hamiltonian` writes no dataset of its
+own**: the bands are there either way and the name only notes them in `out`.
 
 > The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
 > particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
@@ -459,7 +464,7 @@ https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#ang
       <disentanglement
         disWinMin="0.020" disWinMax="3.000"
         disFrozMin="0.020" disFrozMax="0.562"
-        numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+        disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
       <wannierization numIter="3000" convTol="0.00001"/>
       <operatorsRs>
         <operator name="hamiltonian"/>

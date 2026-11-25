@@ -82,6 +82,11 @@ MODULE m_types_wannierlib
     !> whole price of the plot: 40^3 is 500x the work of 8^3. Left at 40^3, what it was
     !> before it could be asked for.
     INTEGER :: plot_grid(3) = [40, 40, 40]  ! <export plotGrid="40 40 40"/>
+    !> How many cells the region spans. plot_region used to hardwire one, which cuts any
+    !> function wider than the cell: in graphene (a = 2.46 A) a sigma function still holds
+    !> half its maximum at the cell wall. The grid is scaled with it, so the resolution is
+    !> the one plotGrid asked for and the cost grows with the product of the three.
+    INTEGER :: plot_cells(3) = [1, 1, 1]    ! <export plotCells="1 1 1"/>
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -209,8 +214,8 @@ MODULE m_types_wannierlib
     !> and runs the whole iteration count out. The disentanglement is not in that position:
     !> its own default is 3 and its reader rejects a negative one, so it does test.
     !> Zero here means we say nothing and leave each of them where it already was.
-    INTEGER :: dis_conv_window = 0   ! disentanglement (W90 dis_conv_window); XML @convWindow
-    INTEGER :: conv_window = 0       ! MLWF/wannierise (W90 conv_window);     XML @convWindow
+    INTEGER :: dis_conv_window = 0   ! disentanglement (W90 dis_conv_window); XML @disConvWindow
+    INTEGER :: conv_window = 0       ! MLWF/wannierise (W90 conv_window);     XML @disConvWindow
     !> Preconditioned gradient in the spread minimisation (W90 precond); XML @precond.
     !> Off by default, which is also Wannier90's default.
     !>
@@ -230,11 +235,11 @@ MODULE m_types_wannierlib
     REAL    :: conv_noise_amp = -1.0      ! W90 conv_noise_amp;    XML @convNoiseAmp
     INTEGER :: conv_noise_num = -1        ! W90 conv_noise_num;    XML @convNoiseNum
     !> Order of the finite-difference stencil for the k derivatives (W90 higher_order_n);
-    !> XML @fdOrder. Zero is our sentinel for "say nothing", so Wannier90 keeps its own
+    !> XML @higherOrderN. Zero is our sentinel for "say nothing", so Wannier90 keeps its own
     !> default of 1 -- the single-shell formula with an O(b^2) error. The quantities that
     !> feel it are the ones defined as k derivatives: A, and above all C and F, which are
     !> second derivatives and therefore carry the error squared.
-    INTEGER :: fd_order = 0
+    INTEGER :: higher_order_n = 0
     !> Tolerance Wannier90 groups the b-vectors into shells with, and checks the completeness
     !> relation sum_b w_b b_a b_b = delta_ab with -- Eq. (B1) of Marzari and Vanderbilt. A
     !> wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the
@@ -495,6 +500,7 @@ CONTAINS
     CALL mpi_bc(this%export%juwip, rank, mpi_comm)
     CALL mpi_bc(this%export%plot, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%export%plot_grid)
+    CALL mpi_bc(rank, mpi_comm, this%export%plot_cells)
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%export%bmesh, rank, mpi_comm)
     CALL mpi_bc(this%l_transport, rank, mpi_comm)
@@ -534,7 +540,7 @@ CONTAINS
     CALL mpi_bc(this%num_no_guide_iter, rank, mpi_comm)
     CALL mpi_bc(this%conv_noise_amp, rank, mpi_comm)
     CALL mpi_bc(this%conv_noise_num, rank, mpi_comm)
-    CALL mpi_bc(this%fd_order, rank, mpi_comm)
+    CALL mpi_bc(this%higher_order_n, rank, mpi_comm)
     CALL mpi_bc(this%kmesh_tol, rank, mpi_comm)
     !> An array of a derived type does not go through the generic mpi_bc, which sizes the
     !> receivers from the message itself. The count travels first, then each record field by
@@ -653,11 +659,11 @@ CONTAINS
       this%dis_froz_proj = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozProj'))
       this%dis_proj_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disProjMin'))
       this%dis_proj_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disProjMax'))
-      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
-      this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
-      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convWindow') == 1) &
-        this%dis_conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convWindow'))
+      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disNumIter'))
+      this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disMixRatio'))
+      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disConvTol'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@disConvWindow') == 1) &
+        this%dis_conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disConvWindow'))
     END IF
 
     ! --- wannierization (MLWF iteration controls); defaults to the disentanglement values ---
@@ -673,8 +679,8 @@ CONTAINS
       this%precond = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@precond'))
       !> Like convWindow: read only when the attribute is present, so that silence
       !> leaves Wannier90 on its own default and an older inp.xml keeps its numbers.
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fdOrder') == 1) &
-        this%fd_order = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fdOrder'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@higherOrderN') == 1) &
+        this%higher_order_n = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@higherOrderN'))
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@kmeshTol') == 1) &
         this%kmesh_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kmeshTol'))
 
@@ -829,6 +835,18 @@ CONTAINS
           calledby='read_xml_wannierlib')
         this%export%plot_grid = NINT(gridlist)
       END IF
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotCells') == 1) THEN
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotCells')
+        CALL evaluateList(gridlist, sbuf)
+        IF (SIZE(gridlist) /= 3) CALL juDFT_error( &
+          'wannierlib: <export plotCells=".."/> takes three numbers', &
+          calledby='read_xml_wannierlib')
+        !> One cell is the whole cell; zero or less is not a region.
+        IF (ANY(NINT(gridlist) < 1)) CALL juDFT_error( &
+          'wannierlib: <export plotCells=".."/> needs at least one cell per direction', &
+          calledby='read_xml_wannierlib')
+        this%export%plot_cells = NINT(gridlist)
+      END IF
       this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@irrep'))
       this%export%bmesh = evaluateFirstBoolOnly(xml%getAttributeValue( &
@@ -850,8 +868,9 @@ CONTAINS
     !> no time, and the day a second consumer wants a path it asks here by name.
     !>
     !> The path is not invented. It is the first list the input already carries with
-    !> type="path" -- the one inpgen writes for every case -- so the default names something
-    !> the caller can read off kpts.xml, and a run with no path list keeps today's silence.
+    !> type="path", which inpgen writes for the higher-symmetry Bravais lattices and for
+    !> films but not for a monoclinic or triclinic cell, so the default names something the
+    !> caller can read off kpts.xml, and a run with no path list keeps today's silence.
     IF (this%export%orbitrans .AND. this%n_domains < 1) THEN
       xPathA = '/fleurInput/cell/bzIntegration/kPointLists/kPointList[@type="path"]'
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) > 0) THEN
