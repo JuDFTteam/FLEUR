@@ -16,9 +16,7 @@ MODULE m_anderson_sf
    !!     rejected before,
    !!  3. escapes along an unstable direction u: the Anderson step is restricted to the complement of u,
    !!     and along u a push is added in the downhill direction (residual along u positive). The push
-   !!     doubles as long as the residual along u does not fall, i.e. the minimum along u is not near.
-   !!     The first escape step is the push alone, so that the response of the residual along u is not
-   !!     mixed with the response to the Anderson step in the complement of u,
+   !!     doubles as long as the residual along u does not fall, i.e. the minimum along u is not near,
    !!  4. ends the escape when the residual along u has fallen below 20% of its maximum (minimum along u
    !!     reached; the history is restarted), or rejects u as a false detection when the residual along
    !!     u turns against the push without ever growing,
@@ -179,7 +177,6 @@ CONTAINS
          step_norm = SQRT(ABS(step.dot.step%apply_metric(l_dfpt)))
          IF (alpha*res_norm > 0.0) step_rel = step_norm/(alpha*res_norm)
          IF (step_norm > step_limit) step = (step_limit/step_norm)*step
-         IF (n_escape_steps == 0) step = 0.0*step ! first escape step: push alone
          res_along_dir = w_escape_dir.dot.res(n_hist)
          IF (n_escape_steps > 0 .AND. res_along_dir >= 0.9*res_along_dir_prev) n_push_doublings = n_push_doublings + 1
          push_length = push_start*2.0**MIN(n_push_doublings, max_push_doublings)
