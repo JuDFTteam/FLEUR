@@ -92,8 +92,6 @@ CONTAINS
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), eigBuffer(:,:,:)
 
 
-#if !defined(_OPENACC) && !defined(__NVCOMPILER)
-!nvhpc fails here with ICE
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
@@ -429,9 +427,6 @@ CONTAINS
             END IF
          END DO  k_loop
       END DO ! spin loop ends
-#else
-      CALL juDFT_error("DFPT is not available in builds with the NVIDIA compiler", calledby="dfpt_eigen.F90")
-#endif
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results1%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
