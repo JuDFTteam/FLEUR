@@ -1416,12 +1416,45 @@
       CALL io_WRITE_att(did,"kfull",l_full)
       CALL io_WRITE_att(did,"l_noco",fmeta%l_noco)
       CALL io_WRITE_att(did,"l_soc",fmeta%l_soc)
-      CALL io_WRITE_att(did,"l_timerev",fmeta%l_timerev)
+      !without SOC time reversal holds per spin; with SOC only if the k-set was
+      !reduced with it (gfprep soc_timerev, non-magnetic systems)
+      CALL io_WRITE_att(did,"l_timerev",fmeta%l_timerev.OR.priv_trneeded(kpts%bk(1:2,:),sym))
       IF (.NOT.fmeta%l_set) RETURN
       CALL io_WRITE_att(did,"amat2d",fmeta%amat2d)
       CALL io_WRITE_att(did,"rkmax",fmeta%rkmax)
       IF (fmeta%zplane(1)>=0.0) CALL io_WRITE_att(did,"zplane",fmeta%zplane(1))
       END SUBROUTINE priv_write_cellmeta
+
+      !<-- F: priv_trneeded
+      LOGICAL FUNCTION priv_trneeded(bk,sym)
+!-----------------------------------------------
+!  T if the k-points cover their mesh only with the in-plane operations
+!  together with time reversal (k -> -k)
+!-----------------------------------------------
+      IMPLICIT NONE
+      REAL,INTENT(IN)        :: bk(:,:)
+      TYPE(t_sym),INTENT(IN) :: sym
+      INTEGER, ALLOCATABLE :: cover(:,:)
+      INTEGER :: nmesh(2),ik,iop,it,m(2)
+      LOGICAL :: l_full,l_ops
+      priv_trneeded = .FALSE.
+      CALL gf_io2dmat_kmesh(bk,nmesh,l_full)
+      IF (l_full.OR.ANY(nmesh<1)) RETURN
+      ALLOCATE(cover(0:nmesh(1)-1,0:nmesh(2)-1))
+      DO it = 1,2
+         cover = 0
+         DO ik = 1,SIZE(bk,2)
+            DO iop = 1,MAX(sym%nop2,1)
+               m = MODULO(NINT(MATMUL(bk(:,ik),REAL(sym%mrot(1:2,1:2,iop)))*nmesh),nmesh)
+               cover(m(1),m(2)) = 1
+               m = MODULO(-m,nmesh)
+               IF (it==2) cover(m(1),m(2)) = 1
+            ENDDO
+         ENDDO
+         IF (it==1) l_ops = ALL(cover==1)
+      ENDDO
+      priv_trneeded = (.NOT.l_ops).AND.ALL(cover==1)
+      END FUNCTION priv_trneeded
 
       !<-- S: gf_io2dmat_kmesh
       SUBROUTINE gf_io2dmat_kmesh(bk,nmesh,l_full)

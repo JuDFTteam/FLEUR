@@ -326,6 +326,50 @@ def test_umklapp_noco_spinor(gfleur_binary, tmp_path, order):
             assert np.max(np.abs(got - want)) <= 1e-9 * np.max(np.abs(want))
 
 
+@pytest.mark.parametrize("cell", ["identity", "root3"])
+def test_soc_unfolding(gfleur_binary, tmp_path, cell):
+    """SOC substrate stored at the irreducible k-points of C3v and time reversal: the
+    unfolding rotates the spin with the operations (mirrors as pi rotations about their
+    normal) and uses sigma_u(p) = s_y sigma_u(-p-u)^T s_y. Identity cell and sqrt3 R30
+    (theta=30, spin frame rotated) reproduce the analytic spinor amplitudes exactly."""
+    asub = ref.hex_amat(ASUB)
+    bsub = ref.recip(asub)
+    cart = ref.c3v_cartesian()
+    kirr = ref.irreducible(ref.mesh(*NMESH), bsub, cart)
+    assert len(kirr) < len(ref.irreducible(ref.mesh(*NMESH), bsub, cart, timerev=False))
+    gv = ref.glist(bsub, RK_SUB)
+    ref.write_embfile(str(tmp_path / "sub"), asub, kirr, gv, ENERGIES, 4, ref.sigma_model_soc, RK_SUB,
+                      ops=ref.point_group_ops(asub, cart), timerev=True, model_kind="subvec", soc=True)
+    if cell == "identity":
+        ao, kpts, theta = asub, ref.mesh(*NMESH)[[0, 1, 8, 15, 21, 35]], 0.0
+    else:
+        ao, kpts, theta = ref.hex_amat(np.sqrt(3.0) * ASUB), ref.mesh(2, 2), 30.0
+    stage(tmp_path, ao, kpts, {"subfile": "'sub'", "stop_after": "t", "theta": theta}, noco=True)
+    _, text = run(gfleur_binary, tmp_path)
+    dev = float(re.search(r"max deviation of symmetry images\s+(\S+)", text).group(1))
+    assert dev < 1e-12, "symmetry images of the SOC amplitudes differ"
+    out = ref.read_embfile(str(tmp_path / "embpot11"))
+    geo = ref.Geometry(out["attrs"]["amat2d"].T, asub, theta, out["attrs"]["rkmax"][0])
+    glist = out["gvecs"]
+    ng = len(glist)
+    bo = ref.recip(out["attrs"]["amat2d"].T)
+    for ie, e in enumerate(ENERGIES):
+        for ik, kap in enumerate(out["kpts"]):
+            hl = geo.home(kap, glist)
+            want = np.zeros((2 * ng, 2 * ng), dtype=complex)
+            for b in hl:
+                for a in hl:
+                    if geo.as_sub(glist[a] - glist[b]) is None:
+                        continue
+                    m = ref.soc_matrix(e.real + 1j * e.imag, (kap + glist[b]) @ bo, (kap + glist[a]) @ bo)
+                    for s1 in range(2):
+                        for s2 in range(2):
+                            want[s1 * ng + a, s2 * ng + b] = m[s1, s2]
+            got = ref.spinor(out["mat"][ik, ie], 2)
+            assert np.abs(want[:ng, ng:]).max() > 1e-4, "no spin off-diagonal part"
+            assert np.abs(got - want).max() < 1e-11 * np.abs(want).max()
+
+
 def test_symmetry_check(gfleur_binary, tmp_path):
     """A square ad-layer with C4 is rejected on the hexagonal substrate."""
     substrate(tmp_path)

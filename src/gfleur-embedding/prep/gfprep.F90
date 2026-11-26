@@ -121,7 +121,9 @@ CONTAINS
       IF (LEN_TRIM(inp%kptsfile) > 0) THEN
          CALL gfprep_kpts_file(TRIM(inp%kptsfile), kpts)
       ELSE
-         CALL gfprep_kpts(lays, kgrid, .NOT. b%fi%noco%l_soc, kpts, inp%kfull)
+         IF (inp%soc_timerev .AND. b%fi%noco%l_soc) WRITE (*, "(a)") &
+            "gfprep: k-mesh reduced with time reversal and SOC: valid for non-magnetic systems only"
+         CALL gfprep_kpts(lays, kgrid, .NOT. b%fi%noco%l_soc .OR. inp%soc_timerev, kpts, inp%kfull)
       END IF
 
       !per layer: inp.xml, re-read as gfleur does, convert and write

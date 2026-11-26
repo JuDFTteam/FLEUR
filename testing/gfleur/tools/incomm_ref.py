@@ -129,6 +129,45 @@ def sigma_model_noco(e, js):
     return f
 
 
+def soc_matrix(e, pc, puc):
+    """Rashba-like 2x2 amplitudes from cartesian p and p' = p+u (arrays [..., 2]):
+    f [a0 + i l1 (p x p')_z s_z + l2 ((p+p') x z).s], invariant under rotations about z,
+    vertical mirrors (spin as axial vector) and s_y sigma^T s_y time reversal"""
+    p2 = np.sum(pc ** 2, -1)
+    pu2 = np.sum(puc ** 2, -1)
+    f = np.exp(-0.12 * (p2 + pu2)) * (1.0 + 0.1 * e)
+    zero = np.all(np.abs(puc - pc) < 1e-12, axis=-1)
+    a0 = np.where(zero, -0.5 * np.sqrt(p2 + 2.0 * (0.3 - e) + 0j), (0.06 + 0.03j) * f)
+    c = pc[..., 0] * puc[..., 1] - pc[..., 1] * puc[..., 0]
+    big_p = pc + puc
+    rx, ry = big_p[..., 1], -big_p[..., 0]
+    l1, l2 = (0.02 + 0.01j) * f, (0.03 - 0.02j) * f
+    m = np.empty(np.shape(c) + (2, 2), dtype=complex)
+    m[..., 0, 0] = a0 + 1j * l1 * c
+    m[..., 1, 1] = a0 - 1j * l1 * c
+    m[..., 0, 1] = l2 * (rx - 1j * ry)
+    m[..., 1, 0] = l2 * (rx + 1j * ry)
+    return m
+
+
+def sigma_model_soc(e, js):
+    """file spin index js = 11, 22, 12, 21 of soc_matrix (kind 'subvec')"""
+    i, j = {1: (0, 0), 2: (1, 1), 3: (0, 1), 4: (1, 0)}[js]
+
+    def f(pc, puc, uc, is_zero):
+        return soc_matrix(e, pc, puc)[..., i, j]
+    return f
+
+
+def c3v_cartesian():
+    ops = []
+    for n in range(3):
+        r = rotation(120.0 * n)
+        ops.append(r)
+        ops.append(r @ np.diag([1.0, -1.0]))
+    return ops
+
+
 def sigma_vacuum(e, spin, vvac=0.2):
     def f(p2, pu2, u2, is_zero):
         return np.where(is_zero, -0.5 * np.sqrt(p2 + 2.0 * (vvac - e) + 0j), 0.0)
@@ -176,7 +215,7 @@ def _att(obj, name, value, dtype):
 
 
 def write_embfile(name, amat, kpts, gvecs, energies, spins, model, rkmax, ops=None,
-                  timerev=False, model_kind="sub"):
+                  timerev=False, model_kind="sub", soc=False):
     """Embedding-potential file in the gf_io2dmat layout.
 
     model(e, spin) returns f(p2, pu2, u2, is_zero) (kind 'sub', p=k+g2, u=g1-g2)
@@ -193,7 +232,11 @@ def write_embfile(name, amat, kpts, gvecs, energies, spins, model, rkmax, ops=No
         u = g1 - g2
         for ie, e in enumerate(energies):
             for s in range(spins):
-                if model_kind == "sub":
+                if model_kind == "subvec":
+                    p = k + g2
+                    mat = model(e, s + 1)(np.broadcast_to(p @ bmat, u.shape), (p + u) @ bmat, u @ bmat,
+                                          np.all(u == 0, axis=-1))
+                elif model_kind == "sub":
                     p = k + g2
                     pc = p @ bmat
                     puc = (p + u) @ bmat
@@ -220,8 +263,8 @@ def write_embfile(name, amat, kpts, gvecs, energies, spins, model, rkmax, ops=No
         kd.attrs.create("amat2d", np.asarray(amat, dtype=float).T)
         _att(kd, "rkmax", rkmax, float)
         _att(kd, "l_timerev", int(timerev), np.int32)
-        _att(kd, "l_noco", 0, np.int32)
-        _att(kd, "l_soc", 0, np.int32)
+        _att(kd, "l_noco", int(spins == 4), np.int32)
+        _att(kd, "l_soc", int(soc), np.int32)
 
 
 def read_embfile(name):

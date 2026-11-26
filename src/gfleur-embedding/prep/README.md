@@ -41,7 +41,8 @@ types, and `spinflip`.
 | `zvac` | 0 | film: the vacuum embedding planes lie at `±(z1+zvac)`, `z1` = dVac/2 of the film |
 | `ewidth`, `nen` | 1, 15 | contour of `gf_en.charge`: starts `ewidth` Htr below E_F, `nen` points (2**n-1). Semicore valence states (Fe 3s3p) need a larger `ewidth` (4) and more points |
 | `zmirror` | `T` | keep the symmetry operations that flip z in the layers; set `F` for a stack with a lead or a surface (charge mode), whose layers are not mirror symmetric |
-| `kfull` | `F` | the full `kgrid` mesh without symmetry reduction (no rotations, no time reversal). Simplest input for `incomm_inp` of an ad-layer on this substrate, required for a noco substrate there |
+| `kfull` | `F` | the full `kgrid` mesh without symmetry reduction (no rotations, no time reversal). Simplest input for `incomm_inp` of an ad-layer on this substrate, required for a noco substrate without SOC there |
+| `soc_timerev` | `F` | reduce the k-mesh with time reversal also with SOC. Only for non-magnetic systems; meant for the substrate potential of `incomm_inp` (surfaces without C2z, e.g. fcc(111)) |
 | `kptsfile` | – | explicit 2D k-list instead of `kgrid`: first line the number of k-points, then `k1 k2` (fractional) per line, equal weights. Used for the lists `kpts_sub` and `kpts_aux` written by `gfleur` with `incomm_inp` |
 
 In auto mode, the embedding planes lie midway between the atomic planes.

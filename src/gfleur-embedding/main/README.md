@@ -283,8 +283,8 @@ Conventions, checked on a free Cu(001) film (`test_writeup_film`):
 * The `kpts` dataset of every file carries the attributes `nsym`, `symop`
   (in-plane parts of `x -> symop x + symtau`, fractional), `symtau`,
   `nkmesh`/`kfull` (the Gamma-centered mesh of the k-list and whether the
-  list is complete), `l_noco`, `l_soc`, `l_timerev` (time reversal used in the
-  k-reduction), `amat2d` (cartesian in-plane lattice vectors as columns,
+  list is complete), `l_noco`, `l_soc`, `l_timerev` (time reversal holds for the
+  data: always without SOC, with SOC if the k-set was reduced with it), `amat2d` (cartesian in-plane lattice vectors as columns,
   a.u.), `rkmax` (the 2D basis is `|k+G| <= rkmax`) and, for the outer planes,
   `zplane` (distance from the plane to the outermost atom plane of the region
   behind it). Files written before these attributes existed lack them.
@@ -398,6 +398,12 @@ substrate file (`Boundary`, `CoulBoundary`) are copied with the 2D star
   the collinear calculation within 0.2 mHtr for `Sigma0` and with
   `order='full'` (the noco and collinear films differ by 0.1 mHtr in E_F).
 
+* SOC (manual check, 2026-11-26): `Sigma_up` of the Cu(001) film with noco
+  and SOC on the reduced 6x6 mesh (10 points, 8 operations) unfolded onto the
+  full mesh equals a `kfull=t` run to 1e-13, including the spin off-diagonal
+  components (size 2e-2). Time reversal is covered by `test_soc_unfolding`
+  (C3v without C2z).
+
 ### Diagnostics in `out`
 
 Per energy and spin: the numbers of exact, cubic, linear and extrapolated
@@ -420,7 +426,12 @@ inconsistent `symop`/`symtau`).
 * The correction is implemented for incommensurate cases. A noco ad-layer
   uses 2x2 spin blocks (also with a collinear substrate, whose blocks are
   diagonal) and a noco `upfile` from a noco auxiliary run. A noco substrate
-  file needs a full k-mesh (no unfolding). The transformation is serial.
+  with SOC is unfolded with the operations rotating the spin (SU(2) of the
+  proper part, a mirror is a pi rotation about its normal) and, if the file has
+  `l_timerev`, with `sigma_u(p) = s_y sigma_u(-p-u)^T s_y`. gfprep reduces a
+  SOC k-mesh with time reversal only with `soc_timerev=t` (non-magnetic
+  systems). A noco substrate without SOC needs a full k-mesh. The
+  transformation is serial.
 * The amplitudes are interpolated in `p` on the substrate mesh; for spectra on
   the real axis use `write_ksub` and `interp='exact'`.
 

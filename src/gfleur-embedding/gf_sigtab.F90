@@ -83,6 +83,10 @@ MODULE m_gf_sigtab
       INTEGER, ALLOCATABLE :: wop(:, :, :)
       REAL, ALLOCATABLE    :: tau(:, :)
       LOGICAL :: l_timerev = .FALSE.
+      !noco file with SOC: the operations rotate the spin with usu (SU(2)),
+      !time reversal is sigma_u(p) = s_y sigma_u(-p-u)^T s_y
+      LOGICAL :: l_spinrot = .FALSE.
+      COMPLEX, ALLOCATABLE :: usu(:, :, :)
       INTEGER :: interp = INTERP_CUBIC
       REAL    :: eps_k = 1.0E-5
       !vacuum extrapolation outside the cutoff
@@ -291,10 +295,11 @@ CONTAINS
       !operations as integer maps of fractional reciprocal row vectors:
       !Cartesian R = A mrot A^-1, f' = f B R^T B^-1
       tab%nop = 1
-      !without SOC the operations act on collinear spin components unchanged;
-      !a noco file needs its full mesh
-      IF (l_unfold .AND. tab%l_collsrc) tab%nop = MAX(f%nsym, 1)
-      ALLOCATE (tab%wop(2, 2, tab%nop), tab%tau(2, tab%nop))
+      !without SOC the operations act on collinear spin components unchanged; with
+      !SOC they rotate the spin as well; a noco file without SOC needs its full mesh
+      tab%l_spinrot = l_unfold .AND. .NOT. tab%l_collsrc .AND. f%l_soc
+      IF (l_unfold .AND. (tab%l_collsrc .OR. tab%l_spinrot)) tab%nop = MAX(f%nsym, 1)
+      ALLOCATE (tab%wop(2, 2, tab%nop), tab%tau(2, tab%nop), tab%usu(2, 2, tab%nop))
       DO iop = 1, tab%nop
          rc = MATMUL(MATMUL(asub, REAL(f%symop(:, :, iop))), priv_inv2(asub))
          w = MATMUL(MATMUL(tab%bsub, TRANSPOSE(rc)), priv_inv2(tab%bsub))
@@ -303,8 +308,11 @@ CONTAINS
             hint="check amat2d/symop of the substrate file", calledby="gf_sigtab")
          tab%wop(:, :, iop) = NINT(w)
          tab%tau(:, iop) = f%symtau(:, iop)
+         tab%usu(:, :, iop) = priv_su2(rc)
       END DO
-      tab%l_timerev = l_unfold .AND. f%l_timerev .AND. tab%l_collsrc
+      tab%l_timerev = l_unfold .AND. f%l_timerev .AND. (tab%l_collsrc .OR. tab%l_spinrot)
+      IF (.NOT. tab%l_collsrc .AND. .NOT. tab%l_spinrot .AND. f%nsym > 1) WRITE (oUnit, "(a)") &
+         "sigtab: noco file without SOC, no unfolding (the full mesh is needed)"
       IF (l_unfold .AND. f%nsym > 1 .AND. .NOT. f%l_symtau) &
          CALL juDFT_warn("The substrate file has no symtau: fractional translations are taken as zero", &
                          calledby="gf_sigtab")
@@ -409,10 +417,11 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: mat(:, :, :)
       LOGICAL, ALLOCATABLE :: inside(:)
-      INTEGER :: ik, ic, ig1, ig2, iu, iu2, iop, it, ntr, kt, ig, ip(2), g(2), u(2), up(2), n
+      INTEGER :: ik, ic, ig1, ig2, iu, iu2, iop, it, ntr, kt, ig, ip(2), g(2), u(2), up(2), n, nc
       INTEGER, PARAMETER :: comp(4) = (/1, 4, 3, 2/)
       REAL    :: p(2), pp(2), x(2)
-      COMPLEX :: v(4), ph
+      COMPLEX :: v(4), ph, wv(4), w2(2, 2)
+      COMPLEX, PARAMETER :: sy(2, 2) = RESHAPE((/(0.0, 0.0), (0.0, 1.0), (0.0, -1.0), (0.0, 0.0)/), (/2, 2/))
 
       tab%s = CMPLX(0.0, 0.0)
       tab%filled = .FALSE.
@@ -445,14 +454,29 @@ CONTAINS
                iu = tab%uindex(u)
                IF (iu == 0) CYCLE
                p = f%kpts(:, ik) + f%gvecs(:, ig2)
-               v(:tab%ns**2) = mat(ig1, ig2, :)
+               nc = tab%ns**2
+               v(:nc) = mat(ig1, ig2, :)
                DO iop = 1, tab%nop
                   pp = MATMUL(p, REAL(tab%wop(:, :, iop)))
                   up = MATMUL(u, tab%wop(:, :, iop))
                   ph = EXP(CMPLX(0.0, -2.0*pi_const*DOT_PRODUCT(REAL(up), tab%tau(:, iop))))
+                  !value of the image: phase, with SOC also the spin rotation U sigma U^+
+                  IF (tab%l_spinrot) THEN
+                     w2 = MATMUL(MATMUL(tab%usu(:, :, iop), RESHAPE(v, (/2, 2/))), &
+                                 TRANSPOSE(CONJG(tab%usu(:, :, iop))))
+                     wv = ph*RESHAPE(w2, (/4/))
+                  ELSE
+                     wv(:nc) = ph*v(:nc)
+                  END IF
                   DO it = 1, ntr
-                     !time reversal: sigma_u(p) = sigma_u(-p-u)
-                     IF (it == 2) pp = -pp - up
+                     !time reversal: sigma_u(p) = sigma_u(-p-u), with SOC s_y sigma^T s_y
+                     IF (it == 2) THEN
+                        pp = -pp - up
+                        IF (tab%l_spinrot) THEN
+                           w2 = MATMUL(MATMUL(sy, TRANSPOSE(RESHAPE(wv, (/2, 2/)))), sy)
+                           wv = RESHAPE(w2, (/4/))
+                        END IF
+                     END IF
                      iu2 = tab%uindex(up)
                      IF (iu2 == 0) CYCLE
                      IF (tab%mode == SIGTAB_GRID) THEN
@@ -472,11 +496,11 @@ CONTAINS
                         CYCLE
                      END IF
                      IF (tab%filled(ig, kt, iu2)) THEN
-                        tab%unfold_dev = MAX(tab%unfold_dev, MAXVAL(ABS(tab%s(:, ig, kt, iu2) - ph*v(:tab%ns**2))))
+                        tab%unfold_dev = MAX(tab%unfold_dev, MAXVAL(ABS(tab%s(:, ig, kt, iu2) - wv(:nc))))
                      END IF
-                     tab%s(:, ig, kt, iu2) = ph*v(:tab%ns**2)
+                     tab%s(:, ig, kt, iu2) = wv(:nc)
                      tab%filled(ig, kt, iu2) = .TRUE.
-                     tab%unfold_scale = MAX(tab%unfold_scale, MAXVAL(ABS(v(:tab%ns**2))))
+                     tab%unfold_scale = MAX(tab%unfold_scale, MAXVAL(ABS(v(:nc))))
                   END DO
                END DO
             END DO
@@ -694,6 +718,27 @@ CONTAINS
          k(:, j + 1) = t; kf(j + 1) = tf; ks(:, j + 1) = ts
       END DO
    END SUBROUTINE priv_sortk
+
+   FUNCTION priv_su2(rc) RESULT(u)
+      !spin rotation of an in-plane operation (cartesian rc, z unchanged): the
+      !proper part of a rotation by phi is exp(-i phi s_z/2); a mirror is the
+      !inversion times the rotation by pi about the mirror normal n, U = -i n.s
+      REAL, INTENT(IN) :: rc(2, 2)
+      COMPLEX          :: u(2, 2)
+      REAL :: phi, alpha, n(2)
+      u = CMPLX(0.0, 0.0)
+      IF (rc(1, 1)*rc(2, 2) - rc(1, 2)*rc(2, 1) > 0.0) THEN
+         phi = ATAN2(rc(2, 1), rc(1, 1))
+         u(1, 1) = EXP(CMPLX(0.0, -0.5*phi))
+         u(2, 2) = EXP(CMPLX(0.0, 0.5*phi))
+      ELSE
+         !mirror line at the angle alpha: rc = ((cos 2a, sin 2a), (sin 2a, -cos 2a))
+         alpha = 0.5*ATAN2(rc(2, 1), rc(1, 1))
+         n = (/-SIN(alpha), COS(alpha)/)
+         u(1, 2) = CMPLX(0.0, -1.0)*CMPLX(n(1), -n(2))
+         u(2, 1) = CMPLX(0.0, -1.0)*CMPLX(n(1), n(2))
+      END IF
+   END FUNCTION priv_su2
 
    FUNCTION priv_inv2(a) RESULT(b)
       REAL, INTENT(IN) :: a(2, 2)
