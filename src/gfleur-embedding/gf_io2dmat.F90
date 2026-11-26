@@ -406,7 +406,21 @@
                                                                         
          !<-- new handles for embpot
 
-         new_handles = 2*layers%num_layers-COUNT(iohandle%mode ==IO2D_EMB)
+         !count the missing handles: user handles of other planes (region 0,
+         !nlayers+1) must not reduce the number
+         new_handles = 0
+         DO layer = 1,layers%num_layers
+            DO side = 1,2
+               IF (gfinp%l_surface.AND.layer == layers%num_layers.AND.side == 2) CYCLE
+               IF (ANY(iohandle%mode == IO2D_EMB.AND.iohandle%region == layer &
+     &              .AND.iohandle%side == side)) CYCLE
+               new_handles = new_handles+1
+            ENDDO
+         ENDDO
+         IF (gfinp%l_surface) THEN
+            IF (.NOT.ANY(iohandle%mode == IO2D_EMB.AND.iohandle%region == layers%num_layers+1 &
+     &           .AND.iohandle%side == 1)) new_handles = new_handles+1
+         ENDIF
 
 #ifdef CPP_MPI
          IF(gfinp%l_surface) THEN
