@@ -7,6 +7,9 @@ build-nvhpc-cpu:
   stage: build
   tags:
       - rtx2080ti
+  variables:
+    # Wannier90 subproject does not find BLAS with nvhpc
+    FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier FALSE -includedir /opt/fleur-deps/include -libdir /opt/fleur-deps/lib"
   artifacts:
      paths:
        - build
@@ -43,6 +46,9 @@ build-nvhpc-gpu:
   stage: build
   tags:
       - rtx2080ti
+  variables:
+    # Wannier90 subproject does not find BLAS with nvhpc
+    FLEUR_CI_FEATURE_OPTIONS: "-libxc TRUE -wannier FALSE -includedir /opt/fleur-deps/include -libdir /opt/fleur-deps/lib"
   artifacts:
     paths:
       - build
