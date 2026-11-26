@@ -76,6 +76,9 @@ CONTAINS
       INTEGER(WL_BANDS_HID) :: dgid
       CHARACTER(LEN=40) :: dgrp
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
+      !> The three-component spin slice of one collinear channel, assembled from the
+      !> channel's own block so the generic driver takes it like any other operator.
+      COMPLEX, ALLOCATABLE :: s_ch(:, :, :, :)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
       COMPLEX, ALLOCATABLE :: b0k(:, :, :, :)          ! (nw,nw,3,nk_loc) B(k) for the k-space export
       !> H_W(k) and H(R): the Hamiltonian side of every interpolation, built once here.
@@ -219,9 +222,26 @@ CONTAINS
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
                ! bound=1: <sigma> of a normalised spinor cannot exceed 1, so the driver can
                ! say so when the interpolation overshoots. Only spin has a bound this simple.
-               CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                               coarse%s0, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
-                                               bound=1.0)
+               IF (l_collinear) THEN
+                  !> This channel's own block in z, and zero in x and y. The zeros are the
+                  !> answer and not an omission: the transverse expectation value of a
+                  !> spin-pure eigenstate is zero, and collinearly every eigenstate is one.
+                  IF (.NOT. ALLOCATED(coarse%sz0)) CALL juDFT_error( &
+                     'wannierlib: the collinear spin channel block was never built', &
+                     hint='melem_coarse allocates sz0 when spin is requested; it was not', &
+                     calledby='wgauge_run')
+                  ALLOCATE (s_ch(SIZE(coarse%sz0, 1), SIZE(coarse%sz0, 2), 3, SIZE(coarse%sz0, 4)), &
+                            source=CMPLX(0.0, 0.0))
+                  s_ch(:, :, 3, :) = coarse%sz0(:, :, wf_ch, :)
+                  CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                                  s_ch, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
+                                                  bound=1.0)
+                  DEALLOCATE (s_ch)
+               ELSE
+                  CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                                  coarse%s0, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
+                                                  bound=1.0)
+               END IF
             CASE ('orbital')
                ! total (site-summed) orbital moment
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &

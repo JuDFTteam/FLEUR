@@ -33,6 +33,7 @@ MODULE m_melem_spin
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_pauli_from_blocks, melem_spin_sumrule
+  PUBLIC :: melem_spin_channel_check
 CONTAINS
 
   !> Assemble the three Pauli matrices at one k from the four global spin-block
@@ -77,5 +78,56 @@ CONTAINS
       WRITE(oUnit, '(a,i0,a)') '  WARNING: ', nbad, ' bands violate norm=1 or |<s>|<=1'
     END IF
   END SUBROUTINE melem_spin_sumrule
+
+  !> The within-channel spin block of a collinear run, against what it has to be.
+  !>
+  !> Over one spin channel sigma_z reduces to that channel's own overlap, so the block is
+  !> the identity -- but it IS the integral, taken over the spheres, the interstitial and
+  !> the vacuum like every other matrix element here, not a number written down. That is
+  !> what makes this a check and not a tautology: a region left out of the sum, a bad
+  !> normalisation, or a film whose vacuum never reached the operator all move the
+  !> diagonal off one, and none of them would move a constant.
+  !>
+  !> The magnitude is tested and not the sign, because the sign is the channel label and
+  !> is assigned rather than measured: channel 1 is up.
+  !>
+  !> Every k is judged; only l_report prints. The two are separate because they reach the
+  !> reader by different routes. An abort leaves any rank, but a WRITE to oUnit only
+  !> reaches `out` from rank 0, and the k are handed out in strides, so a check that
+  !> printed at several k would show one of them and hide the rest -- which is how this
+  !> routine started life, reporting three k and displaying one.
+  SUBROUTINE melem_spin_channel_check(sz, ik, tol, l_report)
+    COMPLEX, INTENT(IN) :: sz(:, :, :)        ! (nb,nb,2) the two channels' blocks
+    INTEGER, INTENT(IN) :: ik
+    REAL,    INTENT(IN) :: tol
+    LOGICAL, INTENT(IN) :: l_report
+
+    INTEGER :: nb, ch, m, n
+    REAL    :: dev, offmax
+    CHARACTER(LEN=200) :: msg
+
+    nb = SIZE(sz, 1)
+    IF (l_report) WRITE(oUnit, '(a,i0)') 'wannierlib collinear spin-channel check, k = ', ik
+    DO ch = 1, SIZE(sz, 3)
+      dev = 0.0; offmax = 0.0
+      DO m = 1, nb
+        dev = MAX(dev, ABS(ABS(sz(m, m, ch)) - 1.0))
+        DO n = 1, nb
+          IF (n /= m) offmax = MAX(offmax, ABS(sz(n, m, ch)))
+        END DO
+      END DO
+      IF (l_report) WRITE(oUnit, '(a,i0,a,f10.6,a,f10.6)') &
+        '  channel ', ch, ': max | |diag|-1 | = ', dev, '   largest off-diagonal = ', offmax
+      IF (dev > tol .OR. offmax > tol) THEN
+        WRITE(msg, '(a,i0,a,i0,a,es10.3,a,es10.3)') &
+          'the spin block of collinear channel ', ch, ' at k = ', ik, &
+          ' is not the unit matrix: max | |diag|-1 | = ', dev, ', largest off-diagonal = ', offmax
+        CALL juDFT_error(TRIM(msg), &
+          hint='sigma_z within one channel is that channel own overlap, so the block has '// &
+               'to be the identity; a region left out of the integral moves it off', &
+          calledby='melem_spin_channel_check')
+      END IF
+    END DO
+  END SUBROUTINE melem_spin_channel_check
 
 END MODULE m_melem_spin

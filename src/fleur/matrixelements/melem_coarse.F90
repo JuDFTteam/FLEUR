@@ -32,7 +32,8 @@ MODULE m_melem_coarse
    USE m_types_mat
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_window, ONLY: t_melem_window
-   USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule
+   USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule, &
+                           melem_spin_channel_check
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_vacuum
    USE m_types_matelements_soc, ONLY: t_matelements_soc
@@ -63,6 +64,12 @@ MODULE m_melem_coarse
       !> is built here with the other coarse matrices even though the operator itself cannot
       !> be assembled until both channels are wannierised.
       COMPLEX, ALLOCATABLE :: x0(:, :, :)         !< (nb,nb,nk_loc)
+      !> collinear jspins=2 only: each channel's OWN spin block, <ch|sigma_z|ch>, per k.
+      !> It is what a single channel can say about the spin on its own, and unlike x0 it
+      !> needs no second gauge, so it is the one spin quantity a collinear run can
+      !> interpolate. The provider returns all four blocks either way; this keeps the two
+      !> diagonal ones instead of discarding them.
+      COMPLEX, ALLOCATABLE :: sz0(:, :, :, :)     !< (nb,nb,2,nk_loc)
       !> Exchange torque T = -mu_B sigma x Omega_xc, muffin-tin only. Over spinors the
       !> three Cartesian components; collinearly only the cross-spin block, for the same
       !> reason x0 is only that: the combined 2N operator needs both gauges.
@@ -112,10 +119,12 @@ CONTAINS
       this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop &
                        .OR. request%needs_op('exchangeTorque')) .AND. l_spinors
       !> L is spin-diagonal, so each channel has its own and either list is reason enough
-      !> to build it. The cross-spin overlap is only ever wanted by the real-space export:
-      !> the interpolated spin operator does not exist here, see the guard below.
+      !> to build it. The spin splits in two: the cross-spin overlap is wanted only by the
+      !> real-space export, while the channel's own block also feeds <interpolation>.
       l_ch_orb  = this%n_channels == 2 .AND. request%needs_op('orbital')
-      l_ch_spin = this%n_channels == 2 .AND. request%has_op_r('spin')
+      !> needs_op and not has_op_r: the channel block feeds <interpolation> as well as
+      !> the real-space 2N operator, and either request has to allocate it.
+      l_ch_spin = this%n_channels == 2 .AND. request%needs_op('spin')
       !> Two channels do NOT mean no spin-orbit coupling. Keeping it out of the eigenproblem
       !> and adding it afterwards as an operator in the Wannier basis is a construction of
       !> its own, and the one that keeps the Wannier functions spin-pure: with SOC in the
@@ -169,9 +178,15 @@ CONTAINS
             calledby="melem_coarse_init")
       END IF
 
+      !> Two arrays, two requests, so two conditions. The cross-spin block leaves only
+      !> through <operatorsRs>: a run that asks for the spin in <interpolation> alone has
+      !> no reader for it, and reserving it on the wider condition would fill it for
+      !> nobody. The channel's own block is what that run does need.
+      IF (this%n_channels == 2 .AND. request%has_op_r('spin')) THEN
+         ALLOCATE (this%x0(window%num_bands, window%num_bands, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
       IF (l_ch_spin) THEN
-         ALLOCATE (this%x0(window%num_bands, window%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
-                   source=cmplx(0.0, 0.0))
+         ALLOCATE (this%sz0(window%num_bands, window%num_bands, 2, nkc_loc), source=cmplx(0.0, 0.0))
       END IF
       IF (this%l_active .AND. request%needs_op('exchangeTorque')) THEN
          ALLOCATE (this%t0(window%num_bands, window%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
@@ -254,7 +269,7 @@ CONTAINS
       END IF
 
       IF (this%n_channels == 2) THEN
-         l_do_spin = request%has_op_r('spin')
+         l_do_spin = request%needs_op('spin')
          l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital')
          l_do_soc  = request%has_op_r('spinOrbit')
          l_do_torque = request%has_op_r('exchangeTorque')
@@ -373,11 +388,24 @@ CONTAINS
                                                       spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
                                                       ikpt, tol=1.0e-3)
             ELSE
-               this%x0(:, :, il) = spinop%mat(1, 2)%data_c
-               !> Not Hermitian on its own -- the cross-spin block is the adjoint of the
-               !> other one, not of itself -- so only finite and non-zero are asked of it.
-               IF (ikpt == 1) CALL melem_check_matrix(this%x0(:, :, il:il), 'spin cross-block', &
-                                                     ikpt, l_hermitian=.FALSE.)
+               !> Guarded, because l_do_spin is now the wider of the two conditions
+               !> above: an interpolation-only request reaches here with no x0.
+               IF (ALLOCATED(this%x0)) THEN
+                  this%x0(:, :, il) = spinop%mat(1, 2)%data_c
+                  !> Not Hermitian on its own -- the cross-spin block is the adjoint of the
+                  !> other one, not of itself -- so only finite and non-zero are asked of it.
+                  IF (ikpt == 1) CALL melem_check_matrix(this%x0(:, :, il:il), 'spin cross-block', &
+                                                        ikpt, l_hermitian=.FALSE.)
+               END IF
+               !> The two diagonal blocks, which the provider built alongside the cross one.
+               !> sigma_z over channel 1 is its overlap and over channel 2 its negative: the
+               !> channel index IS the spin index when the two are separate eigenproblems.
+               IF (ALLOCATED(this%sz0)) THEN
+                  this%sz0(:, :, 1, il) =  spinop%mat(1, 1)%data_c
+                  this%sz0(:, :, 2, il) = -spinop%mat(2, 2)%data_c
+                  CALL melem_spin_channel_check(this%sz0(:, :, :, il), ikpt, tol=1.0e-3, &
+                                                l_report=(ikpt == 1))
+               END IF
             END IF
          END IF
 
@@ -544,6 +572,7 @@ CONTAINS
       IF (ALLOCATED(this%soc0)) DEALLOCATE (this%soc0)
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
+      IF (ALLOCATED(this%sz0)) DEALLOCATE (this%sz0)
       IF (ALLOCATED(this%t0)) DEALLOCATE (this%t0)
       IF (ALLOCATED(this%hxc0)) DEALLOCATE (this%hxc0)
       IF (ALLOCATED(this%tx0)) DEALLOCATE (this%tx0)
