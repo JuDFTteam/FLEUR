@@ -239,7 +239,7 @@ CONTAINS
       TYPE(t_rsoc) :: rsoc
       INTEGER, ALLOCATABLE :: ev_list(:)
       LOGICAL :: l_spinor_records, l_do_spin, l_do_orb, l_do_soc, l_do_torque
-      LOGICAL :: l_taxis_common, l_tperp
+      LOGICAL :: l_taxis_common
       REAL    :: taxis(3)
       INTEGER :: ikpt, itype, il, na, iatom, ib, ch, a
 
@@ -384,9 +384,9 @@ CONTAINS
                !> combination built out of them, which is what leaves this module. A
                !> transposed block index survives the first check and fails here.
                IF (ikpt == 1) CALL melem_check_matrix(this%s0(:, :, :, il), 'spin (assembled)', ikpt)
-               IF (ikpt <= 3) CALL melem_spin_sumrule(this%s0(:, :, :, il), &
-                                                      spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
-                                                      ikpt, tol=1.0e-3)
+               CALL melem_spin_sumrule(this%s0(:, :, :, il), &
+                                       spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
+                                       ikpt, tol=1.0e-3, l_report=(ikpt == 1))
             ELSE
                !> Guarded, because l_do_spin is now the wider of the two conditions
                !> above: an interpolation-only request reaches here with no x0.
@@ -440,8 +440,8 @@ CONTAINS
                                                       'exchangeTorque (assembled)', ikpt)
                !> T.m = 0 holds by construction, so this needs no reference to compare
                !> against. It fails on a sign in the Pauli assembly and on a wrong axis.
-               IF (ikpt <= 3) CALL melem_torque_perp_check(this%t0(:, :, :, il), taxis, &
-                                                           ikpt, 1.0e-8, l_tperp)
+               CALL melem_torque_perp_check(this%t0(:, :, :, il), taxis, &
+                                            ikpt, 1.0e-8, l_report=(ikpt == 1))
             ELSE
                !> This block IS updown.perpmag of the classic route.
                this%tx0(:, :, il) = torqop%mat(1, 2)%data_c

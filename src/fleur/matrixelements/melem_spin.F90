@@ -53,29 +53,56 @@ CONTAINS
   !> With interstitial + MT summed, spin-trace orthonormality gives
   !>   o_uu(m,m) + o_dd(m,m) = 1  (norm), and the per-band spin |<sigma>_m| <= 1.
   !> For a magnet with the moment along z: <sigma_z>_m ~ +/-1, <sigma_xy>_m ~ 0.
-  SUBROUTINE melem_spin_sumrule(s0, o_uu, o_dd, ik, tol)
+  !> Every k is judged and only l_report prints the table, for the reason spelled out in
+  !> melem_spin_channel_check: a verdict has to be able to leave any rank, while a WRITE
+  !> to oUnit reaches `out` from rank 0 alone. Printed at three k and judged at three k,
+  !> as this was, a violation at the other two was found and then discarded.
+  !>
+  !> Both bounds are exact, not empirical. The norm is one by orthonormality of the
+  !> eigenvectors, and |<s>| <= 1 holds for any normalised spinor, so a run past the
+  !> tolerance has matrix elements that are wrong rather than imprecise -- which is why
+  !> this now stops instead of printing a line nobody reads.
+  SUBROUTINE melem_spin_sumrule(s0, o_uu, o_dd, ik, tol, l_report)
     COMPLEX, INTENT(IN) :: s0(:, :, :)         ! (nb,nb,3)
     COMPLEX, INTENT(IN) :: o_uu(:, :), o_dd(:, :)
     INTEGER, INTENT(IN) :: ik
     REAL,    INTENT(IN) :: tol
+    LOGICAL, INTENT(IN) :: l_report
 
     INTEGER :: nb, m, nbad
-    REAL    :: nrm, sx, sy, sz, smag
+    REAL    :: nrm, sx, sy, sz, smag, worst_nrm, worst_mag
+    CHARACTER(LEN=200) :: msg
 
     nb = SIZE(s0, 1); nbad = 0
-    WRITE(oUnit, '(a,i0)') 'wannierlib spin sum-rule check, k = ', ik
-    WRITE(oUnit, '(a)')    '  band     norm    <sx>     <sy>     <sz>    |<s>|'
+    worst_nrm = 0.0; worst_mag = 0.0
+    IF (l_report) THEN
+      WRITE(oUnit, '(a,i0)') 'wannierlib spin sum-rule check, k = ', ik
+      WRITE(oUnit, '(a)')    '  band     norm    <sx>     <sy>     <sz>    |<s>|'
+    END IF
     DO m = 1, nb
       nrm = REAL(o_uu(m, m) + o_dd(m, m))
       sx  = REAL(s0(m, m, 1)); sy = REAL(s0(m, m, 2)); sz = REAL(s0(m, m, 3))
       smag = SQRT(sx*sx + sy*sy + sz*sz)
       IF (ABS(nrm - 1.0) > tol .OR. smag > 1.0 + tol) nbad = nbad + 1
-      WRITE(oUnit, '(i6,5f9.4)') m, nrm, sx, sy, sz, smag
+      worst_nrm = MAX(worst_nrm, ABS(nrm - 1.0))
+      worst_mag = MAX(worst_mag, smag)
+      IF (l_report) WRITE(oUnit, '(i6,5f9.4)') m, nrm, sx, sy, sz, smag
     END DO
-    IF (nbad == 0) THEN
-      WRITE(oUnit, '(a)') '  sum-rule OK: norms=1 and |<s>|<=1 for all bands'
-    ELSE
-      WRITE(oUnit, '(a,i0,a)') '  WARNING: ', nbad, ' bands violate norm=1 or |<s>|<=1'
+    IF (l_report) THEN
+      IF (nbad == 0) THEN
+        WRITE(oUnit, '(a)') '  sum-rule OK: norms=1 and |<s>|<=1 for all bands'
+      ELSE
+        WRITE(oUnit, '(a,i0,a)') '  WARNING: ', nbad, ' bands violate norm=1 or |<s>|<=1'
+      END IF
+    END IF
+    IF (nbad > 0) THEN
+      WRITE(msg, '(a,i0,a,i0,a,es10.3,a,es10.3)') &
+        'the spin sum rule fails for ', nbad, ' bands at k = ', ik, &
+        ': largest |norm-1| = ', worst_nrm, ', largest |<s>| = ', worst_mag
+      CALL juDFT_error(TRIM(msg), &
+        hint='the norm is one by orthonormality and |<s>| cannot pass one for a '// &
+             'normalised spinor, so these matrix elements are wrong, not imprecise', &
+        calledby='melem_spin_sumrule')
     END IF
   END SUBROUTINE melem_spin_sumrule
 

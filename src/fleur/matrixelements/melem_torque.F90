@@ -107,16 +107,21 @@ CONTAINS
    !>
    !> It cannot see an overall sign or scale, since both survive the projection. Those
    !> are fixed by comparing against the stored perpmag, not here.
-   SUBROUTINE melem_torque_perp_check(t0, axis, ik, tol, l_ok)
+   !> Judged at every k and reported at one, like melem_spin_channel_check, and for the
+   !> same reason: oUnit reaches `out` from rank 0 alone. The verdict is not handed back:
+   !> it used to be, and the one caller dropped it. Now a failure stops the run, so what
+   !> a caller could read would always be .TRUE., which is worse than nothing.
+   SUBROUTINE melem_torque_perp_check(t0, axis, ik, tol, l_report)
       COMPLEX, INTENT(IN)  :: t0(:,:,:)
       REAL,    INTENT(IN)  :: axis(3)
       INTEGER, INTENT(IN)  :: ik
       REAL,    INTENT(IN)  :: tol
-      LOGICAL, INTENT(OUT) :: l_ok
+      LOGICAL, INTENT(IN)  :: l_report
 
       COMPLEX, ALLOCATABLE :: proj(:,:)
       REAL :: rel, scale
       INTEGER :: nb
+      LOGICAL :: l_ok
 
       nb = SIZE(t0, 1)
       ALLOCATE(proj(nb, nb))
@@ -126,12 +131,15 @@ CONTAINS
       rel   = MAXVAL(ABS(proj)) / scale
       l_ok  = rel < tol
 
-      WRITE(oUnit, '(a,i0,a,es10.3,a,a)') &
+      IF (l_report) WRITE(oUnit, '(a,i0,a,es10.3,a,a)') &
          'wannierlib exchange-torque perpendicularity, k = ', ik, &
          ': max |T.m| / max|T| = ', rel, '   ', MERGE('OK  ', 'FAIL', l_ok)
-      IF (.NOT. l_ok) WRITE(oUnit, '(a)') &
-         '  the torque is not perpendicular to the moment: the blocks, the Pauli '// &
-         'assembly or the axis disagree'
+      IF (.NOT. l_ok) THEN
+         CALL juDFT_error('the exchange torque is not perpendicular to the moment', &
+            hint='T = -mu_B sigma x Omega_xc is perpendicular by construction, so a '// &
+                 'finite T.m means the blocks, the Pauli assembly or the axis disagree', &
+            calledby='melem_torque_perp_check')
+      END IF
 
       DEALLOCATE(proj)
    END SUBROUTINE melem_torque_perp_check
