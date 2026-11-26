@@ -7,7 +7,7 @@
 !> B(k), C(k) and F(k): the three tensors of the modern theory in the Wannier gauge, one
 !> step before the Fourier sum that writes WF<n>_bmn.dat, _cmn.dat and _fmn.dat.
 !>
-!> Asked for by <operatorsKs>, which collects what the run holds in k whether or not a
+!> Asked for by KS="T", which collects what the run holds in k whether or not a
 !> gauge is in it, and written to a file of its own rather than beside the Bloch-basis
 !> matrices, because these three DO carry a gauge and nothing in a dataset's shape says so.
 !>
@@ -76,8 +76,8 @@ CONTAINS
       TYPE(t_kpts),         INTENT(IN) :: kpts                    !< the full-zone list the tensors are on
       TYPE(t_cell),         INTENT(IN) :: cell
       INTEGER,              INTENT(IN) :: nw, jspin, mpicm, irank
-      !> Which of the three <operatorsKs> named. Not the same question as whether the
-      !> slice exists: <operatorsRs> may have built C or F for its own .dat file, and a
+      !> Which of the three KS="T" named. Not the same question as whether the
+      !> slice exists: RS="T" may have built C or F for its own .dat file, and a
       !> tensor nobody asked for in k has no business in this one.
       LOGICAL,              INTENT(IN) :: l_want_b, l_want_c, l_want_f
 #ifdef CPP_HDF
@@ -96,7 +96,7 @@ CONTAINS
       !> way that happens, and B says so where it is built. Saying it again here beats a
       !> file with a dataset silently absent from it.
       IF (.NOT. (l_b .OR. l_c .OR. l_f)) THEN
-         IF (l_root) WRITE (oUnit, '(a)') 'wannierlib: <operatorsKs> asked for B(k), '// &
+         IF (l_root) WRITE (oUnit, '(a)') 'wannierlib: KS="T" asked for B(k), '// &
             'C(k) or F(k) and none of them could be built -> nothing written'
          RETURN
       END IF
@@ -151,7 +151,7 @@ CONTAINS
             ' Wannier functions, ', nkptf, ' k-points and the list they are on, Wannier gauge)'
       END IF
 #else
-      CALL juDFT_error("wannierlib: bmn/cmn/fmn in <operatorsKs> need FLEUR built with HDF5", &
+      CALL juDFT_error("wannierlib: bmn/cmn/fmn with KS='T' need FLEUR built with HDF5", &
                        calledby="wannierlib_export_modern_k")
 #endif
    END SUBROUTINE wannierlib_export_modern_k

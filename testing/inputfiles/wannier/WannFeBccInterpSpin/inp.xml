@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.39">
+<fleurInput fleurInputVersion="0.40">
    <comment>
       bcc Fe FM, collinear, spin interpolated
    </comment>
@@ -61,14 +61,13 @@
       <wannierlib wannierize="T">
         <bands numBands="6" minBand="5" maxBand="10"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
-        <operatorsRs>
-          <operator name="hamiltonian"/>
-        </operatorsRs>
+        <operators>
+           <hamiltonian RS="T" INT="T"/>
+           <spin INT="T"/>
+        </operators>
         <interpolation>
           <domain listName="path-2" suffix="_plane"/>
           <domain listName="w222"/>
-          <operator name="hamiltonian"/>
-          <operator name="spin"/>
         </interpolation>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

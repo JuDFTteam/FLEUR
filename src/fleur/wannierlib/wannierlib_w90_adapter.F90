@@ -398,7 +398,7 @@ CONTAINS
     !> Transport last, because it reads the gauge: tran_main builds its own real-space
     !> Hamiltonian from u_matrix, u_matrix_opt and eigval, which are exactly what the calls
     !> above have already set, so nothing further is handed to it. That H(R) is Wannier90's
-    !> own, with its own Wigner-Seitz convention, and is NOT the one <operatorsRs> writes --
+    !> own, with its own Wigner-Seitz convention, and is NOT the one RS="T" writes --
     !> two objects of the same name that must not be read into each other.
     !>
     !> Every rank calls it although tran_main is serial: w90_transport runs it on rank 0 and

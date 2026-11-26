@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.39">
+<fleurInput fleurInputVersion="0.40">
    <comment>
       bcc Fe FM, collinear + SOC
    </comment>
@@ -62,19 +62,17 @@
         <bands numBands="12" minBand="9" maxBand="20"/>
         <disentanglement disWinMin="-0.1" disWinMax="0.7" disFrozMin="-0.1" disFrozMax="0.7" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
         <wannierization numIter="400" convTol="0.00000001" convWindow="3"/>
-        <export wannier90="T" bmesh="T"/>
-        <operatorsKs>
-          <operator name="spin"/>
-          <operator name="orbital"/>
-          <operator name="bmn"/>
-        </operatorsKs>
-        <operatorsRs>
-          <operator name="hamiltonian"/>
-          <operator name="bmn"/>
-          <operator name="spin"/>
-          <operator name="orbital"/>
-          <operator name="spinOrbit"/>
-        </operatorsRs>
+        <export>
+           <wannier90 on="T"/>
+           <bmesh on="T"/>
+        </export>
+        <operators>
+           <hamiltonian RS="T"/>
+           <spin KS="T" RS="T"/>
+           <orbital KS="T" RS="T"/>
+           <spinOrbit RS="T"/>
+           <bmn KS="T" RS="T"/>
+        </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

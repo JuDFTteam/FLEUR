@@ -18,9 +18,12 @@ int dropInputSchema(char* version)
 {
   char * xsd_txt;
   int xsd_len;
-   if (strcmp(version,"0.39")==0){
+   if (strcmp(version,"0.40")==0){
      xsd_len=FleurInputSchema_xsd_len;
      xsd_txt = FleurInputSchema_xsd;
+   } else if (strcmp(version,"0.39")==0){
+     xsd_len=FleurInputSchema_39_xsd_len;
+     xsd_txt = FleurInputSchema_39_xsd;
    } else if (strcmp(version,"0.38")==0){
      xsd_len=FleurInputSchema_38_xsd_len;
      xsd_txt = FleurInputSchema_38_xsd;

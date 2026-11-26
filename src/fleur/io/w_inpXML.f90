@@ -930,69 +930,49 @@ WRITE (fileNum, 242) fr(1.0)
          WRITE (fileNum, 446) wannNumBands, wannMinBand, wannMaxBand
          WRITE (fileNum, '(a)') '         <disentanglement disFrozMax="0.0" disNumIter="10000" disConvTol="0.000000001" disConvWindow="10" disMixRatio="0.5"/>'
          WRITE (fileNum, '(a)') '         <wannierization numIter="10000" convTol="0.000000001" convWindow="10" precond="F"/>'
-         !> The stages below are off because they are not there: a commented block is the
-         !> switch, the same thing the absence of the element says. None of them carries an
-         !> inner comment, because an XML comment does not nest and a double hyphen inside
-         !> one ends it early -- which would truncate the file at that point.
-         WRITE (fileNum, '(a)') '         <!--'
-         WRITE (fileNum, '(a)') '         <operatorsKs>'
-         WRITE (fileNum, '(a)') '            <operator name="spin"/>'
-         WRITE (fileNum, '(a)') '            <operator name="orbital"/>'
-         WRITE (fileNum, '(a)') '            <operator name="spinOrbit"/>'
-         WRITE (fileNum, '(a)') '            <operator name="exchangeTorque"/>'
-         WRITE (fileNum, '(a)') '            <operator name="bmn"/>'
-         WRITE (fileNum, '(a)') '            <operator name="cmn"/>'
-         WRITE (fileNum, '(a)') '            <operator name="fmn"/>'
-         WRITE (fileNum, '(a)') '         </operatorsKs>'
-         WRITE (fileNum, '(a)') '         -->'
-         WRITE (fileNum, '(a)') '         <!--'
-         WRITE (fileNum, '(a)') '         <operatorsRs>'
-         WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
-         WRITE (fileNum, '(a)') '            <operator name="position"/>'
-         WRITE (fileNum, '(a)') '            <operator name="positionPw90"/>'
-         WRITE (fileNum, '(a)') '            <operator name="bmn"/>'
-         WRITE (fileNum, '(a)') '            <operator name="fmn"/>'
-         WRITE (fileNum, '(a)') '            <operator name="cmn"/>'
-         WRITE (fileNum, '(a)') '            <operator name="spin"/>'
-         WRITE (fileNum, '(a)') '            <operator name="orbital"/>'
-         WRITE (fileNum, '(a)') '            <operator name="spinOrbit"/>'
-         WRITE (fileNum, '(a)') '            <operator name="exchangeTorque"/>'
+         !> Every operator is written with its switches off, so switching one on is a
+         !> value edited in place: no line is added, deleted or commented out, which is
+         !> what a generator driving FLEUR can do. Nothing below is wrapped in an XML
+         !> comment, so each stage can carry its own explanation: a comment does not
+         !> nest, and a double hyphen inside one would end it early.
+         WRITE (fileNum, '(a)') '         <operators>'
+         WRITE (fileNum, '(a)') '            <hamiltonian                 RS="F" INT="F"/>'
+         WRITE (fileNum, '(a)') '            <position                    RS="F"/>'
+         WRITE (fileNum, '(a)') '            <positionPw90                RS="F"/>'
+         WRITE (fileNum, '(a)') '            <velocity                           INT="F"/>'
+         WRITE (fileNum, '(a)') '            <spin              KS="F"    RS="F" INT="F"/>'
+         WRITE (fileNum, '(a)') '            <orbital           KS="F"    RS="F" INT="F"/>'
+         WRITE (fileNum, '(a)') '            <spinOrbit         KS="F"    RS="F" INT="F"/>'
+         WRITE (fileNum, '(a)') '            <exchangeTorque    KS="F"    RS="F" INT="F"/>'
          !> Only on the spinor route, because that is where it exists: the projection on
          !> the moment is taken over a spinor, and offering it in a collinear template
          !> would put a name in the file that the run then refuses.
          IF (judft_was_argument("-spinor")) THEN
-            WRITE (fileNum, '(a)') '            <operator name="exchangeField"/>'
+            WRITE (fileNum, '(a)') '            <exchangeField               RS="F"/>'
          END IF
-         WRITE (fileNum, '(a)') '         </operatorsRs>'
-         WRITE (fileNum, '(a)') '         -->'
+         WRITE (fileNum, '(a)') '            <bmn               KS="F"    RS="F"/>'
+         WRITE (fileNum, '(a)') '            <cmn               KS="F"    RS="F"/>'
+         WRITE (fileNum, '(a)') '            <fmn               KS="F"    RS="F"/>'
+         WRITE (fileNum, '(a)') '         </operators>'
+         !> Where the INT="T" operators land: listName names a list of kpts.xml, suffix
+         !> names the output files, refinementPoints subdivides each segment of a path.
+         !> A cell with no type="path" list has nothing to resolve on, so the element is
+         !> left out; every INT is "F" in this template, so leaving it out costs nothing.
 447      FORMAT('            <domain listName="', a, '" suffix="dense" refinementPoints="10"/>')
-         !> Two branches, and not one with a conditional wrapper, because an XML comment
-         !> does not nest: a commented stage may not carry the comment that explains it,
-         !> whose own close would end the wrapper early and leave the element live. With a
-         !> path the stage runs and the explanation sits above it; without one the
-         !> explanation is a closed comment and only the element is wrapped.
          IF (LEN_TRIM(wannPathName) > 0) THEN
-            WRITE (fileNum, '(a)') '         <!-- listName names a list of kpts.xml, suffix names the output files,'
-            WRITE (fileNum, '(a)') '              and refinementPoints subdivides each segment of a path. -->'
             WRITE (fileNum, '(a)') '         <interpolation useWsDistance="F">'
             WRITE (fileNum, 447) TRIM(ADJUSTL(wannPathName))
-            WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
             WRITE (fileNum, '(a)') '         </interpolation>'
-         ELSE
-            WRITE (fileNum, '(a)') '         <!-- This cell got no type="path" list, so the stage has nothing to resolve'
-            WRITE (fileNum, '(a)') '              on. Add a path list to kpts.xml and uncomment it; path-2 is the name'
-            WRITE (fileNum, '(a)') '              inpgen gives it for the lattices where it does write one. -->'
-            WRITE (fileNum, '(a)') '         <!--'
-            WRITE (fileNum, '(a)') '         <interpolation useWsDistance="F">'
-            WRITE (fileNum, '(a)') '            <domain listName="path-2" suffix="dense" refinementPoints="10"/>'
-            WRITE (fileNum, '(a)') '            <operator name="hamiltonian"/>'
-            WRITE (fileNum, '(a)') '         </interpolation>'
-            WRITE (fileNum, '(a)') '         -->'
          END IF
-         WRITE (fileNum, '(a)') '         <!--'
-         WRITE (fileNum, '(a)') '         <export wannier90="F" wannierberri="F" irrep="F" bmesh="F" orbitrans="F"'
-         WRITE (fileNum, '(a)') '                 juwip="F" plotWF="F" plotGrid="40 40 40" plotCells="1 1 1"/>'
-         WRITE (fileNum, '(a)') '         -->'
+         WRITE (fileNum, '(a)') '         <export>'
+         WRITE (fileNum, '(a)') '            <wannier90    on="F"/>'
+         WRITE (fileNum, '(a)') '            <wannierberri on="F"/>'
+         WRITE (fileNum, '(a)') '            <irrep        on="F"/>'
+         WRITE (fileNum, '(a)') '            <bmesh        on="F"/>'
+         WRITE (fileNum, '(a)') '            <orbitrans    on="F"/>'
+         WRITE (fileNum, '(a)') '            <juwip        on="F"/>'
+         WRITE (fileNum, '(a)') '            <plotWF       on="F" grid="40 40 40" cells="1 1 1"/>'
+         WRITE (fileNum, '(a)') '         </export>'
          WRITE (fileNum, '(a)') '      </wannierlib>'
       END IF
       WRITE (fileNum, '(a)') '   </output>'

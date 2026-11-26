@@ -62,7 +62,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN), OPTIONAL :: wf_channel            !< collinear spin channel (1/2); default 1
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix  !< '_spin1'/'_spin2' collinear; empty otherwise
-      !> B(k) and this rank's global-k list, handed up for the <operatorsKs> file. The file
+      !> B(k) and this rank's global-k list, handed up for the Bloch-basis file. The file
       !> is written by the driver because the writer lives in export/, which this directory
       !> does not reach into: what belongs here is building B(k), not writing it.
       COMPLEX, ALLOCATABLE, INTENT(OUT), OPTIONAL :: b0k_out(:, :, :, :)
@@ -97,7 +97,7 @@ CONTAINS
       IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
       wf_ch = 1
       IF (PRESENT(wf_channel)) wf_ch = wf_channel
-      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operatorsRs (WF1/WF2)
+      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel O(R) files (WF1/WF2)
 
       CALL timestart('wgauge_run')
 
@@ -128,11 +128,11 @@ CONTAINS
                                    coarse%s0, coarse%l0, coarse%soc4, coarse%t0, coarse%hxc0, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
 
-      !> (2b) <operatorsKs> can also ask for B, C and F. They are not in the Bloch basis
-      !> the other half of that block promises: contracting over PAIRS of neighbours needs
+      !> (2b) KS="T" can also ask for B, C and F. They are not in the Bloch basis
+      !> the other half of that switch promises: contracting over PAIRS of neighbours needs
       !> a band index that means the same state at k+b1 and at k+b2, and the Bloch one does
       !> not, so these three carry the Wannier gauge and go to a file of their own. The
-      !> request is independent of <operatorsRs> -- either block may ask for a tensor and
+      !> request is independent of RS="T" -- either switch may ask for a tensor and
       !> neither obliges the other -- so this runs whether or not the pass above did.
       !>
       !> C and F arrive already built, so only B is made here; the three travel up to the

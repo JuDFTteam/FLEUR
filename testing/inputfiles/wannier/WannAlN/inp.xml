@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.39">
+<fleurInput fleurInputVersion="0.40">
    <comment>
       AlN en wurtzita                                                                                     
    </comment>
@@ -85,10 +85,10 @@
       <wannierlib wannierize="T">
          <bands numBands="8" minBand="1" maxBand="8"/>
          <wannierization numIter="3000" convTol="0.00000001" convWindow="3" precond="T"/>
-         <operatorsRs>
-            <operator name="hamiltonian"/>
-            <operator name="orbital"/>
-         </operatorsRs>
+         <operators>
+            <hamiltonian RS="T"/>
+            <orbital RS="T"/>
+         </operators>
       </wannierlib>
 
    </output>

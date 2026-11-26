@@ -172,7 +172,7 @@ _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vect
 _OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1",
                    "rspauli.1", "wig_vectors"]
 # <export orbitrans="T"/> and juwip="T" do not copy the operator files: they decide where
-# <operatorsRs> writes them and under which name. The map is repeated here on purpose --
+# RS="T" writes them and under which name. The map is repeated here on purpose --
 # this is the only thing that can fail if the Fortran side stops moving them, because a
 # file that stays behind is simply a file the fixture does not find.
 #
@@ -564,7 +564,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"file and then stopped short of what the run asked for")
 
     expected = set(EXPORT_FILES.get(test_id, ()))
-    #> A consumer flag renames and moves what <operatorsRs> asked for, and only that. A
+    #> A consumer element renames and moves what RS="T" asked for, and only that. A
     #> run that asks for three operators gets three files: nothing stands in for the one
     #> it did not ask for. WannFeBcc asks for no spinOrbit, so input/spin_orbit is in the
     #> census above and in no expected set, which is what turns that into an assertion.

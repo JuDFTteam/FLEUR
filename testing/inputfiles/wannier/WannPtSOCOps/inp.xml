@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.39">
+<fleurInput fleurInputVersion="0.40">
    <comment>
       fcc platinum                                                                                        
    </comment>
@@ -60,13 +60,15 @@
         <bands numBands="36" minBand="7" maxBand="42"/>
         <disentanglement disWinMin="0.097264375" disWinMax="2.669716927" disFrozMin="0.097264375" disFrozMax="0.661487799" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
-        <operatorsRs>
-          <operator name="hamiltonian"/>
-          <operator name="spin"/>
-          <operator name="orbital"/>
-          <operator name="spinOrbit"/>
-        </operatorsRs>
-        <export juwip="T"/>
+        <export>
+           <juwip on="T"/>
+        </export>
+        <operators>
+           <hamiltonian RS="T"/>
+           <spin RS="T"/>
+           <orbital RS="T"/>
+           <spinOrbit RS="T"/>
+        </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
