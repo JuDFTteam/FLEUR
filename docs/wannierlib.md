@@ -17,7 +17,7 @@ If no suitable Wannier90 is found, `-wannier TRUE` builds the `external/wannier9
 submodule along with FLEUR:
 
 ```bash
-./configure.sh -libxc -wannier TRUE -hdf5 -l wannlib
+./configure.sh -libxc TRUE -wannier TRUE -hdf5 TRUE -l wannlib
 cd build.wannlib && make -j16
 ```
 
@@ -31,8 +31,10 @@ inpgen -inp.xml -kpt "wann8#gamma@grid=8,8,8" -noKsym
 Then point `<kPointListSelection listName="wann8"/>` at that list. The SCF itself may keep
 using the symmetry-reduced mesh.
 
-**The number of k-points must divide the number of MPI ranks exactly.** If it does not,
-FLEUR does *not* abort — it **hangs** on one k-point.
+**Choose a rank count that divides the number of k-points.** FLEUR prints the counts that
+do (`Most efficient MPI parallelization for:`), and a count that does not is slower rather
+than forbidden — but it has been measured to **hang** on one k-point instead of reporting
+anything: with 16 ranks, 1000 and 2744 k-points hang while 512, 1728 and 4096 finish.
 
 **Numbers in `inp.xml` are plain decimals.** FLEUR's expression parser reads digits, one
 decimal point and a leading sign, and stops at anything else, so `1.0e-10` fails with
@@ -67,10 +69,10 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 
     <wannierization numIter="3000" convTol="0.00001"/>
 
-    <operators_r>
+    <operatorsRs>
       <operator name="hamiltonian"/>
       <operator name="spin"/>
-    </operators_r>
+    </operatorsRs>
 
     <interpolation useWsDistance="F">
       <domain listName="path-2"/>
@@ -78,6 +80,8 @@ Only `<bands>` is required; every other sub-block is optional and independent.
     </interpolation>
 
     <export wannier90="T"/>
+
+    <transport axis="z" energyMin="0.097" energyMax="0.317"/>
   </wannierlib>
 </output>
 ```
@@ -87,7 +91,6 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 | attribute | default | meaning |
 |---|---|---|
 | `wannierize` | `F` | run the wannierisation |
-| `plotWF` | `F` | write the Wannier functions as XSF files, one per function, on a 40x40x40 grid over one unit cell. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
 
 ### 2.3 `<bands>` — which states enter
 
@@ -147,19 +150,28 @@ are then the trial orbitals themselves, orthonormalised. That is a real choice, 
 degenerate case — the minimisation converges to maximally localised functions whatever it
 starts from, so the initial projections only decide the gauge when it is switched off.
 
-### 2.6 `<operators_r>` — O(R) for external post-processing
+`kmeshTol` is the tolerance Wannier90 groups the b-vectors into shells with, and checks the
+completeness relation with. Its own value is `1e-6`. A wannierisation runs on a uniform
+full-zone mesh, so when the shells come out wrong the lattice is the first suspect rather
+than the mesh: a slightly distorted cell splits one shell into several, or misses Eq. (B1),
+and the run stops in `kmesh_get` with nothing left to turn. The mesh itself is checked
+nowhere, so a selected k-list that is not the grid `mp_grid` describes lands here too.
+Loosening this gets past that, and it is not free, because the weights are then solved over
+b-vectors of unequal length.
+
+### 2.6 `<operatorsRs>` — O(R) for external post-processing
 
 Writes the real-space operator matrices in the Wannier90/FLEUR standalone format. No band
 interpolation: these are the files an external transport code reads.
 
 ```xml
-<operators_r>
+<operatorsRs>
   <operator name="hamiltonian"/>   <!-- WF<n>_hr.dat   -->
   <operator name="position"/>      <!-- WF<n>_r.dat    -->
   <operator name="spin"/>          <!-- rspauli.1      -->
   <operator name="orbital"/>       <!-- anglmomrs.1    -->
-  <operator name="spin_orbit"/>    <!-- rssocmat.1     -->
-</operators_r>
+  <operator name="spinOrbit"/>    <!-- rssocmat.1     -->
+</operatorsRs>
 ```
 
 Accepted names:
@@ -168,13 +180,13 @@ Accepted names:
 |---|---|
 | `hamiltonian` | H(R) |
 | `position` | A(R) = `<0n|r|Rm>` |
-| `position_pw90` | the same in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation. Writes `WF<n>_rpw.dat`. |
+| `positionPw90` | the same in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation. Writes `WF<n>_rpw.dat`. |
 | `bmn` | B(R) = `<0n|H(r-R)|Rm>` |
 | `fmn` | F(R) = `<0n|r_a r_b|Rm>` — needs the pair overlap (uIu) |
 | `cmn` | C(R) = `<0n|r_a H r_b|Rm>` — needs uHu |
 | `spin` | S(R) |
 | `orbital` | L(R) |
-| `spin_orbit` | the spin-orbit operator |
+| `spinOrbit` | the spin-orbit operator |
 
 `fmn` and `cmn` are refused on a film: they need the vacuum halves of the pair overlap and
 of the momentum, which this layer does not reach. `spin` is refused on a film for the same
@@ -186,7 +198,7 @@ carrying spin density.
 ```xml
 <interpolation useWsDistance="F">
   <domain listName="path-2"/>
-  <domain listName="path-2" suffix="dense" npts="10"/>
+  <domain listName="path-2" suffix="dense" refinementPoints="10"/>
   <operator name="hamiltonian"/>
 </interpolation>
 ```
@@ -197,7 +209,7 @@ carrying spin density.
 |---|---|---|
 | `listName` | **yes** | an existing kPointList, in `kpts.xml` or any included file |
 | `suffix` | no | distinguishes this domain's `bands_wann_*.dat`; may be left off for at most one domain |
-| `npts` | no | subdivides each segment of an ordered list into `npts` pieces (`npts<=1` = list as-is) |
+| `refinementPoints` | no | subdivides each segment of an ordered list into `refinementPoints` pieces (`refinementPoints<=1` = list as-is) |
 
 Whether a list is a line, a plane or a mesh is a property of the list, not of FLEUR.
 
@@ -212,32 +224,98 @@ matters when the Wannier centres sit far from the origin. **Wannier90's own defa
 | `hamiltonian` | `bands_wann_interpol.dat`, `bands_wann_interpol_ev.dat` |
 | `spin` | `bands_wann_spin.dat` |
 | `orbital` | `bands_wann_orbmom.dat` |
-| `spin_orbit` | `bands_wann_spin_orbit.dat` |
+| `spinOrbit` | `bands_wann_spin_orbit.dat` |
 | `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
 | `eigenstates` | `bands_wann_eigenstates.dat` |
 
-`total="T"` (the default) asks for the site-summed projection; only `spin` and `orbital`
-have anything to sum over. `comp` selects Cartesian components.
-
-> The operator names are the **same** in `<operators_r>` and `<interpolation>` — in
-> particular it is `spin_orbit` in both. The two blocks do not accept the same *set* of
+> The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
+> particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
 > names, because not everything that has an O(R) has an interpolation driver and the other
 > way round, but a name never means two different things.
 
 ### 2.8 `<export>` — hand out matrices the run already holds
 
-One boolean per artefact, all `F` by default, all independent: they are not alternatives,
-and asking for one does not turn the others off.
+One boolean per **consumer**, all `F` by default, all independent: they are not
+alternatives, and asking for one never turns another off. A flag writes everything its
+consumer needs from this block, so what `wannier90` and `irrep`
+write is a subset of what `wannierberri` writes.
 
 | attribute | writes |
 |---|---|
 | `wannier90` | `WF<n>.amn`, `.mmn`, `.eig` — what a standalone `wannier90.x` needs to repeat the same wannierisation. The `.mmn` of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. |
-| `wannierberri` | `WF<n>_basis.hdf` — the plane-wave index list and the interstitial eigenvector coefficients, for symmetry analysis. Needs a full-zone mesh and a build with HDF5. |
-| `gauge` | `WF<n>_gauge.hdf` — `u_opt` and `u_mlwf`, the two factors Wannier90 returned. |
-| `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. |
+| `irrep` | `WF<n>_basis.hdf` -- the plane-wave index list and the eigenvector coefficients over the interstitial, which is what irrep reads to do the symmetry analysis. That region is invariant under the space group, so the characters taken over it are exact and the muffin-tin parts are not needed: that is what lets the analysis live outside this code. FLEUR dumps and describes -- the cell, the k-list, the eigenvalues and the spin angles are not repeated, they stay in `inp.xml`, `kpts.xml` and `out.xml` for the reader to derive, and the file declares its own layout, so a consumer never has to know how FLEUR stacks spinors. Needs a full-zone mesh and a build with HDF5. **Films are written too**: what makes a character over a region exact is that the group maps the region to itself, which the interstitial of a film does, so the charge in the vacuum never enters. A film describes its cell with `bravaisMatrixFilm` and `filmPos`, so the reader must understand those. |
+| `wannierberri` | everything the two rows above write: the Wannier90 set **and** `WF<n>_basis.hdf`. A superset rather than a third artefact -- WannierBerri computes no electronic structure of its own, its site-symmetric wannierisation consumes the `.amn/.mmn/.eig` and takes its symmetry table from what irrep builds out of the interstitial, so one flag asks for everything that route needs. It wannierises on the irreducible points alone, projects onto the symmetric subspace at every iteration and rotates the result over the full zone, so the symmetry constrains the gauge rather than being imposed afterwards. |
+| `plotWF` | `WF<n>_<nnn>.xsf` and `WF<n>_<nnn>.vts`, one pair per Wannier function: the real part and the modulus on a real-space grid. XSF is what XCrySDen and VESTA read, `.vts` what ParaView reads. `plotGrid="nx ny nz"` sets the resolution (`40 40 40` by default, at least 2 per direction) and is the whole price of the plot: one state evaluated per grid point, band and k-point, so `40^3` is 500x the work of `8^3`. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
+| `orbitrans` | `input/` — the directory the orbitrans transport code opens, holding both halves of what it reads. `lattice`, `atom_centers`, `wann_centers` and `N_wann_atom` are written here: orbitrans otherwise recovers them with regular expressions from a `.wout`, which library mode never writes. Beside them go the operator matrices `<operatorsRs>` produced, **moved and renamed, not copied** — `rspauli.1` is written as `spin`, `anglmomrs.1` as `orbital`, `rssocmat.1` as `spin_orbit`, `WF1_hr.dat` as `hoppings`, `wig_vectors` as `rpts`. Only the operators that were asked for: nothing stands in for one that was not. A second spin channel keeps its own name, since orbitrans wants one 2N basis and that is a combination, not a name. |
+| `juwip` | `w90files/` — the directory JuWIP opens, with the same files under OUR names, which is what it reads. Moved, not copied, like the row above; the two flags therefore cannot be asked for at once and saying so is an error rather than a silent choice. |
 
-What `<operators_r>` and `<interpolation>` write is deliberately not here: those compute
+What `<operatorsRs>` and `<interpolation>` write is deliberately not here: those compute
 something first and writing it is the last step, while `<export>` only copies out.
+
+What WannierBerri does with the symmetry table is worth knowing before choosing the mesh:
+it wannierises on the irreducible points alone, projects onto the symmetric subspace at
+every iteration, and rotates the result over the full zone with those matrices. The symmetry
+constrains the gauge throughout rather than being imposed at the end, and the cost follows
+the number of star representatives instead of the number of k-points.
+
+`plotWF` is the one flag here not named after a consumer: those two files are read by
+several programs. It is also the only one whose output is a picture rather than an input to
+another code, which is why it is the only one with no case in the test suite -- on the
+default grid it takes a case from twenty seconds to over nine minutes. The grid is spanned
+by the lattice vectors, so the `.vts` carries every point's cartesian coordinate: an image
+dataset (`.vti`), which stores one spacing per cartesian axis, draws a hexagonal or fcc cell
+sheared into a box it does not live in, and the picture looks perfectly fine.
+
+### 2.9 `<transport>` — ballistic conductance along one axis
+
+Hands the wannierised Hamiltonian to Wannier90's own transport module and gets back the
+Landauer conductance of the perfect crystal: how many bands propagate along the chosen
+direction at each energy. The calculation is the one `wannier90.x` does with
+`transport = .true.`, driven here from `inp.xml` and from the matrices the run already
+holds, so nothing is written out and read back.
+
+| attribute | default | meaning |
+|---|---|---|
+| `axis` | — | `x`, `y` or `z`: the cartesian direction the current flows along. Required. |
+| `energyMin` | −3 eV | bottom of the energy window, in Hartree, **absolute** — the same convention as the disentanglement windows. |
+| `energyMax` | +3 eV | top of the window. Given together with `energyMin`; leaving both out keeps Wannier90's default. |
+| `energyStep` | 0.01 eV | spacing of the energy grid. |
+| `hrCutoff` | none | hoppings smaller than this, in Hartree, are dropped before the Hamiltonian is cut into layers. |
+| `distCutoff` | no cutoff | hoppings reaching further than this, in Bohr, are dropped. Applied first. |
+
+Two files come out, both two columns with the energy in eV: `<seed>_qc.dat` is the
+transmission in units of the conductance quantum, `<seed>_dos.dat` the density of states of
+the same Hamiltonian.
+
+**The window default is not useful for a metal.** Wannier90's −3…3 eV is absolute, not
+relative to the Fermi level, so for anything whose `E_F` sits near 10 eV it covers a region
+with no bands and the transmission comes out identically zero. Give the window.
+
+**The axis needs a lattice vector parallel to it.** Wannier90 cuts the Hamiltonian into
+principal layers stacked along the axis, and it builds that stack out of one lattice vector,
+so a primitive bcc or fcc cell — whose vectors all point between axes — aborts with
+`1-D LATTICE VECTOR NOT DEFINED` whichever axis is asked for. A cell with `a3 ∥ z` works.
+
+**The Hamiltonian is not the one `<operatorsRs>` writes.** The transport module builds its
+own `H(R)` from the gauge matrices, with Wannier90's Wigner-Seitz convention; asking for
+`<operator name="hamiltonian"/>` as well gives a second `H(R)` that is ours. They answer
+different questions and neither is a check on the other.
+
+**Only bulk mode is reachable.** Wannier90 also does lead–conductor–lead, which needs a
+device geometry built from separate calculations; nothing here describes one, so the block
+asks for the periodic case and says so by not offering the choice.
+
+`hrCutoff` and `distCutoff` decide how thick a principal layer is: the largest lattice
+vector along the axis still carrying a hopping becomes the layer. They are an affordability
+knob and not a tuning one, and they are expensive in accuracy. On AlN the layer is two cells,
+and either cutoff reduces it to one — with that, the transmission summed over the window
+falls from 95.7 to 43.0 (`distCutoff="5.0"`) or to 34.0 (`hrCutoff="0.00367"`). The
+untruncated run is the right answer, and a truncated one can even look tidier: a Hamiltonian
+cut short gives a cleaner staircase at the wrong height.
+
+The check that costs nothing: a crystal with no scatterer transmits whole channels, so
+`T(E)` is an integer staircase whatever the energy mesh is. A curve that is smooth, or that
+sits at zero everywhere, is a broken run rather than a material with no conductance.
 
 ## 3. Species projections: `<wannierproj .../>`
 
@@ -383,10 +461,10 @@ https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#ang
         disFrozMin="0.020" disFrozMax="0.562"
         numIter="3000" convTol="0.00001" mixRatio="0.5"/>
       <wannierization numIter="3000" convTol="0.00001"/>
-      <operators_r>
+      <operatorsRs>
         <operator name="hamiltonian"/>
         <operator name="spin"/>
-      </operators_r>
+      </operatorsRs>
     </wannierlib>
   </output>
   ...
@@ -399,7 +477,7 @@ Energies in Hartree; `convTol` as a plain decimal, never `1.0e-5`.
 
 - **Give `disWinMin` and `disWinMax`**, and measure them on the wannierisation mesh. See 2.4.
 - **Plain decimals only.** `1.0e-10` is not a number to FLEUR's parser.
-- **`n_k` must divide the MPI ranks exactly**, or the run hangs instead of failing.
+- **Pick MPI ranks that divide `n_k`**, or the run can hang on one k-point without saying so.
 - **The wannierisation mesh is full-zone and gamma-centred** (`inpgen ... -noKsym`).
 - With `jspins=2` and no SOC the two spin channels wannierise **separately**, and the whole
   pipeline runs once per channel; with noco or SOC the states are spinors and there is one

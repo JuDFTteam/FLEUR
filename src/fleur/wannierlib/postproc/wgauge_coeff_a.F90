@@ -17,6 +17,7 @@ MODULE m_wgauge_coeff_a
   USE m_types_wgauge_bmesh
   USE m_wgauge_ft, ONLY : wgauge_ft_to_real_reduce
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+  USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wgauge_build_berry_aw_r, wgauge_check_berry_centres, wgauge_write_ar
@@ -168,7 +169,7 @@ CONTAINS
       fn = 'WF1'//TRIM(suffix)
       IF (PRESENT(wfpref)) fn = TRIM(wfpref)//TRIM(suffix)
     END IF
-    CALL wgauge_write_realspace(aw_r, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'r', TRIM(fn)//'.dat', 0)
+    CALL wgauge_write_realspace(aw_r, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'r', wannierlib_export_file(TRIM(fn)//'.dat'), 0)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (A(R), Ang)'
   END SUBROUTINE wgauge_write_ar
 

@@ -118,7 +118,7 @@ endif()
 target_link_libraries(fleur ${FLEUR_LIBRARIES})
 target_link_libraries(fleur ${FLEUR_LINK_LIBRARIES})
 
-
+include(cmake/gfleur.cmake)
 
 include(cmake/docker.txt)
 

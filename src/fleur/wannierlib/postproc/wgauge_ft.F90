@@ -475,7 +475,7 @@ CONTAINS
   END SUBROUTINE wgauge_ft_rtok
 
   !> Public wrapper exposing the Wigner-Seitz R-vectors + degeneracies (W90 convention)
-  !> so the real-space operator export (operators_r) can write wig_vectors.
+  !> so the real-space operator export (operatorsRs) can write wig_vectors.
   SUBROUTINE wgauge_ws_vectors(cell, mp_grid, irvec, ndegen, nrpts)
     TYPE(t_cell), INTENT(IN) :: cell
     INTEGER, INTENT(IN)  :: mp_grid(3)

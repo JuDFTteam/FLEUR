@@ -3583,8 +3583,13 @@
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="disFrozMax" type="FleurDouble" use="required"/>
-      <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="numIter" type="xsd:nonNegativeInteger" use="required">
+         <xsd:annotation>
+            <xsd:documentation>Iterations of the Omega_I minimisation. numIter="0" is legal and means: take the subspace the projections define, constrained to the frozen window, and leave it unoptimised. Wannier90 accepts it -- its own guard rejects dis_num_iter &lt; 0, not 0 -- and its iteration loop runs from 1, so it simply does not execute, while the projection and frozen-window steps that construct the subspace run before the loop and always. Omega_I is then the invariant of that subspace rather than its minimum over subspaces.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
+      <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>
       <xsd:attribute default="F" name="disFrozProj" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.01" name="disProjMin" type="FleurDouble" use="optional"/>
@@ -3597,7 +3602,58 @@
       </xsd:annotation>
       <xsd:attribute name="numIter" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
+      <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="precond" type="FleurBool" use="optional"/>
+      <xsd:attribute name="numCgSteps" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many conjugate-gradient steps Wannier90 takes before resetting to steepest descent (its num_cg_steps). Silence leaves Wannier90 on its own default.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="trialStep" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>The trial step of the parabolic line search along the search direction (Wannier90 trial_step). Changing it changes the path taken, so it is one of the handles a sweep varies when two runs land in different minima.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="fixedStep" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Take a step of this fixed length instead of searching for one (Wannier90 fixed_step, which sets its lfixstep). Mutually exclusive in spirit with trialStep: the line search is switched off.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="guidingCentres" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Use guiding centres to steer the minimisation away from local minima (Wannier90 guiding_centres). The centres are the sites of the trial orbitals, so this needs projections to be defined. See numGuideCycles and numNoGuideIter.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="numGuideCycles" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How often the guiding centres are applied, in iterations (Wannier90 num_guide_cycles). Only meaningful with guidingCentres="T".</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="numNoGuideIter" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many iterations run before the guiding centres start (Wannier90 num_no_guide_iter). Only meaningful with guidingCentres="T".</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="convNoiseAmp" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Amplitude of the random noise Wannier90 adds to the search direction once the spread has converged, to escape a local minimum and carry on (its conv_noise_amp). The noise is an anti-Hermitian matrix added for one iteration; the minimisation then runs again and the new spread is compared with the old one. If they agree the run stops for good, otherwise it is kicked again, up to convNoiseNum times. Note that Wannier90 keeps the last minimum it lands on, not the best one. Setting this without convWindow makes Wannier90 choose convWindow=5 for itself.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="convNoiseNum" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How many times the convNoiseAmp kick may be applied (Wannier90 conv_noise_num). Inert without convNoiseAmp.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="fdOrder" type="xsd:positiveInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Order of the finite-difference stencil Wannier90 builds the b-shells with (its higher_order_n). The default 1 is the one-shell formula of Marzari and Vanderbilt, whose error in the k derivative is O(b^2); 2 and 3 combine more shells and reduce it to O(b^4) and O(b^6), at the cost of more neighbours per k point and therefore more overlap matrices. It matters for every quantity built as a k derivative - the Berry connection A, and above all C and F, which are second derivatives. Silence leaves Wannier90 on its own default, so an existing input keeps its numbers.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="kmeshTol" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>How close two b-vectors have to be in length to count as one shell, and how exactly the completeness relation sum_b w_b b_a b_b = delta_ab has to hold - Eq. (B1) of Marzari and Vanderbilt, PRB 56, 12847 (1997). Wannier90's own value is 1e-6 and silence keeps it. A wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the lattice is the first suspect rather than the mesh: a slightly distorted cell splits one shell into several, or misses (B1), and Wannier90 stops in kmesh_get. The mesh itself is not checked anywhere, so a selected k-list that is not the uniform grid mp_grid describes would land in the same place. Loosening this is what gets past that, and it is not free - the weights are then solved over vectors of unequal length, so the finite-difference k derivative is a little worse than it claims to be.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOperatorType">
@@ -3605,8 +3661,6 @@
          <xsd:documentation>One Wannier-interpolated operator, projected onto the interpolated bands.</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="name" type="WannierlibOperatorEnum" use="required"/>
-      <xsd:attribute name="comp" type="xsd:string" use="optional"/>
-      <xsd:attribute name="total" type="FleurBool" use="optional" default="T"/>
    </xsd:complexType>
 
    <xsd:simpleType name="WannierlibOperatorEnum">
@@ -3614,19 +3668,20 @@
          <xsd:enumeration value="hamiltonian"/>
          <xsd:enumeration value="spin"/>
          <xsd:enumeration value="orbital"/>
-         <xsd:enumeration value="spin_orbit"/>
+         <xsd:enumeration value="spinOrbit"/>
          <xsd:enumeration value="velocity"/>
          <xsd:enumeration value="eigenstates"/>
+         <xsd:enumeration value="exchangeTorque"/>
       </xsd:restriction>
    </xsd:simpleType>
 
    <xsd:complexType name="WannierlibDomainType">
       <xsd:annotation>
-         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' distinguishes this domain's bands_wann_*.dat files and may be left off for at most one domain. 'npts' optionally subdivides each segment of an ordered list into npts pieces (npts&lt;=1 = list as-is).</xsd:documentation>
+         <xsd:documentation>One output domain: interpolate the requested operators on one set of k-points and suffix this domain's output files. Whether that set is a line, a plane or a mesh is a property of the list, not of FLEUR: 'listName' names an existing kPointList (in kpts.xml or any xi:included file) and is required. 'suffix' distinguishes this domain's bands_wann_*.dat files and may be left off for at most one domain. 'refinementPoints' optionally subdivides each segment of an ordered list into refinementPoints pieces (refinementPoints&lt;=1 = list as-is).</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="listName" type="xsd:string" use="required"/>
       <xsd:attribute name="suffix" type="xsd:string" use="optional"/>
-      <xsd:attribute name="npts" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="refinementPoints" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOperatorRType">
@@ -3640,13 +3695,25 @@
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="hamiltonian"/>
          <xsd:enumeration value="position"/>
-         <xsd:enumeration value="position_pw90"/>
+         <xsd:enumeration value="positionPw90"/>
          <xsd:enumeration value="bmn"/>
          <xsd:enumeration value="fmn"/>
          <xsd:enumeration value="cmn"/>
          <xsd:enumeration value="spin"/>
          <xsd:enumeration value="orbital"/>
-         <xsd:enumeration value="spin_orbit"/>
+         <xsd:enumeration value="spinOrbit"/>
+         <!-- exchangeTorque: the up-down block of the exchange field B_xc, which is the
+              exchange torque of Freimuth et al., PRB 90, 174423 (2014). The classic
+              Wannier route calls this job "perpmag" and the Bloch-basis matrices are
+              still written to updown.perpmag. Not to be confused with wann_torque. -->
+         <xsd:enumeration value="exchangeTorque"/>
+         <!-- exchangeField: the projection of <sigma B_xc> on the moment direction, the
+              half of that matrix the torque's cross product discards. It is the exchange
+              Hamiltonian a Kubo torkance needs, as a full matrix in R, where the transport
+              code otherwise takes three numbers per atom or per Wannier function. Spinors
+              only, and every site has to share a moment direction, as for exchangeTorque.
+              Writes rshxc.1. -->
+         <xsd:enumeration value="exchangeField"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -3658,6 +3725,34 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="operator" type="WannierlibOperatorRType"/>
       </xsd:sequence>
    </xsd:complexType>
+
+   <xsd:complexType name="WannierlibOperatorsKType">
+      <xsd:annotation>
+         <xsd:documentation>What the run holds in k, one step before the Fourier sum &lt;operatorsRs&gt; takes. The two blocks are independent requests: either may be absent, and asking for a quantity in one does not oblige the other. Two kinds of name live here and they go to two files. spin, orbital, spinOrbit and exchangeTorque are a matrix at a single k, written to WF&lt;spin&gt;_operators_ks.hdf as the coarse pass built them, before any gauge exists -- with the finite-difference b-shells that travel in the same file, that is what a consumer building its own Wannier functions needs, and it costs no wannierisation. bmn, cmn and fmn are contractions over PAIRS of neighbours, so they carry the Wannier gauge and go to WF&lt;spin&gt;_modern_k.hdf. Each file states in its own header which of the two it holds.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="operator" type="WannierlibOperatorKType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="WannierlibOperatorKType">
+      <xsd:attribute name="name" type="WannierlibOperatorKEnum" use="required"/>
+   </xsd:complexType>
+
+   <xsd:simpleType name="WannierlibOperatorKEnum">
+      <xsd:annotation>
+         <xsd:documentation>The first four are a matrix at a single k and are written in the Bloch basis, with no gauge. The last three -- B(k), C(k) and F(k) of the modern theory of magnetisation -- are contractions over pairs of neighbours, and a contraction over b needs a band index that means the same state at k+b1 and at k+b2, which the Bloch one does not: a gauge-free B(k), C(k) or F(k) does not exist, so these three carry the Wannier gauge and are written to a separate file, in the units their .dat counterparts use so the Fourier sum between the two is a plain phase sum. The Hamiltonian in this basis is the eigenvalue list and the position operator is a finite difference over the b-shells, so neither is nameable here; asking for one fails validation rather than at run time.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="spin"/>
+         <xsd:enumeration value="orbital"/>
+         <xsd:enumeration value="spinOrbit"/>
+         <xsd:enumeration value="exchangeTorque"/>
+         <xsd:enumeration value="bmn"/>
+         <xsd:enumeration value="cmn"/>
+         <xsd:enumeration value="fmn"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="WannierlibInterpolationType">
       <xsd:annotation>
@@ -3682,12 +3777,92 @@
 
    <xsd:complexType name="WannierlibExportType">
       <xsd:annotation>
-         <xsd:documentation>Hand the matrices the run already holds to a reader outside it. One boolean per artefact, all off by default and independent: they are not alternatives, and asking for one must not turn the others off. What &lt;operators_r&gt; and &lt;interpolation&gt; write is deliberately NOT here - those compute something first and writing it is the last step, while these only copy out. wannier90="T" writes WF&lt;spin&gt;.amn, .mmn and .eig, the three files a standalone wannier90.x needs to repeat the same wannierization; the .mmn of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. wannierberri="T" writes WF&lt;spin&gt;_basis.hdf, the plane-wave index list and the eigenvector coefficients over the interstitial, for the symmetry analysis irrep performs and the site-symmetric wannierization WannierBerri builds on it; the interstitial is invariant under the space group, so its characters are exact, and the muffin-tin parts are not needed. Requires a full-zone k-mesh (inpgen -noKsym) and a build with HDF5. gauge="T" writes WF&lt;spin&gt;_gauge.hdf with the two factors Wannier90 returned, u_opt and u_mlwf: every exported operator is the Bloch-basis operator sandwiched between them, and they are the only part of that sandwich which otherwise leaves no trace. blochOperators="T" writes WF&lt;spin&gt;_s0.dat, the spin operator in the Bloch basis BEFORE any gauge is applied - the one ingredient of S(R) that no other file carries, so a disagreement between the operator and the basis its gauge was built for can be seen from outside.</xsd:documentation>
+         <xsd:documentation>Files handed out for a reader outside FLEUR: one boolean per consumer, all off by default and independent.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="wannier90" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="wannierberri" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="gauge" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="blochOperators" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="wannier90" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes the five files a standalone wannier90.x needs, as one set: WF&lt;spin&gt;.win, .amn, .mmn, .eig and .chk. The .win declares the run -- cell, atoms, k-mesh, windows and the same search_shells the overlaps were built with -- so the reader picks the same b vectors; the .chk is written by Wannier90 itself, in its format and not ours, after the projection and again after the minimisation, so an interrupted run still leaves the earlier point. With restart = wannierise in the .win, wannier90.x carries on from the gauge this run reached. The .chk is also one of the two files WannierBerri accepts. Opt-in: the .mmn is bulky.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="wannierberri" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes the wannier90 files -- the .chk among them -- and WF&lt;spin&gt;_basis.hdf: the union of wannier90="T" and irrep="T".</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="irrep" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes WF&lt;spin&gt;_basis.hdf, the interstitial plane waves and coefficients irrep reads. Needs a full-zone mesh and HDF5.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="bmesh" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes WF&lt;spin&gt;_bmesh.hdf: the finite-difference b-shells and the neighbour topology -- which stored k-point is k+b, and the reciprocal lattice vector that brings it back into the zone. A property of the wannierisation rather than of any one consumer, settled before the gauge exists, and the one piece of the Wannier90 setup a reader cannot rebuild from inp.xml. Needed to take any derivative in k.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="orbitrans" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes input/, the directory orbitrans opens, with the &lt;operatorsRs&gt; matrices renamed and the four structural files.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="juwip" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes w90files/ with the &lt;operatorsRs&gt; matrices. Not combinable with orbitrans: the matrices are moved, not copied.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Writes each Wannier function on a real-space grid, as .xsf and .vts. Not available for spinor Wannier functions.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="40 40 40" name="plotGrid" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Resolution of the plotWF grid, "nx ny nz"; the cost is one state per grid point, band and k-point.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:complexType>
+
+   <xsd:simpleType name="WannierlibAxisType">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="x"/>
+         <xsd:enumeration value="y"/>
+         <xsd:enumeration value="z"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:complexType name="WannierlibTransportType">
+      <xsd:annotation>
+         <xsd:documentation>Ballistic (Landauer) conductance along one axis, computed by Wannier90's transport stage from the Wannier Hamiltonian this run produces. The element's presence is the switch, as for &lt;operatorsKs&gt; and &lt;interpolation&gt;: it is a stage that computes something, not a way of writing out something already computed. Only the bulk mode is reachable from here, and it needs no device geometry -- just a periodic direction. What it returns at an energy is the number of propagating channels there, so the curve is a staircase of integers in units of the conductance quantum, which is what makes it checkable without a reference. Nothing has to be handed to the stage: it builds its own real-space Hamiltonian from the gauge, the optimal subspace and the eigenvalues, all of which are already set by the time it runs.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="axis" type="WannierlibAxisType" use="required">
+         <xsd:annotation>
+            <xsd:documentation>The transport direction: Wannier90's one_dim_axis. Required, and not because the physics has no sensible default -- it is that Wannier90 rejects an input with transport on and no axis, so demanding it here turns an abort from inside the library into a schema error on the line that caused it.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="energyMin" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Bottom of the energy range the transmission is scanned over, in Hartree and absolute, like the disentanglement windows and converted on the way out. Optional: leaving energyMin and energyMax equal says nothing and keeps Wannier90 on its own range.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="energyMax" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Top of that range, in Hartree and absolute.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="energyStep" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Spacing of the scan, in Hartree. Optional; a step of zero says nothing. The steps of the staircase are where the curve carries its information, so a spacing coarser than the bands are structured will cut corners off it.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="hrCutoff" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Hoppings smaller than this are set to zero before the Hamiltonian is cut into principal layers, in Hartree. Together with distCutoff it is what decides how thick a layer is: the largest lattice vector along the axis that still carries a hopping becomes the layer. Wannier90 applies no cutoff by default, and the layer then follows the decay of the Hamiltonian itself. Cutting is an affordability knob and not a tuning one: on AlN either cutoff takes the layer from two cells to one and moves the transmission by more than half.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="distCutoff" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Hoppings reaching further than this are set to zero, in Bohr. Wannier90's default of 1000 Angstrom is no cutoff at all, and it quietly reduces the value to what the supercell can hold, reporting the one it used. Applied before hrCutoff, so a hopping removed here never reaches that test.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOutputType">
@@ -3698,16 +3873,13 @@
          <xsd:element maxOccurs="1" minOccurs="1" name="bands" type="WannierlibBandsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="disentanglement" type="WannierlibDisentanglementType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannierization" type="WannierlibWannierizationType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="operators_r" type="WannierlibOperatorsRType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="operatorsRs" type="WannierlibOperatorsRType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="operatorsKs" type="WannierlibOperatorsKType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="export" type="WannierlibExportType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="interpolation" type="WannierlibInterpolationType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="transport" type="WannierlibTransportType"/>
       </xsd:all>
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Write the Wannier functions on a real-space grid, as XSF files one per function (block A: real part, block B: modulus). Off by default because it costs a second pass over the k-points. The region is one unit cell centred on the origin, on a 40x40x40 grid; how much of each function falls on the edge of that box is reported, so a clipped picture is visible rather than silent. Not available for spinor Wannier functions (noco or SOC).</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="RelaxationType">

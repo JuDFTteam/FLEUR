@@ -14,6 +14,22 @@
 !>  own -- the k-point distribution, the per-k abc coefficients of the collinear channels,
 !>  the Wannier gauge, and the b-mesh -- so that adding an operator never touches this file.
 !--------------------------------------------------------------------------------
+!> CONVENTIONS THIS LIBRARY DEPENDS ON, and who owns each one.
+!>
+!> Every line below was measured, and every one of them is a place where two codes can agree
+!> in words and disagree in memory. Each stays written where it is enforced, because a
+!> convention stated far from its code stops being checked against it; this is the door to
+!> them, not a second copy.
+!>
+!>   k-point spelling     kpts%bk holds the numbers the k-point list spells, kpts%bkf the
+!>                        fold into [0,1). Made one here        -> wl_align_kpts
+!>   reciprocal folding   a G label belongs to the k its own basis was built at, so the
+!>                        list that goes out is lapw%gvec as it was built, unfolded, and
+!>                        a reader folds it at its own risk     -> wannierlib_export_basis
+!>   overlap kernel       the mmn kernel conjugates its SECOND argument, so what comes back
+!>                        is the conjugate of <a|O|b>           -> wannierlib_mmnkb
+!>   lattice vectors      they are the COLUMNS of cell%amat     -> wannierlib_export_orbitrans
+!>   units on disk        the structural files are in Bohr      -> wannierlib_export_orbitrans
 MODULE m_wannierlib_main
    USE m_juDFT
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
@@ -28,14 +44,26 @@ MODULE m_wannierlib_main
   USE m_wannierlib_cf, ONLY: wannierlib_uiu, wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
+   USE m_wannierlib_export_ks, ONLY: wannierlib_export_ks
+   USE m_wannierlib_export_win, ONLY: wannierlib_write_win
+   USE m_wannierlib_import_ks, ONLY: wannierlib_ks_roundtrip
+   USE m_wannierlib_export_bmesh, ONLY: wannierlib_export_bmesh
+   USE m_types_sphhar, ONLY: t_sphhar
    USE m_wgauge_run, ONLY: wgauge_run
+   USE m_wannierlib_export_modern_k, ONLY: wannierlib_export_modern_k
+   USE m_wannierlib_chkinfo, ONLY: wl_chkinfo_set, wl_chkinfo_stamp
+   USE m_wgauge_check_mw, ONLY: wgauge_check_mw
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
-   USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge
+   USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans, orbitrans_assemble_2n
+   USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
+   USE m_wannierlib_gauge_results, ONLY: wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
-USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
-   USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, wannierlib_write_s0, &
-                                     wannierlib_write_mmn
-   USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
+USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig, &
+                                    wannierlib_check_bands
+   USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, &
+                                     wannierlib_write_mmn, wannierlib_write_amn
+   USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear, &
+                                 wgauge_perpmag_collinear
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_atoms
@@ -54,21 +82,33 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
-   use m_wann_write_amn
-   use m_types_misc
-   use m_types_stars
+   USE m_types_misc
+   USE m_types_stars
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_main
 CONTAINS
 
-   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum)
+   !> Wannierise this spin channel and write what the input asked for.
+   !>
+   !> One coarse pass over the k-mesh builds the matrix elements, Wannier90 is driven in
+   !> library mode to produce the gauge, and everything after that -- the exports, the
+   !> interpolation, the real-space operators -- is read off the gauge rather than recomputed.
+   !> Where the states are spinors one pass carries both spin directions; otherwise this runs
+   !> once per channel and the channels never meet, which is what wgauge_spin_collinear is
+   !> for.
+   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts_in, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum, sphhar)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_vacuum), INTENT(IN) :: vacuum
+      !> Only the exchange torque reads it, and only to build the non-spherical part
+      !> of the exchange field. Every other operator weighs an overlap.
+      TYPE(t_sphhar), INTENT(IN) :: sphhar
       TYPE(t_input), INTENT(IN) :: input
-      TYPE(t_kpts), INTENT(IN) :: kpts
+      TYPE(t_kpts), INTENT(IN) :: kpts_in
+      !> The k-points the whole library works with, spelled one way. See wl_align_kpts.
+      TYPE(t_kpts) :: kpts
       TYPE(t_sym), INTENT(IN) :: sym
       TYPE(t_noco), INTENT(IN) :: noco
       TYPE(t_nococonv), INTENT(IN) :: nococonv
@@ -80,6 +120,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: eig_id
 
       INTEGER :: nntot_w90, jspin
+      REAL    :: soc_resid
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: mmn_full(:, :, :, :)
@@ -90,19 +131,29 @@ CONTAINS
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
+      !> What the postproc pass hands back for the <operatorsKs> file: B(k) and the global
+      !> index of each k this rank owns, in the order the per-rank slices were cut.
+      INTEGER, ALLOCATABLE :: gk_loc_ks(:)
+      COMPLEX, ALLOCATABLE :: b0k_ks(:, :, :, :)
       real, allocatable :: eig(:, :)
       COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), u_opt(:, :, :)   ! Wannier gauge factors from w90
+      COMPLEX, ALLOCATABLE :: mw_chk(:, :, :, :)  ! the overlaps as Wannier90 leaves them
       !> The gauge of each spin channel, kept across the channel loop: the combined 2N spin
       !> operator needs BOTH, while u_matrix and u_opt are released at the end of every
       !> iteration. It lives here rather than in the coarse object, which holds the Bloch
       !> matrices from before any gauge exists.
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
+      !> A bmesh of its own for the Bloch export: the shared one is filled after the
+      !> gauge exists and carries the centres, and this runs before either.
+      TYPE(t_wgauge_bmesh) :: bmesh_k
       TYPE(t_wgauge_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
       COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) the same one with H inside
       LOGICAL :: l_wannierlib_spinors
+      CHARACTER(LEN=16) :: wl_route       ! scalar/collinear/spinor, for the witness
+      CHARACTER(LEN=80) :: chk_name       ! the checkpoint this channel handed out
       TYPE(t_melem_request) :: request
       TYPE(t_wgauge_manifold) :: manifold
       TYPE(t_wgauge_domains) :: domains
@@ -117,6 +168,10 @@ CONTAINS
       ! A.1: input%l_real stays TRUE with inversion even under SOC (n_denmat=0), and
       ! reading a complex spinor into a real buffer kills the imaginary part of the MMN.
       spin12 = (/'WF1', 'WF2'/)
+
+      !> Before anything builds a basis: one spelling of each k-point from here on.
+      kpts = kpts_in
+      CALL wl_align_kpts(kpts)
 
       !> The factory cache is module state, and what it holds belongs to whoever ran last.
       !> Nothing guarantees they cleared it: secvar_soc does so on entry and on exit, this
@@ -139,15 +194,53 @@ CONTAINS
       CALL wannierlib_build_request(this, input, l_wannierlib_spinors, request)
 
       wl = this
+      !> Before the window derivation, which is itself the first thing to index
+      !> results%eig at maxBand, and before anything reads an eigenvector.
+      CALL wannierlib_check_bands(wl, results, kpts, input, l_wannierlib_spinors)
       CALL wannierlib_default_windows(wl, results, kpts, input, l_wannierlib_spinors)
+
+      !> The witness that rides in every file we write: what this gauge was built from.
+      !> Here, because this is the line after which the windows stop being optional -- a
+      !> window left out of the input has just been filled in from the bands -- and
+      !> before the first export. What goes down is therefore what the run USED.
+      IF (l_wannierlib_spinors) THEN
+         wl_route = 'spinor'
+      ELSE IF (input%jspins == 2) THEN
+         wl_route = 'collinear'
+      ELSE
+         wl_route = 'scalar'
+      END IF
+      CALL wl_chkinfo_set(wl_route, wl%num_bands, wl%min_band, wl%max_band, wl%num_wann, &
+                          fmpi%isize, wl%dis_win_min, wl%dis_win_max, wl%dis_froz_min, &
+                          wl%dis_froz_max)
 
       CALL manifold%init(wl%num_bands, wl%num_wann, wl%dis_win_min, wl%dis_win_max, &
                          wl%min_band, wl%max_band)
       CALL domains%init(this%n_domains, this%dom_kset, this%dom_suffix)
 
+      !> Before anything is written: a consumer flag in <export> sends every operator
+      !> file into that consumer's directory, under the name it opens, and the writers
+      !> below ask this module for the path instead of naming the file themselves.
+      CALL wannierlib_export_dir_set(this, fmpi%irank)
+
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
+
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
-                      stars, enpara, fmpi, vtot, eig_id, distk)
+                      stars, enpara, fmpi, vtot, eig_id, distk, vacuum=vacuum, sphhar=sphhar)
+
+      !> soc0 is the sum over the four spin-orbit blocks, and the operator file carries
+      !> only the four: a consumer outside FLEUR that wants soc0 has to add them up, and
+      !> that is only right while the two are assembled as melem_coarse.F90:474-482
+      !> assembles them. Checked here, where both exist, so that a change there breaks
+      !> this loudly instead of leaving the exported file quietly inconsistent.
+      IF (ALLOCATED(melem%soc0) .AND. ALLOCATED(melem%soc4)) THEN
+         soc_resid = MAXVAL(ABS(melem%soc0(:, :, 1, :) - SUM(melem%soc4, DIM=3)))
+         IF (soc_resid > 1.0E-12) CALL juDFT_error( &
+            "wannierlib: soc0 is no longer the sum over the soc4 blocks", &
+            hint='the operator file exports soc4 only, and a reader adding them up would '// &
+                 'now be wrong: see melem_coarse.F90 and wannierlib_main', &
+            calledby="wannierlib_main")
+      END IF
 
       !> wl, not this: wannierlib_main takes the input object as INTENT(IN), so the windows
       !> the derivation fills in live only in the copy. Handing w90 the original passes it
@@ -174,68 +267,120 @@ CONTAINS
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
 
-         !> The three files Wannier90 was handed, so a standalone wannier90.x can repeat the
-         !> run: .amn, .mmn and .eig. They are written together and after create_eig because
-         !> without the eigenvalues the other two cannot be used -- w90 stops at
-         !> "No .eig file found. Needed for disentanglement".
+         !> Four of the five files a standalone wannier90.x needs: .amn, .mmn, .eig and
+         !> the .win that names them. The fifth, the .chk, is written by Wannier90 itself
+         !> inside run_w90 below, under this same flag. They are written together and
+         !> after create_eig because without the eigenvalues the matrices cannot be used
+         !> -- w90 stops at "No .eig file found. Needed for disentanglement".
          !> amn is complete on every rank after the reduce above; mmn is one k-slice per rank
-         !> and has to be gathered first. Only rank 0 writes, and wann_write_amn is told
-         !> isize=1 so it does not try to collect a distribution it does not have.
-         IF (this%export%w90 .OR. fmpi%isize == 1) THEN
+         !> and has to be gathered first. Only rank 0 writes, and neither writer collects
+         !> anything itself: what they are handed is already whole.
+         !> The flag alone decides. This used to write on one rank whatever was asked, which
+         !> left the .mmn of a large mesh -- hundreds of megabytes of text, the reason the
+         !> flag is opt-in at all -- on the disk of every serial run that never wanted it.
+         !> wannierberri asks for them too: WannierBerri does no DFT, so its wannierisation
+         !> consumes these and takes the symmetry table as an argument beside them.
+         !> What wannier90="T" writes is a subset of what wannierberri="T" writes.
+         IF (this%export%w90) THEN
             CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, mmn, mmn_full)
             IF (fmpi%irank == 0) THEN
                amn_file = spin12(jspin)//'.amn'
-               call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
-                                   this%num_bands, kpts%nkptf, this%num_wann, &
-                                   0, 1, .false., .false., &
-                                   amn, .false.)
+               CALL wannierlib_write_amn(amn, amn_file, "Testing amn")
 
                CALL wannierlib_write_mmn(this, mmn_full, kpts, nnkp, gkpb, jspin)
                CALL wannierlib_write_eig(eig, spin12(jspin)//'.eig')
+               !> And the input file that names them. Without it the three above are a
+               !> set of tables no reader can act on: wannier90.x takes its whole setup
+               !> from the .win and refuses to start without one.
+               CALL wannierlib_write_win(wl, atoms, cell, kpts, spin12(jspin)//'.win', &
+                                         l_wannierlib_spinors, WANNIERLIB_SEARCH_SHELLS)
             END IF
             DEALLOCATE (mmn_full)
          END IF
 
-         !> The interstitial wave functions, for irrep and through it the site-symmetric
-         !> wannierisation in WannierBerri. Written here so that it lands next to the
-         !> .amn/.mmn/.eig of the same channel and shares their k-point ORDER -- if the two
-         !> orders ever part company, every symmetry operation is applied at the wrong k and
-         !> the failure is silent: it converges, the centres come out symmetric, and the
-         !> bands are wrong.
-         IF (this%export%basis) &
+         !> The interstitial, for irrep. The region is invariant under the space group, so
+         !> the characters taken over it are exact and the muffin-tin parts are not needed:
+         !> that is what lets the symmetry analysis live outside this code rather than here.
+         !> What goes out is the plane-wave index list and the coefficients, nothing derived
+         !> -- the cell, the k-list, the eigenvalues and the spin angles are already in
+         !> inp.xml, kpts.xml and out.xml, and a reader that has to be told twice can be
+         !> told two different things.
+         IF (this%export%basis) THEN
             CALL wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, &
                                          noco, nococonv, enpara, vtot, fmpi, eig_id, jspin)
+         END IF
          ! collinear jspins=2 (no SOC/noco): the two spin channels wannierise separately;
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
 
-         ! wannierise this channel -> the gauge factors u_matrix (MLWF) and u_opt (disentangled)
-         !> Published before run_w90 so it is the operator as built, with no gauge on it.
-         IF (request%has_op_r('spin') .AND. ALLOCATED(melem%s0) .AND. this%export%bloch) &
-            CALL wannierlib_write_s0(fmpi, distk, kpts%nkptf, melem%s0, &
-                                     spin12(jspin)//'_s0.dat')
-         CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
+         !> The b-mesh, filled on a copy of its own. The shared one gets its weights only
+         !> after run_w90, because the same call also fills the Wannier centres and those
+         !> need a gauge; the topology and the shells do not, and both are settled here.
+         IF (this%export%bmesh .OR. request%l_operators_k) THEN
+            CALL bmesh_k%set_neighbours(nntot_w90, nnkp, gkpb, kdiff)
+            CALL wannierlib_get_bmesh(this, kpts, bmesh_k)
+         END IF
+         IF (this%export%bmesh) CALL wannierlib_export_bmesh(bmesh_k, kpts, jspin, fmpi)
+
+         !> The Bloch-basis half of <operatorsKs>, before run_w90 has a gauge to offer.
+         !> It goes here and not beside the O(R) export because that is the whole point: a
+         !> consumer that builds its own Wannier functions needs these and not a gauge,
+         !> and asking for them must not oblige the run to produce one. The same block may
+         !> also name bmn, cmn and fmn, which are pair contractions and DO carry the gauge:
+         !> those are written after run_w90, so asking only for them must not open a file
+         !> here -- which is why the four names are tested and not the block.
+         IF (request%has_op_k('spin') .OR. request%has_op_k('orbital') .OR. &
+             request%has_op_k('spinOrbit') .OR. request%has_op_k('exchangeTorque')) THEN
+            CALL wannierlib_export_ks(request%has_op_k('spin'), request%has_op_k('orbital'), &
+                                      request%has_op_k('spinOrbit'), &
+                                      request%has_op_k('exchangeTorque'), &
+                                      melem%s0, melem%l0, melem%soc4, melem%t0, melem%x0, &
+                                      melem%n_channels, atoms%nat, &
+                                      distk, kpts, cell, wl%num_bands, eig, jspin, fmpi)
+            !> Read it back and require it to reproduce what it was written from. The
+            !> reader is outside FLEUR and will never have the eigenvectors to check it
+            !> against, so this is the only place the question can still be asked.
+            CALL wannierlib_ks_roundtrip(request%has_op_k('spin'), request%has_op_k('orbital'), &
+                                         request%has_op_k('spinOrbit'), &
+                                         request%has_op_k('exchangeTorque'), &
+                                         melem%s0, melem%l0, melem%soc4, melem%t0, &
+                                         melem%n_channels, atoms%nat, &
+                                         distk, kpts%nkptf, wl%num_bands, eig, jspin, fmpi)
+         END IF
+
+         CALL run_w90(wl, cell, kpts, mmn, amn, eig, jspin, melem%n_channels, &
+                      u_matrix, u_opt, mw_chk)
+
+         !> Wannier90 rotated its own copy of the overlaps all the way to the final
+         !> gauge, and the operator side is about to build the same quantity from the
+         !> Bloch overlaps it still has. Two routes to one matrix, so they are compared
+         !> while both exist -- and this is the only run in which both do: the .chk this
+         !> run hands out carries the Wannier90 side alone.
+         !> The tolerance is relative and the module header carries the measurement it
+         !> comes from.
+         CALL wgauge_check_mw(mmn, distk, u_opt, u_matrix, bmesh, mw_chk, fmpi, 1.0E-6)
 
          !> The gauge goes to results before anything else touches it, so whoever
          !> interpolates with it downstream gets the factors this run produced.
          CALL wannierlib_store_gauge(fmpi, distk, kpts, input, wl%num_bands, wl%num_wann, &
                                      jspin, u_matrix, u_opt, results)
 
-         CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
+         !> Every real-space operator that is assembled from both channels at once needs
+         !> this gauge, and the three of them have to be named here: u_opt and u_matrix are
+         !> released at the end of this iteration, so one that is not asked for now cannot
+         !> be served later.
+         CALL wannierlib_keep_gauge(melem%n_channels, &
+                                    request%has_op_r('spin') .OR. &
+                                    request%has_op_r('orbital') .OR. &
+                                    request%has_op_r('spinOrbit'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
-
-         !> Right here and not from v_ch: that one is only assembled on the collinear
-         !> two-channel path, while u_opt and u_matrix are in hand on both, so writing from
-         !> them covers the spinor route as well.
-         IF (this%export%gauge) &
-            CALL wannierlib_export_gauge(kpts, fmpi, jspin, u_opt, u_matrix)
 
          ! Draw the Wannier functions, if anybody asked. Here and not earlier because the
          ! gauge is what makes them: it costs a second pass over this rank's k-points to
          ! read the states back, and what comes out is num_wann grids rather than the
          ! whole basis tabulated at every k.
-         IF (this%l_plot_wf) &
+         IF (this%export%plot) &
             CALL wannierlib_plot_wf(this, atoms, cell, input, sym, stars, vacuum, noco, nococonv, &
                                     enpara, vtot, kpts, fmpi, eig_id, radfun, distk, &
                                     jspin, l_wannierlib_spinors, u_matrix, u_opt)
@@ -248,25 +393,58 @@ CONTAINS
          CALL wannierlib_get_bmesh(this, kpts, bmesh)
          !> F wants the gauge at two neighbours at once, so it can be built neither with the
          !> coarse matrices, which come before any gauge, nor in the post-processing, which
-         !> cannot reach the wavefunctions. It goes here, and only when it was asked for.
-         IF (request%has_op_r('fmn')) &
+         !> cannot reach the wavefunctions. It goes here, and only when it was asked for --
+         !> by EITHER block, since the two are independent requests for the same tensor.
+         IF (request%has_op_r('fmn') .OR. request%has_op_k('fmn')) &
             CALL wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
-                                vtot, fmpi, distk, u_matrix, u_opt, f0_loc)
+                                vtot, vacuum, fmpi, distk, u_matrix, u_opt, f0_loc)
          !> C asks for what F asks -- the gauge at two neighbours at once -- and for the
          !> eigenvalues of the bra on top, so it lives here for the same reason.
-         IF (request%has_op_r('cmn')) &
+         IF (request%has_op_r('cmn') .OR. request%has_op_k('cmn')) &
             CALL wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
-                                vtot, fmpi, distk, u_matrix, u_opt, c0_loc)
+                                vtot, vacuum, fmpi, distk, u_matrix, u_opt, c0_loc)
          CALL wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
                         mmn, bmesh, distk, fmpi, &
-                        wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
+                        wf_channel=jspin, spin_suffix=TRIM(spin_sfx), &
+                        b0k_out=b0k_ks, gk_loc_out=gk_loc_ks)
 
-         if (fmpi%isize == 1) CALL report_w90(this)
+         !> The <operatorsKs> tensors, written here rather than in the pass that built them:
+         !> the writer is a consumer in export/ and postproc/ does not reach into it. B(k)
+         !> arrives unallocated when only C or F were asked for, which the writer expects.
+         IF (request%has_op_k('bmn') .OR. request%has_op_k('cmn') .OR. request%has_op_k('fmn')) &
+            CALL wannierlib_export_modern_k(b0k_ks, c0_loc, f0_loc, gk_loc_ks, kpts, cell, &
+                                            manifold%num_wann, jspin, fmpi%mpi_comm, fmpi%irank, &
+                                            request%has_op_k('bmn'), request%has_op_k('cmn'), &
+                                            request%has_op_k('fmn'))
+         IF (ALLOCATED(b0k_ks)) DEALLOCATE (b0k_ks)
+
+         !> After wgauge_run so the message order in `out` keeps the operators together,
+         !> and inside the channel loop because a collinear two-channel run lays its
+         !> centres down one channel at a time.
+         IF (this%export%orbitrans) &
+            CALL wannierlib_export_orbitrans(this, atoms, cell, bmesh, fmpi, jspin, melem%n_channels)
+
+         !> Rank 0 owns `out` and `out.xml`, and the centres are plain data on every
+         !> rank, so the report is written whatever the number of ranks.
+         IF (fmpi%irank == 0) CALL report_w90(this)
+
+         !> Last in the channel, because this is the first point at which every file it
+         !> writes exists: WF<n>_bmesh.hdf and WF<n>_operators_ks.hdf go out before
+         !> run_w90 and WF<n>_modern_k.hdf after it. Only under <export wannier90="T"/>:
+         !> with no checkpoint handed out there is nothing to pair with, and an absent
+         !> stamp says that rather than a zero that has to be interpreted. The name comes
+         !> from the adapter, which is what decides it; this module does not rebuild the
+         !> rule and does not read it back out of Wannier90's own state.
+         IF (this%export%w90) THEN
+            chk_name = TRIM(wl_w90_seedname(jspin, melem%n_channels))//'.chk'
+            CALL wl_chkinfo_stamp(jspin, TRIM(chk_name), fmpi%irank)
+         END IF
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
+         IF (ALLOCATED(mw_chk)) DEALLOCATE (mw_chk)
          IF (ALLOCATED(u_matrix)) DEALLOCATE (u_matrix)
          IF (ALLOCATED(u_opt)) DEALLOCATE (u_opt)
          IF (ALLOCATED(f0_loc)) DEALLOCATE (f0_loc)
@@ -284,8 +462,21 @@ CONTAINS
          CALL wgauge_anglmom_collinear(this%num_wann, melem%l0, v_ch, cell, kpts, distk, fmpi)
       ! And the spin-orbit coupling, which here is an operator on the basis rather than a
       ! term in the eigenproblem that produced it.
-      IF (melem%n_channels == 2 .AND. request%has_op_r('spin_orbit')) &
+      IF (melem%n_channels == 2 .AND. request%has_op_r('spinOrbit')) &
          CALL wgauge_soc_collinear(this%num_wann, melem%soc4, v_ch, cell, kpts, distk, fmpi)
+      !> The exchange torque, and the one that needs no gauge at all: updown.perpmag is a
+      !> Bloch-basis object, so what is written is the cross-spin block as the k-loop built
+      !> it. Here and not in the channel loop because that block spans both channels.
+      IF (melem%n_channels == 2 .AND. request%has_op_r('exchangeTorque')) &
+         CALL wgauge_perpmag_collinear(melem%tx0, kpts, distk, fmpi)
+      !> The 2N Hamiltonian the transport code reads. Here and not in the channel loop,
+      !> although that is where the consumer's other files are laid down: the spin-orbit
+      !> operator that has to go inside it is written just above, after the loop, so while
+      !> the loop runs there is nothing to fold in and the Hamiltonian would go out
+      !> diagonal in spin -- which costs the transverse spin conductivities and says
+      !> nothing about it.
+      IF (melem%n_channels == 2 .AND. this%export%orbitrans .AND. fmpi%irank == 0) &
+         CALL orbitrans_assemble_2n(this%num_wann)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the
@@ -300,6 +491,35 @@ CONTAINS
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
 
    END SUBROUTINE wannierlib_main
+
+   !> One spelling of each k-point, for every basis the library builds.
+   !>
+   !> t_lapw%init takes its k-point from kpts%bk, which holds the numbers as the k-point
+   !> list spells them, while gen_bz folds kpts%bkf into [0,1). A list written in the
+   !> [-1/2,1/2) convention -- which is what inpgen writes unless the mesh is asked for
+   !> with #gamma@grid= -- therefore has the basis built about one spelling while the
+   !> mesh, the b-vector table, the A and M matrices and Wannier90's own k-point list all
+   !> use the other. The two differ by a lattice vector, so every reciprocal vector matched
+   !> between two bases lands one shell away. Nothing aborts: WannFeAFM simply wannierises
+   !> to Omega_I = 30.582 instead of 16.719, and WannPt to 6.868 instead of 4.841.
+   !>
+   !> Both spellings name the same point, so bk takes bkf's, once, before the first basis
+   !> is built. Where they are not the same point there is nothing to choose between and
+   !> the library says so rather than pairing them wrongly.
+   SUBROUTINE wl_align_kpts(kpts)
+      TYPE(t_kpts), INTENT(INOUT) :: kpts
+      INTEGER :: ik, nk
+      REAL :: d(3)
+
+      nk = MIN(kpts%nkpt, kpts%nkptf)
+      DO ik = 1, nk
+         d = kpts%bkf(:, ik) - kpts%bk(:, ik)
+         IF (ANY(ABS(d - ANINT(d)) > 1e-9)) CALL juDFT_error( &
+            "wannierlib: kpts%bk and kpts%bkf do not hold the same k-points", &
+            calledby="wl_align_kpts")
+      END DO
+      kpts%bk(:, :nk) = kpts%bkf(:, :nk)
+   END SUBROUTINE wl_align_kpts
 
    !> Which rank owns each global k-point.
    !>
@@ -331,17 +551,18 @@ CONTAINS
 
    !> Keep this spin channel's Wannier gauge V = u_opt u_matrix while both factors are alive.
    !>
-   !> Only the collinear two-channel spin operator needs it, and only it can say so: the
-   !> combined 2N matrix cannot be assembled until BOTH channels have wannierised, while
-   !> u_opt and u_matrix are released at the end of every iteration. Anything that wants a
-   !> gauge later has to have kept it here.
+   !> The operators that are assembled from both channels at once need it, and none of them
+   !> can be built until BOTH channels have wannierised, while u_opt and u_matrix are
+   !> released at the end of every iteration. Anything that wants a gauge later has to have
+   !> kept it here.
    !>
-   !> A no-op unless there are two channels and the spin operator was asked for, so the
-   !> caller can call it unconditionally.
-   SUBROUTINE wannierlib_keep_gauge(n_channels, l_want_spin, manifold, nkptf, jspin, &
+   !> A no-op unless there are two channels and a caller asked for it, so it can be called
+   !> unconditionally. Which operators want one is not visible from here, so the caller
+   !> decides, and one whose request is left out of that decision finds nothing.
+   SUBROUTINE wannierlib_keep_gauge(n_channels, l_want_gauge, manifold, nkptf, jspin, &
                                     u_opt, u_matrix, v_ch)
       INTEGER, INTENT(IN) :: n_channels
-      LOGICAL, INTENT(IN) :: l_want_spin
+      LOGICAL, INTENT(IN) :: l_want_gauge
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       INTEGER, INTENT(IN) :: nkptf, jspin
       COMPLEX, INTENT(IN) :: u_opt(:, :, :), u_matrix(:, :, :)
@@ -349,20 +570,12 @@ CONTAINS
 
       INTEGER :: ik
 
-      IF (n_channels /= 2 .OR. .NOT. l_want_spin) RETURN
+      IF (n_channels /= 2 .OR. .NOT. l_want_gauge) RETURN
       IF (.NOT. ALLOCATED(v_ch)) &
          ALLOCATE (v_ch(manifold%num_bands, manifold%num_wann, nkptf, 2), source=CMPLX(0.0, 0.0))
       DO ik = 1, SIZE(u_opt, 3)
          v_ch(:, :, ik, jspin) = MATMUL(u_opt(:, :, ik), u_matrix(:, :, ik))
       END DO
    END SUBROUTINE wannierlib_keep_gauge
-
-
-
-
-
-
-
-
 
 END MODULE m_wannierlib_main

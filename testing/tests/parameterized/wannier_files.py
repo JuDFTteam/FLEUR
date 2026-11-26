@@ -7,6 +7,24 @@ test_wannier.py reads as what it is -- the run plus the claims made about it.
 import re
 
 
+def gauge_unitarity(path):
+    """The deviations wannierlib_store_gauge reports, one entry per spin channel.
+
+    V(k) = u_opt(k) . u_mlwf(k) has orthonormal columns, so V^H V is the num_wann identity
+    at every k of the full mesh; the routine prints the worst departure as it hands the
+    gauge to results. Returns [(spin, deviation), ...] in the order they were written --
+    a collinear jspins=2 run wannierises each channel on its own and so reports twice.
+    """
+    pat = re.compile(r"wannierlib gauge: spin (\d+), "
+                     r"max \|V\^H V - 1\| over the mesh =\s*(\S+)")
+    out = []
+    for line in open(path, errors="ignore"):
+        m = pat.search(line)
+        if m:
+            out.append((int(m.group(1)), float(m.group(2))))
+    return out
+
+
 def spin_sumrule_values(path):
     """The |<s>| column of every 'spin sum-rule check' block FLEUR prints."""
     txt = open(path, errors="ignore").read()
@@ -146,3 +164,55 @@ def nonzero_entries(path):
             if float(f[-2]) != 0.0 or float(f[-1]) != 0.0:
                 n += 1
     return n
+
+
+def torque_perp_residual(path, axis):
+    """max |T(R).m_hat| / max |T(R)| over every entry of a three-component O(R) file.
+
+    T = -(s x m_hat), so this vanishes identically. The floor is set by the file, not
+    by the physics: the operator is written with eight decimals, so an entry whose
+    largest component is |T|max carries a rounding error of 1e-8 and the ratio cannot
+    go below 1e-8 / |T|max.
+    """
+    comps = {}
+    for line in open(path):
+        c = line.split()
+        if len(c) != 8:
+            continue
+        comps.setdefault(tuple(c[:5]), {})[int(c[5])] = complex(float(c[6]), float(c[7]))
+    if not comps:
+        raise AssertionError("%s has no data rows" % path)
+    scale = max(abs(v) for entry in comps.values() for v in entry.values())
+    if scale == 0.0:
+        raise AssertionError("%s is identically zero" % path)
+    worst = max(abs(sum(entry.get(i + 1, 0.0) * axis[i] for i in range(3)))
+                for entry in comps.values())
+    return worst / scale
+
+
+def perpmag_census(path):
+    """(nbnd, nkpts, nwfs, rows, complete, trace, peak) of an updown.perpmag file.
+
+    `trace` is sum_k Tr(M M+). It is invariant under a unitary rotation within either
+    spin's degenerate multiplets, but that is not the only freedom a run has: the reduction
+    order reaches the density, so the value moves by about 1e-3 relative with the compiler,
+    the rank count and the thread count alike. Its caller pins it loosely for that reason.
+    """
+    with open(path) as fh:
+        fh.readline()
+        nb, nk, nw = (int(x) for x in fh.readline().split())
+        seen = set()
+        trace = 0.0
+        peak = 0.0
+        rows = 0
+        for line in fh:
+            c = line.split()
+            if len(c) != 5:
+                continue
+            i, j, k = int(c[0]), int(c[1]), int(c[2])
+            v = complex(float(c[3]), float(c[4]))
+            seen.add((i, j, k))
+            trace += abs(v) ** 2
+            peak = max(peak, abs(v))
+            rows += 1
+    return nb, nk, nw, rows, len(seen) == nb * nk * nw, trace, peak

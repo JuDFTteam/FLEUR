@@ -31,6 +31,7 @@ MODULE m_wgauge_coeff_tensor
   USE m_types_kpts
   USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+  USE m_wannierlib_export_paths, ONLY: wannierlib_export_file
 #ifdef CPP_MPI
   USE mpi
 #endif
@@ -127,7 +128,7 @@ CONTAINS
       fn = 'WF1'//suffix
       IF (PRESENT(wfpref)) fn = TRIM(wfpref)//suffix
       CALL wgauge_write_realspace(o_r, irvec, ndegen_unused, nrpts, nw, 9, fmt, &
-                                 TRIM(fn)//'.dat', 0)
+                                 wannierlib_export_file(TRIM(fn)//'.dat'), 0)
       WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat ('//what//')'
       DEALLOCATE(ndegen_unused)
     END IF

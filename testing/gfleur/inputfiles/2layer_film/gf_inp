@@ -1,0 +1,3 @@
+!minimal gf_inp for the 2-layer toy test
+&LAYERS nlayers=2 /
+&MODE charge=f,dos=f,tmat=t,gmat=f /

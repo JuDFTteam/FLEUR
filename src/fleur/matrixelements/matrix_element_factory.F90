@@ -26,6 +26,7 @@ MODULE m_matrix_element_factory
     USE m_types_kpts
     USE m_types_potden
     USE m_types_mpi
+    USE m_types_hybinp, ONLY: t_hybinp
     USE m_judft, ONLY: judft_error, judft_bug
     USE m_eig66_io, ONLY: read_eig
     USE m_types_matelements
@@ -37,6 +38,16 @@ MODULE m_matrix_element_factory
     TYPE(t_radfun), ALLOCATABLE, TARGET :: radfun_store(:)  !(ntype)
     LOGICAL                     :: radfun_valid = .FALSE.
 
+    !The Wigner matrices of every group operation, for re-expanding the matching
+    !coefficients about the global frame. They depend on the lattice and the symmetry only,
+    !so they outlive both the k-point and the potential.
+    !
+    !They are carried in a t_hybinp because that is where the routine that applies them takes
+    !them from. Nothing else of that type is filled or used here: a hybrid-functional run
+    !builds its own, and this one never reaches it.
+    TYPE(t_hybinp) :: wgn_carrier
+    LOGICAL        :: wgn_valid = .FALSE.
+
     !Everything one k-point contributes, keyed on (eig_id, ikpt, nrec, band selection).
     TYPE :: t_k_slot
         TYPE(t_mat), ALLOCATABLE :: zmat(:)         !(nrec) eigenvectors as read
@@ -45,6 +56,7 @@ MODULE m_matrix_element_factory
         !needs that shape; one that contracts record by record uses zmat.
         TYPE(t_mat), ALLOCATABLE :: zmat_spinor(:)  !(1)
         TYPE(t_abc), ALLOCATABLE :: abc(:,:)        !(2,ntype) matching coefficients
+        INTEGER              :: n_comp = -1         !spin components the coefficients hold
         INTEGER              :: eig_id = -1, ikpt = -1
         INTEGER              :: nrec = -1           !record layout it was filled with
         INTEGER, ALLOCATABLE :: list(:)             !band selection; unallocated = all bands
@@ -67,6 +79,7 @@ MODULE m_matrix_element_factory
 
     PUBLIC :: matrix_element_factory, matrix_element_factory_reset, matrix_element_states
     PUBLIC :: matrix_element_release_anchor, matrix_element_radial
+    PUBLIC :: matrix_element_abc_of
 
 CONTAINS
 
@@ -74,6 +87,8 @@ CONTAINS
         !> Invalidate all cached data. Must be called whenever the eig-file
         !> content or the potential changes, i.e. once per SCF iteration.
         IF (ALLOCATED(radfun_store)) DEALLOCATE(radfun_store)
+        IF (ALLOCATED(wgn_carrier%d_wgn2)) DEALLOCATE(wgn_carrier%d_wgn2)
+        wgn_valid = .FALSE.
         radfun_valid = .FALSE.
         CALL reset_k_cache()
     END SUBROUTINE matrix_element_factory_reset
@@ -87,22 +102,29 @@ CONTAINS
         anchor_slot = 0
     END SUBROUTINE reset_k_cache
 
+    !> Let the anchored k-point be overwritten again. Cheap to call more than once.
     SUBROUTINE matrix_element_release_anchor()
-        !> Let the anchored k-point be overwritten again. Cheap to call more than once.
         anchor_slot = 0
     END SUBROUTINE matrix_element_release_anchor
 
+    !> Give back everything a slot holds and mark it empty, so the next k-point can take it.
+    !> The identifying fields go to values no request can match, which is what keeps a slot
+    !> that was emptied from answering for the k-point it used to hold.
     SUBROUTINE clear_slot(sl)
         TYPE(t_k_slot), INTENT(INOUT) :: sl
         IF (ALLOCATED(sl%zmat))        DEALLOCATE(sl%zmat)
         IF (ALLOCATED(sl%zmat_spinor)) DEALLOCATE(sl%zmat_spinor)
         IF (ALLOCATED(sl%abc))         DEALLOCATE(sl%abc)
         IF (ALLOCATED(sl%list))        DEALLOCATE(sl%list)
-        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1
+        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1; sl%n_comp = -1
         sl%valid  = .FALSE.
         sl%stamp  = 0
     END SUBROUTINE clear_slot
 
+    !> Whether a slot already holds the states a request asks for: same eig file, same
+    !> k-point, same number of records, and the same band selection. The selection is part of
+    !> the identity and not a detail: a slot filled for every band does not answer a request
+    !> for a subset, because what it holds is indexed by the position in the subset.
     LOGICAL FUNCTION slot_matches(sl, eig_id, ikpt, nrec, ev_list)
         TYPE(t_k_slot), INTENT(IN)    :: sl
         INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec
@@ -205,6 +227,59 @@ CONTAINS
         CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
         radfun => radfun_store
     END SUBROUTINE matrix_element_radial
+
+    !> The matching coefficients of a state this module did not read.
+    !>
+    !> ensure_slot builds them for the eigenvectors of one k-point of the eig file and keys
+    !> them on that k-point. A state which is not in the file cannot be asked for that way,
+    !> and the cache must not hold it either because nothing identifies it: a symmetry image
+    !> of a state, whose coefficient vector the caller has just rotated, is the case this
+    !> exists for. It is built here and the caller owns it.
+    !>
+    !> Same three steps in the same order as ensure_slot, the re-expansion about the global
+    !> frame included. A consumer contracting these against anything else the factory
+    !> produced needs both sides in one frame, and that rotation is per atom, so doing it
+    !> afterwards on a quantity that has lost the atom index is not possible.
+    SUBROUTINE matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, fmpi, &
+                                     vtot, lapw, zmat, num_bands, jsp_local, abc)
+        !> The muffin-tin coefficients of one LOCAL spin direction, rebuilt from a given
+        !> eigenvector instead of read from the cache.
+        !>
+        !> jsp_local is that direction, and it is one question even though it moves two
+        !> things: the radial set the coefficients are contracted with, and -- where the
+        !> magnetisation is non-collinear -- the weight of each half of the spinor in the
+        !> atom's own frame. It is NOT a row offset into zmat. A non-collinear calc_abc
+        !> reads BOTH halves of the record and combines them with conjg(nococonv%umat) of
+        !> the type, so zmat has to arrive WHOLE: handing over one component of a split
+        !> spinor asks it to build a local direction out of half the state, and the
+        !> coefficients come back wrong by the frame rather than by a convention.
+
+        TYPE(t_input),    INTENT(IN) :: input
+        TYPE(t_atoms),    INTENT(IN) :: atoms
+        TYPE(t_sym),      INTENT(IN) :: sym
+        TYPE(t_cell),     INTENT(IN) :: cell
+        TYPE(t_noco),     INTENT(IN) :: noco
+        TYPE(t_nococonv), INTENT(IN) :: nococonv
+        TYPE(t_enpara),   INTENT(IN) :: enpara
+        TYPE(t_mpi),      INTENT(IN) :: fmpi
+        TYPE(t_potden),   INTENT(IN) :: vtot
+        TYPE(t_lapw),     INTENT(IN) :: lapw
+        TYPE(t_mat),      INTENT(IN) :: zmat
+        INTEGER,          INTENT(IN) :: num_bands, jsp_local
+        TYPE(t_abc), ALLOCATABLE, INTENT(OUT) :: abc(:)   !> (ntype)
+
+        INTEGER :: n
+
+        CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
+        CALL ensure_wigner(atoms, sym, cell)
+        ALLOCATE(abc(atoms%ntype))
+        DO n = 1, atoms%ntype
+            CALL abc(n)%init(input, atoms, num_bands, n)
+            CALL abc(n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, radfun_store(n), &
+                                 noco, nococonv, jsp_local, n, zmat)
+            CALL abc(n)%rot_to_unrotated(wgn_carrier, atoms, sym, n)
+        END DO
+    END SUBROUTINE matrix_element_abc_of
 
     !> Make sure the states of one k-point, their matching coefficients and the radial
     !> functions are in the cache, and say which slot holds them and how many bands they
@@ -332,10 +407,20 @@ CONTAINS
                                                    radfun_store(n), noco, nococonv, jsp_rad, n, &
                                                    kslot(is)%zmat(MIN(jsp, nrec)))
                 END DO
+                !The coefficients come out expanded about the local frame of each atom,
+                !which is what lets every atom of a type share one radial set. Here they are
+                !re-expanded about the global frame, once, for everyone: an operator that
+                !contracts them against a quantity carrying no atom index cannot undo a
+                !per-atom rotation afterwards, and one that could would be doing it twice.
+                CALL ensure_wigner(atoms, sym, cell)
+                DO jsp = 1, n_comp
+                    CALL kslot(is)%abc(jsp,n)%rot_to_unrotated(wgn_carrier, atoms, sym, n)
+                END DO
                 !A state with no spin structure is its own second channel. Two real
                 !components must never be equated.
                 IF (n_comp == 1) kslot(is)%abc(2,n) = kslot(is)%abc(1,n)
             END DO
+            kslot(is)%n_comp = n_comp
 
             kslot(is)%eig_id = eig_id
             kslot(is)%ikpt   = ikpt
@@ -345,6 +430,30 @@ CONTAINS
         END IF
 
     END SUBROUTINE ensure_slot
+
+    !> The Wigner matrices, built once per run.
+    !>
+    !> Neither store the rest of the code keeps will do: the one on sym is only filled when
+    !> a density matrix or a Green function asks for it and stops at the l of a Hubbard
+    !> shell, and the one on hybinp exists only along the hybrid-functional path.
+    SUBROUTINE ensure_wigner(atoms, sym, cell)
+        USE m_dwigner, ONLY: d_wigner
+        TYPE(t_atoms), INTENT(IN) :: atoms
+        TYPE(t_sym),   INTENT(IN) :: sym
+        TYPE(t_cell),  INTENT(IN) :: cell
+
+        !> Cached across callers on purpose. The table depends on the lattice and on the
+        !> group operations, not on which atom sits in which frame, so a caller that hands
+        !> over a sym with the atom rotations overridden still gets the right table.
+        IF (wgn_valid) RETURN
+        IF (ALLOCATED(wgn_carrier%d_wgn2)) DEALLOCATE(wgn_carrier%d_wgn2)
+        ALLOCATE(wgn_carrier%d_wgn2(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd, &
+                                    0:atoms%lmaxd, sym%nop))
+        CALL d_wigner(sym%nop, sym%mrot, cell%bmat, atoms%lmaxd, wgn_carrier%d_wgn2(:,:,1:,:))
+        wgn_carrier%d_wgn2(:,:,0,:) = CMPLX(1.0, 0.0)
+        wgn_valid = .TRUE.
+    END SUBROUTINE ensure_wigner
+
 
     !> Evaluate one operator at one k-point.
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
@@ -368,9 +477,14 @@ CONTAINS
         TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
 
         INTEGER :: is, num_bands
+        TYPE(t_abc), POINTER :: abc_use(:,:)
 
         CALL ensure_slot(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, enpara, &
                          lapw, vtot, fmpi, is, num_bands, ev_list, l_both_spinors, kpts)
+
+        !Which frame the operator declared. Most contract against local-frame quantities and
+        !take the set the slot already holds; one that says so gets the global-frame set.
+        abc_use => kslot(is)%abc
 
         !An operator whose result carries Cartesian components keeps them in a store
         !that has no distributed counterpart, so the two cannot be combined. Say so here
@@ -399,10 +513,10 @@ CONTAINS
         !spin channels. The abc coefficients stay per record either way, since each is
         !contracted with its own component.
         IF (ALLOCATED(kslot(is)%zmat_spinor)) THEN
-            CALL matel%calc_matrix_elements(kslot(is)%zmat_spinor, kslot(is)%abc, &
+            CALL matel%calc_matrix_elements(kslot(is)%zmat_spinor, abc_use, &
                                             radfun_store)
         ELSE
-            CALL matel%calc_matrix_elements(kslot(is)%zmat, kslot(is)%abc, &
+            CALL matel%calc_matrix_elements(kslot(is)%zmat, abc_use, &
                                             radfun_store)
         END IF
 

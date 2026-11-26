@@ -33,7 +33,7 @@ MODULE m_intgr
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: intgr0, intgr1, intgr2, intgr3_modern, intgr3, intgz0, intgz1, intgz1complex, intgz1realreverse, &
-     intgz1complexreverse, sfint, intgr3linintp, intgr2linintp, intgz1reverse, ddot
+     intgz1complexreverse, sfint, sfint_outward, intgr3linintp, intgr2linintp, intgz1reverse, ddot
 
   !INTRINSIC exp,log
   INTERFACE
@@ -552,6 +552,26 @@ END SUBROUTINE intgr3_modern
       z(i)=z(i-1)+h*(x(i-1)*y(i-1)+x(i)*y(i))/2
 
    END SUBROUTINE
+
+   subroutine sfint_outward(y, x, h, jri, z)
+      ! Same integrator as sfint, but integrates from the MT boundary inward,
+      ! i.e. z(i) is the integral from x(i) to x(jri).
+
+      integer, intent(in)  :: jri
+      real,    intent(in)  :: h
+      real,    intent(in)  :: x(jri), y(jri)
+      real,    intent(out) :: z(jri)
+
+      integer :: i
+
+      z(jri) = 0.0
+      z(jri-1) = h*(x(jri-1)*y(jri-1) + x(jri)*y(jri))/2
+      do i = jri-2, 2, -1
+         z(i) = z(i+1) - h*(x(i-1)*y(i-1) - 13*x(i)*y(i) - 13*x(i+1)*y(i+1) + x(i+2)*y(i+2))/24
+      end do
+      z(1) = z(2) + h*(x(1)*y(1) + x(2)*y(2))/2
+
+   end subroutine sfint_outward
 
    ! For dfpt (juPhon):
    SUBROUTINE intgr3LinIntp(y,r,h,jri,z, i1)

@@ -261,12 +261,32 @@ PROGRAM inpgen
       ELSE
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
       ENDIF
+      !-spinor acts on the magnetism that make_magnetism derives from the
+      !inpgen input, and has to be applied before make_defaults so that the
+      !noco defaults follow. Neither runs when the input is already an
+      !inp.xml, so the flag would be accepted and ignored there.
+      IF (l_fullinput.AND.judft_was_argument("-spinor")) CALL judft_error(&
+           "-spinor only works on an inpgen input read with -f",&
+           hint="On an existing inp.xml, set l_noco in <magnetism> by hand")
+
       IF (.NOT.l_fullinput) THEN
          !First we determine the spacegoup and map the atoms to groups
          CALL make_crystal(input%film,atomid,atompos,mag_mom,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
 
          !Generate magnetic settings
          CALL make_magnetism(input,noco,atoms,mag_mom)
+
+         !-spinor selects the spinor route for a magnetic configuration whose
+         !moments are collinear. make_magnetism leaves those on its collinear
+         !branch with l_noco=F, so the choice cannot be expressed in the input
+         !file. jspins is 2 at this point only if moments were given, and
+         !make_defaults cannot reject jspins=0 because it raises it to 1 after
+         !its own noco check.
+         IF (judft_was_argument("-spinor")) THEN
+            IF (input%jspins/=2) CALL judft_error("-spinor needs a magnetic configuration",&
+                 hint="Give magnetic moments in the &atom namelists of the inpgen input")
+            noco%l_noco = .TRUE.
+         END IF
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module

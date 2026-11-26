@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_ssomat
@@ -12,14 +12,12 @@ MODULE m_ssomat
   USE m_types_potden
   USE m_types_misc
   USE m_types_kpts
-  USE m_types_tlmplm
-  USE m_types_usdus
   USE m_types_lapw
+  USE m_types_abc
+  USE m_types_radfun
   USE m_constants
   USE m_eig66_io
-  USE m_abcof
   USE m_fermifct
-  USE m_genMTBasis
   USE m_types_rsoc
 #ifdef CPP_MPI
   USE mpi
@@ -38,8 +36,6 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)         :: fmpi
-
-     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -61,50 +57,41 @@ CONTAINS
     INTEGER:: ierr
 #endif
     INTEGER :: neigf=1  !not full-matrix
-    INTEGER :: ilo,js,jsloc,nk,n,l ,lm,band,nr,ne,nat,m
-    INTEGER :: na,nef
-    REAL    :: r1,r2
-    COMPLEX :: c1,c2
+    INTEGER :: jsloc,nk,n,nr,ne,nef
 
     COMPLEX, ALLOCATABLE :: matel(:,:,:)
     REAL,    ALLOCATABLE :: eig_shift(:,:,:,:)
-    REAL,    ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
     Real,    allocatable :: w_iks(:)
-    COMPLEX, ALLOCATABLE :: acof(:,:,:,:,:), bcof(:,:,:,:,:)
-    COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:,:)
-    COMPLEX,ALLOCATABLE  :: soangl(:,:,:,:,:,:,:)
+    COMPLEX, ALLOCATABLE :: soangl(:,:,:,:,:,:,:)
+    COMPLEX, ALLOCATABLE :: chi(:,:,:)
 
     TYPE(t_rsoc) :: rsoc
     TYPE(t_mat)  :: zmat
-    TYPE(t_usdus):: usdus
     TYPE(t_lapw) :: lapw
+    TYPE(t_radfun), ALLOCATABLE :: radfun(:)
+    TYPE(t_abc),    ALLOCATABLE :: abc(:,:)
 
+    ! With one atom per type every atom is its own representative, so the
+    ! coefficients need no rotation to the global frame (rot_to_unrotated).
     IF (ANY(atoms%neq/=1)) CALL judft_error('(spin spiral + soc) does not work'//&
          ' properly for more than one atom per type!',calledby="ssomat")
+    IF (input%jspins/=2) CALL judft_error('ssomat requires a spin-polarized calculation',calledby="ssomat")
 
-
-
-    ! needed directly for calculating matrix elements
     seigvso=0.0
     ALLOCATE(eig_shift(input%neig,0:atoms%ntype,kpts%nkpt,SIZE(theta)));eig_shift=0.0
-    ALLOCATE( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2),&
-         bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2) )
-    ALLOCATE( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat,2,2) )
+    ALLOCATE(matel(neigf,input%neig,0:atoms%ntype))
 
-    ALLOCATE( matel(neigf,input%neig,0:atoms%ntype) )
-
-
-
-    !Generate the muffin-tin radial functions and the usdus quantities needed
-    !by abcof. (This replaces the radial part of the former spnorb call.)
-    CALL usdus%init(atoms,2)
-    ALLOCATE(f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd),flo(atoms%jmtd,2,atoms%nlod))
-    DO js=1,input%jspins
-       DO n=1,atoms%ntype
-          CALL genMTBasis(atoms,enpara,v,fmpi,n,js,usdus,f,g,flo,l_writeArg=.FALSE.)
-       ENDDO
+    ! Muffin-tin radial functions for both local spins
+    ALLOCATE(radfun(atoms%ntype),abc(2,atoms%ntype))
+    DO n=1,atoms%ntype
+       CALL radfun(n)%generate_radial_functions(atoms,input,enpara,fmpi,v,n)
     ENDDO
-    DEALLOCATE(f,g,flo)
+
+    ! Spin rotation local -> global frame: chi(js,jsloc,n)
+    ALLOCATE(chi(2,2,atoms%ntype))
+    DO n=1,atoms%ntype
+       chi(:,:,n)=nococonv%umat(n)
+    ENDDO
 
     !Calculate the radial spin-orbit matrix elements rsoc%rso. The angular
     !matrix elements are set up below for the requested SOC directions.
@@ -127,58 +114,18 @@ CONTAINS
        IF (ALLOCATED(zmat%data_c)) DEALLOCATE(zmat%data_c)
        ALLOCATE(zmat%data_c(zMat%matsize1,zmat%matsize2))
        CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,0,nk,1),zmat=zmat)
-       DO jsloc= 1,2
-          eig_shift(:,0,nk,1)=0.0 !not needed
-          CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc , &
-               acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
-       ENDDO
-
-       ! rotate abcof into global spin coordinate frame
-       nat= 0
-       DO n= 1,atoms%ntype
-          DO na= 1,atoms%neq(n)
-             nat= nat+1
-             r1= nococonv%alph(n)
-             r2= nococonv%beta(n)
-             DO lm= 0,atoms%lmaxd*(atoms%lmaxd+2)
-                DO band= 1,input%neig
-                   c1= acof(band,lm,nat,1,1)
-                   c2= acof(band,lm,nat,2,1)
-                   acof(band,lm,nat,1,1)= CMPLX(COS(r1/2.),-SIN(r1/2.)) *CMPLX( COS(r2/2.),0.) *c1
-                   acof(band,lm,nat,2,1)= CMPLX(COS(r1/2.),-SIN(r1/2.)) *CMPLX(-SIN(r2/2.),0.) *c2
-                   acof(band,lm,nat,1,2)= CMPLX(COS(r1/2.),+SIN(r1/2.)) *CMPLX(+SIN(r2/2.),0.) *c1
-                   acof(band,lm,nat,2,2)= CMPLX(COS(r1/2.),+SIN(r1/2.)) *CMPLX( COS(r2/2.),0.) *c2
-                   c1= bcof(band,lm,nat,1,1)
-                   c2= bcof(band,lm,nat,2,1)
-                   bcof(band,lm,nat,1,1)= CMPLX(COS(r1/2.),-SIN(r1/2.)) *CMPLX( COS(r2/2.),0.) *c1
-                   bcof(band,lm,nat,2,1)= CMPLX(COS(r1/2.),-SIN(r1/2.)) *CMPLX(-SIN(r2/2.),0.) *c2
-                   bcof(band,lm,nat,1,2)= CMPLX(COS(r1/2.),+SIN(r1/2.)) *CMPLX(+SIN(r2/2.),0.) *c1
-                   bcof(band,lm,nat,2,2)= CMPLX(COS(r1/2.),+SIN(r1/2.)) *CMPLX( COS(r2/2.),0.) *c2
-                ENDDO ! band
-             ENDDO   ! lm
-             DO ilo = 1,atoms%nlo(n)
-                l = atoms%llo(ilo,n)
-                DO band= 1,input%neig
-                   DO m = -l, l
-                      c1= ccof(m,band,ilo,nat,1,1)
-                      c2= ccof(m,band,ilo,nat,2,1)
-                      ccof(m,band,ilo,nat,1,1)= CMPLX(COS(r1/2.),-SIN(r1/2.))*CMPLX( COS(r2/2.),0.)*c1
-                      ccof(m,band,ilo,nat,2,1)= CMPLX(COS(r1/2.),-SIN(r1/2.))*CMPLX(-SIN(r2/2.),0.)*c2
-                      ccof(m,band,ilo,nat,1,2)= CMPLX(COS(r1/2.),+SIN(r1/2.))*CMPLX(+SIN(r2/2.),0.)*c1
-                      ccof(m,band,ilo,nat,2,2)= CMPLX(COS(r1/2.),+SIN(r1/2.))*CMPLX( COS(r2/2.),0.)*c2
-                   ENDDO
-                ENDDO
-             ENDDO
+       eig_shift(:,0,nk,1)=0.0 !not needed
+       ! Coefficients in the local spin frame of each atom
+       DO n=1,atoms%ntype
+          DO jsloc=1,2
+             CALL abc(jsloc,n)%init(input,atoms,input%neig,n)
+             CALL abc(jsloc,n)%calc_abc(input,atoms,sym,cell,lapw,ne,radfun(n),noco,nococonv,jsloc,n,zMat)
           ENDDO
        ENDDO
        DO nr=1,size(theta) !loop over angles
           ! matrix elements within k
-          CALL ssomatel(neigf,input,atoms, noco, &
-               soangl(:,:,:,:,:,:,nr),rsoc%rso,&
-               .TRUE.,&
-               acof,bcof, ccof,&
-               acof,bcof, ccof,&
-               matel )
+          CALL ssomatel(neigf,input,atoms,soangl(:,:,:,:,:,:,nr),rsoc%rso,&
+               .TRUE.,abc,abc,chi,matel)
           eig_shift(:,0:,nk,nr)=matel(1,:,0:)
        ENDDO
     ENDDO
@@ -207,55 +154,38 @@ CONTAINS
             enddo
           ENDDO
        ENDDO
-       !seigvso= results%seigv+seigvso !now included in sum above
     ENDIF
   END SUBROUTINE ssomat
 
   ! ==================================================================== !
 
-  SUBROUTINE ssomatel(neigf,input,atoms, noco,&
-       soangl,rso,&
-       diag, &
-       acof1,bcof1,ccof1,acof2,bcof2,ccof2,&
-       matel )
+  !> First-order SOC matrix elements in the global spin frame
+  !>   matel(bandf,band2,n) = sum c1(icof;l,m1,js1)*rso(icof,jcof,n,l,jsloc1,jsloc2)
+  !>                          *conjg(c2(jcof;l,m2,js2))*soangl(l,m2,js2,l,m1,js1)
+  !> with the global-frame coefficients c(js) = chi(js,jsloc,n)*abc(jsloc,n)%cof.
+  !> diag: only js1==js2 (both spins); else js1=2,js2=1. neigf==1: band1==band2.
+  SUBROUTINE ssomatel(neigf,input,atoms,soangl,rso,diag,abc1,abc2,chi,matel)
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_noco),INTENT(IN)        :: noco
-    TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_atoms),INTENT(IN)   :: atoms
+    LOGICAL, INTENT(IN)        :: diag
+    INTEGER, INTENT(IN)        :: neigf
+    ! rso(icof,jcof,ntype,0:lmaxd,2,2), slots as in t_abc%cof
+    REAL,    INTENT(IN)        :: rso(:,:,:,0:,:,:)
+    COMPLEX, INTENT(IN)        :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)
+    TYPE(t_abc), INTENT(IN)    :: abc1(:,:),abc2(:,:)  !(jsloc,ntype)
+    COMPLEX, INTENT(IN)        :: chi(:,:,:)           !(js,jsloc,ntype)
+    COMPLEX, INTENT(OUT)       :: matel(:,:,0:)        !(neigf,neig,0:ntype)
 
-    LOGICAL, INTENT(IN)  :: diag
-    INTEGER, INTENT(IN)  :: neigf
-    ! Unified radial SOC matrix: rso(icof,jcof,ntype,0:lmaxd,2,2) with the
-    ! radial-function slots 1=u, 2=udot, 3.. = LOs of the same l (in atoms%llo
-    ! order). It replaces the former rsopp/rsoppd/.../rsoploplop arrays.
-    REAL,    INTENT(IN)  :: rso(:,:,:,0:,:,:)
-    COMPLEX, INTENT(IN)  :: &
-         soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:),  &
-         acof1(:,0:,:,:,:), &
-         bcof1(:,0:,:,:,:),&
-         ccof1(-atoms%llod:,:,:,:,:,:),&
-         acof2(:,0:,:,:,:), &
-         bcof2(:,0:,:,:,:),&
-         ccof2(-atoms%llod:,:,:,:,:,:)
+    INTEGER :: band1,band2,bandf,n,na,l,m1,m2,lm1,lm2,nr,icof,jcof
+    INTEGER :: jsloc1,jsloc2,js1,js2,jsnumber
+    COMPLEX, ALLOCATABLE :: s(:,:,:),r(:,:,:)
 
-    Complex, INTENT(OUT) :: matel(neigf,input%neig,0:atoms%ntype)
-
-    INTEGER :: band1,band2,bandf, n ,na, l,m1,m2,lm1,lm2,&
-         jsloc1,jsloc2, js1,js2,jsnumber,ilo,ilop,nat
-    INTEGER :: lo_slot(atoms%nlod)
-    COMPLEX, ALLOCATABLE :: sa(:,:),sb(:,:),sc(:,:,:),ral(:,:,:)
-    COMPLEX, ALLOCATABLE :: ra(:,:),rb(:,:),rc(:,:,:),rbl(:,:,:)
-
-    ! with the following nesting of loops the calculation of the
-    ! matrix-elements is of order
-    ! natall*lmd*neigd*(lmd+neigd) ; note that  lmd+neigd << lmd*neigd
-
+    ! cost per atom and spin: lmd*neig*(lmd+neig)
     matel(:,:,:)= CMPLX(0.,0.)
-    ALLOCATE ( sa(2,0:atoms%lmaxd*(atoms%lmaxd+2)),sb(2,0:atoms%lmaxd*(atoms%lmaxd+2)),ra(2,0:atoms%lmaxd*(atoms%lmaxd+2)),rb(2,0:atoms%lmaxd*(atoms%lmaxd+2)) )
-    ALLOCATE ( sc(2,-atoms%llod:atoms%llod,atoms%nlod),rc(2,-atoms%llod:atoms%llod,atoms%nlod) )
-    ALLOCATE ( ral(2,-atoms%llod:atoms%llod,atoms%nlod),rbl(2,-atoms%llod:atoms%llod,atoms%nlod) )
+    nr= atoms%max_radial_functions
+    ALLOCATE(s(nr,2,0:atoms%lmaxd*(atoms%lmaxd+2)),r(nr,2,0:atoms%lmaxd*(atoms%lmaxd+2)))
 
-    ! within one k-point loop over global spin
     IF (diag) THEN
        jsnumber= 2
     ELSE
@@ -267,173 +197,69 @@ CONTAINS
        ELSE
           js1= 2
        ENDIF
-
-       ! loop over MT
-       na= 0
        DO n= 1,atoms%ntype
-          ! Map each LO of this atom type to its radial-function slot in rso:
-          ! slot 1=u, 2=udot, 3.. = LOs of the same l in atoms%llo order.
-          DO ilo= 1,atoms%nlo(n)
-             lo_slot(ilo)= atoms%slot_of_lo(ilo,n)
-          ENDDO
-          DO nat= 1,atoms%neq(n)
-             na= na+1
-
-             DO band2= 1,input%neig ! loop over eigenstates 2
-
-                DO l= 1,atoms%lmax(n) ! loop over l
-                   DO m1= -l,l   ! loop over m1
+          DO na= 1,atoms%neq(n)
+             DO band2= 1,input%neig
+                ! s = sum_m2 conjg(c2)*soangl
+                DO l= 1,atoms%lmax(n)
+                   DO m1= -l,l
                       lm1= l*(l+1) + m1
-
                       DO jsloc2= 1,2
-                         sa(jsloc2,lm1) = CMPLX(0.,0.)
-                         sb(jsloc2,lm1) = CMPLX(0.,0.)
-                         DO m2= -l,l
-                            lm2= l*(l+1) + m2
-
-                            sa(jsloc2,lm1)= sa(jsloc2,lm1) + &
-                                 CONJG(acof2(band2,lm2,na,jsloc2,js2))&
-                                 * soangl(l,m2,js2,l,m1,js1)
-                            sb(jsloc2,lm1)= sb(jsloc2,lm1) + &
-                                 CONJG(bcof2(band2,lm2,na,jsloc2,js2))&
-                                 * soangl(l,m2,js2,l,m1,js1)
-
-                         ENDDO ! m2
-                      ENDDO   ! jsloc2
-
-                   ENDDO ! m1
-                ENDDO   ! l
-
-                DO ilo = 1, atoms%nlo(n) ! LO-part
-                   l = atoms%llo(ilo,n)
-                   DO m1 = -l, l
-                      DO jsloc2= 1,2
-                         sc(jsloc2,m1,ilo) = CMPLX(0.,0.)
-                         IF (l==0) CYCLE
-                         DO m2= -l, l
-                            sc(jsloc2,m1,ilo) = sc(jsloc2,m1,ilo) +&
-                                 CONJG(ccof2(m2,band2,ilo,na,jsloc2,js2))&
-                                 * soangl(l,m2,js2,l,m1,js1)
+                         DO jcof= 1,abc2(jsloc2,n)%n_r(l)
+                            s(jcof,jsloc2,lm1)= CMPLX(0.,0.)
+                            DO m2= -l,l
+                               lm2= l*(l+1) + m2
+                               s(jcof,jsloc2,lm1)= s(jcof,jsloc2,lm1) + &
+                                    CONJG(chi(js2,jsloc2,n)*abc2(jsloc2,n)%cof(band2,lm2,jcof,na))&
+                                    *soangl(l,m2,js2,l,m1,js1)
+                            ENDDO
                          ENDDO
                       ENDDO
                    ENDDO
-                ENDDO ! ilo
-
-                DO l= 1,atoms%lmax(n) ! loop over l
-                   DO m1= -l,l   ! loop over m1
-                      lm1= l*(l+1) + m1
-
-                      DO jsloc1= 1,2
-                         ra(jsloc1,lm1)= CMPLX(0.,0.)
-                         rb(jsloc1,lm1)= CMPLX(0.,0.)
-                         DO jsloc2= 1,2
-                            ra(jsloc1,lm1)= ra(jsloc1,lm1) +  &
-                                 sa(jsloc2,lm1) * rso(1,1,n,l,jsloc1,jsloc2) &
-                                 + sb(jsloc2,lm1) * rso(1,2,n,l,jsloc1,jsloc2)
-                            rb(jsloc1,lm1)= rb(jsloc1,lm1) +&
-                                 sa(jsloc2,lm1) * rso(2,1,n,l,jsloc1,jsloc2)&
-                                 + sb(jsloc2,lm1) * rso(2,2,n,l,jsloc1,jsloc2)
-                         ENDDO ! jsloc2
-                      ENDDO   ! jsloc1
-
-                   ENDDO ! m1
-                ENDDO   ! l
-
-                DO ilo = 1, atoms%nlo(n) ! LO-part
-                   l = atoms%llo(ilo,n)
-                   DO m1 = -l, l
+                ENDDO
+                ! r = rso*s
+                DO l= 1,atoms%lmax(n)
+                   DO m1= -l,l
                       lm1= l*(l+1) + m1
                       DO jsloc1= 1,2
-                         ral(jsloc1,m1,ilo) = CMPLX(0.,0.)
-                         rbl(jsloc1,m1,ilo) = CMPLX(0.,0.)
-                         rc(jsloc1,m1,ilo)  = CMPLX(0.,0.)
-                         DO jsloc2= 1,2
-                            ral(jsloc1,m1,ilo) = ral(jsloc1,m1,ilo) +&
-                                 sc(jsloc2,m1,ilo) * rso(1,lo_slot(ilo),n,l,jsloc1,jsloc2)
-                            rbl(jsloc1,m1,ilo) = rbl(jsloc1,m1,ilo) +&
-                                 sc(jsloc2,m1,ilo) * rso(2,lo_slot(ilo),n,l,jsloc1,jsloc2)
-                            rc(jsloc1,m1,ilo) = rc(jsloc1,m1,ilo) +&
-                                 sa(jsloc2,lm1) * rso(lo_slot(ilo),1,n,l,jsloc1,jsloc2)&
-                                 + sb(jsloc2,lm1) * rso(lo_slot(ilo),2,n,l,jsloc1,jsloc2)
+                         DO icof= 1,abc1(jsloc1,n)%n_r(l)
+                            r(icof,jsloc1,lm1)= CMPLX(0.,0.)
+                            DO jsloc2= 1,2
+                               DO jcof= 1,abc2(jsloc2,n)%n_r(l)
+                                  r(icof,jsloc1,lm1)= r(icof,jsloc1,lm1) + &
+                                       rso(icof,jcof,n,l,jsloc1,jsloc2)*s(jcof,jsloc2,lm1)
+                               ENDDO
+                            ENDDO
                          ENDDO
                       ENDDO
                    ENDDO
-                ENDDO ! ilo
-
-                DO l= 1,atoms%lmax(n) ! loop over l
-                   DO m1= -l,l   ! loop over m1
-                      lm1= l*(l+1) + m1
-
-                      DO jsloc1= 1,2
-                         DO bandf= 1,neigf
-                            IF (neigf==input%neig) THEN
-                               band1= bandf
-                            ELSE
-                               band1= band2
-                            ENDIF
-                            matel(bandf,band2,n)= matel(bandf,band2,n) +&
-                                 acof1(band1,lm1,na,jsloc1,js1)*ra(jsloc1,lm1)   &
-                                 + bcof1(band1,lm1,na,jsloc1,js1)*rb(jsloc1,lm1)
-                         ENDDO ! band1
-                      ENDDO   ! jsloc1
-
-                   ENDDO ! m1,lm1
-                ENDDO   ! l
-
-                DO ilo = 1, atoms%nlo(n) ! LO-part
-                   l = atoms%llo(ilo,n)
-                   IF (l==0) CYCLE
-                   DO m1 = -l, l
-                      lm1= l*(l+1) + m1
-
-                      DO jsloc1= 1,2
-                         DO bandf= 1,neigf
-                            IF (neigf==input%neig) THEN
-                               band1= bandf
-                            ELSE
-                               band1= band2
-                            ENDIF
-                            matel(bandf,band2,n)= matel(bandf,band2,n) +&
-                                 ccof1(m1,band1,ilo,na,jsloc1,js1)*rc(jsloc1,m1,ilo)&
-                                 + acof1(band1,lm1,na,jsloc1,js1)*ral(jsloc1,m1,ilo)&
-                                 + bcof1(band1,lm1,na,jsloc1,js1)*rbl(jsloc1,m1,ilo)
-                         ENDDO ! band1
-                      ENDDO   ! jsloc1
-
-                      DO ilop = 1,atoms%nlo(n)
-                         IF (atoms%llo(ilop,n).EQ.l) THEN
-                            DO jsloc1= 1,2
-                               DO bandf= 1,neigf
-                                  IF (neigf==input%neig) THEN
-                                     band1= bandf
-                                  ELSE
-                                     band1= band2
-                                  ENDIF
-                                  DO jsloc2= 1,2
-                                     matel(bandf,band2,n)= matel(bandf,band2,n) +&
-                                          ccof1(m1,band1,ilo,na,jsloc1,js1)*&
-                                          rso(lo_slot(ilo),lo_slot(ilop),n,l,jsloc1,jsloc2)*&
-                                          sc(jsloc2,m1,ilop)
-                                  ENDDO   ! jsloc2
-                               ENDDO     ! band1
-                            ENDDO   ! jsloc1
-                         ENDIF
-                      ENDDO ! ilop
-
-                   ENDDO   ! m1
-                ENDDO     ! ilo
-
+                ENDDO
+                ! matel += c1*r
+                DO bandf= 1,neigf
+                   IF (neigf==input%neig) THEN
+                      band1= bandf
+                   ELSE
+                      band1= band2
+                   ENDIF
+                   DO l= 1,atoms%lmax(n)
+                      DO m1= -l,l
+                         lm1= l*(l+1) + m1
+                         DO jsloc1= 1,2
+                            DO icof= 1,abc1(jsloc1,n)%n_r(l)
+                               matel(bandf,band2,n)= matel(bandf,band2,n) + &
+                                    chi(js1,jsloc1,n)*abc1(jsloc1,n)%cof(band1,lm1,icof,na)*r(icof,jsloc1,lm1)
+                            ENDDO
+                         ENDDO
+                      ENDDO
+                   ENDDO
+                ENDDO
              ENDDO     ! band2
-          ENDDO       ! nat,na
+          ENDDO       ! na
        ENDDO         ! n
     ENDDO           ! js2,js1
 
     DO n= 1,atoms%ntype
-          DO band2= 1,input%neig
-             DO bandf= 1,neigf
-                matel(bandf,band2,0)= matel(bandf,band2,0) + matel(bandf,band2,n)
-             ENDDO
-          ENDDO
+       matel(:,:,0)= matel(:,:,0) + matel(:,:,n)
     ENDDO
 
     IF (diag) THEN
@@ -451,8 +277,6 @@ CONTAINS
           ENDDO
        ENDDO
     ENDIF
-
-    DEALLOCATE ( sa,sb,ra,rb )
 
   END SUBROUTINE ssomatel
 END MODULE m_ssomat
