@@ -58,7 +58,14 @@ MODULE m_matrix_element_factory
         TYPE(t_abc), ALLOCATABLE :: abc(:,:)        !(2,ntype) matching coefficients
         INTEGER              :: n_comp = -1         !spin components the coefficients hold
         INTEGER              :: eig_id = -1, ikpt = -1
+        !The key is the PAIR. LAYOUT_SPINOR appears with one record (noco: the whole
+        !spinor already in one) and with two (second variation: the halves of one
+        !state), so the layout alone does not fix the record count; and nrec alone
+        !cannot tell those two halves from the unrelated states of LAYOUT_CHANNELS,
+        !nor a one-record spinor from a one-record LAYOUT_SCALAR, whose abc holds one
+        !component copied into both slots rather than two.
         INTEGER              :: nrec = -1           !record layout it was filled with
+        INTEGER              :: layout = -1         !and the spinor layout behind it
         INTEGER, ALLOCATABLE :: list(:)             !band selection; unallocated = all bands
         LOGICAL              :: valid = .FALSE.
         INTEGER              :: stamp = 0           !last use, for the eviction order
@@ -79,7 +86,6 @@ MODULE m_matrix_element_factory
 
     PUBLIC :: matrix_element_factory, matrix_element_factory_reset, matrix_element_states
     PUBLIC :: matrix_element_release_anchor, matrix_element_radial
-    PUBLIC :: matrix_element_abc_of
 
 CONTAINS
 
@@ -116,22 +122,23 @@ CONTAINS
         IF (ALLOCATED(sl%zmat_spinor)) DEALLOCATE(sl%zmat_spinor)
         IF (ALLOCATED(sl%abc))         DEALLOCATE(sl%abc)
         IF (ALLOCATED(sl%list))        DEALLOCATE(sl%list)
-        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1; sl%n_comp = -1
+        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1; sl%n_comp = -1; sl%layout = -1
         sl%valid  = .FALSE.
         sl%stamp  = 0
     END SUBROUTINE clear_slot
 
     !> Whether a slot already holds the states a request asks for: same eig file, same
-    !> k-point, same number of records, and the same band selection. The selection is part of
-    !> the identity and not a detail: a slot filled for every band does not answer a request
-    !> for a subset, because what it holds is indexed by the position in the subset.
-    LOGICAL FUNCTION slot_matches(sl, eig_id, ikpt, nrec, ev_list)
+    !> k-point, same number of records under the same spinor layout, and the same band
+    !> selection. The selection is part of the identity and not a detail: a slot filled
+    !> for every band does not answer a request for a subset, because what it holds is
+    !> indexed by the position in the subset.
+    LOGICAL FUNCTION slot_matches(sl, eig_id, ikpt, nrec, layout, ev_list)
         TYPE(t_k_slot), INTENT(IN)    :: sl
-        INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec
+        INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec, layout
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
 
         slot_matches = sl%valid .AND. eig_id == sl%eig_id .AND. ikpt == sl%ikpt &
-                       .AND. nrec == sl%nrec
+                       .AND. nrec == sl%nrec .AND. layout == sl%layout
         IF (.NOT.slot_matches) RETURN
         IF (PRESENT(ev_list) .NEQV. ALLOCATED(sl%list)) THEN
             slot_matches = .FALSE.
@@ -145,15 +152,15 @@ CONTAINS
     !> of the two happened, so the caller knows whether it still has to fill it. The
     !> victim is the slot used longest ago, which keeps a k that is revisited on every
     !> iteration -- the k of a k/k+b pair -- while its neighbours come and go.
-    INTEGER FUNCTION acquire_slot(eig_id, ikpt, nrec, l_hit, ev_list)
-        INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec
+    INTEGER FUNCTION acquire_slot(eig_id, ikpt, nrec, layout, l_hit, ev_list)
+        INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec, layout
         LOGICAL, INTENT(OUT)          :: l_hit
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
 
         INTEGER :: is, oldest
 
         DO is = 1, N_KSLOT
-            IF (slot_matches(kslot(is), eig_id, ikpt, nrec, ev_list)) THEN
+            IF (slot_matches(kslot(is), eig_id, ikpt, nrec, layout, ev_list)) THEN
                 l_hit = .TRUE.
                 acquire_slot = is
                 use_clock = use_clock + 1
@@ -227,59 +234,6 @@ CONTAINS
         CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
         radfun => radfun_store
     END SUBROUTINE matrix_element_radial
-
-    !> The matching coefficients of a state this module did not read.
-    !>
-    !> ensure_slot builds them for the eigenvectors of one k-point of the eig file and keys
-    !> them on that k-point. A state which is not in the file cannot be asked for that way,
-    !> and the cache must not hold it either because nothing identifies it: a symmetry image
-    !> of a state, whose coefficient vector the caller has just rotated, is the case this
-    !> exists for. It is built here and the caller owns it.
-    !>
-    !> Same three steps in the same order as ensure_slot, the re-expansion about the global
-    !> frame included. A consumer contracting these against anything else the factory
-    !> produced needs both sides in one frame, and that rotation is per atom, so doing it
-    !> afterwards on a quantity that has lost the atom index is not possible.
-    SUBROUTINE matrix_element_abc_of(input, atoms, sym, cell, noco, nococonv, enpara, fmpi, &
-                                     vtot, lapw, zmat, num_bands, jsp_local, abc)
-        !> The muffin-tin coefficients of one LOCAL spin direction, rebuilt from a given
-        !> eigenvector instead of read from the cache.
-        !>
-        !> jsp_local is that direction, and it is one question even though it moves two
-        !> things: the radial set the coefficients are contracted with, and -- where the
-        !> magnetisation is non-collinear -- the weight of each half of the spinor in the
-        !> atom's own frame. It is NOT a row offset into zmat. A non-collinear calc_abc
-        !> reads BOTH halves of the record and combines them with conjg(nococonv%umat) of
-        !> the type, so zmat has to arrive WHOLE: handing over one component of a split
-        !> spinor asks it to build a local direction out of half the state, and the
-        !> coefficients come back wrong by the frame rather than by a convention.
-
-        TYPE(t_input),    INTENT(IN) :: input
-        TYPE(t_atoms),    INTENT(IN) :: atoms
-        TYPE(t_sym),      INTENT(IN) :: sym
-        TYPE(t_cell),     INTENT(IN) :: cell
-        TYPE(t_noco),     INTENT(IN) :: noco
-        TYPE(t_nococonv), INTENT(IN) :: nococonv
-        TYPE(t_enpara),   INTENT(IN) :: enpara
-        TYPE(t_mpi),      INTENT(IN) :: fmpi
-        TYPE(t_potden),   INTENT(IN) :: vtot
-        TYPE(t_lapw),     INTENT(IN) :: lapw
-        TYPE(t_mat),      INTENT(IN) :: zmat
-        INTEGER,          INTENT(IN) :: num_bands, jsp_local
-        TYPE(t_abc), ALLOCATABLE, INTENT(OUT) :: abc(:)   !> (ntype)
-
-        INTEGER :: n
-
-        CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
-        CALL ensure_wigner(atoms, sym, cell)
-        ALLOCATE(abc(atoms%ntype))
-        DO n = 1, atoms%ntype
-            CALL abc(n)%init(input, atoms, num_bands, n)
-            CALL abc(n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, radfun_store(n), &
-                                 noco, nococonv, jsp_local, n, zmat)
-            CALL abc(n)%rot_to_unrotated(wgn_carrier, atoms, sym, n)
-        END DO
-    END SUBROUTINE matrix_element_abc_of
 
     !> Make sure the states of one k-point, their matching coefficients and the radial
     !> functions are in the cache, and say which slot holds them and how many bands they
@@ -357,7 +311,7 @@ CONTAINS
         !Eigenvectors and abc coefficients for this k-point and band selection. Several
         !k-points are held at once, so asking for a neighbour does not discard the k it is
         !a neighbour of.
-        is = acquire_slot(eig_id, ikpt, nrec, l_hit, ev_list)
+        is = acquire_slot(eig_id, ikpt, nrec, layout%layout, l_hit, ev_list)
         IF (.NOT.l_hit) THEN
             !Read and select the state vectors
             !TODO: at the secvar_soc call site the eigenvectors are also read in
@@ -425,6 +379,7 @@ CONTAINS
             kslot(is)%eig_id = eig_id
             kslot(is)%ikpt   = ikpt
             kslot(is)%nrec   = nrec
+            kslot(is)%layout = layout%layout
             IF (PRESENT(ev_list)) kslot(is)%list = ev_list
             kslot(is)%valid = .TRUE.
         END IF

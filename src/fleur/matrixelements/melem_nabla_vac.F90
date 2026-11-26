@@ -33,8 +33,7 @@
 !>  d/d(mesh). slot_sign carries it, the same way it carries the reflection of the phase.
 MODULE m_melem_nabla_vac
    USE m_juDFT
-   USE m_intgr, ONLY: intgz0
-   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
+   USE m_types_melem_vacabc, ONLY: t_melem_vacabc, melem_vac_zint
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_nabla_vac
@@ -92,16 +91,24 @@ CONTAINS
                IF (vac%kvac(2, l) /= vac_b%kvac(2, lp) - gb(2)) CYCLE
 
                !> the overlap integrals, for the in-plane components
-               CALL zint(vac%u(:, l, iv), vac_b%u(:, lp, iv_b), s_uu)
-               CALL zint(vac%u(:, l, iv), vac_b%ue(:, lp, iv_b), s_ud)
-               CALL zint(vac%ue(:, l, iv), vac_b%u(:, lp, iv_b), s_du)
-               CALL zint(vac%ue(:, l, iv), vac_b%ue(:, lp, iv_b), s_dd)
+               CALL melem_vac_zint(vac%u(:, l, iv), vac_b%u(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, s_uu)
+               CALL melem_vac_zint(vac%u(:, l, iv), vac_b%ue(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, s_ud)
+               CALL melem_vac_zint(vac%ue(:, l, iv), vac_b%u(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, s_du)
+               CALL melem_vac_zint(vac%ue(:, l, iv), vac_b%ue(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, s_dd)
 
                !> the same four with the KET differentiated, for the z component
-               CALL zint(vac%u(:, l, iv), vac_b%du(:, lp, iv_b), z_uu)
-               CALL zint(vac%u(:, l, iv), vac_b%due(:, lp, iv_b), z_ud)
-               CALL zint(vac%ue(:, l, iv), vac_b%du(:, lp, iv_b), z_du)
-               CALL zint(vac%ue(:, l, iv), vac_b%due(:, lp, iv_b), z_dd)
+               CALL melem_vac_zint(vac%u(:, l, iv), vac_b%du(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, z_uu)
+               CALL melem_vac_zint(vac%u(:, l, iv), vac_b%due(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, z_ud)
+               CALL melem_vac_zint(vac%ue(:, l, iv), vac_b%du(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, z_du)
+               CALL melem_vac_zint(vac%ue(:, l, iv), vac_b%due(:, lp, iv_b), &
+                                   nmz, z1, delz, zks, re, im, z_dd)
 
                qb = vac_b%qpar(:, lp)
 
@@ -126,27 +133,6 @@ CONTAINS
 
       DEALLOCATE (re, im)
       CALL timestop('melem_nabla_vac')
-
-   CONTAINS
-
-      !>  int_{z1}^{inf} f(z) g(z) e^{-i b_z z} dz, the same integral m_melem_mmkb_vac does
-      !>  and for the same reason reversed: intgz0 works inward from the outermost point and
-      !>  adds the exponential tail beyond it.
-      SUBROUTINE zint(f, g, res)
-         REAL, INTENT(IN) :: f(:), g(:)
-         COMPLEX, INTENT(OUT) :: res
-         INTEGER :: iz
-         REAL :: zr, zi, arg
-
-         DO iz = 1, nmz
-            arg = (z1 + (iz - 1)*delz)*zks
-            re(nmz + 1 - iz) = f(iz)*g(iz)*COS(arg)
-            im(nmz + 1 - iz) = f(iz)*g(iz)*SIN(arg)
-         END DO
-         CALL intgz0(re, delz, nmz, zr, .TRUE.)
-         CALL intgz0(im, delz, nmz, zi, .TRUE.)
-         res = CMPLX(zr, zi)
-      END SUBROUTINE zint
 
    END SUBROUTINE melem_nabla_vac
 

@@ -43,8 +43,8 @@ MODULE m_types_matelements_orbital
       INTEGER :: iat   = 0     !> which of the equivalent atoms of that type
       INTEGER :: channel = 0   !> which spin channel this instance serves; 0 = a spinor
    CONTAINS
-      PROCEDURE :: init                 => init
-      PROCEDURE :: calc_matrix_elements => calc_matrix_elements
+      PROCEDURE :: init                 => orbital_init
+      PROCEDURE :: calc_matrix_elements => orbital_calc_matrix_elements
    END TYPE t_matelements_orbital
 
    PUBLIC :: t_matelements_orbital
@@ -60,20 +60,20 @@ CONTAINS
    !> Were each in its own it would be wrong: L is axial, L' = det(R) . R . L, so under a
    !> proper rotation the Cartesian components mix, and only for inversion -- det(R) = -1,
    !> R = -I -- would the rotation be the identity and a plain sum happen to hold.
-   SUBROUTINE init(this, atoms, ntyp, iat, channel)
+   SUBROUTINE orbital_init(this, atoms, ntyp, iat, channel)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
       INTEGER, INTENT(IN) :: ntyp, iat
       INTEGER, INTENT(IN), OPTIONAL :: channel   !> present: serve this channel alone
 
       IF (ntyp < 1 .OR. ntyp > atoms%ntype) &
-         CALL judft_bug("init: the atom type is out of range")
+         CALL judft_bug("orbital_init: the atom type is out of range")
       IF (iat < 1 .OR. iat > atoms%neq(ntyp)) &
-         CALL judft_bug("init: the equivalent atom is out of range")
+         CALL judft_bug("orbital_init: the equivalent atom is out of range")
 
       this%channel = 0
       IF (PRESENT(channel)) THEN
-         IF (channel < 1 .OR. channel > 2) CALL judft_bug("init: the spin channel is 1 or 2")
+         IF (channel < 1 .OR. channel > 2) CALL judft_bug("orbital_init: the spin channel is 1 or 2")
          this%channel = channel
       END IF
 
@@ -86,9 +86,9 @@ CONTAINS
       this%atoms => atoms
       this%ntyp  = ntyp
       this%iat   = iat
-   END SUBROUTINE init
+   END SUBROUTINE orbital_init
 
-   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
+   SUBROUTINE orbital_calc_matrix_elements(this, zmat, abc, radfun)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_mat),    INTENT(IN) :: zmat(:)   !> unused, L works on the abc coefficients only
       TYPE(t_abc),    INTENT(IN) :: abc(:, :) !> (2 spin, ntype) local-frame coefficients
@@ -100,15 +100,15 @@ CONTAINS
       COMPLEX :: lx, ly, lz     ! the Cartesian triple before the frame rotation
 
       IF (.NOT.ALLOCATED(this%mat)) &
-         CALL judft_bug("calc_matrix_elements: the result matrix is not allocated")
+         CALL judft_bug("orbital_calc_matrix_elements: the result matrix is not allocated")
       IF (SIZE(this%mat, 1) /= 1 .OR. SIZE(this%mat, 2) /= 1) &
-         CALL judft_bug("calc_matrix_elements: L is spin-diagonal, so the result is a single block")
+         CALL judft_bug("orbital_calc_matrix_elements: L is spin-diagonal, so the result is a single block")
       IF (SIZE(abc, 1) /= 2 .OR. SIZE(abc, 2) /= this%atoms%ntype) &
-         CALL judft_bug("calc_matrix_elements: the coefficients must have shape (2,ntype)")
+         CALL judft_bug("orbital_calc_matrix_elements: the coefficients must have shape (2,ntype)")
 
       nb = SIZE(abc(1, 1)%cof, 1)
       IF (this%mat(1, 1)%matsize1 /= nb) &
-         CALL judft_bug("calc_matrix_elements: the matrix size does not match the abc coefficients")
+         CALL judft_bug("orbital_calc_matrix_elements: the matrix size does not match the abc coefficients")
 
       !> One channel is one state, so only its own component is read. A spinor is one state
       !> made of two, so both are, and they are summed.
@@ -169,6 +169,6 @@ CONTAINS
             this%comp(i, j, 3) = lz
          END DO
       END DO
-   END SUBROUTINE calc_matrix_elements
+   END SUBROUTINE orbital_calc_matrix_elements
 
 END MODULE m_types_matelements_orbital

@@ -51,15 +51,15 @@ MODULE m_types_matelements_spin
       LOGICAL                   :: l_film   = .FALSE.
       TYPE(t_spinor_layout)     :: layout
    CONTAINS
-      PROCEDURE :: init                 => init
-      PROCEDURE :: calc_matrix_elements => calc_matrix_elements
+      PROCEDURE :: init                 => spin_init
+      PROCEDURE :: calc_matrix_elements => spin_calc_matrix_elements
    END TYPE t_matelements_spin
 
    PUBLIC :: t_matelements_spin
 
 CONTAINS
 
-   SUBROUTINE init(this, atoms, stars, lapw, nococonv, input, noco, &
+   SUBROUTINE spin_init(this, atoms, stars, lapw, nococonv, input, noco, &
                    vacuum, cell, enpara, vtot)
       CLASS(t_matelements_spin), INTENT(INOUT) :: this
       TYPE(t_atoms),    TARGET,  INTENT(IN)    :: atoms
@@ -103,9 +103,9 @@ CONTAINS
       !> Saying so is what makes row_dn meaningful here.
       CALL this%layout%init(input, noco, lapw, atoms, &
                             l_both_spinors=(noco%l_soc .AND. .NOT.noco%l_noco))
-   END SUBROUTINE init
+   END SUBROUTINE spin_init
 
-   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
+   SUBROUTINE spin_calc_matrix_elements(this, zmat, abc, radfun)
       CLASS(t_matelements_spin), INTENT(INOUT) :: this
       !> The state at this k, either as one 2N matrix holding the whole spinor or as the
       !> two channels of a collinear calculation, one matrix each. Which of the two is read
@@ -126,15 +126,15 @@ CONTAINS
       LOGICAL :: l_rot
 
       IF (.NOT.ALLOCATED(this%mat)) &
-         CALL judft_bug("calc_matrix_elements: the result matrix is not allocated")
+         CALL judft_bug("spin_calc_matrix_elements: the result matrix is not allocated")
       IF (SIZE(this%mat,1) /= 2 .OR. SIZE(this%mat,2) /= 2) &
-         CALL judft_bug("calc_matrix_elements: the matrix must be a 2x2 spinor matrix")
+         CALL judft_bug("spin_calc_matrix_elements: the matrix must be a 2x2 spinor matrix")
       IF (SIZE(abc,1) /= 2 .OR. SIZE(abc,2) /= this%atoms%ntype) &
-         CALL judft_bug("calc_matrix_elements: the abc coefficients must have shape (2,ntype)")
+         CALL judft_bug("spin_calc_matrix_elements: the abc coefficients must have shape (2,ntype)")
 
       nb = SIZE(abc(1,1)%cof, 1)
       IF (this%mat(1,1)%matsize1 /= nb) &
-         CALL judft_bug("calc_matrix_elements: the matrix size does not match the abc coefficients")
+         CALL judft_bug("spin_calc_matrix_elements: the matrix size does not match the abc coefficients")
 
       js2 = radial_slot(radfun, 2)
 
@@ -144,16 +144,16 @@ CONTAINS
       SELECT CASE (SIZE(zmat))
       CASE (1)
          IF (this%layout%layout /= LAYOUT_SPINOR) &
-            CALL judft_bug("calc_matrix_elements: one matrix holds a whole spinor, and the &
+            CALL judft_bug("spin_calc_matrix_elements: one matrix holds a whole spinor, and the &
                            &layout of this k-point does not say so")
          iu = 1; id = 1; off_u = 0; off_d = this%layout%row_dn
       CASE (2)
          IF (this%layout%layout /= LAYOUT_CHANNELS) &
-            CALL judft_bug("calc_matrix_elements: two matrices are two spin channels, and the &
+            CALL judft_bug("spin_calc_matrix_elements: two matrices are two spin channels, and the &
                            &layout of this k-point does not say so")
          iu = 1; id = 2; off_u = 0; off_d = 0
       CASE DEFAULT
-         CALL judft_bug("calc_matrix_elements: the state arrives either as one spinor or as &
+         CALL judft_bug("spin_calc_matrix_elements: the state arrives either as one spinor or as &
                         &two channels")
       END SELECT
 
@@ -279,6 +279,6 @@ CONTAINS
             this%mat(i1,j1)%data_c = CONJG(this%mat(i1,j1)%data_c)
          END DO
       END DO
-   END SUBROUTINE calc_matrix_elements
+   END SUBROUTINE spin_calc_matrix_elements
 
 END MODULE m_types_matelements_spin

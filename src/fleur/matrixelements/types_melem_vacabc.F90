@@ -32,6 +32,7 @@ MODULE m_types_melem_vacabc
    USE m_vacudz
    USE m_constants, ONLY: oUnit
    USE m_differentiate, ONLY: difcub
+   USE m_intgr, ONLY: intgz0
    USE m_types_cell
    USE m_types_enpara
    USE m_types_lapw
@@ -40,6 +41,8 @@ MODULE m_types_melem_vacabc
    USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
+
+   PUBLIC :: melem_vac_zint
 
    !> The Wronskian the two z solutions are rescaled to. It is what fixes the meaning of
    !> ac/bc, so it belongs to the type and not to a caller.
@@ -304,6 +307,43 @@ CONTAINS
       df(n - 1) = difcub(z(n - 3:n), f(n - 3:n), z(n - 1))
       df(n) = difcub(z(n - 3:n), f(n - 3:n), z(n))
    END SUBROUTINE melem_vac_ddz
+
+   !>  int_{z1}^{inf} f(z) g(z) e^{-i b_z z} dz, on the linear mesh of the vacuum: the
+   !>  integral the pair overlap and the momentum both need. It sat, byte for byte the
+   !>  same, in each of them until this became the one copy.
+   !>
+   !>  The mesh is reversed before integrating because intgz0 works inward from the
+   !>  outermost point and adds the exponential tail beyond it -- that tail is the part of
+   !>  the vacuum the mesh does not reach, and dropping it would quietly truncate every
+   !>  overlap.
+   !>
+   !>  re and im stay the caller's. Eight of these run inside the loop over neighbours, so a
+   !>  routine allocating its own would allocate inside that loop. They are scratch and what
+   !>  they hold on entry is not read.
+   !>
+   !>  nmz, z1 and delz describe the mesh f and g live on. t_melem_vacabc carries all three
+   !>  for the reason stated where it declares them -- the same functions integrated on the
+   !>  wrong mesh come back as a number and say nothing -- so pass them from the same vac
+   !>  whose u and ue are being handed in, and from nowhere else.
+   SUBROUTINE melem_vac_zint(f, g, nmz, z1, delz, zks, re, im, res)
+      REAL, INTENT(IN) :: f(:), g(:)
+      INTEGER, INTENT(IN) :: nmz
+      REAL, INTENT(IN) :: z1, delz, zks
+      REAL, INTENT(INOUT) :: re(:), im(:)
+      COMPLEX, INTENT(OUT) :: res
+      INTEGER :: iz
+      REAL :: zr, zi, arg
+
+      DO iz = 1, nmz
+         arg = (z1 + (iz - 1)*delz)*zks
+         re(nmz + 1 - iz) = f(iz)*g(iz)*COS(arg)
+         im(nmz + 1 - iz) = f(iz)*g(iz)*SIN(arg)
+      END DO
+      CALL intgz0(re, delz, nmz, zr, .TRUE.)
+      CALL intgz0(im, delz, nmz, zi, .TRUE.)
+      res = CMPLX(zr, zi)
+   END SUBROUTINE melem_vac_zint
+
 
 
 END MODULE m_types_melem_vacabc

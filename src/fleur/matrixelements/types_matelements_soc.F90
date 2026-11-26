@@ -54,13 +54,13 @@ MODULE m_types_matelements_soc
         TYPE(t_mpi),    POINTER :: fmpi   => NULL()
         TYPE(t_nococonv),POINTER :: nococonv => NULL()
     CONTAINS
-        PROCEDURE :: init => init
-        PROCEDURE :: calc_matrix_elements => calc_matrix_elements
+        PROCEDURE :: init => soc_init
+        PROCEDURE :: calc_matrix_elements => soc_calc_matrix_elements
     END TYPE t_matelements_soc
 
 CONTAINS
 
-    SUBROUTINE init(this, atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc,  fmpi, nococonv)
+    SUBROUTINE soc_init(this, atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc,  fmpi, nococonv)
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
         TYPE(t_atoms),  TARGET, INTENT(IN) :: atoms
         TYPE(t_noco),   TARGET, INTENT(IN) :: noco
@@ -92,9 +92,9 @@ CONTAINS
         this%rsoc   => rsoc
         this%fmpi   => fmpi
         this%nococonv => nococonv
-    END SUBROUTINE init
+    END SUBROUTINE soc_init
 
-    SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
+    SUBROUTINE soc_calc_matrix_elements(this, zmat, abc, radfun)
 
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
         TYPE(t_mat),    INTENT(IN) :: zMat(:)   !unused, SOC works on the abc coefficients only
@@ -107,19 +107,19 @@ CONTAINS
         COMPLEX :: cof_lm
 
         IF (.NOT.ALLOCATED(this%mat)) THEN
-            CALL judft_bug("calc_matrix_elements: The result matrix is not allocated.")
+            CALL judft_bug("soc_calc_matrix_elements: The result matrix is not allocated.")
         END IF
         IF (SIZE(this%mat,1) /= 2 .OR. SIZE(this%mat,2) /= 2 ) THEN
-            CALL judft_bug("calc_matrix_elements: The matrix must be a 2x2 spinor matrix.")
+            CALL judft_bug("soc_calc_matrix_elements: The matrix must be a 2x2 spinor matrix.")
         END IF
         IF (SIZE(abc,1) /= 2 .OR. SIZE(abc,2) /= this%atoms%ntype) THEN
-            CALL judft_bug("calc_matrix_elements: The abc coefficients must have shape (2,ntype).")
+            CALL judft_bug("soc_calc_matrix_elements: The abc coefficients must have shape (2,ntype).")
         END IF
         num_bands = SIZE(abc(1,1)%cof,1)
         !matsize1 equals the global number of bands also for the row-cyclic
         !distributed t_mpimat blocks (full rows are local there)
         IF (this%mat(1,1)%matsize1 /= num_bands) THEN
-            CALL judft_bug("calc_matrix_elements: The matrix size does not match the abc coefficients.")
+            CALL judft_bug("soc_calc_matrix_elements: The matrix size does not match the abc coefficients.")
         END IF
 
         DO n = 1,this%atoms%ntype
@@ -159,5 +159,5 @@ CONTAINS
       !> The result is conj(<i|H_so|j>) = sum c_i*conj(c_j)*conj(soangl(i-part,j-part)),
       !> and conj(soangl(a,b)) = soangl(b,a) as soangl is Hermitian.
 
-    END SUBROUTINE calc_matrix_elements
+    END SUBROUTINE soc_calc_matrix_elements
 END MODULE m_types_matelements_soc  

@@ -53,6 +53,27 @@ CONTAINS
       alpha = wannierlib%proj(nwf)%zona
       rads(nwf, :, :, :) = 0.0
 
+      !> rwf names WHICH radial function this trial orbital is given, and its sign
+      !> splits two families that do not mix. A value <= 0 takes the function from the
+      !> LAPW basis of this atom, so the guess is built out of what the calculation
+      !> already solved there; a value > 0 is an analytic hydrogenic function of that
+      !> principal quantum number, which knows nothing about the potential.
+      !>
+      !>   -5       a Slater 1s, 2*alpha^(3/2)*exp(-alpha*r) -- but NOT stored as such.
+      !>            Only its value and slope at the sphere boundary are used, and what
+      !>            gets stored is the u/udot mix that matches both there. The wronk
+      !>            below is the determinant of that 2x2 match, radfun%bnd its rows.
+      !>   -4..-1   the mix (1-|zona|)*u + zona*udot of ONE fixed l = |rwf|-1, copied
+      !>            into all four l slots: the angular part is chosen elsewhere, and
+      !>            this says which l's radial function to pair it with.
+      !>    0       the same mix, each l with its own radial function. The default.
+      !>   -6,-7,-8 the first, second or third local orbital of this atom.
+      !>   -9       every local orbital, each written at the l it belongs to (llo).
+      !>   1..6     hydrogenic n, in rho = 2*alpha*r/n, for the l that n allows.
+      !>
+      !> The two families also differ in what they FILL, which the caller inherits:
+      !> the LAPW ones write both components of the last index, the hydrogenic ones
+      !> write only the first and leave the second zero.
       IF (wannierlib%proj(nwf)%rwf == -5) THEN
         aa = 2.0 * (alpha ** 1.5)
         bb = alpha
@@ -148,6 +169,12 @@ CONTAINS
           rads(nwf, 3, j, 1) = (1.0 / (300.0 * SQRT(70.0))) * rho * rho * rho * (8.0 - rho) * (alpha ** 1.5) * EXP(-rho / 2.0)
         END DO
       ELSE IF (wannierlib%proj(nwf)%rwf == 6) THEN
+        !> Inherited, and left as it stands: n=1..5 above divide by their root --
+        !> 1/(300*sqrt(5)) -- while these two MULTIPLY by it, 1/2160*sqrt(6). This is
+        !> the classic wann_rad_twf.f line for line, where one of the two was even
+        !> multiplied by zero, so the branch has never been exercised. Changing it
+        !> would move results silently; rwf="6" is reachable, the schema bounds it
+        !> nowhere, so the discrepancy is recorded here rather than patched.
         DO j = 1, atoms%jri(ntyp)
           rho = 2.0 * alpha * atoms%rmsh(j, ntyp) / 6.0
           rads(nwf, 0, j, 1) = (1.0 / 2160.0 * SQRT(6.0)) * (720.0 - 1800.0 * rho + 1200.0 * rho * rho - 300.0 * rho ** 3 + 30.0 * rho ** 4 - rho ** 5) * (alpha ** 1.5) * EXP(-rho / 2.0)

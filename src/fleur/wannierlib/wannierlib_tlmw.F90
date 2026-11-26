@@ -53,6 +53,16 @@ CONTAINS
     ic = CMPLX(0.0, 1.0)
     tlm = CMPLX(0.0, 0.0)
 
+    !> The third index of tlm is Wannier90's mr, which counts the real harmonics of
+    !> one l in a fixed order of its own: for l=1 that order is z, x, y; for l=2 it is
+    !> z^2, xz, yz, x^2-y^2, xy; for l=3 it is z^3, xz^2, yz^2, z(x^2-y^2), xyz,
+    !> x(x^2-3y^2), y(3x^2-y^2). Each row holds that one real harmonic written in the
+    !> complex Y_lm, which is why the table is complex, and why a plain (l, mr)
+    !> projection needs nothing more than the row.
+    !>
+    !> mr arrives already checked: projection_m_count in types_wannierlib refuses one
+    !> outside the count of its l while the projection list is expanded, so no guard
+    !> is repeated here and an all-zero row cannot be reached from the input.
     tlm(0, 0, 1) = CMPLX(1.0, 0.0)
 
     tlm(1, 0, 1) = CMPLX(1.0, 0.0)
@@ -93,6 +103,12 @@ CONTAINS
       lr = wannierlib%proj(nwf)%l
       mr = wannierlib%proj(nwf)%m
 
+      !> A negative l is a hybrid, and projection_m_count gives it 2, 3, 4, 5 or 6
+      !> members: -1 sp, -2 sp2, -3 sp3, -4 sp3d, -5 sp3d2. They are the guesses that
+      !> span more than one l, so each is written l by l instead of copied as a row.
+      !>
+      !> -4 repeating -2's first three is deliberate, not duplication: sp3d IS sp2
+      !> plus two combinations that reach l=2, so its mr=1..3 are the sp2 ones.
       IF (lr >= 0) THEN
         tlmwf(lr, :, nwf) = tlm(lr, :, mr)
       ELSE IF (lr == -1) THEN

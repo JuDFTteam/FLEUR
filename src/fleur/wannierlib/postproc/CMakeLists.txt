@@ -1,7 +1,4 @@
 set(fleur_F90 ${fleur_F90}
-src/fleur/wannierlib/postproc/types_wgauge_manifold.F90
-src/fleur/wannierlib/postproc/types_wgauge_domains.F90
-src/fleur/wannierlib/postproc/types_wgauge_bmesh.F90
 src/fleur/wannierlib/postproc/wgauge_ft.F90
 src/fleur/wannierlib/postproc/wgauge_io.F90
 src/fleur/wannierlib/postproc/wgauge_bands_io.F90
