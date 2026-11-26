@@ -27,6 +27,7 @@ MODULE m_gf_init
    USE m_gf_io2dmat, ONLY: io2dmat_init => init
    USE m_gf_iotmat, ONLY: init_tmat_storage
    USE m_gf_embedding, ONLY: gf_checkemb
+   USE m_gf_embtransform, ONLY: gf_embtransform
    USE m_gaunt, ONLY: gaunt_init
    USE m_xmlOutput
 #ifdef CPP_HDF
@@ -45,8 +46,9 @@ CONTAINS
       TYPE(t_gflayer), ALLOCATABLE, INTENT(OUT) :: ld(:)
       TYPE(t_kpts), INTENT(OUT)     :: gkpts !the common 2D BZ k-points
 
-      INTEGER :: i, outxmlFileID, ierr
-      LOGICAL :: l_tmatmemory
+      INTEGER :: i, outxmlFileID, ierr, nl
+      LOGICAL :: l_tmatmemory, l_exist
+      REAL    :: zplanes(2), c
       CHARACTER(len=100) :: filename_add, xml_add
 
 #ifdef CPP_MPI
@@ -164,10 +166,31 @@ CONTAINS
       END DO
       CALL timestop("Setup of step-functions")
 
+      !substrate embedding potential mapped to the cell of layer 1
+      INQUIRE (FILE="incomm_inp", EXIST=l_exist)
+      IF (l_exist) THEN
+         CALL timestart("incomm transform")
+         CALL gf_embtransform(gmpi, ld(1), gkpts)
+         CALL timestop("incomm transform")
+      END IF
+
+      !distance of the outer planes to the outermost atom planes
+      nl = layers%num_layers
+      zplanes = -1.0
+      IF (ld(1)%fi%atoms%nat > 0) THEN
+         c = MERGE(layers%c(1), ld(1)%fi%cell%amat(3, 3), layers%c(1) > 0.0)
+         zplanes(1) = MINVAL(ld(1)%fi%atoms%pos(3, :)) + c/2.0
+      END IF
+      IF (ld(nl)%fi%atoms%nat > 0) THEN
+         c = MERGE(layers%c(nl), ld(nl)%fi%cell%amat(3, 3), layers%c(nl) > 0.0)
+         zplanes(2) = c/2.0 - MAXVAL(ld(nl)%fi%atoms%pos(3, :))
+      END IF
+
       !open the 2D-matrix store (embedding potentials, G, T)
       CALL timestart("init io2dmat")
       CALL io2dmat_init(gkpts, embinp, ld(1)%lapw_gf, ld(1)%fi%sym, layers, &
-                        ld(1)%fi%input%jspins, ld(1)%fi%noco%l_noco, gmpi, l_tmatmemory)
+                        ld(1)%fi%input%jspins, ld(1)%fi%noco%l_noco, gmpi, l_tmatmemory, &
+                        cell=ld(1)%fi%cell, l_soc=ld(1)%fi%noco%l_soc, zplanes=zplanes)
       CALL timestop("init io2dmat")
       IF (l_tmatmemory) THEN
          CALL init_tmat_storage(ld(1)%fi%noco%l_noco, gf_noen(), layers%num_layers, &

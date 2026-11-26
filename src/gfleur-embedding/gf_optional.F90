@@ -5,6 +5,8 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_OPTIONAL 
       use m_juDFT
+      use m_gf_types
+      use m_gf_embdos
       IMPLICIT NONE
 !-----------------------------------------------                        
 ! DESC:Collection of tools and service routines                         
@@ -19,9 +21,6 @@
 !    Checks for various files and calls corresponding routines          
 !           (last modified: 05-08-17) D. Wortmann                       
 !-----------------------------------------------                        
-      USE m_gf_kptsp1x1 
-      USE m_gf_types 
-      USE m_gf_embdos 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)         :: jspins 
@@ -40,12 +39,9 @@
       LOGICAL             :: l_exist 
       !>                                                                
                                                                         
-      !A p1x1 kpts-file should be generated                             
       INQUIRE(FILE='gf_pot.kpts.hdf',EXIST=l_exist) 
-      IF (l_exist) THEN 
-         CALL gf_kptsp1x1(cell,sym,kpts,gfinp) 
-          CALL juDFT_end("kpts-generated")
-      ENDIF 
+      IF (l_exist) CALL juDFT_error("gf_pot.kpts.hdf (p1x1 k-points) is no longer supported", &
+         hint="map embedding potentials between cells with incomm_inp (&INCOMM)")
       INQUIRE(FILE ='embdos_inp',EXIST = l_exist) 
       IF (l_exist) THEN 
          CALL gf_embdos(jspins,atoms,input,sym,nococonv,lapw,lapw_gf,kpts,cell,noco,gfinp)

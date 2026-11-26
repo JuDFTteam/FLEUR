@@ -5,7 +5,17 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_gfleur_basic
       use m_juDFT
+      use m_gf_types
+      use m_gf_hs1lapw
+      use m_gf_spectrum
+      use m_gf_get_spectrum
+      use m_gf_gfcn
+      use m_gf_tmat, only: gf_tmat_layers
+      use m_gf_iotmat, only: gf_tmat_stored
+      use m_gf_energies, only: gf_noen
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_gfleur_basic
       CONTAINS
       SUBROUTINE gf_gfleur_basic(jspin,layer,nk,embinp,layers,ld,gmpi,   &
      &     bk,lapw,lapw_gf,pot_aux)
@@ -22,13 +32,6 @@
 !     (ld) and calls the modern gf_hs1lapw (hsmt + gf_hs_int on dense
 !     t_mat). LDA+U/SOC and the duplicated v25 datatypes are gone.
 !*************************************************
-      USE m_gf_types
-      USE m_gf_hs1lapw
-      USE m_gf_spectrum
-      USE m_gf_get_spectrum
-      USE m_gf_gfcn
-      USE m_gf_tmat, ONLY  : gf_tmat_layers
-      USE m_gf_energies, ONLY: gf_noen
       IMPLICIT NONE
       INTEGER,INTENT(IN)            :: jspin
       INTEGER,INTENT(IN)            :: layer
@@ -65,8 +68,9 @@
          CALL timestop("gf_get_spectrum")
       ENDIF
 
-      !<-- calculate the transfer matrix of a stack of layers
-      IF (layers%num_layers > 1) THEN
+      !<-- calculate the transfer matrix of a stack of layers (one layer:
+      !needed for the propagation of writeup or of the top plane)
+      IF (layers%num_layers > 1 .OR. gf_tmat_stored()) THEN
          ALLOCATE( gij(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,1) )
          DO en = 1,gf_noen()
             IF (embinp%napw(layer) > -1) THEN

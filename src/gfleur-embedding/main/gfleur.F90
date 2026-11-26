@@ -45,7 +45,7 @@ MODULE m_gfleur_driver
    USE m_gf_vacuum, ONLY: gf_vacemb_init
    USE m_gf_CBS, ONLY: outCBS_openfile, outCBS_closefile
    USE m_gf_energies, ONLY: gf_noen
-   USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize
+   USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize, gf_io2dmatFID, IO2D_EMB, IO2D_WRITE
    USE m_gf_writetrans, ONLY: gf_writetrans_hdfclose
    USE m_assign_enpara_potential, ONLY: assign_enpara_potential
    IMPLICIT NONE
@@ -105,7 +105,7 @@ CONTAINS
       INTEGER :: it, jspin, nspins, nk, nk_loop, layer, layer_loop, i
       INTEGER :: nl, neigd, ierr
       INTEGER :: chargelayers
-      LOGICAL :: l_exist_cdn
+      LOGICAL :: l_exist_cdn, l_writetop
       COMPLEX :: pot_aux(2, 3)
       REAL    :: vac_pot
       REAL, ALLOCATABLE :: qtot_el(:), qtot_nuc(:)
@@ -128,6 +128,9 @@ CONTAINS
 
       IF ((embinp%l_surface .OR. embinp%l_vacleft) .AND. embinp%l_CBS) &
          CALL juDFT_error("vacuum embedding (surface/vacleft) is not available in CBS mode", &
+                          calledby="gfleur_execute")
+      IF (embinp%l_writeup .AND. (embinp%l_CBS .OR. .NOT. embinp%l_gmat)) &
+         CALL juDFT_error("writeup needs gmat=t and is not available in CBS mode", &
                           calledby="gfleur_execute")
       IF (embinp%l_charge .AND. embinp%l_vacleft) &
          CALL juDFT_error("charge mode with vacuum on the left is not supported", &
@@ -157,6 +160,9 @@ CONTAINS
                        ld(1)%nococonv, ld(1)%fi%cell, embinp, lapw(1), &
                        lapw_gf(1), ld(1)%fi%noco, gkpts, ld(1)%fi%sym)
       IF (embinp%l_surface .OR. embinp%l_vacleft) CALL gf_vacemb_init(embinp, ld(1)%fi%cell, gkpts, nl)
+      !the embedding potential of the stack at the top plane of a surface is written
+      l_writetop = .FALSE.
+      IF (embinp%l_surface) l_writetop = (gf_io2dmatFID(IO2D_EMB, nl + 1, 1, IO2D_WRITE) > 0)
 
       IF (embinp%l_charge) ALLOCATE (qtot_el(0:nl), qtot_nuc(0:nl))
 
@@ -286,7 +292,8 @@ CONTAINS
 #endif
                !<-- propagate the embedding self-energy through the stack
                IF (embinp%l_gmat .AND. (((embinp%l_dos .OR. embinp%l_charge) .AND. nl > 1) &
-                                        .OR. (embinp%curr > 3))) THEN
+                                        .OR. (embinp%curr > 3) .OR. embinp%l_writeup &
+                                        .OR. l_writetop)) THEN
                   CALL timestart("gf_gfleur_propagate")
                   layer = gmpi%kl_layers(1)
                   CALL gf_gfleur_propagate(layers, gmpi, lapw(layer), lapw_gf(layer), &

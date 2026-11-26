@@ -88,31 +88,51 @@
       TYPE(t_mem),save :: mem
 #endif
 
+      !cell and k-set metadata written as attributes of the 'kpts' dataset
+      TYPE t_io2dmeta
+        LOGICAL :: l_set = .FALSE.
+        !cartesian in-plane lattice vectors (columns, a.u.)
+        REAL    :: amat2d(2,2) = 0.0
+        !cutoff of the 2D basis |k+G|<=rkmax
+        REAL    :: rkmax = 0.0
+        LOGICAL :: l_noco = .FALSE., l_soc = .FALSE.
+        !time reversal used in the reduction of the k-set
+        LOGICAL :: l_timerev = .FALSE.
+        !distance of the plane to the outermost atom plane behind it
+        !(region 0 side 2: layer 1, region nl+1 side 1: layer nl), <0 unknown
+        REAL    :: zplane(2) = -1.0
+        INTEGER :: nlayers = 0
+      END TYPE
+      TYPE(t_io2dmeta),SAVE :: meta
+      PUBLIC :: t_io2dmeta
 
-                                                                        
       PUBLIC init,finalize,gf_write2dmat,gf_read2dmat,gf_io2dmatFID     &
-     &     ,gf_io2dmatshift,gf_io2dstatus,gf_io2dmat_memorysync
+     &     ,gf_io2dmatshift,gf_io2dstatus,gf_io2dmat_memorysync         &
+     &     ,gf_io2dmat_create,gf_io2dmat_kmesh
       CONTAINS 
                                                                         
       !<-- S: init                                                      
       SUBROUTINE init(kpts,gfinp,lapw_gf,sym,layers,jspins,l_noco,gmpi    &
-     &     ,l_tmatmemory)                                               
-!-----------------------------------------------                        
-!                                                                       
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-                                                                        
-      INTEGER,INTENT(IN)        :: jspins 
-      TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_embinp),INTENT(IN)  :: gfinp 
-      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf 
-      TYPE(t_sym),INTENT(IN)    :: sym 
-      TYPE(t_layers),INTENT(IN) :: layers 
+     &     ,l_tmatmemory,cell,l_soc,zplanes)
+!-----------------------------------------------
+!
+!           (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      IMPLICIT NONE
+      !<--Arguments
+
+      INTEGER,INTENT(IN)        :: jspins
+      TYPE(t_kpts),INTENT(IN)   :: kpts
+      TYPE(t_embinp),INTENT(IN)  :: gfinp
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_layers),INTENT(IN) :: layers
       LOGICAL,INTENT(IN)        :: l_noco
       TYPE(t_gfmpi),intent(in)    :: gmpi
-      LOGICAL,INTENT(OUT)       :: l_tmatmemory 
+      LOGICAL,INTENT(OUT)       :: l_tmatmemory
+      TYPE(t_cell),INTENT(IN),OPTIONAL :: cell
+      LOGICAL,INTENT(IN),OPTIONAL      :: l_soc
+      REAL,INTENT(IN),OPTIONAL         :: zplanes(2)
                                                                         
       !>                                                                
       !<-- Locals                                                       
@@ -141,15 +161,27 @@
       NAMELIST /FILE/ name,energy_shift,bias,en_eps,kpts_eps 
       NAMELIST /IO/ mode,region,side,rw,id,spinrot,theta,phi,shift 
       if (l_noco) NO_HDF_TMP=.false.
-      !>                                                                
+      !>
       l_tmatmemory = .FALSE.
-      INQUIRE(FILE ='gf_io',EXIST = lexist) 
+      meta%l_set = PRESENT(cell)
+      IF (PRESENT(cell)) meta%amat2d = cell%amat(1:2,1:2)
+      meta%rkmax = lapw_gf%rkmax
+      meta%l_noco = l_noco
+      meta%l_soc = .FALSE.
+      IF (PRESENT(l_soc)) meta%l_soc = l_soc
+      !gfprep reduces the k-set with time reversal unless SOC is on
+      meta%l_timerev = .NOT. meta%l_soc
+      IF (PRESENT(zplanes)) meta%zplane = zplanes
+      meta%nlayers = layers%num_layers
+      INQUIRE(FILE ='gf_io',EXIST = lexist)
 
 
       IF (.NOT.(lexist)) THEN
         !No IO wanted
         if (gfinp%l_addemb.and..not.(gfinp%l_vacleft.and.gfinp%l_surface)) &
            CALL juDFT_error("addemb set without gf_io-file")
+        if (gfinp%l_writeup) CALL juDFT_error("writeup needs a gf_io file", &
+           hint="add a handle &IO mode='E', region=0, side=2, rw='w' /")
         IF (layers%num_layers==1) RETURN
         !several layers: the temporary T-matrix/embedding storage is still needed
         iohandles = 0
@@ -240,8 +272,13 @@
          ENDIF 
       ENDDO 
                                                                         
-      !>                                                                
+      !>
       !check for required io-handles
+      if (gfinp%l_writeup) THEN
+         if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw/=IO2D_READ.and.iohandle%region==0.and.iohandle%side==2)/=1) &
+            CALL juDFT_error("writeup needs one gf_io write handle for region=0, side=2", &
+                             hint="&IO mode='E', region=0, side=2, rw='w', id=<n> /")
+      endif
       if (gfinp%l_addemb) THEN
          !is there an left embedding file?
          if (gfinp%l_vacleft) then
@@ -349,14 +386,21 @@
                                                                         
       !<-- add IO for tempoary files in case of multiple layers         
                                                                         
-      fileno = SIZE(iofile) 
-      IF (layers%num_layers>1) THEN 
-         !<-- new handles for t-matrix                                  
-                                                                        
+      fileno = SIZE(iofile)
+      !writeup and the output of the top plane of a surface propagate also
+      !through a single layer: keep its T-matrix
+      IF (layers%num_layers==1) THEN
+         IF (gfinp%l_writeup.OR.(gfinp%l_surface.AND.ANY(iohandle%mode==IO2D_EMB.AND.iohandle%region==2 &
+     &        .AND.iohandle%side==1.AND.iohandle%rw/=IO2D_READ))) &
+     &      l_tmatmemory = (COUNT(iohandle%mode==IO2D_TMAT)==0)
+      ENDIF
+      IF (layers%num_layers>1) THEN
+         !<-- new handles for t-matrix
+
          new_handles = layers%num_layers-COUNT(iohandle%mode ==         &
-     &        IO2D_TMAT)                                                
-         !check if t-matrix should be stored in memory                  
-         l_tmatmemory = (new_handles == layers%num_layers) 
+     &        IO2D_TMAT)
+         !check if t-matrix should be stored in memory
+         l_tmatmemory = (new_handles == layers%num_layers)
          IF (new_handles>0.AND.(new_handles /= layers%num_layers)) THEN 
             ALLOCATE(iohandle_tmp(iohandles)) 
             iohandle_tmp = iohandle 
@@ -567,10 +611,11 @@
                                                                         
       INTEGER(hid_t)   :: varid,fspace
       INTEGER          :: access_mode
-      INTEGER(hsize_t) :: dims(7),maxdims(7) 
-      INTEGER          :: hdferr,irank 
-      !>                                                                
-      !<--Access properties for MPI                                     
+      INTEGER(hsize_t) :: dims(7),maxdims(7)
+      INTEGER          :: hdferr,irank
+      TYPE(t_io2dmeta) :: fmeta
+      !>
+      !<--Access properties for MPI
 
 #ifdef CPP_MPI                                                          
       integer :: ierr
@@ -580,10 +625,9 @@
 #endif
                                                                         
       CALL timestart("io2dmat open:"//io_file%filename)
-      !>                                                                
-      !<--perhaps a supercell embedding potential should be made??      
-      CALL priv_generatesupercell(lapw_gf,kpts,jspins) 
-      !>                                                                
+      INQUIRE(FILE ="supercell_io",EXIST= l_exist)
+      IF (l_exist) CALL juDFT_error("supercell_io is no longer supported", &
+     &     hint="use incomm_inp (&INCOMM) to map an embedding potential to a supercell")
                                                                         
                                                                         
       INQUIRE(FILE = TRIM(io_file%filename)//'.hdf',EXIST=l_exist) 
@@ -744,73 +788,30 @@
             OPEN(io_file%fid,ACCESS ='direct',RECL = io_file%matsize**2 &
      &           *16,STATUS ='scratch')                                 
          ELSE
-            CALL timestart("open file")
-
-            CALL h5fcreate_f(TRIM(io_file%filename)//'.hdf'             &
-     &           ,H5F_ACC_TRUNC_F,io_file%fid, hdferr,H5P_DEFAULT_f,    &
-     &           hdf_access_prp(trim(io_file%filename)))
-            nk = kpts%nkpt 
-            CALL timestop("open file")
-            CALL timestart("create datasets")
+            nk = kpts%nkpt
 #ifndef CPP_MPI
             if (io_file%filename(1:1)=='_') nk=1
 #endif
-            CALL io_createvar(io_file%fid,"2Dmat",H5T_NATIVE_DOUBLE,    &
-     &           (/io_file%matsize,io_file%matsize,2,io_file%spins      &
-     &           ,gf_NoEN(),nk/),io_file%varid,chunk=4,fill=.false.)
-            !call io_createvar(io_file%fid,"mapping",H5T_NATIVE_INTEGER, &
-            !        (/SIZE(lapw_gf%global2Dlist,2),io_file%spins,nk/),io_file%mapid)
-            !>
-            CALL timestop("create datasets")
-            !<-- create mapping array for energies                      
-            CALL timestart("energy+k mapping")
-
-            CALL timestart("create energy dataset")
-            ALLOCATE(io_file%emap(gf_NoEN())) 
-            io_file%emap = (/(n,n = 1,gf_NoEn())/) 
-            !write energies to file
-
-            CALL io_createvar(io_file%fid,"energies",H5T_NATIVE_DOUBLE, &
-     &           (/2,gf_NoEn()/),varid)
-            CALL timestop("create energy dataset")
-            CALL timestart("write energy dataset")
-            CALL io_WRITE(varid,(/-1,1/),(/1,gf_NoEn()/),"gf_AllZ",gf_AllZ(0))
-            CALL io_dclose(varid,hdferr) 
-            CALL timestop("write energy dataset")
-            !>                                                          
-            !<-- kpts                                                   
-            CALL timestart("create kpts dataset")
-            ALLOCATE(io_file%kmap(kpts%nkpt)) 
-            io_file%kmap = (/ (n,n = 1,kpts%nkpt ) /) 
+            !the plane this file describes fixes zplane
+            fmeta = meta
+            fmeta%zplane = -1.0
+            DO n = 1,SIZE(iohandle)
+               IF (iohandle(n)%fileno<1.OR.iohandle(n)%fileno>SIZE(iofile)) CYCLE
+               IF (iofile(iohandle(n)%fileno)%filename/=io_file%filename) CYCLE
+               IF (iohandle(n)%mode/=IO2D_EMB) CYCLE
+               IF (iohandle(n)%region==0.AND.iohandle(n)%side==2) fmeta%zplane(1) = meta%zplane(1)
+               IF (iohandle(n)%region==meta%nlayers+1.AND.iohandle(n)%side==1) fmeta%zplane(1) = meta%zplane(2)
+            ENDDO
+            CALL gf_io2dmat_create(TRIM(io_file%filename),lapw_gf,kpts,sym,  &
+     &           io_file%spins,nk,io_file%matsize,fmeta,io_file%fid,io_file%varid)
+            ALLOCATE(io_file%emap(gf_NoEN()))
+            io_file%emap = (/(n,n = 1,gf_NoEn())/)
+            ALLOCATE(io_file%kmap(kpts%nkpt))
+            io_file%kmap = (/ (n,n = 1,kpts%nkpt ) /)
             if (nk/=kpts%nkpt) io_file%kmap=1
-            CALL io_createvar(io_file%fid,"kpts",H5T_NATIVE_DOUBLE,(/2  &
-     &           ,kpts%nkpt/),varid)                                   
-            CALL io_WRITE(varid,(/1,1/),(/2,kpts%nkpt/),"kpts_bk",kpts%bk(1:2,:))
-            CALL timestop("create kpts dataset")
-
-            CALL timestart("create sym attributes")
-            !<-- The symmetry attributes                                
-            CALL io_WRITE_att(varid,"nsym",sym%nop2) 
-            CALL io_WRITE_att(varid,"symop",sym%mrot(1:2,1:2,1:sym%nop2)&
-     &           )                                                      
-            !>                                                          
-                                                                        
-            CALL io_dclose(varid,hdferr) 
-            CALL timestop("create sym attributes")
-            CALL timestart("create gvec dataset")
-            !>                                                          
-            !<-- The gvectors                                           
-            ALLOCATE(io_file%gmap(SIZE(lapw_gf%global2Dlist,2))) 
-            io_file%gmap = (/(n,n = 1,SIZE(io_file%gmap))/) 
-            CALL io_createvar(io_file%fid,"gvecs",H5T_NATIVE_INTEGER,(/2&
-     &           ,SIZE(io_file%gmap)/),varid)                           
-            CALL io_WRITE(varid,(/1,1/),(/2,SIZE(io_file%gmap)/),"lapw_global2Dlist",lapw_gf%global2Dlist(:,:))
-            CALL io_dclose(varid,hdferr)
-            CALL timestop("create gvec dataset")
-            CALL timestop("energy+k mapping")
-
-            !>                                                          
-         ENDIF 
+            ALLOCATE(io_file%gmap(SIZE(lapw_gf%global2Dlist,2)))
+            io_file%gmap = (/(n,n = 1,SIZE(io_file%gmap))/)
+         ENDIF
       ENDIF 
       CALL timestop("io2dmat open:"//io_file%filename)
       END SUBROUTINE 
@@ -1260,8 +1261,9 @@
       priv_getiohandle = -1 
       IF (.NOT.ALLOCATED(iohandle)) RETURN 
       DO n = 1,SIZE(iohandle) 
+         !region must match exactly: region 0 is the plane below layer 1
          IF (iohandle(n)%mode == mode.AND.                              &
-     &        (iohandle(n)%region==region.OR.iohandle(n)%region==0)     &
+     &        iohandle(n)%region==region                                &
      &       .AND.                                                      &
      &        (iohandle(n)%side==side.OR.iohandle(n)%side==0).AND.      &
      &        (iohandle(n)%rw==rw.OR.iohandle(n)%rw==IO2D_READWRITE))   &
@@ -1345,244 +1347,108 @@
                                                                         
       !>                                                                
                                                                         
-      !<-- S:priv_generatesupercell(fid,matrix)                         
-      SUBROUTINE priv_generatesupercell(lapw_gf,kpts,jspins) 
-!-----------------------------------------------                        
-! Subroutine reads in the data and remaps it to a supercell             
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      INTEGER,INTENT(IN)        :: jspins 
-      TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf 
-      !>                                                                
-      !<-- Locals                                                       
-      REAL                :: trans(2,2) 
-      REAL   ,ALLOCATABLE :: sigma_old(:,:,:,:),sigma_new(:,:,:) 
-      REAL   ,ALLOCATABLE :: k_old(:,:) 
-      INTEGER,ALLOCATABLE :: gmap(:),kmap(:),g_old(:,:),sym(:,:,:) 
-      INTEGER             :: jsp 
-      INTEGER             :: en 
-      INTEGER             :: nk,ng,i,ng1,ng2,n,ns 
-      REAL                :: k(2),kvec(2) 
-      INTEGER             :: gvec(2) 
-      REAL                :: eps 
-      REAL,PARAMETER      :: tolerance = 0.01 
-      CHARACTER(LEN = 10) :: file1,file2 
-      LOGICAL             :: l_exist 
-      !hdf                                                              
-      INTEGER(HID_T)      :: fid_old,fid_new,varid_old,varid_new,varid 
-      INTEGER(HID_T)      :: fspace 
-      INTEGER             :: hdferr 
-      INTEGER(hsize_t)    :: dims(7),maxdims(7) 
-      LOGICAL             :: old_to_new 
-      NAMELIST /CONVERT/file1,file2,old_to_new 
-      !>                                                                
-                                                                        
-      INQUIRE(FILE ="supercell_io",EXIST= l_exist) 
-      IF (.NOT.l_exist) RETURN 
-      CALL gf_out_newheader("Conversion for embedding potentials") 
-      WRITE(*,"(//a//)")                                                &
-     &     "Entered conversion subroutine for embedding potentials"     
-      !<-- read supercell_io file                                       
-      OPEN(99,FILE ="supercell_io") 
-      !loop over entries in this file!                                  
-      DO 
-         !first a namelist input is read and then the transformation    
-         !matix is given                                                
-         old_to_new=.FALSE.;file1=" ";file2=" " 
-         READ(99,CONVERT,ERR = 100,END = 100) 
-         IF (file1           ==" ".OR.file2 ==" ") CALL juDFT_error("No valid filename in conversion")
-         WRITE(oUnit,*) file1," => ",file2 
-         WRITE(*,*) file1," => ",file2 
-         !by default, the transformation matrix is supposed to transform
-         !the new-basis vectors of the lattice into the old vectors     
-         READ(99,*,ERR       = 100,END = 100) trans(1,1),trans(1,2) 
-         READ(99,*,ERR       = 100,END = 100) trans(2,1),trans(2,2) 
-         IF (.NOT.old_to_new) trans=mat_inverse(trans) 
-                                                                        
-         !<-- read old file                                             
-         CALL io_hdfopen (TRIM(file1)//'.hdf',H5F_ACC_RDONLY_F,          &
-     &        fid_old, hdferr)                                          
-         IF (hdferr/=0) CALL juDFT_error("No valid filename:"//TRIM(file1)//'.hdf')
-         !<-- Read old k-points                                         
-         CALL io_dopen(fid_old, 'kpts', varid, hdferr) 
-         CALL h5dget_space_f(varid,fspace,hdferr) 
-         CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
-         ALLOCATE(k_old(2,dims(2))) 
-         CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/1,1/),(/2,SIZE(k_old,2)/),"k_old",k_old)
-         !<-- read the symmetry infos                                   
-         CALL io_READ_att(varid,"nsym",n) 
-         ALLOCATE(sym(2,2,n)) 
-         CALL io_READ_att(varid,"symop",sym) 
-         CALL io_dclose(varid,hdferr) 
-         WRITE(oUnit,*) "Old symmetry operations found:",n 
-         !>                                                             
-         !<-- Calculate a suitable eps for finding a k-vector           
-         eps = 1.0 
-         DO n   = 1,SIZE(k_old,2) 
-            DO nk  = n+1,SIZE(k_old,2) 
-               eps = MIN(eps,dot_product(k_old(:,n)-k_old(:,nk),k_old(: &
-     &              ,n)-k_old(:,nk)))                                   
-            ENDDO 
-         ENDDO 
-         eps = eps*tolerance 
-         WRITE(oUnit,*) "K-point tolerance in matching:",eps 
-         !>                                                             
-         !>                                                             
-         !<-- Read old gvectors                                         
-                                                                        
-         CALL io_dopen(fid_old, 'gvecs', varid, hdferr) 
-         CALL h5dget_space_f(varid,fspace,hdferr) 
-         CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
-         ALLOCATE(g_old(2,dims(2))) 
-         CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/1,1/),(/2,SIZE(g_old,2)/),"g_old",g_old)
-         CALL io_dclose(varid,hdferr) 
-                                                                        
-         !>                                                             
-         !<-- Open old data                                             
-         CALL io_dopen(fid_old, '2Dmat', varid_old, hdferr) 
-         !>                                                             
-         !>                                                             
-         !<-- Create the new file                                       
-         !<-- Create the file and dataset                               
-                                                                        
-         CALL h5fcreate_f(TRIM(file2)//'.hdf'                           &
-     &        ,H5F_ACC_TRUNC_F,fid_new, hdferr)                         
-         IF (hdferr /= 0) CALL juDFT_error("Could not create:"//TRIM(file2)//'.hdf')
-         CALL io_createvar(fid_new,"2Dmat",H5T_NATIVE_DOUBLE,           &
-     &        (/SIZE(lapw_gf%global2Dlist,2),SIZE(lapw_gf%global2Dlist,2),2   &
-     &        ,jspins,gf_NoEn(),kpts%nkpt/),varid_new)                 
-                                                                        
-         !>                                                             
-         !<-- create mapping array for energies                         
-                                                                        
-         !write energies to file                                        
-         CALL io_createvar(fid_new,"energies",H5T_NATIVE_DOUBLE,        &
-     &        (/2,gf_NoEn()/),varid)                                    
-         CALL io_WRITE(varid,(/-1,1/),(/1,gf_NoEn()/),"gf_AllZ",gf_AllZ(0))
-         CALL io_dclose(varid,hdferr) 
-                                                                        
-         !>                                                             
-         !<-- kpts                                                      
-                                                                        
-         CALL io_createvar(fid_new,"kpts",H5T_NATIVE_DOUBLE,(/2         &
-     &        ,kpts%nkpt/),varid)                                      
-         CALL io_WRITE(varid,(/1,1/),(/2,kpts%nkpt/),"kpts_bk",kpts%bk(1:2,:))
-         CALL io_dclose(varid,hdferr) 
-                                                                        
-         !>                                                             
-         !<-- The gvectors                                              
-                                                                        
-         CALL io_createvar(fid_new,"gvecs",H5T_NATIVE_INTEGER,(/2       &
-     &        ,SIZE(lapw_gf%global2Dlist,2)/),varid)                       
-         CALL io_WRITE(varid,(/1,1/),(/2,SIZE(lapw_gf%global2Dlist,2)/),"lapw_global2Dlist",lapw_gf%global2Dlist(:,:))
-         CALL io_dclose(varid,hdferr) 
-                                                                        
-         !>                                                             
-                                                                        
-         !<-- allocate big storage                                      
-         ALLOCATE(sigma_old(SIZE(g_old,2),SIZE(g_old,2),2,SIZE(k_old,2))&
-     &        )                                                         
-         ALLOCATE(sigma_new(SIZE(lapw_gf%global2Dlist,2)                   &
-     &        ,SIZE(lapw_gf%global2Dlist,2),2))                            
-         ALLOCATE(gmap(SIZE(lapw_gf%global2Dlist,2))                       &
-     &        ,kmap(SIZE(lapw_gf%global2Dlist,2)))                         
-         !>                                                             
-         DO jsp = 1,jspins 
-            DO en  = 1,gf_NoEn() 
-               !<-read the old-embedding potential for all kpts         
-               CALL io_READ(varid_old,(/1,1,1,jsp,en,1/),&
-     &     (/SIZE(g_old,2)              ,SIZE(g_old,2),2,1,1,SIZE(k_old,2)/),"sigma_old",&
-     &     sigma_old)
-               !>                                                       
-               !<-- process all new kpts                                
-               DO nk = 1,kpts%nkpt 
-                  WRITE(oUnit,"(//,'Processing jspin = '                    &
-     &                ,i1,' Energy =',i5,//)")jsp,en                    
-                  WRITE(oUnit,"(a,i3,a,2(f0.6,2x))") "Processing kpoint ",nk&
-     &                 ," : ",kpts%bk(1:2,nk)                           
-                  !<-- generate a map of all k+g to corresponding old va
-                  DO ng = 1,SIZE(lapw_gf%global2Dlist,2) 
-                     k  = kpts%bk(1:2,nk)+lapw_gf%global2Dlist(:,ng) 
-                     k  = MATMUL(trans,k) 
-                     ! separate integer->gvector from old kpoint        
-                     gvec = NINT(k) 
-                     kvec = k-gvec 
-                     !<-- find corresponding old g and k-vector         
-                     gmap(ng) = 0 
-                     DO i = 1,SIZE(g_old,2) 
-                        IF (ALL(g_old(:,i) == gvec)) gmap(ng) = i 
-                     ENDDO 
-                     kmap(ng) = 0 
-                     DO i = 1,SIZE(k_old,2) 
-                        DO ns = 1,SIZE(sym,3) 
-                           IF (ALL(ABS(MATMUL(sym(:,:,ns),k_old(:,i))   &
-     &                          -kvec)<eps)) kmap(ng) = i               
-                        ENDDO 
-                     ENDDO 
-                     IF (kmap(ng) == 0) WRITE(6                         &
-     &                    ,"(2i5,a,2i5,a,2(f0.5,2x),a)"                 &
-     &                    )lapw_gf%global2Dlist(:,ng)," => ",g_old(:       &
-     &                    ,gmap(ng))," + ",kvec(:)                      &
-     &                    ," Problem with k-mapping"                    
-                     IF (gmap(ng) == 0) WRITE(oUnit,"(2i5,a)")              &
-     &                    lapw_gf%global2Dlist(:,ng)                       &
-     &                    ," Problem with g-mapping"                    
-                     IF (kmap(ng) /= 0.AND.gmap(ng) /= 0)               &
-     &                    WRITE(oUnit,'(2i5,a,2i5,a,2(f0.5,2x))')           &
-     &                    lapw_gf%global2Dlist(:,ng)," => ",g_old(:,gmap(ng&
-     &                    ))," + ",k_old(:,kmap(ng))                    
-                     !>                                                 
-                  ENDDO 
-                  !>                                                    
-                                                                        
-                  !<-- are there missing k-points??                     
-                  IF (ANY(kmap == 0)) CALL juDFT_error("k-points set incompatible in old data")
-                  !>                                                    
-                                                                        
-                  !<-- Now construct the new embedding potential        
-                  DO ng1 = 1,SIZE(lapw_gf%global2Dlist,2) 
-                     IF (gmap(ng1) == 0) CYCLE 
-                     DO ng2 = 1,SIZE(lapw_gf%global2Dlist,2) 
-                        IF (gmap(ng2) == 0) CYCLE 
-                        IF (kmap(ng1) /= kmap(ng2)) THEN 
-                           Sigma_new(ng1,ng2,:) = 0.0 
-                        ELSE 
-                           SIGMA_new(ng1,ng2,:) = sigma_old(gmap(ng1)   &
-     &                          ,gmap(ng2),:,kmap(ng1))                 
-                        ENDIF 
-                     ENDDO 
-                  ENDDO 
-                  !>                                                    
-                  !<-- Write the embedding potential to the file        
-                  CALL io_WRITE(varid_new,(/1,1,1,jsp,en,nk/),&
-     &     (/SIZE(sigma_new,1),SIZE(sigma_new,2),2,1,1,1/),"sigma_new",&
-     &     sigma_new)
-                  !>                                                    
-               ENDDO 
-               !>                                                       
-            ENDDO 
-         ENDDO 
-         !<-- close files, deallocate                                   
-         DEALLOCATE(sigma_old,sigma_new,gmap,kmap,k_old,g_old,sym) 
-         CALL io_dclose(varid_old,hdferr) 
-         CALL io_hdfclose(fid_old,hdferr) 
-         CALL io_dclose(varid_new,hdferr) 
-         CALL io_hdfclose(fid_new,hdferr) 
-         !>                                                             
-            !loop over different conversions                            
-      ENDDO 
-  100 CLOSE(99) 
-      !>                                                                
-       CALL juDFT_error("Generated supercell embedding potential")
-      END SUBROUTINE 
-      !>                                                                
-                                                                        
-                                                                        
+      !<-- S: gf_io2dmat_create
+      SUBROUTINE gf_io2dmat_create(filename,lapw_gf,kpts,sym,spins,nk,matsize,fmeta,fid,varid,l_serial)
+!-----------------------------------------------
+!  Creates an HDF5 file of 2D matrices: dataset 2Dmat(matsize,matsize,2,spins,nE,nk),
+!  energies, kpts (with symmetry and cell attributes) and gvecs (global 2D list)
+!-----------------------------------------------
+      IMPLICIT NONE
+      CHARACTER(LEN=*),INTENT(IN)  :: filename
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf
+      TYPE(t_kpts),INTENT(IN)      :: kpts
+      TYPE(t_sym),INTENT(IN)       :: sym
+      INTEGER,INTENT(IN)           :: spins,nk,matsize
+      TYPE(t_io2dmeta),INTENT(IN)  :: fmeta
+      INTEGER(HID_T),INTENT(OUT)   :: fid,varid
+      !file used by this PE only: no MPI-IO access properties
+      LOGICAL,INTENT(IN),OPTIONAL  :: l_serial
+
+      INTEGER(HID_T) :: did
+      INTEGER        :: hdferr
+      LOGICAL        :: l_ser
+
+      l_ser = .FALSE.
+      IF (PRESENT(l_serial)) l_ser = l_serial
+      CALL timestart("open file")
+      IF (l_ser) THEN
+         CALL h5fcreate_f(filename//'.hdf',H5F_ACC_TRUNC_F,fid,hdferr)
+      ELSE
+         CALL h5fcreate_f(filename//'.hdf',H5F_ACC_TRUNC_F,fid,hdferr,H5P_DEFAULT_f, &
+                          hdf_access_prp(filename))
+      ENDIF
+      IF (hdferr/=0) CALL juDFT_error("Could not create "//filename//".hdf",calledby="gf_io2dmat_create")
+      CALL timestop("open file")
+      CALL io_createvar(fid,"2Dmat",H5T_NATIVE_DOUBLE,                  &
+     &     (/matsize,matsize,2,spins,gf_NoEN(),nk/),varid,chunk=4,fill=.false.)
+      CALL io_createvar(fid,"energies",H5T_NATIVE_DOUBLE,(/2,gf_NoEn()/),did)
+      CALL io_WRITE(did,(/-1,1/),(/1,gf_NoEn()/),"gf_AllZ",gf_AllZ(0))
+      CALL io_dclose(did,hdferr)
+      CALL io_createvar(fid,"kpts",H5T_NATIVE_DOUBLE,(/2,kpts%nkpt/),did)
+      CALL io_WRITE(did,(/1,1/),(/2,kpts%nkpt/),"kpts_bk",kpts%bk(1:2,:))
+      CALL priv_write_cellmeta(did,sym,kpts,fmeta)
+      CALL io_dclose(did,hdferr)
+      CALL io_createvar(fid,"gvecs",H5T_NATIVE_INTEGER,(/2,SIZE(lapw_gf%global2Dlist,2)/),did)
+      CALL io_WRITE(did,(/1,1/),(/2,SIZE(lapw_gf%global2Dlist,2)/),"lapw_global2Dlist",lapw_gf%global2Dlist(:,:))
+      CALL io_dclose(did,hdferr)
+      END SUBROUTINE gf_io2dmat_create
+
+      !<-- S: priv_write_cellmeta
+      SUBROUTINE priv_write_cellmeta(did,sym,kpts,fmeta)
+!-----------------------------------------------
+!  Symmetry, cell and k-set attributes of the kpts dataset. symop are the
+!  in-plane parts of the operations x -> symop x + symtau (fractional).
+!-----------------------------------------------
+      IMPLICIT NONE
+      INTEGER(HID_T),INTENT(IN)   :: did
+      TYPE(t_sym),INTENT(IN)      :: sym
+      TYPE(t_kpts),INTENT(IN)     :: kpts
+      TYPE(t_io2dmeta),INTENT(IN) :: fmeta
+
+      INTEGER :: nmesh(2)
+      LOGICAL :: l_full
+
+      CALL io_WRITE_att(did,"nsym",sym%nop2)
+      CALL io_WRITE_att(did,"symop",sym%mrot(1:2,1:2,1:sym%nop2))
+      CALL io_WRITE_att(did,"symtau",sym%tau(1:2,1:sym%nop2))
+      CALL gf_io2dmat_kmesh(kpts%bk(1:2,:),nmesh,l_full)
+      CALL io_WRITE_att(did,"nkmesh",nmesh)
+      CALL io_WRITE_att(did,"kfull",l_full)
+      CALL io_WRITE_att(did,"l_noco",fmeta%l_noco)
+      CALL io_WRITE_att(did,"l_soc",fmeta%l_soc)
+      CALL io_WRITE_att(did,"l_timerev",fmeta%l_timerev)
+      IF (.NOT.fmeta%l_set) RETURN
+      CALL io_WRITE_att(did,"amat2d",fmeta%amat2d)
+      CALL io_WRITE_att(did,"rkmax",fmeta%rkmax)
+      IF (fmeta%zplane(1)>=0.0) CALL io_WRITE_att(did,"zplane",fmeta%zplane(1))
+      END SUBROUTINE priv_write_cellmeta
+
+      !<-- S: gf_io2dmat_kmesh
+      SUBROUTINE gf_io2dmat_kmesh(bk,nmesh,l_full)
+!-----------------------------------------------
+!  Smallest Gamma-centered mesh N1xN2 containing all k-points (nmesh=0 if
+!  none up to nmax); l_full: the list is the complete mesh
+!-----------------------------------------------
+      IMPLICIT NONE
+      REAL,INTENT(IN)     :: bk(:,:)
+      INTEGER,INTENT(OUT) :: nmesh(2)
+      LOGICAL,INTENT(OUT) :: l_full
+      INTEGER,PARAMETER   :: nmax = 1024
+      REAL,PARAMETER      :: eps = 1.0E-6
+      INTEGER :: i,n
+      nmesh = 0
+      DO i = 1,2
+         DO n = 1,nmax
+            IF (ALL(ABS(bk(i,:)*n-NINT(bk(i,:)*n))<eps*n)) THEN
+               nmesh(i) = n
+               EXIT
+            ENDIF
+         ENDDO
+      ENDDO
+      l_full = ALL(nmesh>0)
+      IF (l_full) l_full = (SIZE(bk,2)==nmesh(1)*nmesh(2))
+      END SUBROUTINE gf_io2dmat_kmesh
+      !>
       !<-- S: gf_io2dstatus(rw,mode,region,side)                        
       SUBROUTINE gf_io2dstatus(rw,mode,region,side) 
 !-----------------------------------------------                        
@@ -1608,7 +1474,7 @@
          WRITE(*,"(a,i3,a,4(i3))") "No:",n," -- ",iohandle(n)%rw        &
      &        ,iohandle(n)%mode,iohandle(n)%region,iohandle(n)%side     
          IF (iohandle(n)%mode == mode.AND.                              &
-     &        (iohandle(n)%region == region.OR.iohandle(n)%region == 0) &
+     &        iohandle(n)%region == region                              &
      &        .AND.                                                     &
      &        (iohandle(n)%side == side.OR.iohandle(n)%side == 0).AND.  &
      &        (iohandle(n)%rw == rw.OR.iohandle(n)%rw==IO2D_READWRITE)) &

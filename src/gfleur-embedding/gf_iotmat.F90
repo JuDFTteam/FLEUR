@@ -16,7 +16,7 @@
       PRIVATE 
       COMPLEX,ALLOCATABLE,SAVE :: tmat_storage(:,:,:,:) 
       INTEGER,SAVE             :: nk_storage,jspin_storage 
-      PUBLIC gf_READ_tmat2,gf_WRITE_tmat,init_tmat_storage 
+      PUBLIC gf_READ_tmat2,gf_WRITE_tmat,init_tmat_storage,gf_tmat_stored
                                                                         
       CONTAINS 
       !<--S: gf_READ_tmat2(layer,en,nk,jspin,lapw_gf,tmat)                 
@@ -85,6 +85,11 @@
                                                                         
       !>                                                                
                                                                         
+      !T-matrices kept in memory?
+      LOGICAL FUNCTION gf_tmat_stored()
+      gf_tmat_stored = ALLOCATED(tmat_storage)
+      END FUNCTION gf_tmat_stored
+
       !<-- S: init_tmat_storage(en,layer,nv2)                           
       SUBROUTINE init_tmat_storage(l_noco,energies,layers,nv2) 
 !-----------------------------------------------                        

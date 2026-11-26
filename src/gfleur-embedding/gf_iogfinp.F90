@@ -65,10 +65,10 @@
       INTEGER :: napw(1000)
       NAMELIST /BASIS/solwil,npw,napw
       !EMB
-      LOGICAL::addemb,advanced,surface,embmt,embspectral,simplevacuum,vacleft
+      LOGICAL::addemb,advanced,surface,embmt,embspectral,simplevacuum,vacleft,writeup
       REAL  ::charge_limit,imag_broad,EField,vacuum_energy
       NAMELIST /EMB/addemb,advanced,surface,charge_limit,embmt,         &
-     &       imag_broad,Efield,embspectral,simplevacuum,vacuum_energy,vacleft
+     &       imag_broad,Efield,embspectral,simplevacuum,vacuum_energy,vacleft,writeup
       !SC
       REAL::trans,c_sc
       INTEGER::imix,maxiter,iter,precond
@@ -103,6 +103,7 @@
       embinp%l_adv = .FALSE.
       embinp%l_surface  = .FALSE.
       embinp%l_vacleft  = .FALSE.
+      embinp%l_writeup  = .FALSE.
       embinp%l_embspectral = .FALSE.
       embinp%imag_broad = 0.0
       embinp%l_simplevacuum=.FALSE.
@@ -216,6 +217,7 @@
             advanced = .FALSE.
             surface  = .FALSE.
             vacleft  = .FALSE.
+            writeup  = .FALSE.
             imag_broad = 0.0
             charge_limit=0.0
             Efield = 0.0
@@ -230,6 +232,7 @@
             embinp%l_embmt  = embmt
             embinp%l_surface = surface
             embinp%l_vacleft = vacleft
+            embinp%l_writeup = writeup
             embinp%imag_broad = imag_broad
             embinp%Efield   = Efield
          ELSEIF (teststring(1:3) =='&SC') THEN

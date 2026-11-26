@@ -4,7 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_propaemb 
+      USE m_constants, ONLY: oUnit
+      USE m_gf_math
           IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_propaemb
+      !ill-conditioned propagations reported so far
+      INTEGER, SAVE :: nwarn = 0
       CONTAINS 
       SUBROUTINE gf_propaemb(                                           &
      &                     l_invs,nv2,embpot_in,tmat,                   &
@@ -15,7 +21,6 @@
 !     l_invs=.true. => use the inverse of "tmat".                       
 !     Frank Freimuth, November 2007                                     
 !****************************************************                   
-      USE m_gf_math 
       IMPLICIT NONE 
       LOGICAL,INTENT(IN)::l_invs 
       INTEGER,INTENT(IN)::nv2 
@@ -25,6 +30,7 @@
                                                                         
       COMPLEX,ALLOCATABLE:: t11(:,:),t22(:,:),t12(:,:),t21(:,:) 
       COMPLEX,ALLOCATABLE:: tmat_tmp(:,:),ew(:)
+      REAL :: anorm,cond
                                                                         
       ALLOCATE( t11(nv2,nv2) ) 
       ALLOCATE( t12(nv2,nv2) ) 
@@ -50,8 +56,15 @@
 !      t22=matmul(t22,embpot_in)                                        
       CALL cblas_matmul_sq(t22,embpot_in) 
       t11=t11+t12 
-
+      anorm=MAXVAL(SUM(ABS(t11),DIM=1))
       t11=mat_inverse(t11)
+      !1-norm condition of t11+t12*Sigma: thick layers lose the evanescent states
+      cond=anorm*MAXVAL(SUM(ABS(t11),DIM=1))
+      IF (cond>1.0E12.AND.nwarn<10) THEN
+         nwarn=nwarn+1
+         WRITE(oUnit,"(a,es10.2,a)") "WARNING: propagation of the embedding potential ill-conditioned, cond=", &
+     &        cond," (thinner layers or a smaller |k+G| cutoff help)"
+      ENDIF
 
       t21=t21+t22
 !      embpot_out=matmul(t11,t21)                                       

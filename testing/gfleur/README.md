@@ -83,3 +83,14 @@ the bias-dependent current, and MPI runs.
   The charge test `test_charge_mpi_equals_serial` needs an MPI build: run the module with
   `GFPREP_BINARY=<serial build>/gfprep GFLEUR_BINARY=<MPI build>/gfleur_MPI GFLEUR_MPI="mpirun -np 2"`
   (the lead CBS runs always use one rank). It skips without `GFLEUR_MPI`.
+
+* `test_gfleur_incomm.py` checks the substrate embedding potential for an
+  ad-layer of another 2D lattice (`incomm_inp`). Most tests use a synthetic
+  substrate file (analytic amplitudes on a hexagonal 6x6 mesh, stored at the
+  irreducible k-points) and stop gfleur after the transformation; they compare
+  with the NumPy reference `tools/incomm_ref.py` (identity, 2x2 supercell with
+  shift, sqrt3 R30, incommensurate, vacuum, exact k-list, Umklapp correction,
+  symmetry check, ~15 s, need numpy and h5py). `test_writeup_film` converges
+  the Cu film of `cu_film` with `fleur` and checks the potential of the film at
+  its outer planes (`writeup=t`, top plane of a surface) against the film
+  eigenvalues.

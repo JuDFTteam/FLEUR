@@ -5,7 +5,18 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_gfleur_propagate 
       use m_juDFT
+      use m_gf_types
+      use m_gf_iotmat
+      use m_gf_propagate_embpot
+      use m_gf_embedding
+      use m_gf_io2dmat
+      use m_gf_energies
+      use m_gf_current_single
+      use m_gf_tmat
+      use m_gf_math
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_gfleur_propagate
 !*************************************************                      
 !     Propagate the embedding potentials of the                         
 !     composed system to the subsystems.                                
@@ -15,15 +26,6 @@
       CONTAINS 
       SUBROUTINE gf_gfleur_propagate(layers,fmpi,lapw,lapw_gf,gfinp,nk,jspin,ld &
      &     ,bk)
-      USE m_gf_types
-      USE m_gf_iotmat
-      USE m_gf_propagate_embpot
-      USE m_gf_embedding
-      USE m_gf_io2dmat
-      USE m_gf_energies
-      USE m_gf_current_single
-      USE m_gf_tmat
-      USE m_gf_math
       IMPLICIT NONE
       TYPE(t_layers),INTENT(IN) :: layers
       TYPE(t_gfmpi),INTENT(IN)  :: fmpi
@@ -164,6 +166,13 @@
         ENDDO 
         !CALL gf_write2dmat(IO2D_EMB,1,2,en,nk,jspin,lapw_gf,        &
      !&          cmplx(0.5,0.0)*embpot_right(:,:,1))
+        IF (gfinp%l_writeup) THEN
+           !through layer 1: the embedding potential of the stack above
+           !the plane below layer 1, written as region 0, side 2
+           CALL gf_propagate_embpot_right(1,en,nk,jspin,lapw,lapw_gf,       &
+     &          embpot_right(:,:,1),gfinp%l_nohelpregion,g1)
+           CALL gf_write2dmat(IO2D_EMB,0,2,en,nk,jspin,lapw_gf,0.5*g1)
+        ENDIF
         embpot_right=cmplx(0.5,0.0)*embpot_right
         DO layer = 1,layers%num_layers
            CALL gf_write2dmat(IO2D_EMB,layer,2,en,nk,jspin,lapw_gf,   &

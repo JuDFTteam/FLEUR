@@ -48,6 +48,10 @@ MODULE m_gfprep_inp
       !semicore valence states need a larger ewidth
       REAL               :: ewidth = 1.0
       INTEGER            :: nen = 15
+      !full k-mesh without symmetry reduction (substrate of incomm_inp)
+      LOGICAL            :: kfull = .FALSE.
+      !explicit k-list (count, then k1 k2 per line, fractional) instead of kgrid
+      CHARACTER(LEN=200) :: kptsfile = ""
    END TYPE t_gfprep_inp
 
    TYPE t_layergeo
@@ -71,9 +75,11 @@ CONTAINS
       REAL    :: plane_tol, dt_addon, vshift, gmax_scale, zvac, ewidth
       INTEGER :: planes_per_layer, first_plane, last_plane, kgrid(2), nen
       REAL    :: zplanes(maxdim)
-      LOGICAL :: spinflip(maxdim), zmirror
+      LOGICAL :: spinflip(maxdim), zmirror, kfull
+      CHARACTER(LEN=200) :: kptsfile
       NAMELIST /GFPREP/ bulkdir, prefix, plane_tol, planes_per_layer, first_plane, &
-         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac, zmirror, ewidth, nen
+         last_plane, zplanes, dt_addon, vshift, spinflip, kgrid, gmax_scale, zvac, zmirror, ewidth, nen, &
+         kfull, kptsfile
 
       LOGICAL :: l_exist
       INTEGER :: n, ios
@@ -87,6 +93,7 @@ CONTAINS
       zvac = inp%zvac
       zmirror = inp%zmirror
       ewidth = inp%ewidth; nen = inp%nen
+      kfull = inp%kfull; kptsfile = inp%kptsfile
       zplanes = HUGE(1.0)
       spinflip = .FALSE.
 
@@ -115,6 +122,9 @@ CONTAINS
       inp%gmax_scale = gmax_scale
       inp%zmirror = zmirror
       inp%ewidth = ewidth; inp%nen = nen
+      inp%kfull = kfull; inp%kptsfile = ADJUSTL(kptsfile)
+      IF (inp%kfull .AND. LEN_TRIM(inp%kptsfile) > 0) &
+         CALL juDFT_error("kfull and kptsfile exclude each other", calledby="gfprep_read_inp")
       inp%zvac = zvac
       IF (inp%gmax_scale < 1.0) CALL juDFT_error("gmax_scale<1", calledby="gfprep_read_inp")
       IF (inp%dt_addon <= 0.0) CALL juDFT_error("dt_addon must be positive", calledby="gfprep_read_inp")

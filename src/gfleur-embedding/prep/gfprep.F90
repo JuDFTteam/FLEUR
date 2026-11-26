@@ -118,7 +118,11 @@ CONTAINS
       END DO
       kgrid = inp%kgrid
       IF (ANY(kgrid < 1)) kgrid = b%fi%kpts%nkpt3(1:2)
-      CALL gfprep_kpts(lays, kgrid, .NOT. b%fi%noco%l_soc, kpts)
+      IF (LEN_TRIM(inp%kptsfile) > 0) THEN
+         CALL gfprep_kpts_file(TRIM(inp%kptsfile), kpts)
+      ELSE
+         CALL gfprep_kpts(lays, kgrid, .NOT. b%fi%noco%l_soc, kpts, inp%kfull)
+      END IF
 
       !per layer: inp.xml, re-read as gfleur does, convert and write
       DO i = 1, SIZE(geo)

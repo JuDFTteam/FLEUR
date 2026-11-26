@@ -43,7 +43,8 @@ src/gfleur-embedding/gf_povrayColors.F90
 src/gfleur-embedding/gf_flipPot.F90
 src/gfleur-embedding/gf_shiftatoms.F90
 src/gfleur-embedding/gf_rsmesh.F90
-src/gfleur-embedding/gf_kptsp1x1.F90
+src/gfleur-embedding/gf_sigtab.F90
+src/gfleur-embedding/gf_embtransform.F90
 src/gfleur-embedding/gf_kpts.F90
 src/gfleur-embedding/gf_inp2plot.F90
 src/gfleur-embedding/gf_inp_describe.F90

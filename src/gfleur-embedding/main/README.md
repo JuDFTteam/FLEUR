@@ -132,7 +132,7 @@ This configuration reads `embpot11.hdf` and `embpotN2.hdf`.  The principal
 | field | meaning |
 |---|---|
 | `mode` | matrix category; use `E` for a conventional embedding potential |
-| `region`, `side` | layer/region and its boundary (`1` left, `2` right) |
+| `region`, `side` | layer/region and its boundary (`1` left, `2` right), matched exactly; `region=0, side=2` and `region=<nlayers+1>, side=1` are the outer planes (see below) |
 | `rw` | access mode: `r` read, `w` write, or `b` read/write |
 | `id` | one-based index of the associated `&FILE` record |
 | `spinrot`, `theta`, `phi` | optional spin rotation applied on read |
@@ -252,6 +252,173 @@ plane is the constant `vacuum_energy`.
 
 The vacuum embedding is available in the `tmat`/`gmat`/`dos` modes, not in
 `charge` (self-consistent surfaces) and `CBS` mode.
+
+## Embedding potentials at the outer planes
+
+Two write handles give the embedding potential of the whole stack at an outer
+plane:
+
+* `&IO mode='E', region=<nlayers+1>, side=1, rw='w', id=<n> /` with
+  `&EMB surface=t`: the potential of the lead (or left vacuum) plus all
+  layers at the top plane, seen from below. This is the substrate potential
+  for an ad-layer starting at this plane. It is written for any number of
+  layers (also a single layer); in charge mode it is rewritten in every
+  iteration, the file then holds the last one.
+* `&IO mode='E', region=0, side=2, rw='w', id=<n> /` with `&EMB writeup=t`:
+  the potential of all layers plus the right lead (or vacuum, `surface=t`) at
+  the plane below layer 1, seen from above (`Sigma_up` of the ad-layer
+  region). `writeup` needs `gmat=t`.
+
+Conventions, checked on a free Cu(001) film (`test_writeup_film`):
+
+* Both sides use the outward normal of the region they embed, so at a common
+  plane `G_S^-1 = Sigma_L + Sigma_R` (no factor). The peaks of
+  `-Im Tr (Sigma_L + Sigma_up)^-1` reproduce the film eigenvalues, and for a
+  single layer the potential at the top plane equals the one below layer 1 of
+  a mirror symmetric film (to 1e-13; split into three layers the composition
+  of the T-matrices limits this to about 1e-2). The free-electron vacuum is `Sigma_GG = -1/2 sqrt(2(V-E)+|k+G|^2)`.
+* The matrices are taken between normalized plane waves of the 2D cell, so
+  they are intensive: a supercell description of the same plane has the same
+  elements `<k+G|Sigma|k+G'>` without an area factor.
+* The `kpts` dataset of every file carries the attributes `nsym`, `symop`
+  (in-plane parts of `x -> symop x + symtau`, fractional), `symtau`,
+  `nkmesh`/`kfull` (the Gamma-centered mesh of the k-list and whether the
+  list is complete), `l_noco`, `l_soc`, `l_timerev` (time reversal used in the
+  k-reduction), `amat2d` (cartesian in-plane lattice vectors as columns,
+  a.u.), `rkmax` (the 2D basis is `|k+G| <= rkmax`) and, for the outer planes,
+  `zplane` (distance from the plane to the outermost atom plane of the region
+  behind it). Files written before these attributes existed lack them.
+* The energy zero is the one of the layer inputs. Substrate and ad-layer must
+  share it (`gfprep vshift`, see "Charge mode").
+
+## Ad-layers with another lattice (`incomm_inp`)
+
+The embedding potential of a substrate at the plane `S` is mapped onto layer 1
+of a stack whose 2D lattice differs from the substrate lattice (an ad-layer
+that is incommensurate, rotated or a supercell). The substrate couples the
+plane wave `p` to `p+u`, `u` a substrate reciprocal vector, with the
+amplitudes `sigma_u(p) = <p+u|Sigma|p>`. In the ad-layer basis `kappa+G`,
+
+```
+Sigma0(G_i,G_j) = exp(-i u.d) sigma_u((kappa+G_j) M)   if u = (G_i-G_j) M is integer, else 0,
+```
+
+with `M` the map of ad-layer to substrate fractional coordinates and `d` the
+lateral shift of the substrate. For an incommensurate ad-layer only `u=0`
+survives (`Sigma0` is diagonal: the registry average); for a supercell the
+common vectors `Lambda_c` are exact. The remaining Umklapp couplings to
+`kappa+u+G` can be folded back (Loewdin partitioning with
+`G_S^-1 = Sigma_L + Sigma_R`):
+
+```
+Sigma_eff = Sigma0 - Delta_0Q [D_Q + Delta_QQ]^-1 Delta_Q0,   D_u = Sigma0(kappa+u) + Sigma_up(kappa+u),
+```
+
+`Sigma_up` the embedding potential of the ad-layer region at the Bloch vectors
+`kappa+u`, `Delta` the substrate couplings between the blocks.
+
+The transformation runs in `gf_init` of the ad-layer run when `incomm_inp`
+exists (serial, rank 0). The amplitudes are tabulated on the substrate k-mesh,
+unfolded with the symmetry operations and time reversal of the substrate file,
+and interpolated in `p` (4x4 Lagrange; exact on mesh points). For a k-list
+that is not a mesh (`write_ksub`) only exact lookups are done.
+
+### Workflow
+
+1. Substrate: lead CBS (`embpot11.hdf`), surface stack from `gfprep` of a
+   film (`zmirror=f`, thin last layer, see `prep/README.md`), self-consistent
+   with `charge=t, surface=t`. One more run with the converged potential and a
+   write handle for `region=<nlayers+1>, side=1` writes the substrate file,
+   e.g. `embpotS.hdf`. Use the energy grid of the ad-layer run and a k-mesh
+   (symmetry-reduced or `kfull=t`).
+2. Ad-layer region: `gfprep` of a film of the ad-layer (plus, if wanted,
+   substrate planes with the ad-layer cell) so that the plane below layer 1
+   is `S`. The printed `zplane` values of both files give the distance of the
+   ad-layer atoms from the substrate atoms.
+3. `incomm_inp` with `order='0'` and the default `gf_io` (`region=1, side=1`
+   reads `outfile`) in the ad-layer directory: every gfleur run maps the
+   substrate potential first, then uses it. `stop_after=t` only writes it.
+4. Umklapp correction (collinear, incommensurate):
+   * `write_kaux=t` writes `kpts_aux` (the vectors `kappa+u` reduced to the
+     ad-layer zone) and `kaux_map`, and stops;
+   * auxiliary run: `gfprep` of the ad-layer with `kptsfile='kpts_aux'`, gfleur
+     with `&EMB surface=t, vacleft=t, writeup=t` and a write handle for
+     `region=0, side=2` (`upfile`);
+   * `incomm_inp` with `order='2'`, `'3'` or `'full'` and `upfile`.
+5. Self-consistency: charge iterations of the ad-layer with the transformed
+   potential; `Sigma_up` changes slowly, repeat step 4 every few cycles until
+   the DOS and the charge change less than the tolerance.
+
+### `&INCOMM` in `incomm_inp`
+
+| parameter | default | meaning |
+|---|---|---|
+| `subfile` | – | substrate embedding potential (base name, `.hdf` added) |
+| `outfile` | `'embpot11'` | output, read as `region=1, side=1` |
+| `theta` | 0 | rotation (degrees) of the substrate lattice in the cartesian frame of the ad-layer; a noco/SOC substrate is rotated in spin space as well |
+| `asub` | from file | substrate `amat2d` (columns, a.u., before the rotation) for files without metadata |
+| `shift` | 0,0 | lateral shift `d` of the substrate (cartesian, a.u.); only enters with common vectors `Lambda_c` |
+| `order` | `'0'` | `'0'`: `Sigma0`; `'2'`, `'3'`: Umklapp correction to this order; `'full'`: the linear system |
+| `nshell` | 1 | shells of substrate vectors `u` in the correction |
+| `upfile` | – | `Sigma_up` at the points of `kpts_aux` (order > 0) |
+| `interp` | `'cubic'` | `'cubic'`, `'linear'`, `'exact'` (error unless `p` is a stored point) |
+| `extrap` | `'none'` | `'vac'`: amplitudes beyond the substrate cutoff from the free-electron form `-1/2 sqrt(p^2+2(vvac-E))` (`u=0`), 0 otherwise |
+| `vvac` | 0 | vacuum level of `extrap='vac'` |
+| `write_ksub` | F | write `kpts_sub`, the substrate k-points `[(kappa+G)M]` for exact lookups, and stop |
+| `write_kaux` | F | write `kpts_aux` and `kaux_map` and stop |
+| `eps_comm` | 1e-6 | tolerance of the test for common vectors |
+| `eps_energy` | 1e-5 | tolerance of the energy match with the substrate file |
+| `stop_after` | F | end the run after writing `outfile` |
+
+The k-set of the ad-layer must not use operations that are no symmetry of
+the substrate: every in-plane rotation of the ad-layer must be one of the
+substrate (rotated by `theta`), with common vectors also the translations
+(including `shift`). The run stops otherwise (`zmirror=f` and fewer operations
+in the ad-layer `sym.xml`, or a full k-mesh). The Coulomb boundary data of the
+substrate file (`Boundary`, `CoulBoundary`) are copied with the 2D star
+`G=0` only.
+
+### Checks on real data
+
+* Unfolding: `Sigma_up` of a Cu(001) film from the symmetry-reduced 4x4 mesh
+  (C4v and time reversal), unfolded onto the full mesh, equals a direct run on
+  the full mesh (`test_unfold_film`).
+* Supercell (manual check, 2026-11-26): the 1x1 `Sigma_up` of the Cu(001) film
+  transformed into a sqrt2 x sqrt2 R45 cell (inpgen shifts the origin by
+  `shift=0,-a/2`) compared with a direct run of the film converged in that
+  cell (same k-points, folded): `||A-B||/||B||` is 1-3% for `|k+G| >= 2.5`
+  and about 1% for `|k+G| >= 3.5`, 10-17% including the propagating
+  channels. The diagonal ratio is 1 (no area factor). Both films are converged
+  separately (their Fermi energies differ by 2 mHtr), which limits the
+  comparison. With `shift=0` the symmetry check rejects the wrong registry.
+
+### Diagnostics in `out`
+
+Per energy and spin: the numbers of exact, cubic, linear and extrapolated
+evaluations; the interpolation estimate `max|cubic-linear|/max|sigma|` (a
+note recommends a denser substrate mesh or exact mode above `1e-3`); for the
+correction `max ||Delta_u0||/||Sigma0||`, `||Sigma~2||`, `||Sigma~ - Sigma~2||`
+(orders 3 and full), the number of near-singular `D_u` (resonances, use
+`'full'`) and of couplings dropped at the cutoff. The table setup reports the
+deviation of symmetry images of the substrate amplitudes (a warning signals
+inconsistent `symop`/`symtau`).
+
+### Approximations and limits
+
+* A0: `order='0'` neglects the Umklapp coupling (registry average); the
+  correction treats it to the given order with the current `Sigma_up`.
+* A1: the substrate-periodic part of the potential above `S` is not in the
+  ad-layer region.
+* A2: the substrate does not respond to the charge of the ad-layer beyond its
+  surface run (the Coulomb boundary keeps the star `G=0`).
+* The correction is implemented for collinear, incommensurate cases. A noco
+  substrate file needs a full k-mesh (no unfolding). The transformation is
+  serial.
+* The amplitudes are interpolated in `p` on the substrate mesh; for spectra on
+  the real axis use `write_ksub` and `interp='exact'`.
+
+The old `supercell_io` converter and the p(1x1) k-list (`gf_pot.kpts.hdf`)
+were removed; a supercell is one case of `incomm_inp`.
 
 ## Non-collinear magnetism
 

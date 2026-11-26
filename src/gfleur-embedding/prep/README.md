@@ -41,6 +41,8 @@ types, and `spinflip`.
 | `zvac` | 0 | film: the vacuum embedding planes lie at `±(z1+zvac)`, `z1` = dVac/2 of the film |
 | `ewidth`, `nen` | 1, 15 | contour of `gf_en.charge`: starts `ewidth` Htr below E_F, `nen` points (2**n-1). Semicore valence states (Fe 3s3p) need a larger `ewidth` (4) and more points |
 | `zmirror` | `T` | keep the symmetry operations that flip z in the layers; set `F` for a stack with a lead or a surface (charge mode), whose layers are not mirror symmetric |
+| `kfull` | `F` | the full `kgrid` mesh without symmetry reduction (no rotations, no time reversal). Simplest input for `incomm_inp` of an ad-layer on this substrate, required for a noco substrate there |
+| `kptsfile` | – | explicit 2D k-list instead of `kgrid`: first line the number of k-points, then `k1 k2` (fractional) per line, equal weights. Used for the lists `kpts_sub` and `kpts_aux` written by `gfleur` with `incomm_inp` |
 
 In auto mode, the embedding planes lie midway between the atomic planes.
 
@@ -48,6 +50,16 @@ For a film, `first_plane` and `last_plane` count the atomic planes of the
 film. A layer range that includes the lowest (highest) atomic plane ends at
 a vacuum embedding plane at `-(z1+zvac)` (`z1+zvac`). This plane must not cut
 a MT sphere.
+
+For the substrate of an ad-layer with another lattice (`incomm_inp` of
+`gfleur`), the top plane of the surface stack is the plane where the ad-layer
+starts. Keep the last layer thin: the plane just outside the top MT spheres
+with a small `zvac`. Propagating through a thick vacuum part loses the
+strongly evanescent `|k+G|` channels (`gfleur` warns about ill-conditioned
+propagations in `out`). The plane-wave cutoff of the substrate must cover the
+momenta of the ad-layer: `Kmax(substrate) >= Kmax(ad-layer) + |u|`, `u` the
+Umklapp vectors used, plus a margin for the interpolation (`gmax_scale` and
+the Kmax of the bulk input).
 
 ## Output
 

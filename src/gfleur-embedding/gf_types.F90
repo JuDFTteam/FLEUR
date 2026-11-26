@@ -64,6 +64,9 @@ MODULE m_gf_types
       LOGICAL :: l_spectral, l_embspectral, l_simplevacuum
       !vacuum embedding below layer 1 (l_surface: above the last layer)
       LOGICAL :: l_vacleft = .FALSE.
+      !write the embedding potential of layer 1 and everything above it at the
+      !plane below layer 1 (gf_io region=0, side=2)
+      LOGICAL :: l_writeup = .FALSE.
       !calculate full Green function instead of only projections
       LOGICAL :: l_fullgreen
       LOGICAL :: l_nogno

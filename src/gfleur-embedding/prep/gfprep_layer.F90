@@ -21,7 +21,7 @@ MODULE m_gfprep_layer
    USE m_gfprep_bulk, ONLY: t_gfprep_struct
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: t_gfprep_layer, gfprep_make_layer, gfprep_kpts
+   PUBLIC :: t_gfprep_layer, gfprep_make_layer, gfprep_kpts, gfprep_kpts_file
 
    TYPE t_gfprep_layer
       TYPE(t_layergeo)  :: geo
@@ -360,13 +360,15 @@ CONTAINS
       END FUNCTION priv_map_l
    END SUBROUTINE priv_fill_noco
 
-   SUBROUTINE gfprep_kpts(lays, kgrid, l_timerev, kpts)
+   SUBROUTINE gfprep_kpts(lays, kgrid, l_timerev, kpts, l_full)
       !The 2D k-point set shared by all layers: a Gamma-centered grid
       !reduced with the in-plane point operations common to all layers
+      !(l_full: no reduction)
       TYPE(t_gfprep_layer), INTENT(IN) :: lays(:)
       INTEGER, INTENT(IN)              :: kgrid(2)
       LOGICAL, INTENT(IN)              :: l_timerev
       TYPE(t_kpts), INTENT(OUT)        :: kpts
+      LOGICAL, INTENT(IN)              :: l_full
 
       INTEGER, ALLOCATABLE :: rot(:, :, :), owner(:, :)
       REAL, ALLOCATABLE    :: bk(:, :), wt(:)
@@ -389,6 +391,10 @@ CONTAINS
          nrot = nrot + 1
          rot(:, :, nrot) = lays(1)%sym%mrot(1:2, 1:2, iop)
       END DO
+      IF (l_full) THEN
+         nrot = 1
+         rot(:, :, 1) = RESHAPE([1, 0, 0, 1], [2, 2])
+      END IF
 
       ALLOCATE (owner(0:kgrid(1) - 1, 0:kgrid(2) - 1), bk(2, kgrid(1)*kgrid(2)), wt(kgrid(1)*kgrid(2)))
       owner = 0
@@ -401,7 +407,7 @@ CONTAINS
             bk(:, nk) = k - NINT(k)
             wt(nk) = 0.0
             DO ir = 1, nrot
-               DO is = 1, MERGE(2, 1, l_timerev)
+               DO is = 1, MERGE(2, 1, l_timerev .AND. .NOT. l_full)
                   q = MATMUL(k, REAL(rot(:, :, ir)))*(3 - 2*is)
                   IF (ANY(ABS(q*kgrid - NINT(q*kgrid)) > eps)) CALL juDFT_error( &
                      "The k-point grid is not compatible with the symmetry", &
@@ -428,6 +434,33 @@ CONTAINS
       WRITE (oUnit, "(a,i0,a,i0,a,i0,a,i0,a)") "gfprep: ", kgrid(1), "x", kgrid(2), " k-grid, ", &
          nk, " k-points (", nrot, " common in-plane rotations)"
    END SUBROUTINE gfprep_kpts
+
+   SUBROUTINE gfprep_kpts_file(filename, kpts)
+      !explicit 2D k-list: number of k-points, then k1 k2 (fractional) per line
+      CHARACTER(LEN=*), INTENT(IN) :: filename
+      TYPE(t_kpts), INTENT(OUT)    :: kpts
+      INTEGER :: nk, n, ios
+      LOGICAL :: l_exist
+      INQUIRE (FILE=filename, EXIST=l_exist)
+      IF (.NOT. l_exist) CALL juDFT_error("kptsfile not found: "//filename, calledby="gfprep_kpts_file")
+      OPEN (97, FILE=filename, STATUS="old", ACTION="read")
+      READ (97, *, IOSTAT=ios) nk
+      IF (ios /= 0 .OR. nk < 1) CALL juDFT_error("kptsfile: first line must be the number of k-points", &
+                                                 calledby="gfprep_kpts_file")
+      kpts%kptsName = "default"
+      kpts%kptsKind = KPTS_KIND_UNSPECIFIED
+      kpts%nkpt = nk
+      ALLOCATE (kpts%bk(3, nk), kpts%wtkpt(nk))
+      kpts%bk = 0.0
+      DO n = 1, nk
+         READ (97, *, IOSTAT=ios) kpts%bk(1:2, n)
+         IF (ios /= 0) CALL juDFT_error("kptsfile: too few k-points", calledby="gfprep_kpts_file")
+      END DO
+      CLOSE (97)
+      kpts%wtkpt = 1.0/nk
+      kpts%nkpt3 = [0, 0, 1]
+      WRITE (oUnit, "(a,i0,a,a)") "gfprep: ", nk, " k-points from ", filename
+   END SUBROUTINE gfprep_kpts_file
 
    LOGICAL FUNCTION priv_has_rot(sym, r)
       TYPE(t_sym), INTENT(IN) :: sym
