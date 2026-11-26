@@ -153,7 +153,7 @@ CONTAINS
       TYPE(t_igeo)     :: geo
       TYPE(t_io2dmeta) :: fmeta
       INTEGER, ALLOCATABLE :: lc(:, :), q(:, :), ulist(:, :), dmap(:, :), hl(:), ie_sub(:), ie_up(:)
-      COMPLEX, ALLOCATABLE :: s0(:, :, :), seff(:, :)
+      COMPLEX, ALLOCATABLE :: s0(:, :, :), seff(:, :), sfull(:, :)
       REAL, ALLOCATABLE    :: a(:, :, :)
       INTEGER(HID_T) :: fid, varid
       INTEGER :: ng, nlc, nq, dmax, n, nk, ichan, nchan, jsp_out, ns, nh, ia, ib, iu, hdferr, ic, ispin
@@ -234,7 +234,8 @@ CONTAINS
 
       !<-- table of the substrate amplitudes
       CALL priv_ulist(lc(:, :nlc), q, ulist)
-      CALL tab%init(f, ulist, inp%interp, geo%asub, .TRUE.)
+      !a noco ad-layer needs 2x2 spin blocks, also from a collinear substrate
+      CALL tab%init(f, ulist, inp%interp, geo%asub, .TRUE., l_spinor=l_noco)
       tab%l_vacextrap = inp%l_vacextrap
       tab%vvac = inp%vvac
       ns = tab%ns
@@ -262,14 +263,9 @@ CONTAINS
       IF (ns == 2) THEN
          IF (.NOT. l_noco) CALL juDFT_error("A noco substrate file needs a noco ad-layer", calledby="gf_embtransform")
          nchan = 1
-      ELSE IF (l_noco) THEN
-         nchan = 2
       ELSE
          nchan = jsp_out
       END IF
-      IF (inp%order > 0 .AND. (l_noco .OR. ns == 2)) &
-         CALL juDFT_error("The Umklapp correction is only implemented for collinear calculations", &
-                          calledby="gf_embtransform")
 
       !<-- output file
       fmeta%l_set = .TRUE.
@@ -316,11 +312,19 @@ CONTAINS
                   END DO
                END DO
                IF (inp%order > 0) THEN
-                  ALLOCATE (seff(nh, nh))
+                  !full spinor matrix (index (s-1)*nh+G), components 11,21,12,22
+                  ALLOCATE (seff(ns*nh, ns*nh), sfull(ns*nh, ns*nh))
+                  DO ic = 1, ns**2
+                     sfull(MOD(ic - 1, ns)*nh + 1:(MOD(ic - 1, ns) + 1)*nh, &
+                           ((ic - 1)/ns)*nh + 1:((ic - 1)/ns + 1)*nh) = s0(:, :, ic)
+                  END DO
                   CALL priv_umklapp(inp, tab, f, up, ie_up(n), ispin, geo, kap, ld%lapw_gf%global2Dlist, hl(:nh), &
-                                    ld%fi%cell%bbmat, q, s0(:, :, 1), seff, dnorm, nmiss)
-                  s0(:, :, 1) = seff
-                  DEALLOCATE (seff)
+                                    ld%fi%cell%bbmat, q, sfull, seff, dnorm, nmiss)
+                  DO ic = 1, ns**2
+                     s0(:, :, ic) = seff(MOD(ic - 1, ns)*nh + 1:(MOD(ic - 1, ns) + 1)*nh, &
+                                         ((ic - 1)/ns)*nh + 1:((ic - 1)/ns + 1)*nh)
+                  END DO
+                  DEALLOCATE (seff, sfull)
                END IF
                !<-- write: noco spins 1..4 = 11,22,12,21
                DO ic = 1, ns**2
@@ -334,11 +338,6 @@ CONTAINS
                   END IF
                   CALL priv_write(varid, a, ispin, n, nk)
                END DO
-               IF (ns == 1 .AND. l_noco .AND. ichan == 1) THEN
-                  a = 0.0
-                  CALL priv_write(varid, a, 3, n, nk)
-                  CALL priv_write(varid, a, 4, n, nk)
-               END IF
                DEALLOCATE (s0)
             END DO
             !<-- diagnostics of this energy and spin channel
@@ -570,7 +569,8 @@ CONTAINS
    END SUBROUTINE priv_symcheck
 
    SUBROUTINE priv_umklapp(inp, tab, f, up, ie_up, ispin, geo, kap, glist, hl, bbmat, q, s0, seff, dnorm, nmiss)
-      !Sigma_eff = Sigma0 - Delta_0Q [D_Q + Delta_QQ]^-1 Delta_Q0 for one kappa (collinear)
+      !Sigma_eff = Sigma0 - Delta_0Q [D_Q + Delta_QQ]^-1 Delta_Q0 for one kappa. The matrices have
+      !nsp=tab%ns spin components in the order of the noco basis: index (s-1)*n + G
       TYPE(t_incomm), INTENT(IN)    :: inp
       TYPE(t_sigtab), INTENT(INOUT) :: tab
       TYPE(t_embfile), INTENT(IN)   :: f, up
@@ -584,26 +584,28 @@ CONTAINS
       INTEGER, INTENT(INOUT)        :: nmiss
 
       TYPE t_block
-         INTEGER :: nb = 0, off = 0
+         INTEGER :: nb = 0, off = 0, ik = 0
          REAL    :: q(2)
          INTEGER, ALLOCATABLE :: g(:, :), gf(:), ih(:)
          COMPLEX, ALLOCATABLE :: d(:, :), du0(:, :), d0u(:, :), x(:, :)
          INTEGER, ALLOCATABLE :: ipiv(:)
       END TYPE t_block
       TYPE(t_block), ALLOCATABLE :: b(:)
-      COMPLEX, ALLOCATABLE :: upmat(:, :), s2(:, :), s3(:, :), big(:, :), rhs(:, :), d0q(:, :), z(:, :), duv(:, :)
+      COMPLEX, ALLOCATABLE :: s2(:, :), s3(:, :), big(:, :), rhs(:, :), d0q(:, :), z(:, :), duv(:, :)
       INTEGER, ALLOCATABLE :: ipiv(:)
-      INTEGER :: nq, iq, jq, nh, ik, ih, nshift(2), n, m, ntot, info
-      REAL    :: s(3), p(2), anorm, rcond, rwork(1)
-      COMPLEX :: val(1)
+      INTEGER :: nq, iq, jq, nh, nsp, mh, ik, ih, nshift(2), n, m, nn, ntot, info
+      REAL    :: s(3), p(2), anorm, rcond, rwork(1), th
+      COMPLEX :: sg(2, 2)
       COMPLEX, ALLOCATABLE :: work(:)
       REAL, ALLOCATABLE    :: rw(:)
-      LOGICAL :: ok
       REAL, EXTERNAL :: zlange
 
       nq = SIZE(q, 2)
       nh = SIZE(hl)
-      ALLOCATE (b(nq), upmat(up%ng, up%ng))
+      nsp = tab%ns
+      mh = nsp*nh
+      th = inp%theta*pi_const/180.0
+      ALLOCATE (b(nq))
       s(3) = 0.0
       !<-- blocks u: basis kappa+u+G with |kappa+u+G|<=rkmax
       ntot = 0
@@ -615,7 +617,7 @@ CONTAINS
             CALL juDFT_error("k-point kappa+u not in upfile", hint="generate the k-list with write_kaux=t", &
                              calledby="gf_embtransform")
          END IF
-         CALL up%read(ie_up, MIN(ispin, up%spins), ik, upmat)
+         b(iq)%ik = ik
          !relative G: kappa+u+G = k_file + (G - nshift)
          ALLOCATE (b(iq)%g(2, up%ng), b(iq)%gf(up%ng), b(iq)%ih(up%ng))
          n = 0
@@ -633,64 +635,58 @@ CONTAINS
          END DO
          b(iq)%nb = n
          b(iq)%off = ntot
-         ntot = ntot + n
-         ALLOCATE (b(iq)%d(n, n), b(iq)%du0(n, nh), b(iq)%d0u(nh, n), b(iq)%ipiv(n))
-         b(iq)%d = upmat(b(iq)%gf(:n), b(iq)%gf(:n))
+         ntot = ntot + nsp*n
+         ALLOCATE (b(iq)%d(nsp*n, nsp*n), b(iq)%du0(nsp*n, mh), b(iq)%d0u(mh, nsp*n), b(iq)%ipiv(nsp*n))
+         CALL priv_dblock(iq, b(iq)%d)
          b(iq)%du0 = 0.0
          b(iq)%d0u = 0.0
          DO n = 1, b(iq)%nb
-            !D_u: Sigma0 of the block (diagonal, incommensurate) + Sigma_up
-            p = MATMUL(b(iq)%q + b(iq)%g(:, n), geo%m)
-            CALL tab%eval(f, p, tab%uindex((/0, 0/)), val, ok)
-            IF (.NOT. ok) CALL priv_fail(p, (/0, 0/), tab)
-            b(iq)%d(n, n) = b(iq)%d(n, n) + val(1)
             IF (b(iq)%ih(n) == 0) THEN
                nmiss = nmiss + 1
                CYCLE
             END IF
             !Delta_u0 = sigma_u(p), Delta_0u = sigma_-u(p+u), p = (kappa+G)M
             p = MATMUL(kap + b(iq)%g(:, n), geo%m)
-            CALL tab%eval(f, p, tab%uindex(q(:, iq)), val, ok)
-            IF (.NOT. ok) CALL priv_fail(p, q(:, iq), tab)
-            b(iq)%du0(n, b(iq)%ih(n)) = val(1)
-            CALL tab%eval(f, p + q(:, iq), tab%uindex(-q(:, iq)), val, ok)
-            IF (.NOT. ok) CALL priv_fail(p + q(:, iq), -q(:, iq), tab)
-            b(iq)%d0u(b(iq)%ih(n), n) = val(1)
+            CALL priv_sig(p, q(:, iq), sg)
+            CALL priv_put(b(iq)%du0, n, b(iq)%nb, b(iq)%ih(n), nh, sg)
+            CALL priv_sig(p + q(:, iq), -q(:, iq), sg)
+            CALL priv_put(b(iq)%d0u, b(iq)%ih(n), nh, n, b(iq)%nb, sg)
          END DO
-         dnorm(1) = MAX(dnorm(1), zlange("F", b(iq)%nb, nh, b(iq)%du0, MAX(b(iq)%nb, 1), rwork)/ &
-                        MAX(zlange("F", nh, nh, s0, nh, rwork), 1.0E-30))
+         dnorm(1) = MAX(dnorm(1), zlange("F", nsp*b(iq)%nb, mh, b(iq)%du0, MAX(nsp*b(iq)%nb, 1), rwork)/ &
+                        MAX(zlange("F", mh, mh, s0, mh, rwork), 1.0E-30))
       END DO
 
       !<-- second order: -sum_u Delta_0u D_u^-1 Delta_u0
-      ALLOCATE (s2(nh, nh), work(2*MAXVAL(b%nb) + 1), rw(2*MAXVAL(b%nb) + 1))
+      ALLOCATE (s2(mh, mh), work(2*nsp*MAXVAL(b%nb) + 1), rw(2*nsp*MAXVAL(b%nb) + 1))
       s2 = 0.0
       DO iq = 1, nq
-         n = b(iq)%nb
+         n = nsp*b(iq)%nb
          IF (n == 0) CYCLE
          anorm = zlange("1", n, n, b(iq)%d, n, rwork)
          CALL zgetrf(n, n, b(iq)%d, n, b(iq)%ipiv, info)
          IF (info /= 0) CALL juDFT_error("singular D_u in the Umklapp correction", calledby="gf_embtransform")
          CALL zgecon("1", n, b(iq)%d, n, anorm, rcond, work, rw, info)
          IF (rcond < 1.0E-8) dnorm(4) = dnorm(4) + 1.0
-         ALLOCATE (b(iq)%x(n, nh))
+         ALLOCATE (b(iq)%x(n, mh))
          b(iq)%x = b(iq)%du0
-         CALL zgetrs("N", n, nh, b(iq)%d, n, b(iq)%ipiv, b(iq)%x, n, info)
+         CALL zgetrs("N", n, mh, b(iq)%d, n, b(iq)%ipiv, b(iq)%x, n, info)
          s2 = s2 - MATMUL(b(iq)%d0u, b(iq)%x)
       END DO
-      dnorm(2) = MAX(dnorm(2), zlange("F", nh, nh, s2, nh, rwork))
+      dnorm(2) = MAX(dnorm(2), zlange("F", mh, mh, s2, mh, rwork))
       seff = s0 + s2
       IF (inp%order == 2) RETURN
 
       IF (inp%order == 3) THEN
          !<-- third order: + sum_{u/=u'} Delta_0u D_u^-1 Delta_uu' D_u'^-1 Delta_u'0
-         ALLOCATE (s3(nh, nh))
+         ALLOCATE (s3(mh, mh))
          s3 = 0.0
          DO iq = 1, nq
-            IF (b(iq)%nb == 0) CYCLE
+            n = nsp*b(iq)%nb
+            IF (n == 0) CYCLE
             !z = Delta_0u D_u^-1 = (D_u^-T Delta_0u^T)^T
-            ALLOCATE (z(b(iq)%nb, nh))
+            ALLOCATE (z(n, mh))
             z = TRANSPOSE(b(iq)%d0u)
-            CALL zgetrs("T", b(iq)%nb, nh, b(iq)%d, b(iq)%nb, b(iq)%ipiv, z, b(iq)%nb, info)
+            CALL zgetrs("T", n, mh, b(iq)%d, n, b(iq)%ipiv, z, n, info)
             DO jq = 1, nq
                IF (jq == iq .OR. b(jq)%nb == 0) CYCLE
                CALL priv_duv(iq, jq, duv)
@@ -699,58 +695,109 @@ CONTAINS
             DEALLOCATE (z)
          END DO
          seff = seff + s3
-         dnorm(3) = MAX(dnorm(3), zlange("F", nh, nh, s3, nh, rwork))
+         dnorm(3) = MAX(dnorm(3), zlange("F", mh, mh, s3, mh, rwork))
          RETURN
       END IF
 
       !<-- full: solve (D_Q + Delta_QQ) X = Delta_Q0
-      ALLOCATE (big(ntot, ntot), rhs(ntot, nh), d0q(nh, ntot), ipiv(ntot))
+      ALLOCATE (big(ntot, ntot), rhs(ntot, mh), d0q(mh, ntot), ipiv(ntot))
       big = 0.0
       DO iq = 1, nq
-         n = b(iq)%nb
+         n = nsp*b(iq)%nb
          IF (n == 0) CYCLE
          !D_u again (the LU factor replaced it)
-         CALL up%read(ie_up, MIN(ispin, up%spins), up%find_k(b(iq)%q, 1.0E-5, nshift), upmat)
-         big(b(iq)%off + 1:b(iq)%off + n, b(iq)%off + 1:b(iq)%off + n) = upmat(b(iq)%gf(:n), b(iq)%gf(:n))
-         DO m = 1, n
-            p = MATMUL(b(iq)%q + b(iq)%g(:, m), geo%m)
-            CALL tab%eval(f, p, tab%uindex((/0, 0/)), val, ok)
-            big(b(iq)%off + m, b(iq)%off + m) = big(b(iq)%off + m, b(iq)%off + m) + val(1)
-         END DO
+         CALL priv_dblock(iq, big(b(iq)%off + 1:b(iq)%off + n, b(iq)%off + 1:b(iq)%off + n))
          rhs(b(iq)%off + 1:b(iq)%off + n, :) = b(iq)%du0
          d0q(:, b(iq)%off + 1:b(iq)%off + n) = b(iq)%d0u
          DO jq = 1, nq
             IF (jq == iq .OR. b(jq)%nb == 0) CYCLE
             CALL priv_duv(iq, jq, duv)
-            big(b(iq)%off + 1:b(iq)%off + n, b(jq)%off + 1:b(jq)%off + b(jq)%nb) = duv
+            nn = nsp*b(jq)%nb
+            big(b(iq)%off + 1:b(iq)%off + n, b(jq)%off + 1:b(jq)%off + nn) = duv
          END DO
       END DO
-      CALL zgesv(ntot, nh, big, ntot, ipiv, rhs, ntot, info)
+      CALL zgesv(ntot, mh, big, ntot, ipiv, rhs, ntot, info)
       IF (info /= 0) CALL juDFT_error("singular Umklapp system", calledby="gf_embtransform")
       seff = s0 - MATMUL(d0q, rhs)
-      dnorm(3) = MAX(dnorm(3), zlange("F", nh, nh, seff - s0 - s2, nh, rwork))
+      dnorm(3) = MAX(dnorm(3), zlange("F", mh, mh, seff - s0 - s2, mh, rwork))
 
    CONTAINS
+
+      SUBROUTINE priv_sig(pp, u, sg)
+         !sigma_u(p) as nsp x nsp block, spin frame rotated with the lattice
+         REAL, INTENT(IN)     :: pp(2)
+         INTEGER, INTENT(IN)  :: u(2)
+         COMPLEX, INTENT(OUT) :: sg(2, 2)
+         COMPLEX :: v(4)
+         LOGICAL :: lok
+         v = CMPLX(0.0, 0.0)
+         CALL tab%eval(f, pp, tab%uindex(u), v(:nsp**2), lok)
+         IF (.NOT. lok) CALL priv_fail(pp, u, tab)
+         sg = RESHAPE(v, (/2, 2/))
+         IF (nsp == 2) THEN
+            sg(2, 1) = sg(2, 1)*EXP(CMPLX(0.0, th))
+            sg(1, 2) = sg(1, 2)*EXP(CMPLX(0.0, -th))
+         END IF
+      END SUBROUTINE priv_sig
+
+      SUBROUTINE priv_put(mat, ir, nr, ic, nc, sg)
+         !G-diagonal block sg at plane wave ir (of nr) and ic (of nc)
+         COMPLEX, INTENT(INOUT) :: mat(:, :)
+         INTEGER, INTENT(IN)    :: ir, nr, ic, nc
+         COMPLEX, INTENT(IN)    :: sg(2, 2)
+         INTEGER :: s1, s2
+         DO s2 = 1, nsp
+            DO s1 = 1, nsp
+               mat((s1 - 1)*nr + ir, (s2 - 1)*nc + ic) = mat((s1 - 1)*nr + ir, (s2 - 1)*nc + ic) + sg(s1, s2)
+            END DO
+         END DO
+      END SUBROUTINE priv_put
+
+      SUBROUTINE priv_dblock(iq, d)
+         !D_u = Sigma_up(kappa+u) + Sigma0 of the block (G-diagonal, incommensurate)
+         INTEGER, INTENT(IN)  :: iq
+         COMPLEX, INTENT(OUT) :: d(:, :)
+         COMPLEX, ALLOCATABLE :: um(:, :)
+         INTEGER, PARAMETER   :: comp(2, 2) = RESHAPE((/1, 4, 3, 2/), (/2, 2/))
+         INTEGER :: s1, s2, k, nb, js
+         nb = b(iq)%nb
+         ALLOCATE (um(up%ng, up%ng))
+         d = 0.0
+         DO s2 = 1, nsp
+            DO s1 = 1, nsp
+               !noco file: spins 11,22,12,21; collinear file: the diagonal
+               IF (up%spins == 4) THEN
+                  js = comp(s1, s2)
+               ELSE IF (s1 /= s2) THEN
+                  CYCLE
+               ELSE IF (nsp == 2) THEN
+                  js = MIN(s1, up%spins)
+               ELSE
+                  js = MIN(ispin, up%spins)
+               END IF
+               CALL up%read(ie_up, js, b(iq)%ik, um)
+               d((s1 - 1)*nb + 1:s1*nb, (s2 - 1)*nb + 1:s2*nb) = um(b(iq)%gf(:nb), b(iq)%gf(:nb))
+            END DO
+         END DO
+         DO k = 1, nb
+            CALL priv_sig(MATMUL(b(iq)%q + b(iq)%g(:, k), geo%m), (/0, 0/), sg)
+            CALL priv_put(d, k, nb, k, nb, sg)
+         END DO
+      END SUBROUTINE priv_dblock
 
       SUBROUTINE priv_duv(iq, jq, duv)
          !Delta_uu'(G,G) = sigma_{u-u'}((kappa+u'+G)M), same relative G
          INTEGER, INTENT(IN)                 :: iq, jq
          COMPLEX, ALLOCATABLE, INTENT(INOUT) :: duv(:, :)
-         INTEGER :: n1, n2, iu
-         REAL    :: pp(2)
-         COMPLEX :: v(1)
-         LOGICAL :: lok
+         INTEGER :: n1, n2
          IF (ALLOCATED(duv)) DEALLOCATE (duv)
-         ALLOCATE (duv(b(iq)%nb, b(jq)%nb))
+         ALLOCATE (duv(nsp*b(iq)%nb, nsp*b(jq)%nb))
          duv = 0.0
-         iu = tab%uindex(q(:, iq) - q(:, jq))
          DO n2 = 1, b(jq)%nb
             DO n1 = 1, b(iq)%nb
                IF (ANY(b(iq)%g(:, n1) /= b(jq)%g(:, n2))) CYCLE
-               pp = MATMUL(b(jq)%q + b(jq)%g(:, n2), geo%m)
-               CALL tab%eval(f, pp, iu, v, lok)
-               IF (.NOT. lok) CALL priv_fail(pp, q(:, iq) - q(:, jq), tab)
-               duv(n1, n2) = v(1)
+               CALL priv_sig(MATMUL(b(jq)%q + b(jq)%g(:, n2), geo%m), q(:, iq) - q(:, jq), sg)
+               CALL priv_put(duv, n1, b(iq)%nb, n2, b(jq)%nb, sg)
             END DO
          END DO
       END SUBROUTINE priv_duv

@@ -338,7 +338,7 @@ that is not a mesh (`write_ksub`) only exact lookups are done.
 3. `incomm_inp` with `order='0'` and the default `gf_io` (`region=1, side=1`
    reads `outfile`) in the ad-layer directory: every gfleur run maps the
    substrate potential first, then uses it. `stop_after=t` only writes it.
-4. Umklapp correction (collinear, incommensurate):
+4. Umklapp correction (incommensurate; collinear or noco):
    * `write_kaux=t` writes `kpts_aux` (the vectors `kappa+u` reduced to the
      ad-layer zone) and `kaux_map`, and stops;
    * auxiliary run: `gfprep` of the ad-layer with `kptsfile='kpts_aux'`, gfleur
@@ -392,6 +392,12 @@ substrate file (`Boundary`, `CoulBoundary`) are copied with the 2D star
   separately (their Fermi energies differ by 2 mHtr), which limits the
   comparison. With `shift=0` the symmetry check rejects the wrong registry.
 
+* Noco (manual check, 2026-11-26): the tutorial example (Cu(001) film on a
+  Cu(001) film rotated by 45 degrees) with `l_noco=T` films, once with a
+  collinear and once with a noco substrate (`kfull=t`), gives the DOS peaks of
+  the collinear calculation within 0.2 mHtr for `Sigma0` and with
+  `order='full'` (the noco and collinear films differ by 0.1 mHtr in E_F).
+
 ### Diagnostics in `out`
 
 Per energy and spin: the numbers of exact, cubic, linear and extrapolated
@@ -411,9 +417,10 @@ inconsistent `symop`/`symtau`).
   ad-layer region.
 * A2: the substrate does not respond to the charge of the ad-layer beyond its
   surface run (the Coulomb boundary keeps the star `G=0`).
-* The correction is implemented for collinear, incommensurate cases. A noco
-  substrate file needs a full k-mesh (no unfolding). The transformation is
-  serial.
+* The correction is implemented for incommensurate cases. A noco ad-layer
+  uses 2x2 spin blocks (also with a collinear substrate, whose blocks are
+  diagonal) and a noco `upfile` from a noco auxiliary run. A noco substrate
+  file needs a full k-mesh (no unfolding). The transformation is serial.
 * The amplitudes are interpolated in `p` on the substrate mesh; for spectra on
   the real axis use `write_ksub` and `interp='exact'`.
 

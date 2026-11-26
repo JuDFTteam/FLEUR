@@ -118,6 +118,17 @@ def sigma_model(e, spin):
     return f
 
 
+def sigma_model_noco(e, js):
+    """noco substrate: file spin index js = 11, 22, 12, 21; spin off-diagonal amplitudes"""
+    if js <= 2:
+        return sigma_model(e, js)
+    amp = (0.02 - 0.015j) if js == 3 else (0.01 + 0.02j)
+
+    def f(p2, pu2, u2, is_zero):
+        return amp * (1.0 + 0.2 * e) * np.exp(-0.15 * (p2 + pu2) - 0.05 * u2)
+    return f
+
+
 def sigma_vacuum(e, spin, vvac=0.2):
     def f(p2, pu2, u2, is_zero):
         return np.where(is_zero, -0.5 * np.sqrt(p2 + 2.0 * (vvac - e) + 0j), 0.0)
@@ -134,6 +145,29 @@ def up_model(e, spin):
         diag = -0.5 * np.sqrt(a1 + 2.0 * (0.1 - e) + 0j)
         return np.where(d2 < 1e-20, diag, val)
     return f
+
+
+def up_model_noco(e, js):
+    """noco Sigma_up: spin index js = 11, 22, 12, 21"""
+    if js <= 2:
+        return up_model(e, js)
+    amp = (0.004 + 0.002j) if js == 3 else (0.003 - 0.001j)
+
+    def f(m1, m2):
+        a1 = np.sum(m1 ** 2, axis=-1)
+        a2 = np.sum(m2 ** 2, axis=-1)
+        d2 = np.sum((m1 - m2) ** 2, axis=-1)
+        return amp * np.exp(-0.2 * (a1 + a2) - 0.3 * d2)
+    return f
+
+
+def up_model_diag(model):
+    """noco Sigma_up from a collinear model: 11 = spin 1, 22 = spin 2, no spin coupling"""
+    def m(e, js):
+        if js <= 2:
+            return model(e, js)
+        return lambda m1, m2: np.zeros(np.broadcast(m1[..., 0], m2[..., 0]).shape)
+    return m
 
 
 # --------------------------------------------------------------------------- files
@@ -253,6 +287,39 @@ class SigRef:
         return None
 
 
+class SpinTab:
+    """2x2 amplitudes: from a noco table set (spins 11,22,12,21) with the spin frame rotated
+    by theta, or the diagonal of a collinear set"""
+    nsp = 2
+
+    def __init__(self, tabs, theta=0.0):
+        self.tabs = tabs
+        self.th = np.radians(theta)
+
+    def __call__(self, p, u):
+        v = [t(p, u) for t in self.tabs]
+        if any(x is None for x in v):
+            return None
+        if len(v) == 2:
+            return np.diag(v).astype(complex)
+        m = np.array([[v[0], v[2]], [v[3], v[1]]], dtype=complex)
+        m[1, 0] *= np.exp(1j * self.th)
+        m[0, 1] *= np.exp(-1j * self.th)
+        return m
+
+
+def _blk(tab, p, u):
+    v = tab(p, u)
+    return None if v is None else np.atleast_2d(np.asarray(v, dtype=complex))
+
+
+def spinor(mat4, nsp):
+    """full matrix (index (s-1)*n+G) from the file spins 11,22,12,21 ([..., spin, G, G'])"""
+    if nsp == 1:
+        return mat4[0]
+    return np.block([[mat4[0], mat4[2]], [mat4[3], mat4[1]]])
+
+
 def lagrange4(t):
     return [-(t - 1) * (t - 2) * (t - 3) / 6.0, t * (t - 2) * (t - 3) / 2.0,
             -t * (t - 1) * (t - 3) / 2.0, t * (t - 1) * (t - 2) / 6.0]
@@ -281,9 +348,11 @@ class Geometry:
 
 
 def sigma0(geo, tab, kap, glist, shift=(0.0, 0.0)):
-    """Sigma0 in the global basis (zero outside the kappa sphere)."""
+    """Sigma0 in the global basis (zero outside the kappa sphere); spinor tables give the
+    full matrix with the index (s-1)*ng+G"""
+    nsp = getattr(tab, "nsp", 1)
     ng = len(glist)
-    out = np.zeros((ng, ng), dtype=complex)
+    out = np.zeros((nsp * ng, nsp * ng), dtype=complex)
     hl = geo.home(kap, glist)
     for b in hl:
         p = (kap + glist[b]) @ geo.m
@@ -291,9 +360,12 @@ def sigma0(geo, tab, kap, glist, shift=(0.0, 0.0)):
             u = geo.as_sub(glist[a] - glist[b])
             if u is None:
                 continue
-            v = tab(p, u)
+            v = _blk(tab, p, u)
             assert v is not None, ("missing amplitude", p, u)
-            out[a, b] = np.exp(-1j * (u @ geo.bb) @ np.asarray(shift)) * v
+            ph = np.exp(-1j * (u @ geo.bb) @ np.asarray(shift))
+            for s1 in range(nsp):
+                for s2 in range(nsp):
+                    out[s1 * ng + a, s2 * ng + b] = ph * v[s1, s2]
     return out
 
 
@@ -316,37 +388,58 @@ def find_k(kfile, q, eps=1e-5):
 
 
 def sigma_eff(geo, tab, kap, glist, q, up, e_up, spin, order):
-    """Sigma0 + Umklapp correction for one kappa (home block only, global indices)."""
+    """Sigma0 + Umklapp correction for one kappa (home block, index (s-1)*nh+G).
+    Returns the home indices and the matrix."""
+    nsp = getattr(tab, "nsp", 1)
     hl = geo.home(kap, glist)
     nh = len(hl)
-    s0 = sigma0(geo, tab, kap, glist)[np.ix_(hl, hl)]
+    ng = len(glist)
+    idx = [s1 * ng + a for s1 in range(nsp) for a in hl]
+    s0 = sigma0(geo, tab, kap, glist)[np.ix_(idx, idx)]
     gpos = {tuple(glist[a]): i for i, a in enumerate(hl)}
+
+    def put(mat, ir, nr, ic, nc, v):
+        for s1 in range(nsp):
+            for s2 in range(nsp):
+                mat[s1 * nr + ir, s2 * nc + ic] += v[s1, s2]
+
+    def upmat(ik, sel):
+        if nsp == 1:
+            m = up["mat"][ik, e_up, min(spin, up["mat"].shape[2] - 1)]
+            return m[np.ix_(sel, sel)]
+        m4 = up["mat"][ik, e_up]
+        if m4.shape[0] == 4:
+            return spinor([x[np.ix_(sel, sel)] for x in m4], 2)
+        return np.block([[m4[0][np.ix_(sel, sel)], np.zeros((len(sel), len(sel)))],
+                         [np.zeros((len(sel), len(sel))), m4[min(1, m4.shape[0] - 1)][np.ix_(sel, sel)]]])
+
     blocks = []
     for u in q:
         qq = kap + u @ geo.minv
         ik, nshift = find_k(up["kpts"], qq)
         kf = up["kpts"][ik]
-        idx = [m for m, g in enumerate(up["gvecs"]) if (kf + g) @ geo.bbo @ (kf + g) <= geo.rk ** 2]
-        grel = [up["gvecs"][m] + nshift for m in idx]
-        d = up["mat"][ik, e_up, spin][np.ix_(idx, idx)].copy()
-        du0 = np.zeros((len(idx), nh), dtype=complex)
-        d0u = np.zeros((nh, len(idx)), dtype=complex)
+        sel = [m for m, g in enumerate(up["gvecs"]) if (kf + g) @ geo.bbo @ (kf + g) <= geo.rk ** 2]
+        grel = [up["gvecs"][m] + nshift for m in sel]
+        nb = len(sel)
+        d = upmat(ik, sel).astype(complex)
+        du0 = np.zeros((nsp * nb, nsp * nh), dtype=complex)
+        d0u = np.zeros((nsp * nh, nsp * nb), dtype=complex)
         for n, g in enumerate(grel):
-            d[n, n] += tab((qq + g) @ geo.m, np.zeros(2, int))
+            put(d, n, nb, n, nb, _blk(tab, (qq + g) @ geo.m, np.zeros(2, int)))
             h = gpos.get(tuple(g))
             if h is None:
                 continue
             p = (kap + g) @ geo.m
-            du0[n, h] = tab(p, u)
-            d0u[h, n] = tab(p + u, -u)
-        blocks.append(dict(u=u, q=qq, g=grel, d=d, du0=du0, d0u=d0u))
+            put(du0, n, nb, h, nh, _blk(tab, p, u))
+            put(d0u, h, nh, n, nb, _blk(tab, p + u, -u))
+        blocks.append(dict(u=u, q=qq, g=grel, nb=nb, d=d, du0=du0, d0u=d0u))
 
     def duv(bi, bj):
-        out = np.zeros((len(bi["g"]), len(bj["g"])), dtype=complex)
+        out = np.zeros((nsp * bi["nb"], nsp * bj["nb"]), dtype=complex)
         for n2, g2 in enumerate(bj["g"]):
             for n1, g1 in enumerate(bi["g"]):
                 if np.all(g1 == g2):
-                    out[n1, n2] = tab((bj["q"] + g2) @ geo.m, bi["u"] - bj["u"])
+                    put(out, n1, bi["nb"], n2, bj["nb"], _blk(tab, (bj["q"] + g2) @ geo.m, bi["u"] - bj["u"]))
         return out
 
     s2 = sum(-b["d0u"] @ np.linalg.solve(b["d"], b["du0"]) for b in blocks)
@@ -356,15 +449,14 @@ def sigma_eff(geo, tab, kap, glist, q, up, e_up, spin, order):
         s3 = np.zeros_like(s0)
         for i, bi in enumerate(blocks):
             for j, bj in enumerate(blocks):
-                if i == j:
-                    continue
-                s3 += bi["d0u"] @ np.linalg.solve(bi["d"], duv(bi, bj)) @ np.linalg.solve(bj["d"], bj["du0"])
+                if i != j:
+                    s3 += bi["d0u"] @ np.linalg.solve(bi["d"], duv(bi, bj)) @ np.linalg.solve(bj["d"], bj["du0"])
         return hl, s0 + s2 + s3
-    sizes = [len(b["g"]) for b in blocks]
+    sizes = [nsp * b["nb"] for b in blocks]
     off = np.concatenate([[0], np.cumsum(sizes)])
     big = np.zeros((off[-1], off[-1]), dtype=complex)
-    rhs = np.zeros((off[-1], nh), dtype=complex)
-    d0q = np.zeros((nh, off[-1]), dtype=complex)
+    rhs = np.zeros((off[-1], nsp * nh), dtype=complex)
+    d0q = np.zeros((nsp * nh, off[-1]), dtype=complex)
     for i, bi in enumerate(blocks):
         sl = slice(off[i], off[i + 1])
         big[sl, sl] = bi["d"]

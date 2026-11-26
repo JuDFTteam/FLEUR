@@ -89,8 +89,8 @@ the bias-dependent current, and MPI runs.
   substrate file (analytic amplitudes on a hexagonal 6x6 mesh, stored at the
   irreducible k-points) and stop gfleur after the transformation; they compare
   with the NumPy reference `tools/incomm_ref.py` (identity, 2x2 supercell with
-  shift, sqrt3 R30, incommensurate, vacuum, exact k-list, Umklapp correction,
-  symmetry check, ~15 s, need numpy and h5py). `test_writeup_film` converges
+  shift, sqrt3 R30, incommensurate, vacuum, exact k-list, Umklapp correction
+  collinear and noco, symmetry check, ~30 s, need numpy and h5py). `test_writeup_film` converges
   the Cu film of `cu_film` with `fleur` and checks the potential of the film at
   its outer planes (`writeup=t`, top plane of a surface) against the film
   eigenvalues.

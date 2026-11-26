@@ -69,8 +69,11 @@ MODULE m_gf_sigtab
       !Umklapp list and its index map
       INTEGER :: nu = 0, umax = 0
       INTEGER, ALLOCATABLE :: u(:, :), umap(:, :)
-      !1: scalar per spin, 2: 2x2 spinor blocks (noco file)
+      !1: scalar per spin, 2: 2x2 spinor blocks (noco file, or a collinear file
+      !for a noco ad-layer: diagonal blocks)
       INTEGER :: ns = 1
+      !the data of the file are collinear (spins 1 or 2)
+      LOGICAL :: l_collsrc = .TRUE.
       !s(ns*ns,ig,ik,iu) = sigma_u(k+g), g the file vector ig
       COMPLEX, ALLOCATABLE :: s(:, :, :, :)
       LOGICAL, ALLOCATABLE :: filled(:, :, :)
@@ -258,15 +261,17 @@ CONTAINS
    !-------------------------------------------------------------------------
    ! t_sigtab
    !-------------------------------------------------------------------------
-   SUBROUTINE sigtab_init(tab, f, ulist, interp, asub, l_unfold)
+   SUBROUTINE sigtab_init(tab, f, ulist, interp, asub, l_unfold, l_spinor)
       !k-structure of the table and the Umklapp list (closed under the
-      !operations); asub: substrate lattice (columns, substrate frame)
+      !operations); asub: substrate lattice (columns, substrate frame);
+      !l_spinor: 2x2 blocks also from a collinear file
       CLASS(t_sigtab), INTENT(INOUT) :: tab
       TYPE(t_embfile), INTENT(IN)    :: f
       INTEGER, INTENT(IN)            :: ulist(:, :)
       INTEGER, INTENT(IN)            :: interp
       REAL, INTENT(IN)               :: asub(2, 2)
       LOGICAL, INTENT(IN)            :: l_unfold
+      LOGICAL, INTENT(IN), OPTIONAL  :: l_spinor
 
       INTEGER, ALLOCATABLE :: utmp(:, :), cover(:, :)
       INTEGER :: n, iop, nu, i, j, m(2), it, ntr, ik, nfound
@@ -276,13 +281,19 @@ CONTAINS
       tab%asub = asub
       tab%bsub = 2.0*pi_const*priv_inv2(asub)
       tab%interp = interp
+      tab%l_collsrc = (f%spins <= 2)
       tab%ns = 1
-      IF (f%spins == 4) tab%ns = 2
+      IF (.NOT. tab%l_collsrc) tab%ns = 2
+      IF (PRESENT(l_spinor)) THEN
+         IF (l_spinor) tab%ns = 2
+      END IF
 
       !operations as integer maps of fractional reciprocal row vectors:
       !Cartesian R = A mrot A^-1, f' = f B R^T B^-1
       tab%nop = 1
-      IF (l_unfold .AND. tab%ns == 1) tab%nop = MAX(f%nsym, 1)
+      !without SOC the operations act on collinear spin components unchanged;
+      !a noco file needs its full mesh
+      IF (l_unfold .AND. tab%l_collsrc) tab%nop = MAX(f%nsym, 1)
       ALLOCATE (tab%wop(2, 2, tab%nop), tab%tau(2, tab%nop))
       DO iop = 1, tab%nop
          rc = MATMUL(MATMUL(asub, REAL(f%symop(:, :, iop))), priv_inv2(asub))
@@ -293,7 +304,7 @@ CONTAINS
          tab%wop(:, :, iop) = NINT(w)
          tab%tau(:, iop) = f%symtau(:, iop)
       END DO
-      tab%l_timerev = l_unfold .AND. f%l_timerev .AND. tab%ns == 1
+      tab%l_timerev = l_unfold .AND. f%l_timerev .AND. tab%l_collsrc
       IF (l_unfold .AND. f%nsym > 1 .AND. .NOT. f%l_symtau) &
          CALL juDFT_warn("The substrate file has no symtau: fractional translations are taken as zero", &
                          calledby="gf_sigtab")
@@ -414,6 +425,11 @@ CONTAINS
       DO ik = 1, f%nk
          IF (tab%ns == 1) THEN
             CALL f%read(ie, MIN(ispin, f%spins), ik, mat(:, :, 1))
+         ELSE IF (tab%l_collsrc) THEN
+            !collinear file in 2x2 blocks: diagonal 11 and 22
+            CALL f%read(ie, 1, ik, mat(:, :, 1))
+            CALL f%read(ie, MIN(2, f%spins), ik, mat(:, :, 4))
+            mat(:, :, 2:3) = CMPLX(0.0, 0.0)
          ELSE
             !2x2 blocks in column order 11,21,12,22 from the spins 11,22,12,21
             DO ic = 1, 4

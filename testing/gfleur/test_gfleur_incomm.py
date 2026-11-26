@@ -49,9 +49,11 @@ def gfleur_binary():
     return binary
 
 
-def write_layer(path, amat, kpts, kmax=KMAX_AD, jspins=2, ops=None):
+def write_layer(path, amat, kpts, kmax=KMAX_AD, jspins=2, ops=None, noco=False):
     """layer1_inp.xml of a one-atom film with the in-plane lattice amat (columns)."""
     xml = TEMPLATE.read_text()
+    if noco:
+        xml = xml.replace('l_noco="F"', 'l_noco="T"').replace('soc theta=".10000000"', 'soc theta=".00000000"')
     xml = re.sub(r'Kmax="[^"]*"', f'Kmax="{kmax:.8f}"', xml)
     xml = re.sub(r'jspins="\d"', f'jspins="{jspins}"', xml)
     xml = re.sub(r'radius="[^"]*"', 'radius="2.20000000"', xml)
@@ -71,9 +73,9 @@ def write_layer(path, amat, kpts, kmax=KMAX_AD, jspins=2, ops=None):
     path.write_text(xml)
 
 
-def stage(work, amat, kpts, incomm, ops=None, jspins=2):
+def stage(work, amat, kpts, incomm, ops=None, jspins=2, noco=False):
     work.mkdir(parents=True, exist_ok=True)
-    write_layer(work / "layer1_inp.xml", amat, kpts, ops=ops, jspins=jspins)
+    write_layer(work / "layer1_inp.xml", amat, kpts, ops=ops, jspins=jspins, noco=noco)
     (work / "gf_inp").write_text("&LAYERS nlayers=1 /\n&MODE charge=f,dos=f,tmat=f,gmat=f /\n")
     lines = [f"l{len(ENERGIES):>17d}"] + [f"{e.real:10.5f}{e.imag:10.5f}{1.0:10.5f}{0.0:10.5f}" for e in ENERGIES]
     (work / "gf_en").write_text("\n".join(lines) + "\n")
@@ -260,6 +262,68 @@ def test_umklapp(gfleur_binary, tmp_path, order):
                 s0 = ref.sigma0(geo, tab, kap, glist)[np.ix_(hl, hl)]
                 assert np.max(np.abs(want - s0)) > 1e-6, "the correction vanishes"
                 assert np.max(np.abs(got - want)) <= 1e-9 * np.max(np.abs(want))
+
+
+def _umklapp_run(binary, work, ao, order, noco, up_model, sub=None, kpts=None, theta=7.0):
+    """order-0 run (G-list), write_kaux, synthetic upfile, run with the correction"""
+    kpts = ref.mesh(2, 2) if kpts is None else kpts
+    base = f"subfile='sub', theta={theta}, nshell=1"
+    stage(work, ao, kpts, {"subfile": "'sub'", "theta": theta, "stop_after": "t"}, noco=noco)
+    if sub is not None:
+        shutil.copy(sub, work / "sub.hdf")
+    run(binary, work)
+    glist = ref.read_embfile(str(work / "embpot11"))["gvecs"]
+    (work / "incomm_inp").write_text(f"&INCOMM {base}, write_kaux=t /\n")
+    run(binary, work)
+    kaux = ref.read_klist(work / "kpts_aux")
+    ref.write_embfile(str(work / "up"), ao, kaux, glist, ENERGIES, 4 if noco else 2, up_model, KMAX_AD,
+                      model_kind="up")
+    (work / "incomm_inp").write_text(f"&INCOMM {base}, order='{order}', upfile='up', stop_after=t /\n")
+    run(binary, work)
+    return ref.read_embfile(str(work / "embpot11")), ref.read_embfile(str(work / "up")), glist
+
+
+@pytest.mark.parametrize("order", ["2", "full"])
+def test_umklapp_noco_equals_collinear(gfleur_binary, tmp_path, order):
+    """A noco ad-layer with a collinear substrate and a spin-diagonal Sigma_up reproduces the
+    collinear correction: 11 = spin 1, 22 = spin 2, no spin off-diagonal blocks."""
+    substrate(tmp_path)
+    ao = ref.hex_amat(5.3)
+    col, _, _ = _umklapp_run(gfleur_binary, tmp_path / "col", ao, order, False, ref.up_model,
+                             sub=tmp_path / "sub.hdf")
+    nco, _, _ = _umklapp_run(gfleur_binary, tmp_path / "noco", ao, order, True, ref.up_model_diag(ref.up_model),
+                             sub=tmp_path / "sub.hdf")
+    assert nco["mat"].shape[2] == 4 and col["mat"].shape[2] == 2
+    scale = np.abs(col["mat"]).max()
+    for s in range(2):
+        assert np.abs(nco["mat"][:, :, s] - col["mat"][:, :, s]).max() < 1e-10 * scale
+    assert np.abs(nco["mat"][:, :, 2:]).max() < 1e-12 * scale
+
+
+@pytest.mark.parametrize("order", ["2", "full"])
+def test_umklapp_noco_spinor(gfleur_binary, tmp_path, order):
+    """noco substrate (spin off-diagonal amplitudes, full mesh) and a Sigma_up with spin
+    off-diagonal blocks, rotated by theta: compare with the spinor reference."""
+    asub, gv = substrate(tmp_path, model=ref.sigma_model_noco, spins=4, symmetric=False)
+    ao = ref.hex_amat(5.3)
+    theta = 7.0
+    out, up, glist = _umklapp_run(gfleur_binary, tmp_path / "noco", ao, order, True, ref.up_model_noco,
+                                  sub=tmp_path / "sub.hdf", theta=theta)
+    geo = ref.Geometry(ao, asub, theta, out["attrs"]["rkmax"][0])
+    q = ref.shells(geo, 1)
+    ng = len(glist)
+    for ie, e in enumerate(ENERGIES):
+        tab = ref.SpinTab([ref.SigRef(asub, NMESH, gv, RK_SUB, ref.sigma_model_noco, e, js) for js in (1, 2, 3, 4)],
+                          theta)
+        for ik, kap in enumerate(out["kpts"]):
+            hl, want = ref.sigma_eff(geo, tab, kap, glist, q, up, ie, 0, {"2": 2, "full": 99}[order])
+            idx = [s1 * ng + a for s1 in range(2) for a in hl]
+            got = ref.spinor(out["mat"][ik, ie], 2)[np.ix_(idx, idx)]
+            s0 = ref.sigma0(geo, tab, kap, glist)[np.ix_(idx, idx)]
+            nh = len(hl)
+            assert np.abs(want[:nh, nh:]).max() > 1e-6, "no spin off-diagonal part"
+            assert np.max(np.abs(want - s0)) > 1e-6, "the correction vanishes"
+            assert np.max(np.abs(got - want)) <= 1e-9 * np.max(np.abs(want))
 
 
 def test_symmetry_check(gfleur_binary, tmp_path):
