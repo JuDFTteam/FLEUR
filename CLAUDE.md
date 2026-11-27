@@ -110,11 +110,11 @@ Pre-commit hooks (`.pre-commit-config.yaml`, hooks from `fleur/fleur-pre-commit`
 pre-commit install
 ```
 
-For Fortran static analysis, `fortitude` is configured via `fortitude.toml` at the repo root (`fix = true`, line-length 192, ignores C003/C121/C131):
+For Fortran static analysis, `fortitude` is configured via `fortitude.toml` at the repo root (`fix = true`, line-length 192, ignores C003/C121/C131). Because of `fix = true`, a plain `fortitude check` rewrites the files in place, including lines a change did not touch:
 
 ```bash
-fortitude check src/        # check only
-fortitude check --fix src/  # check and auto-fix
+fortitude check --no-fix src/  # check only, files stay unchanged
+fortitude check src/           # check and auto-fix (fix = true)
 ```
 
 ## Architecture Notes

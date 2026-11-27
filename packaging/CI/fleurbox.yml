@@ -1,0 +1,23 @@
+# Rebuild the FLEUR image of fleurbox (https://iffgit.fz-juelich.de/fleur/fleurbox, registry
+# iffregistry.fz-juelich.de/fleur/fleurbox/fleur) when the branch develop or release changes:
+#   push to develop -> pipeline on fleurbox master  -> fleur:develop ('fleurbox use develop')
+#   push to release -> pipeline on fleurbox release -> fleur:latest  ('fleurbox use release')
+# The fleurbox pipeline compiles the newest commit of the branch; this job does not wait for it.
+fleurbox-image:
+  stage: build
+  needs: []
+  trigger:
+    project: fleur/fleurbox
+    branch: $FLEURBOX_BRANCH
+  # pass no variables of this pipeline (e.g. GIT_CLONE_PATH) to the fleurbox pipeline
+  inherit:
+    variables: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "develop"'
+      variables:
+        FLEURBOX_BRANCH: master
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "release"'
+      variables:
+        FLEURBOX_BRANCH: release
+  # a failure to start the fleurbox pipeline must not mark the FLEUR pipeline as failed
+  allow_failure: true
