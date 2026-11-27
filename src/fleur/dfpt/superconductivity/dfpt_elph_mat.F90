@@ -20,6 +20,7 @@ MODULE m_dfpt_elph_mat
 
     USE m_constants
     USE m_npy 
+    USE m_dfpt_eigen, ONLY: real_to_cmplx
     USE m_dfpt_eigen_hssetup
     USE m_util
     USE m_types_mpimat
@@ -97,6 +98,7 @@ CONTAINS
         REAL :: bkpt(3) , bkqpt(3)
         REAL, ALLOCATABLE :: eigk(:),eigq(:)
         COMPLEX, ALLOCATABLE :: gmatH(:,:),gmatS(:,:),tempVec(:),tempMat1(:)
+        COMPLEX, ALLOCATABLE :: zk(:,:), zq(:,:) ! complex copies of real eigenvectors at k and k+q
 
         INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
 
@@ -109,9 +111,6 @@ CONTAINS
         ! Get the (lm) matrix elements for V1 and H0
         CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1,.FALSE.)
         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=0.0,l_dfptmod=.TRUE.)
-
-#if !defined(_OPENACC) && !defined(__NVCOMPILER)
-!nvhpc fails here with ICE
 
         DO jsp = 1, merge(1,fi%input%jspins,fi%noco%l_noco)
             DO nk_i = 1, size(fmpi%k_list)
@@ -166,6 +165,11 @@ CONTAINS
                 CALL read_eig(eig_id, nkqpt, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
                 CALL timestop("Read eigenstuff at k/k+q")
 
+                ! Real eigenvectors are used via complex copies in zgemv; MATMUL on
+                ! data_r sections of CLASS(t_mat) gives an nvfortran ICE
+                IF (l_real) CALL real_to_cmplx(zMatk%data_r, zk)
+                IF (zMatq%l_real) CALL real_to_cmplx(zMatq%data_r, zq)
+
 
                 ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                 CALL timestart("Setup of matrix perturbations")
@@ -197,13 +201,13 @@ CONTAINS
                 CALL timestart("Matrix multiplication")
                 DO nu = 1, nuWindow(2) 
                     IF (l_real) THEN ! l_real for zMatk
-                        tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
+                        CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),hmat%data_c,nbasfcnq,zk(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                     ELSE
                         CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),hmat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                     END IF
                     
                     IF (zMatq%l_real) THEN ! l_real for zMatq
-                        tempMat1(:nuWindow(2)) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                        CALL CPP_zgemv('T',nbasfcnq,nuWindow(2),CMPLX(1.0,0.0),zq,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                     ELSE
                         CALL CPP_zgemv('C',nbasfcnq,nuWindow(2),CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                     END IF
@@ -214,13 +218,13 @@ CONTAINS
                     gmatH(:nuWindow(2),nu) = tempMat1(:nuWindow(2))
 
                     IF (l_real) THEN ! l_real for zMatk
-                        tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_r(:nbasfcn,nu))
+                        CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),smat%data_c,nbasfcnq,zk(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                     ELSE
                         CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),smat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                     END IF
 
                     IF (zMatq%l_real) THEN ! l_real for zMatq
-                        tempMat1(:nuwindow(2)) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                        CALL CPP_zgemv('T',nbasfcnq,nuWindow(2),CMPLX(1.0,0.0),zq,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                     ELSE
                         CALL CPP_zgemv('C',nbasfcnq,nuWindow(2),CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                     END IF
@@ -254,6 +258,8 @@ CONTAINS
                 IF (ALLOCATED(gmatS)) DEALLOCATE(gmatS)
                 IF (ALLOCATED(tempVec)) DEALLOCATE(tempVec)
                 IF (ALLOCATED(tempMat1)) DEALLOCATE(tempMat1)
+                IF (ALLOCATED(zk)) DEALLOCATE(zk)
+                IF (ALLOCATED(zq)) DEALLOCATE(zq)
                 IF (ALLOCATED(zMatk)) THEN
                     CALL zMatk%free()
                     DEALLOCATE(zMatk)
@@ -269,9 +275,6 @@ CONTAINS
 
             END DO !nk_i
         END DO !jsp
-#else
-        CALL juDFT_error("DFPT is not available in builds with the NVIDIA compiler", calledby="dfpt_elph_mat.F90")
-#endif
 
 #ifdef CPP_MPI
        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)

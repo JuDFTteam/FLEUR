@@ -1096,10 +1096,7 @@ CONTAINS
       CALL timestop("Interstitial part")
 
       CALL timestart("MT part")
-      DO i = 1, nspins; DO j = 1, nspins
-            !!$acc enter data copyin(hmat(i,j),smat(i,j))
-            !!$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
-      END DO; END DO
+      ! The matrices stay on the host: dfpt_dynmat_hsmt only writes them in matrix_pref
       IF (.NOT.PRESENT(vmat2_final)) THEN
          CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
                                lapw, lapwq, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
@@ -1107,13 +1104,6 @@ CONTAINS
          CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
                                lapw, lapwq, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11), vmat2)
       END IF
-      DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
-            !!$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
-            !!$acc exist data delete(hmat(i,j),smat(i,j))
-         ELSE
-            !!$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
-            !!$acc exit data delete(hmat(i,j),smat(i,j))
-         END IF; END DO; END DO
       CALL timestop("MT part")
 
       !Now copy the data into final matrix

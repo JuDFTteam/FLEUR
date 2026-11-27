@@ -42,7 +42,7 @@ MODULE m_dfpt_eigen
 
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: dfpt_eigen
+   PUBLIC :: dfpt_eigen, real_to_cmplx
 
 CONTAINS
 
@@ -89,11 +89,10 @@ CONTAINS
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
+      COMPLEX, ALLOCATABLE      :: zk(:,:), zq(:,:) ! complex copies of real eigenvectors at k and k+q
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), eigBuffer(:,:,:)
 
 
-#if !defined(_OPENACC) && !defined(__NVCOMPILER)
-!nvhpc fails here with ICE
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
@@ -153,6 +152,11 @@ CONTAINS
             CALL read_eig(q_eig_id, nk, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
             CALL timestop("Read eigenstuff at k/k+q")
 
+            ! Real eigenvectors are used via complex copies in zgemv; MATMUL on
+            ! data_r sections of CLASS(t_mat) gives an nvfortran ICE
+            IF (l_real) CALL real_to_cmplx(zMatk%data_r, zk)
+            IF (zMatq%l_real) CALL real_to_cmplx(zMatq%data_r, zq)
+
             ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
             CALL timestart("Setup of matrix perturbations")
             CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,td,tdV1,vTot,v1,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
@@ -201,7 +205,7 @@ CONTAINS
                ! TODO: At the moment H1 and S1 are handled seperately; this was
                !       for debugging purposes; possibly revert for efficiency.
                IF (l_real) THEN ! l_real for zMatk
-                  tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),hmat%data_c,nbasfcnq,zk(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                ELSE
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),hmat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                   !tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_c(:nbasfcn,nu))
@@ -210,7 +214,7 @@ CONTAINS
                IF (norm2(q_loop).LT.1e-8) THEN
                   IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                   IF (l_real) THEN
-                     eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec))
+                     eigs1(nu) = REAL(DOT_PRODUCT(zk(:nbasfcn,nu),tempVec))
                   ELSE
                      eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
                   END IF
@@ -219,7 +223,7 @@ CONTAINS
                END IF
 
                IF (zMatq%l_real) THEN ! l_real for zMatq
-                  tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                  CALL CPP_zgemv('T',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zq,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                ELSE
                   CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                   !tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
@@ -266,8 +270,8 @@ CONTAINS
                END DO
 
                IF (zMatq%l_real) THEN
-                  z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zq,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1H(:nbasfcnq,nu),1)
+                  IF (.NOT.sh_den) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zq,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1H2(:nbasfcnq,nu),1)
                ELSE
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zMatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1H(:nbasfcnq,nu),1)
                   !z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
@@ -276,7 +280,7 @@ CONTAINS
                END IF
 
                IF (l_real) THEN ! l_real for zMatk
-                  tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_r(:nbasfcn,nu))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),smat%data_c,nbasfcnq,zk(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                ELSE
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),smat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                   !tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_c(:nbasfcn,nu))
@@ -285,7 +289,7 @@ CONTAINS
                IF (norm2(q_loop).LT.1e-8) THEN
                   IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                   IF (l_real) THEN
-                     eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec))
+                     eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zk(:nbasfcn,nu),tempVec))
                   ELSE
                      eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
                   END IF
@@ -294,7 +298,7 @@ CONTAINS
                END IF
 
                IF (zMatq%l_real) THEN ! l_real for zMatq
-                  tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                  CALL CPP_zgemv('T',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zq,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                ELSE
                   CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                   !tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
@@ -344,8 +348,8 @@ CONTAINS
                END DO
 
                IF (zMatq%l_real) THEN
-                  z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zq,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1S(:nbasfcnq,nu),1)
+                  IF (.NOT.sh_den) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zq,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1S2(:nbasfcnq,nu),1)
                ELSE
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1S(:nbasfcnq,nu),1)
                   !z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
@@ -411,6 +415,8 @@ CONTAINS
             IF (ALLOCATED(z1S)) DEALLOCATE(z1S)
             IF (ALLOCATED(z1H2)) DEALLOCATE(z1H2)
             IF (ALLOCATED(z1S2)) DEALLOCATE(z1S2)
+            IF (ALLOCATED(zk)) DEALLOCATE(zk)
+            IF (ALLOCATED(zq)) DEALLOCATE(zq)
             IF (ALLOCATED(zmatk)) THEN
                CALL zMatk%free()
                DEALLOCATE(zMatk)
@@ -429,9 +435,6 @@ CONTAINS
             END IF
          END DO  k_loop
       END DO ! spin loop ends
-#else
-      CALL juDFT_error("DFPT is not available in builds with the NVIDIA compiler", calledby="dfpt_eigen.F90")
-#endif
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results1%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
@@ -441,4 +444,13 @@ CONTAINS
 #endif
 
    END SUBROUTINE dfpt_eigen
+
+   SUBROUTINE real_to_cmplx(a, b)
+      !! Complex copy of a real matrix
+      REAL,                 INTENT(IN)  :: a(:,:)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: b(:,:)
+
+      ALLOCATE(b(SIZE(a,1),SIZE(a,2)))
+      b = a
+   END SUBROUTINE real_to_cmplx
 END MODULE m_dfpt_eigen
