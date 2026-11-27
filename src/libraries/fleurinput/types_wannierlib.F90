@@ -48,8 +48,8 @@ MODULE m_types_wannierlib
     CHARACTER(LEN=20) :: species = ''
   END TYPE t_wannierlib_proj
 
-  !> One <operator> of <interpolation>: which operator to project onto the
-  !> interpolated bands. Declaring it is what asks for it.
+  !> One operator asked for with ki="T" in <operators>: which one to project onto the
+  !> bands interpolated on the domains of <interpolation>.
   TYPE t_wannierlib_op
     SEQUENCE
     CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spinOrbit/velocity/...
@@ -618,8 +618,8 @@ CONTAINS
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
     END IF
 
-    ! Operator selection is now the <interpolation>/<operator> list (parsed below),
-    ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.
+    ! Operator selection is the ks/rs/ki switches of <operators> (parsed below), not
+    ! flat @interpolation/@spinoperator/@orbmom/@socop attributes.
 
     xPathA = '/fleurInput/output/wannierlib/bands'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN

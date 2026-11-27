@@ -57,7 +57,7 @@ MODULE m_types_melem_optable
       LOGICAL :: honours_total = .FALSE.
    END TYPE t_melem_exposed
 
-   !> <interpolation>/<operator name="..">
+   !> What ki="T" of <operators> can be asked for: the interpolation route.
    TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(6) = [ &
       t_melem_exposed('hamiltonian',     '',                0, .FALSE.), &
       t_melem_exposed('spin',            'spin',            3, .TRUE.), &
