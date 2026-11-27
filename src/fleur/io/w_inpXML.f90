@@ -960,7 +960,7 @@ WRITE (fileNum, 242) fr(1.0)
          !> left out; every ki is "F" in this template, so leaving it out costs nothing.
 447      FORMAT('            <domain listName="', a, '" suffix="dense" refinementPoints="10"/>')
          IF (LEN_TRIM(wannPathName) > 0) THEN
-            WRITE (fileNum, '(a)') '         <interpolation useWsDistance="F">'
+            WRITE (fileNum, '(a)') '         <interpolation>'
             WRITE (fileNum, 447) TRIM(ADJUSTL(wannPathName))
             WRITE (fileNum, '(a)') '         </interpolation>'
          END IF
