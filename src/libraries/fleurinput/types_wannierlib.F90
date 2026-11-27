@@ -266,6 +266,9 @@ MODULE m_types_wannierlib
   END TYPE t_wannierlib_wannierize
 
   PUBLIC :: t_wannierlib_wannierize
+  !The inpgen side needs the same count, so -wann and init_wannierlib
+  !cannot disagree about how many functions a channel is worth.
+  PUBLIC :: projection_m_count
 
 CONTAINS
 

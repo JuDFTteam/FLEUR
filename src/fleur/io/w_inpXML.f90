@@ -38,9 +38,18 @@ MODULE m_winpXML
    use m_juDFT
    use m_constants
    use m_xmlOutput
+   use m_types_wannierlib, ONLY: projection_m_count
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: w_inpxml
+
+   !The channels -wann understands, longest first so the scan is greedy: the
+   !hybrids of Wannier90 open with the letters of the pure channels, so sp3 has
+   !to be tried before s, or Si:sp3 would read as s, p and a stray 3.
+   INTEGER, PARAMETER :: nWannChan = 9
+   CHARACTER(len=5), PARAMETER :: wannChanName(nWannChan) = [CHARACTER(len=5) :: &
+      'sp3d2', 'sp3d', 'sp3', 'sp2', 'sp1', 's', 'p', 'd', 'f']
+   INTEGER, PARAMETER :: wannChanL(nWannChan) = [-5, -4, -3, -2, -1, 0, 1, 2, 3]
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
@@ -144,11 +153,18 @@ CONTAINS
       INTEGER :: wannNumBands, wannMinBand, wannMaxBand, wannSemicore
       INTEGER :: ityp_w, ilo_w, ios_w
       CHARACTER(len=1000) :: wannArg
-      LOGICAL :: l_wannProj, wannSeen(0:103), wannChan(0:3, 0:103)
+      !Keyed by atom TYPE and not by atomic number, because a key may be the
+      !label of one atom, which names a single type out of several of the
+      !same element.
+      LOGICAL :: l_wannProj
+      LOGICAL :: wannSeen(atoms%ntype), wannChan(-5:3, atoms%ntype)
       INTEGER :: wannNumWann, wannNbReq, wannSpinM, wannNat, wannSub
       INTEGER :: iEl_w, iCh_w, iPos_w, iSep_w, iCut_w, l_w, nz_w
+      INTEGER :: iTok_w, lTok_w, iCand_w, na_w, ieq_w, jtyp_w, nSel_w, nSpill_w
+      INTEGER :: selT_w(atoms%ntype)
+      CHARACTER(len=1000) :: wannKey
       CHARACTER(len=1000) :: wannSpec, wannItem, wannMod
-      CHARACTER(len=8) :: wannChStr
+      CHARACTER(len=80) :: wannChStr
 
       l_include = l_includeIn .or. .not. present(filename)
       l_explicit = l_explicitIn .OR. .not. present(filename)
@@ -215,57 +231,119 @@ CONTAINS
                     "-wann: every item needs ELEMENT:channels", calledby="w_inpXML", &
                     hint="Write it as -wann Cu:spd,Mn:spd,Ge:sp")
 
+               !The key is either an element symbol, which takes every type of
+               !that element, or the label of one atom, which takes that atom's
+               !type alone. Labels are written to the inp.xml as relPos/@label,
+               !so the atom a key named can be read back off the file it wrote.
+               wannKey = ADJUSTL(wannItem(:iSep_w - 1))
+               nSel_w = 0
                nz_w = -1
                DO iEl_w = 0, 103
-                  IF (TRIM(ADJUSTL(namat_const(iEl_w))) == &
-                      TRIM(ADJUSTL(wannItem(:iSep_w - 1)))) THEN
+                  IF (TRIM(ADJUSTL(namat_const(iEl_w))) == TRIM(wannKey)) THEN
                      nz_w = iEl_w
                      EXIT
                   END IF
                END DO
-               IF (nz_w < 0) CALL juDFT_error( &
-                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
-                    " is not an element symbol", calledby="w_inpXML")
-               !A key that matches nothing would write a species without
-               !projections, and the run would only fail later, in wannierlib_amn.
-               IF (.NOT. ANY(atoms%nz(:) == nz_w)) CALL juDFT_error( &
-                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
-                    " is not in this structure", calledby="w_inpXML")
-               IF (wannSeen(nz_w)) CALL juDFT_error( &
-                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
-                    " appears twice", calledby="w_inpXML", &
-                    hint="Put all of its channels in one item, as Fe:spd.")
-               wannSeen(nz_w) = .TRUE.
-
-               DO iCh_w = iSep_w + 1, LEN_TRIM(wannItem)
-                  SELECT CASE (wannItem(iCh_w:iCh_w))
-                  CASE ('s')
-                     wannChan(0, nz_w) = .TRUE.
-                  CASE ('p')
-                     wannChan(1, nz_w) = .TRUE.
-                  CASE ('d')
-                     wannChan(2, nz_w) = .TRUE.
-                  CASE ('f')
-                     wannChan(3, nz_w) = .TRUE.
-                  CASE (' ')
-                  CASE DEFAULT
-                     CALL juDFT_error("-wann: "//wannItem(iCh_w:iCh_w)// &
-                          " is not one of s, p, d, f", calledby="w_inpXML")
-                  END SELECT
+               IF (nz_w >= 0) THEN
+                  DO ityp_w = 1, atoms%ntype
+                     IF (atoms%nz(ityp_w) /= nz_w) CYCLE
+                     nSel_w = nSel_w + 1
+                     selT_w(nSel_w) = ityp_w
+                  END DO
+                  !A key that matches nothing would write a species without
+                  !projections, and the run would only fail later, in
+                  !wannierlib_amn.
+                  IF (nSel_w == 0) CALL juDFT_error( &
+                       "-wann: element "//TRIM(wannKey)// &
+                       " is not in this structure", calledby="w_inpXML")
+               ELSE
+                  !Walked type by type instead of read off the atom-to-type
+                  !map: inpgen never fills that component, and taking it here
+                  !is a read of uninitialised memory that ends in a signal 11.
+                  na_w = 0
+                  DO ityp_w = 1, atoms%ntype
+                     DO ieq_w = 1, atoms%neq(ityp_w)
+                        na_w = na_w + 1
+                        IF (nSel_w > 0) CYCLE
+                        IF (TRIM(ADJUSTL(atoms%label(na_w))) /= TRIM(wannKey)) CYCLE
+                        nSel_w = 1
+                        selT_w(1) = ityp_w
+                     END DO
+                  END DO
+                  IF (nSel_w == 0) CALL juDFT_error( &
+                       "-wann: "//TRIM(wannKey)//" is neither an element symbol &
+                       &nor an atom label", calledby="w_inpXML", &
+                       hint="A label is the last field of an atom line in the &
+                       &inpgen input, and defaults to the atom's number.")
+                  !The projection is written on the SPECIES, so naming one atom
+                  !only means something when its species holds no other atom.
+                  !Refusing is the point: projecting onto all of them in silence
+                  !is the mistake this key exists to avoid.
+                  nSpill_w = atoms%neq(selT_w(1)) - 1
+                  DO jtyp_w = 1, atoms%ntype
+                     IF (jtyp_w == selT_w(1)) CYCLE
+                     IF (TRIM(atoms%speciesname(jtyp_w)) == &
+                         TRIM(atoms%speciesname(selT_w(1)))) &
+                        nSpill_w = nSpill_w + atoms%neq(jtyp_w)
+                  END DO
+                  IF (nSpill_w > 0) CALL juDFT_error( &
+                       "-wann: the atom labelled "//TRIM(wannKey)// &
+                       " shares its species with others", calledby="w_inpXML", &
+                       hint="A projection is written on the species, so it would &
+                       &land on all of them. Give this atom a species of its own &
+                       &first, by changing a parameter of it: &atom id=14.2 jri=725 /")
+               END IF
+               DO iEl_w = 1, nSel_w
+                  IF (wannSeen(selT_w(iEl_w))) CALL juDFT_error( &
+                       "-wann: "//TRIM(wannKey)//" names an atom that already &
+                       &has channels", calledby="w_inpXML", &
+                       hint="Put all of its channels in one item, as Fe:spd.")
+                  wannSeen(selT_w(iEl_w)) = .TRUE.
                END DO
-               IF (.NOT. ANY(wannChan(:, nz_w))) CALL juDFT_error( &
-                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+
+               iCh_w = iSep_w + 1
+               DO WHILE (iCh_w <= LEN_TRIM(wannItem))
+                  !A separator is only needed where a hybrid would otherwise
+                  !swallow the channel behind it: As:sp3+d is sp3 and d, while
+                  !As:sp3d is the five-member sp3d hybrid.
+                  IF (wannItem(iCh_w:iCh_w) == ' ' .OR. &
+                      wannItem(iCh_w:iCh_w) == '+') THEN
+                     iCh_w = iCh_w + 1
+                     CYCLE
+                  END IF
+                  iTok_w = 0
+                  DO iCand_w = 1, nWannChan
+                     lTok_w = LEN_TRIM(wannChanName(iCand_w))
+                     IF (iCh_w + lTok_w - 1 > LEN_TRIM(wannItem)) CYCLE
+                     IF (wannItem(iCh_w:iCh_w + lTok_w - 1) == &
+                         TRIM(wannChanName(iCand_w))) THEN
+                        iTok_w = iCand_w
+                        EXIT
+                     END IF
+                  END DO
+                  IF (iTok_w == 0) CALL juDFT_error( &
+                       "-wann: "//TRIM(wannItem(iCh_w:))//" is not a channel", &
+                       calledby="w_inpXML", &
+                       hint="Channels are s, p, d, f and the Wannier90 hybrids &
+                       &sp1, sp2, sp3, sp3d, sp3d2.")
+                  DO iEl_w = 1, nSel_w
+                     wannChan(wannChanL(iTok_w), selT_w(iEl_w)) = .TRUE.
+                  END DO
+                  iCh_w = iCh_w + LEN_TRIM(wannChanName(iTok_w))
+               END DO
+               IF (.NOT. ANY(wannChan(:, selT_w(1)))) CALL juDFT_error( &
+                    "-wann: "//TRIM(wannKey)// &
                     " was given no channels", calledby="w_inpXML")
             END DO
 
-            !num_wann exactly as init_wannierlib counts it: the 2l+1 of every
-            !channel, over the atoms of each type, doubled where the eigenvectors
-            !are spinors. The sum runs over TYPES, which is what makes it blind
-            !to how the species were split.
+            !num_wann exactly as init_wannierlib counts it, through the very
+            !function it uses, so a hybrid cannot be counted as 2l+1 here and as
+            !something else there. The sum runs over TYPES, which is what makes
+            !it blind to how the species were split.
             DO ityp_w = 1, atoms%ntype
-               DO l_w = 0, 3
-                  IF (wannChan(l_w, atoms%nz(ityp_w))) wannNumWann = &
-                     wannNumWann + (2*l_w + 1)*atoms%neq(ityp_w)
+               DO l_w = -5, 3
+                  IF (wannChan(l_w, ityp_w)) wannNumWann = &
+                     wannNumWann + projection_m_count(l_w)*atoms%neq(ityp_w)
                END DO
             END DO
             wannNumWann = wannSpinM*wannNumWann
@@ -709,11 +787,14 @@ WRITE (fileNum, 242) fr(1.0)
             END DO
             wannChStr = ''
             wannSub = 0
-            DO l_w = 0, 3
-               IF (.NOT. wannChan(l_w, nz_w)) CYCLE
+            !iAtomType represents this species, and the key resolution refuses
+            !to give one type of a shared species channels the others lack, so
+            !the representative speaks for all of them.
+            DO l_w = -5, 3
+               IF (.NOT. wannChan(l_w, iAtomType)) CYCLE
                WRITE (fileNum, 901) l_w
-               wannChStr = TRIM(wannChStr)//' '//'spdf'(l_w + 1:l_w + 1)
-               wannSub = wannSub + (2*l_w + 1)*wannNat*wannSpinM
+               wannChStr = TRIM(wannChStr)//' '//TRIM(wannChanLabel(l_w))
+               wannSub = wannSub + projection_m_count(l_w)*wannNat*wannSpinM
             END DO
             !Printed before anything runs: the only way to see that the
             !element-to-species translation hit the species it was meant to.
@@ -1007,6 +1088,18 @@ WRITE (fileNum, 242) fr(1.0)
    
          fr=trim(adjustl(temp))
       end function
+   
+      !The name -wann prints for a channel. 'spdf' indexed by l+1 only reaches
+      !l>=0, and a hybrid is exactly what a reader needs to see echoed back.
+      FUNCTION wannChanLabel(l) RESULT(nameOut)
+         INTEGER, INTENT(IN) :: l
+         CHARACTER(len=5) :: nameOut
+         INTEGER :: i
+         nameOut = '?'
+         DO i = 1, nWannChan
+            IF (wannChanL(i) == l) nameOut = wannChanName(i)
+         END DO
+      END FUNCTION
    
    END SUBROUTINE w_inpXML
 END MODULE m_winpXML
