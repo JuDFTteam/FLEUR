@@ -14,6 +14,9 @@ MODULE m_pwden
    USE m_types_fft
    USE m_selecFFT
    USE m_fft_interface
+#ifdef _OPENACC
+   USE openacc
+#endif
    !$ USE omp_lib
    USE m_types_atoms
    USE m_types_banddos
@@ -166,7 +169,7 @@ CONTAINS
             CALL stepFct%init(cell,sym,stateFFTExtendedRadius+0.001)
             CALL stepFct%putFieldOnGrid(stars, stars%ustep, cell,stateFFTRadius+0.0005)
             CALL stepFct%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
-            CALL fft_interface(3, stepFct%dimensions(:), stepFct%grid, .FALSE., fieldSphereIndices)
+            CALL priv_fft_dev(stepFct%dimensions, stepFct%grid, .FALSE., fieldSphereIndices)
          END IF
       END IF
 
@@ -292,25 +295,27 @@ CONTAINS
          CALL pwint_all(stars,atoms,sym ,cell,1,stars%ng3,pwintAllStars)
       END IF
 
+#ifdef _OPENACC
+      ! On the GPU the states are treated in batches with all data kept on the device
+      CALL priv_states_gpu(stars, cell, input, noco, lapw, jspin, atoms%nlotot, ne, ev_list, ikpt, eig, wtf, wtf1, &
+                           fac, l_dfpt, l_minusq, l_gamma, l_stateCharge, stateFFTRadius, zMat, &
+                           stateIndices, stateBIndices, stateqIndices, stateBqIndices, statemqIndices, stateBmqIndices, &
+                           stepFct, pwintStars, pwintAllStars, chargeDen, rhomatGrid, ekinGrid, dos, &
+                           lapwq, zMat1, lapwmq, zMat1m)
+#else
       ! The states are distributed over the OpenMP threads. Each thread has its own state grids,
       ! FFT plans and density accumulators, which are summed up at the end. This needs a thread-safe
       ! FFT: with the built-in FFT the loop runs on one thread, with SpFFT (plans depend on the
-      ! index sets) and on GPUs the FFTs are done by fft_interface as before.
-      l_obj = .FALSE.
-      l_omp = .FALSE.
-#ifndef _OPENACC
+      ! index sets) the FFTs are done by fft_interface.
       fftBackend = selecFFT(.TRUE.)
       l_obj = fftBackend /= spFFT_const
       l_omp = (fftBackend == fftw_const) .OR. (fftBackend == mklFFT_const)
-#endif
       nthr = 1
       !$ IF (l_omp) nthr = MAX(1, MIN(omp_get_max_threads(), ne))
 
-#ifndef _OPENACC
       !$OMP PARALLEL NUM_THREADS(nthr) DEFAULT(shared) &
       !$OMP PRIVATE(nu,ir,istr,iv,i,j,s,xk,forw,state,stateB,stateq,stateBq,statemq,stateBmq,stateDeriv) &
       !$OMP PRIVATE(fftBack,fftForw,accR,accC,ekR,cwkS,starCharges,tempState)
-#endif
       IF (noco%l_noco) THEN
          CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
          CALL stateB%init(cell,sym,stateFFTExtendedRadius+0.001)
@@ -349,9 +354,7 @@ CONTAINS
       END IF
 
       ! LOOP OVER OCCUPIED STATES
-#ifndef _OPENACC
       !$OMP DO SCHEDULE(dynamic)
-#endif
       DO nu = 1, ne
 
          ! Do inverse FFT of state and add related charge density to overall charge density on real-space mesh.
@@ -473,9 +476,7 @@ CONTAINS
             ! The following FFT is a general complex to complex FFT
             ! For zmat%l_real this should be turned into a real to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
-            !$acc data copy(state%grid)
             CALL priv_fft(fftBack, l_obj, state, forw, stateIndices)
-            !$acc end data
             IF (l_dfpt) THEN
                CALL priv_fft(fftBack, l_obj, stateq, forw, stateqIndices)
                IF (l_minusq) THEN
@@ -545,9 +546,7 @@ CONTAINS
             END IF
          END IF
       END DO
-#ifndef _OPENACC
       !$OMP END DO
-#endif
 
       ! Sum up the densities of all threads
       !$OMP CRITICAL (pwden_sum)
@@ -585,7 +584,6 @@ CONTAINS
       if (allocated(cwkS)) deallocate(cwkS)
       if (allocated(starCharges)) deallocate(starCharges)
       if (allocated(tempState)) deallocate(tempState)
-#ifndef _OPENACC
       !$OMP END PARALLEL
 #endif
 
@@ -602,14 +600,14 @@ CONTAINS
       DO idens = 1, ndens
          forw = .TRUE.
          IF (noco%l_noco) THEN
-            CALL fft_interface(3, rhomatGrid(idens)%dimensions(:), rhomatGrid(idens)%grid, forw, fieldSphereIndices)
+            CALL priv_fft_dev(rhomatGrid(idens)%dimensions, rhomatGrid(idens)%grid, forw, fieldSphereIndices)
          ELSE
             ! The following FFT is a general complex to complex FFT
             ! For zmat%l_real this should be turned into a real to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
-            CALL fft_interface(3, chargeDen%dimensions(:), chargeDen%grid, forw, fieldSphereIndices)
+            CALL priv_fft_dev(chargeDen%dimensions, chargeDen%grid, forw, fieldSphereIndices)
             IF (input%l_f) THEN
-               CALL fft_interface(3, ekinGrid%dimensions(:), ekinGrid%grid, forw, fieldSphereIndices)
+               CALL priv_fft_dev(ekinGrid%dimensions, ekinGrid%grid, forw, fieldSphereIndices)
             END IF
          ENDIF
 
@@ -725,4 +723,600 @@ CONTAINS
          CALL fft_interface(3, fftGrid%dimensions(:), fftGrid%grid, forw, indices)
       END IF
    END SUBROUTINE priv_fft
+
+   SUBROUTINE priv_fft_dev(dims, grid, forw, indices)
+      !! FFT of a single grid; in OpenACC builds the grid is put on the device, so that cuFFT is used
+      INTEGER, INTENT(IN)    :: dims(3)
+      COMPLEX, INTENT(INOUT) :: grid(:)
+      LOGICAL, INTENT(IN)    :: forw
+      INTEGER, INTENT(IN)    :: indices(:)
+
+      !$acc data copy(grid)
+      CALL fft_interface(3, dims, grid, forw, indices)
+      !$acc end data
+   END SUBROUTINE priv_fft_dev
+
+   SUBROUTINE priv_states_gpu(stars, cell, input, noco, lapw, jspin, nlotot, ne, ev_list, ikpt, eig, wtf, wtf1, &
+                              fac, l_dfpt, l_minusq, l_gamma, l_stateCharge, stateFFTRadius, zMat, &
+                              stateIndices, stateBIndices, stateqIndices, stateBqIndices, statemqIndices, stateBmqIndices, &
+                              stepFct, pwintStars, pwintAllStars, chargeDen, rhomatGrid, ekinGrid, dos, &
+                              lapwq, zMat1, lapwmq, zMat1m)
+      !! Densities of the states in the interstitial with the states treated in batches on the device:
+      !! the coefficients of a batch are put on the FFT grids, transformed to real space by a batched FFT
+      !! and accumulated into the densities. Only the summed densities and the charges of the states
+      !! are transferred back.
+      TYPE(t_stars),   INTENT(IN)    :: stars
+      TYPE(t_cell),    INTENT(IN)    :: cell
+      TYPE(t_input),   INTENT(IN)    :: input
+      TYPE(t_noco),    INTENT(IN)    :: noco
+      TYPE(t_lapw),    INTENT(IN)    :: lapw
+      INTEGER,         INTENT(IN)    :: jspin, nlotot, ne, ev_list(:), ikpt
+      REAL,            INTENT(IN)    :: eig(:), wtf(:), wtf1(:), fac, stateFFTRadius
+      LOGICAL,         INTENT(IN)    :: l_dfpt, l_minusq, l_gamma, l_stateCharge
+      TYPE(t_mat),     INTENT(IN)    :: zMat
+      INTEGER, ALLOCATABLE, INTENT(IN) :: stateIndices(:), stateBIndices(:), stateqIndices(:), stateBqIndices(:)
+      INTEGER, ALLOCATABLE, INTENT(IN) :: statemqIndices(:), stateBmqIndices(:)
+      TYPE(t_fftGrid), INTENT(IN)    :: stepFct
+      COMPLEX, ALLOCATABLE, INTENT(IN) :: pwintStars(:), pwintAllStars(:)
+      TYPE(t_fftGrid), INTENT(INOUT) :: chargeDen, rhomatGrid(4), ekinGrid
+      TYPE(t_dos),     INTENT(INOUT) :: dos
+      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq, lapwmq
+      TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1, zMat1m
+
+      COMPLEX, ALLOCATABLE :: psiA(:,:), psiB(:,:), psiAq(:,:), psiBq(:,:), psiAmq(:,:), psiBmq(:,:), psiD(:,:)
+      COMPLEX, ALLOCATABLE :: accC(:,:), wq(:), step(:)
+      REAL,    ALLOCATABLE :: accR(:,:), ekR(:), scal(:,:), qs(:,:)
+      INTEGER, ALLOCATABLE :: gq(:)
+      TYPE(t_fft) :: fftBack, fftForw
+      INTEGER :: dims(3), glen, ndens, ngrids, nb, nbb, nu0, nu, ib, ir, iv, i, j, nvmax, offB, offBq, offBmq
+      REAL    :: w, w1, s1, s2, s3, s4
+      COMPLEX :: a, b, aq, bq, amq, bmq, c1, c2, c3, c4
+      LOGICAL :: l_noco, l_f, l_qNoco, l_qSoc
+
+      CALL timestart("pwden: states on device")
+      l_noco  = noco%l_noco
+      l_f     = input%l_f .AND. .NOT.l_noco
+      l_qNoco = l_stateCharge .AND. l_noco
+      l_qSoc  = l_stateCharge .AND. .NOT.l_noco .AND. noco%l_soc .AND. input%jspins == 2
+      ndens   = MERGE(4, 1, l_noco)
+      IF (l_noco) THEN
+         dims = rhomatGrid(1)%dimensions
+         glen = rhomatGrid(1)%gridLength
+      ELSE
+         dims = chargeDen%dimensions
+         glen = chargeDen%gridLength
+      END IF
+
+      ngrids = MERGE(2, 1, l_noco)
+      IF (l_dfpt) ngrids = ngrids*MERGE(3, 2, l_minusq)
+      IF (l_f) ngrids = ngrids + 1
+      nb = priv_batch_size(ne, glen, ngrids)
+
+      ! Row offsets of the second spin block in the noco eigenvectors
+      offB = lapw%nv(1) + nlotot
+      offBq = 0
+      offBmq = 0
+      IF (l_dfpt .AND. l_noco) offBq = lapwq%nv(1) + nlotot
+      IF (l_minusq .AND. l_noco) offBmq = lapwmq%nv(1) + nlotot
+
+      ! Scaling of the coefficients: column 0 for the states, 1-3 for the gradients (forces)
+      nvmax = SIZE(stateIndices)
+      IF (ALLOCATED(stateBIndices)) nvmax = MAX(nvmax, SIZE(stateBIndices))
+      IF (ALLOCATED(stateqIndices)) nvmax = MAX(nvmax, SIZE(stateqIndices))
+      IF (ALLOCATED(stateBqIndices)) nvmax = MAX(nvmax, SIZE(stateBqIndices))
+      IF (ALLOCATED(statemqIndices)) nvmax = MAX(nvmax, SIZE(statemqIndices))
+      IF (ALLOCATED(stateBmqIndices)) nvmax = MAX(nvmax, SIZE(stateBmqIndices))
+      ALLOCATE(scal(nvmax, 0:3))
+      scal = 1.0
+      IF (l_f) THEN
+         DO j = 1, 3
+            DO iv = 1, lapw%nv(jspin)
+               scal(iv, j) = DOT_PRODUCT(lapw%gvec(:, iv, jspin) + lapw%bkpt, cell%bmat(:, j))
+            END DO
+         END DO
+      END IF
+
+      ! Grid indices and weights for the charges of the single states
+      IF (l_qNoco) CALL priv_star_weights(stars, cell, dims, stateFFTRadius+0.0005, pwintStars, stars%ng3_fft, gq, wq)
+      IF (l_qSoc) THEN
+         CALL priv_star_weights(stars, cell, dims, stateFFTRadius+0.0005, pwintAllStars, stars%ng3, gq, wq)
+         ALLOCATE(step(0:glen-1))
+         step(:) = stepFct%grid(:)
+      END IF
+
+      ! Device data
+      CALL priv_z_device(zMat, .TRUE.)
+      IF (l_dfpt) CALL priv_z_device(zMat1, .TRUE.)
+      IF (l_minusq) CALL priv_z_device(zMat1m, .TRUE.)
+      !$acc enter data copyin(stateIndices, eig, wtf, wtf1, scal)
+      IF (ALLOCATED(stateBIndices)) THEN
+         !$acc enter data copyin(stateBIndices)
+      END IF
+      IF (ALLOCATED(stateqIndices)) THEN
+         !$acc enter data copyin(stateqIndices)
+      END IF
+      IF (ALLOCATED(stateBqIndices)) THEN
+         !$acc enter data copyin(stateBqIndices)
+      END IF
+      IF (ALLOCATED(statemqIndices)) THEN
+         !$acc enter data copyin(statemqIndices)
+      END IF
+      IF (ALLOCATED(stateBmqIndices)) THEN
+         !$acc enter data copyin(stateBmqIndices)
+      END IF
+
+      ALLOCATE(psiA(0:glen-1, nb))
+      !$acc enter data create(psiA)
+      IF (l_noco) THEN
+         ALLOCATE(psiB(0:glen-1, nb))
+         !$acc enter data create(psiB)
+      END IF
+      IF (l_dfpt) THEN
+         ALLOCATE(psiAq(0:glen-1, nb))
+         !$acc enter data create(psiAq)
+         IF (l_noco) THEN
+            ALLOCATE(psiBq(0:glen-1, nb))
+            !$acc enter data create(psiBq)
+         END IF
+         ! Without -q the accumulation kernels still name psiAmq/psiBmq: placeholders keep them present
+         ALLOCATE(psiAmq(0:MERGE(glen-1, 0, l_minusq), MERGE(nb, 1, l_minusq)))
+         !$acc enter data create(psiAmq)
+         IF (l_noco) THEN
+            ALLOCATE(psiBmq(0:MERGE(glen-1, 0, l_minusq), MERGE(nb, 1, l_minusq)))
+            !$acc enter data create(psiBmq)
+         END IF
+         ALLOCATE(accC(0:glen-1, ndens))
+         accC = CMPLX(0.0, 0.0)
+         !$acc enter data copyin(accC)
+      ELSE
+         ALLOCATE(accR(0:glen-1, ndens))
+         accR = 0.0
+         !$acc enter data copyin(accR)
+      END IF
+      IF (l_f) THEN
+         ALLOCATE(psiD(0:glen-1, nb), ekR(0:glen-1))
+         ekR = 0.0
+         !$acc enter data create(psiD) copyin(ekR)
+      END IF
+      IF (l_qNoco .OR. l_qSoc) THEN
+         ALLOCATE(qs(nb, 2))
+         !$acc enter data copyin(gq, wq) create(qs)
+      END IF
+      IF (l_qSoc) THEN
+         !$acc enter data copyin(step)
+      END IF
+
+      CALL fftBack%init(dims, .FALSE., batch_size=nb, l_gpu=.TRUE.)
+      IF (l_qNoco .OR. l_qSoc) CALL fftForw%init(dims, .TRUE., batch_size=nb, l_gpu=.TRUE.)
+
+      DO nu0 = 1, ne, nb
+         nbb = MIN(nb, ne - nu0 + 1)
+
+         ! States of the batch in real space
+         CALL priv_put_batch(psiA, stateIndices, zMat, 0, nu0, nbb, scal(:, 0))
+         CALL fftBack%exec_batch(psiA)
+         IF (l_noco) THEN
+            CALL priv_put_batch(psiB, stateBIndices, zMat, offB, nu0, nbb, scal(:, 0))
+            CALL fftBack%exec_batch(psiB)
+         END IF
+         IF (l_dfpt) THEN
+            CALL priv_put_batch(psiAq, stateqIndices, zMat1, 0, nu0, nbb, scal(:, 0))
+            CALL fftBack%exec_batch(psiAq)
+            IF (l_noco) THEN
+               CALL priv_put_batch(psiBq, stateBqIndices, zMat1, offBq, nu0, nbb, scal(:, 0))
+               CALL fftBack%exec_batch(psiBq)
+            END IF
+            IF (l_minusq) THEN
+               CALL priv_put_batch(psiAmq, statemqIndices, zMat1m, 0, nu0, nbb, scal(:, 0))
+               CALL fftBack%exec_batch(psiAmq)
+               IF (l_noco) THEN
+                  CALL priv_put_batch(psiBmq, stateBmqIndices, zMat1m, offBmq, nu0, nbb, scal(:, 0))
+                  CALL fftBack%exec_batch(psiBmq)
+               END IF
+            END IF
+         END IF
+
+         ! Accumulation of the densities, in the same form as in the loop over the states on the host
+         IF (l_noco .AND. .NOT.l_dfpt) THEN
+            ! rho_11, rho_22, m_x/2, m_y/2
+            !$acc parallel loop default(present) private(s1, s2, s3, s4, w, a, b)
+            DO ir = 0, glen - 1
+               s1 = 0.0
+               s2 = 0.0
+               s3 = 0.0
+               s4 = 0.0
+               !$acc loop seq
+               DO ib = 1, nbb
+                  w = wtf(nu0+ib-1)
+                  a = psiA(ir, ib)
+                  b = psiB(ir, ib)
+                  s1 = s1 + w*(REAL(a)**2 + AIMAG(a)**2)
+                  s2 = s2 + w*(REAL(b)**2 + AIMAG(b)**2)
+                  s3 = s3 + w*(REAL(a)*REAL(b) + AIMAG(a)*AIMAG(b))
+                  s4 = s4 + w*(REAL(a)*AIMAG(b) - AIMAG(a)*REAL(b))
+               END DO
+               accR(ir, 1) = accR(ir, 1) + s1
+               accR(ir, 2) = accR(ir, 2) + s2
+               accR(ir, 3) = accR(ir, 3) + s3
+               accR(ir, 4) = accR(ir, 4) + s4
+            END DO
+         ELSE IF (l_noco) THEN
+            ! rho^1_11, rho^1_22, rho^1_12 (block (2,1)), rho^1_21 (block (1,2))
+            !$acc parallel loop default(present) private(c1, c2, c3, c4, w, w1, a, b, aq, bq, amq, bmq)
+            DO ir = 0, glen - 1
+               c1 = CMPLX(0.0, 0.0)
+               c2 = CMPLX(0.0, 0.0)
+               c3 = CMPLX(0.0, 0.0)
+               c4 = CMPLX(0.0, 0.0)
+               !$acc loop seq
+               DO ib = 1, nbb
+                  w = wtf(nu0+ib-1)
+                  w1 = wtf1(nu0+ib-1)
+                  a = psiA(ir, ib)
+                  b = psiB(ir, ib)
+                  aq = psiAq(ir, ib)
+                  bq = psiBq(ir, ib)
+                  c1 = c1 + w*fac*CONJG(a)*aq
+                  c2 = c2 + w*fac*CONJG(b)*bq
+                  c3 = c3 + w*fac*CONJG(b)*aq
+                  c4 = c4 + w*fac*CONJG(a)*bq
+                  IF (l_minusq) THEN
+                     amq = psiAmq(ir, ib)
+                     bmq = psiBmq(ir, ib)
+                     c1 = c1 + w*CONJG(amq)*a
+                     c2 = c2 + w*CONJG(bmq)*b
+                     c3 = c3 + w*CONJG(bmq)*a
+                     c4 = c4 + w*CONJG(amq)*b
+                  END IF
+                  IF (l_gamma) THEN
+                     c1 = c1 + w1*ABS(a)**2
+                     c2 = c2 + w1*ABS(b)**2
+                     c3 = c3 + w1*CONJG(b)*a
+                     c4 = c4 + w1*CONJG(a)*b
+                  END IF
+               END DO
+               accC(ir, 1) = accC(ir, 1) + c1
+               accC(ir, 2) = accC(ir, 2) + c2
+               accC(ir, 3) = accC(ir, 3) + c3
+               accC(ir, 4) = accC(ir, 4) + c4
+            END DO
+         ELSE IF (.NOT.l_dfpt) THEN
+            !$acc parallel loop default(present) private(s1, a)
+            DO ir = 0, glen - 1
+               s1 = 0.0
+               !$acc loop seq
+               DO ib = 1, nbb
+                  a = psiA(ir, ib)
+                  s1 = s1 + wtf(nu0+ib-1)*(REAL(a)**2 + AIMAG(a)**2)
+               END DO
+               accR(ir, 1) = accR(ir, 1) + s1
+            END DO
+         ELSE
+            !$acc parallel loop default(present) private(c1, w, w1, a, aq, amq)
+            DO ir = 0, glen - 1
+               c1 = CMPLX(0.0, 0.0)
+               !$acc loop seq
+               DO ib = 1, nbb
+                  w = wtf(nu0+ib-1)
+                  w1 = wtf1(nu0+ib-1)
+                  a = psiA(ir, ib)
+                  aq = psiAq(ir, ib)
+                  IF (l_minusq) THEN
+                     amq = psiAmq(ir, ib)
+                     c1 = c1 + w*(CONJG(amq)*a + CONJG(a)*aq)
+                  ELSE
+                     c1 = c1 + w*2*CONJG(a)*aq
+                  END IF
+                  IF (l_gamma) c1 = c1 + w1*ABS(a)**2
+               END DO
+               accC(ir, 1) = accC(ir, 1) + c1
+            END DO
+         END IF
+
+         ! Kinetic energy density for the forces
+         IF (l_f) THEN
+            !$acc parallel loop default(present) private(s1, a)
+            DO ir = 0, glen - 1
+               s1 = 0.0
+               !$acc loop seq
+               DO ib = 1, nbb
+                  a = psiA(ir, ib)
+                  s1 = s1 - wtf(nu0+ib-1)*eig(nu0+ib-1)*(REAL(a)**2 + AIMAG(a)**2)
+               END DO
+               ekR(ir) = ekR(ir) + s1
+            END DO
+            DO j = 1, 3
+               CALL priv_put_batch(psiD, stateIndices, zMat, 0, nu0, nbb, scal(:, j))
+               CALL fftBack%exec_batch(psiD)
+               !$acc parallel loop default(present) private(s1, a)
+               DO ir = 0, glen - 1
+                  s1 = 0.0
+                  !$acc loop seq
+                  DO ib = 1, nbb
+                     a = psiD(ir, ib)
+                     s1 = s1 + wtf(nu0+ib-1)*0.5*(REAL(a)**2 + AIMAG(a)**2)
+                  END DO
+                  ekR(ir) = ekR(ir) + s1
+               END DO
+            END DO
+         END IF
+
+         ! Interstitial charges of the single states
+         IF (l_qNoco) THEN
+            !$acc parallel loop collapse(2) default(present)
+            DO ib = 1, nb
+               DO ir = 0, glen - 1
+                  psiA(ir, ib) = ABS(psiA(ir, ib))**2
+                  psiB(ir, ib) = ABS(psiB(ir, ib))**2
+               END DO
+            END DO
+            CALL fftForw%exec_batch(psiA)
+            CALL fftForw%exec_batch(psiB)
+            CALL priv_qcharge(psiA, gq, wq, nbb, qs(:, 1))
+            CALL priv_qcharge(psiB, gq, wq, nbb, qs(:, 2))
+            DO ib = 1, nbb
+               nu = ev_list(nu0+ib-1)
+               dos%qis(nu, ikpt, 1) = dos%qis(nu, ikpt, 1) + qs(ib, 1)
+               dos%qTot(nu, ikpt, 1) = dos%qTot(nu, ikpt, 1) + qs(ib, 1)
+               dos%qis(nu, ikpt, input%jspins) = dos%qis(nu, ikpt, input%jspins) + qs(ib, 2)
+               dos%qTot(nu, ikpt, input%jspins) = dos%qTot(nu, ikpt, input%jspins) + qs(ib, 2)
+            END DO
+         ELSE IF (l_qSoc) THEN
+            !$acc parallel loop collapse(2) default(present)
+            DO ib = 1, nb
+               DO ir = 0, glen - 1
+                  psiA(ir, ib) = CONJG(psiA(ir, ib))*step(ir)*psiA(ir, ib)
+               END DO
+            END DO
+            CALL fftForw%exec_batch(psiA)
+            CALL priv_qcharge(psiA, gq, wq, nbb, qs(:, 1))
+            DO ib = 1, nbb
+               nu = ev_list(nu0+ib-1)
+               dos%qis(nu, ikpt, jspin) = dos%qis(nu, ikpt, jspin) + qs(ib, 1)
+               dos%qTot(nu, ikpt, jspin) = dos%qTot(nu, ikpt, jspin) + qs(ib, 1)
+            END DO
+         END IF
+      END DO
+
+      ! Summed densities back to the host
+      IF (l_dfpt) THEN
+         !$acc exit data copyout(accC)
+         IF (l_noco) THEN
+            DO i = 1, 4
+               rhomatGrid(i)%grid(:) = rhomatGrid(i)%grid(:) + accC(:, i)
+            END DO
+         ELSE
+            chargeDen%grid(:) = chargeDen%grid(:) + accC(:, 1)
+         END IF
+      ELSE
+         !$acc exit data copyout(accR)
+         IF (l_noco) THEN
+            DO i = 1, 4
+               rhomatGrid(i)%grid(:) = rhomatGrid(i)%grid(:) + accR(:, i)
+            END DO
+         ELSE
+            chargeDen%grid(:) = chargeDen%grid(:) + accR(:, 1)
+         END IF
+      END IF
+      IF (l_f) THEN
+         !$acc exit data copyout(ekR) delete(psiD)
+         ekinGrid%grid(:) = ekinGrid%grid(:) + ekR(:)
+      END IF
+
+      CALL fftBack%free()
+      IF (l_qNoco .OR. l_qSoc) THEN
+         CALL fftForw%free()
+         !$acc exit data delete(gq, wq, qs)
+      END IF
+      IF (l_qSoc) THEN
+         !$acc exit data delete(step)
+      END IF
+      IF (ALLOCATED(psiBmq)) THEN
+         !$acc exit data delete(psiBmq)
+      END IF
+      IF (ALLOCATED(psiAmq)) THEN
+         !$acc exit data delete(psiAmq)
+      END IF
+      IF (ALLOCATED(psiBq)) THEN
+         !$acc exit data delete(psiBq)
+      END IF
+      IF (ALLOCATED(psiAq)) THEN
+         !$acc exit data delete(psiAq)
+      END IF
+      IF (ALLOCATED(psiB)) THEN
+         !$acc exit data delete(psiB)
+      END IF
+      !$acc exit data delete(psiA)
+      IF (ALLOCATED(stateBmqIndices)) THEN
+         !$acc exit data delete(stateBmqIndices)
+      END IF
+      IF (ALLOCATED(statemqIndices)) THEN
+         !$acc exit data delete(statemqIndices)
+      END IF
+      IF (ALLOCATED(stateBqIndices)) THEN
+         !$acc exit data delete(stateBqIndices)
+      END IF
+      IF (ALLOCATED(stateqIndices)) THEN
+         !$acc exit data delete(stateqIndices)
+      END IF
+      IF (ALLOCATED(stateBIndices)) THEN
+         !$acc exit data delete(stateBIndices)
+      END IF
+      !$acc exit data delete(stateIndices, eig, wtf, wtf1, scal)
+      IF (l_minusq) CALL priv_z_device(zMat1m, .FALSE.)
+      IF (l_dfpt) CALL priv_z_device(zMat1, .FALSE.)
+      CALL priv_z_device(zMat, .FALSE.)
+      CALL timestop("pwden: states on device")
+   END SUBROUTINE priv_states_gpu
+
+   INTEGER FUNCTION priv_batch_size(ne, glen, ngrids)
+      !! Number of states per batch, limited by the free device memory
+      INTEGER, INTENT(IN) :: ne, glen, ngrids
+#ifdef _OPENACC
+      INTEGER(8) :: freeMem
+
+      freeMem = acc_get_property(0, acc_device_current, acc_property_free_memory)
+      ! half of the free memory; one more grid per state for the cuFFT work space
+      priv_batch_size = INT(0.5*REAL(freeMem)/(16.0*REAL(glen)*REAL(ngrids+1)))
+#else
+      priv_batch_size = 16
+#endif
+      priv_batch_size = MAX(1, MIN(priv_batch_size, 64, ne))
+   END FUNCTION priv_batch_size
+
+   SUBROUTINE priv_star_weights(stars, cell, dims, gCutoff, pw, nmax, gq, wq)
+      !! Grid points and weights with REAL(SUM(grid(gq)*wq)) = interstitial charge of a density given on the
+      !! grid in reciprocal space (unnormalized forward FFT), from the stars up to nmax and their integrals pw
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_cell),  INTENT(IN) :: cell
+      INTEGER,       INTENT(IN) :: dims(3), nmax
+      REAL,          INTENT(IN) :: gCutoff
+      COMPLEX,       INTENT(IN) :: pw(:)
+      INTEGER, ALLOCATABLE, INTENT(OUT) :: gq(:)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: wq(:)
+
+      INTEGER, ALLOCATABLE :: gTmp(:)
+      COMPLEX, ALLOCATABLE :: wTmp(:)
+      INTEGER :: x, y, z, iStar, n
+      REAL    :: fct
+
+      ALLOCATE(gTmp((2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)))
+      ALLOCATE(wTmp(SIZE(gTmp)))
+      fct = 1.0/(REAL(PRODUCT(dims))*cell%omtil)
+      n = 0
+      DO z = -stars%mx3, stars%mx3
+         DO y = -stars%mx2, stars%mx2
+            DO x = -stars%mx1, stars%mx1
+               iStar = stars%ig(x, y, z)
+               IF (iStar == 0 .OR. iStar > nmax) CYCLE
+               IF (stars%sk3(iStar) > gCutoff) CYCLE
+               n = n + 1
+               gTmp(n) = MODULO(x, dims(1)) + dims(1)*MODULO(y, dims(2)) + dims(1)*dims(2)*MODULO(z, dims(3))
+               wTmp(n) = CONJG(stars%rgphs(x, y, z))*pw(iStar)*fct
+            END DO
+         END DO
+      END DO
+      gq = gTmp(1:n)
+      wq = wTmp(1:n)
+   END SUBROUTINE priv_star_weights
+
+   SUBROUTINE priv_qcharge(psi, gq, wq, nbb, q)
+      !! Charges REAL(SUM(psi(gq,ib)*wq)) of the first nbb grids of psi (device data), returned on the host
+      COMPLEX, INTENT(IN)    :: psi(0:,:), wq(:)
+      INTEGER, INTENT(IN)    :: gq(:), nbb
+      REAL,    INTENT(INOUT) :: q(:)
+
+      INTEGER :: ib, ip, np
+      REAL    :: s
+
+      np = SIZE(gq)
+      !$acc parallel loop gang default(present) private(s)
+      DO ib = 1, nbb
+         s = 0.0
+         !$acc loop vector reduction(+:s)
+         DO ip = 1, np
+            s = s + REAL(psi(gq(ip), ib)*wq(ip))
+         END DO
+         q(ib) = s
+      END DO
+      !$acc update self(q(1:nbb))
+   END SUBROUTINE priv_qcharge
+
+   SUBROUTINE priv_z_device(zmat, l_enter)
+      !! Eigenvector coefficients to the device (l_enter) or removed from it
+      TYPE(t_mat), INTENT(IN) :: zmat
+      LOGICAL,     INTENT(IN) :: l_enter
+
+      IF (zmat%l_real) THEN
+         CALL priv_r_device(zmat%data_r, l_enter)
+      ELSE
+         CALL priv_c_device(zmat%data_c, l_enter)
+      END IF
+   END SUBROUTINE priv_z_device
+
+   SUBROUTINE priv_r_device(z, l_enter)
+      REAL,    INTENT(IN) :: z(:,:)
+      LOGICAL, INTENT(IN) :: l_enter
+
+      IF (l_enter) THEN
+         !$acc enter data copyin(z)
+      ELSE
+         !$acc exit data delete(z)
+      END IF
+   END SUBROUTINE priv_r_device
+
+   SUBROUTINE priv_c_device(z, l_enter)
+      COMPLEX, INTENT(IN) :: z(:,:)
+      LOGICAL, INTENT(IN) :: l_enter
+
+      IF (l_enter) THEN
+         !$acc enter data copyin(z)
+      ELSE
+         !$acc exit data delete(z)
+      END IF
+   END SUBROUTINE priv_c_device
+
+   SUBROUTINE priv_put_batch(psi, idx, zmat, off, nu0, nbb, scal)
+      !! Coefficients off+1..off+SIZE(idx) of the states nu0..nu0+nbb-1, scaled by scal, on the FFT grids
+      !! psi(:,1:nbb) (device data); all other grid points are zero
+      COMPLEX,     INTENT(INOUT) :: psi(0:,:)
+      INTEGER,     INTENT(IN)    :: idx(:), off, nu0, nbb
+      TYPE(t_mat), INTENT(IN)    :: zmat
+      REAL,        INTENT(IN)    :: scal(:)
+
+      IF (zmat%l_real) THEN
+         CALL priv_put_r(psi, idx, zmat%data_r, off, nu0, nbb, scal)
+      ELSE
+         CALL priv_put_c(psi, idx, zmat%data_c, off, nu0, nbb, scal)
+      END IF
+   END SUBROUTINE priv_put_batch
+
+   SUBROUTINE priv_put_r(psi, idx, z, off, nu0, nbb, scal)
+      COMPLEX, INTENT(INOUT) :: psi(0:,:)
+      INTEGER, INTENT(IN)    :: idx(:), off, nu0, nbb
+      REAL,    INTENT(IN)    :: z(:,:), scal(:)
+
+      INTEGER :: ib, ir, iv, glen, nb, nv
+
+      glen = SIZE(psi, 1)
+      nb = SIZE(psi, 2)
+      nv = SIZE(idx)
+      !$acc parallel loop collapse(2) default(present)
+      DO ib = 1, nb
+         DO ir = 0, glen - 1
+            psi(ir, ib) = CMPLX(0.0, 0.0)
+         END DO
+      END DO
+      !$acc parallel loop collapse(2) default(present)
+      DO ib = 1, nbb
+         DO iv = 1, nv
+            psi(idx(iv), ib) = CMPLX(z(off+iv, nu0+ib-1)*scal(iv), 0.0)
+         END DO
+      END DO
+   END SUBROUTINE priv_put_r
+
+   SUBROUTINE priv_put_c(psi, idx, z, off, nu0, nbb, scal)
+      COMPLEX, INTENT(INOUT) :: psi(0:,:)
+      INTEGER, INTENT(IN)    :: idx(:), off, nu0, nbb
+      COMPLEX, INTENT(IN)    :: z(:,:)
+      REAL,    INTENT(IN)    :: scal(:)
+
+      INTEGER :: ib, ir, iv, glen, nb, nv
+
+      glen = SIZE(psi, 1)
+      nb = SIZE(psi, 2)
+      nv = SIZE(idx)
+      !$acc parallel loop collapse(2) default(present)
+      DO ib = 1, nb
+         DO ir = 0, glen - 1
+            psi(ir, ib) = CMPLX(0.0, 0.0)
+         END DO
+      END DO
+      !$acc parallel loop collapse(2) default(present)
+      DO ib = 1, nbb
+         DO iv = 1, nv
+            psi(idx(iv), ib) = z(off+iv, nu0+ib-1)*scal(iv)
+         END DO
+      END DO
+   END SUBROUTINE priv_put_c
 END MODULE m_pwden

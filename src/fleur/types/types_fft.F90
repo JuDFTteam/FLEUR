@@ -142,6 +142,9 @@ contains
             call handle_cufft_error(ierr)
             call juDFT_error("cuFFT Plan many failed.")
          endif
+         ! run on the queue of the synchronous OpenACC kernels
+         ierr = cufftSetStream(fft%cufft_plan, acc_get_cuda_stream(acc_async_sync))
+         if(ierr /= 0) call juDFT_error("cufftSetStream failed.")
 #endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
