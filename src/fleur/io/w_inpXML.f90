@@ -153,10 +153,16 @@ CONTAINS
       INTEGER :: wannNumBands, wannMinBand, wannMaxBand, wannSemicore
       INTEGER :: ityp_w, ilo_w, ios_w
       CHARACTER(len=1000) :: wannArg
-      LOGICAL :: l_wannProj, wannSeen(0:103), wannChan(-5:3, 0:103)
+      !Keyed by atom TYPE and not by atomic number, because a key may be the
+      !label of one atom, which names a single type out of several of the
+      !same element.
+      LOGICAL :: l_wannProj
+      LOGICAL :: wannSeen(atoms%ntype), wannChan(-5:3, atoms%ntype)
       INTEGER :: wannNumWann, wannNbReq, wannSpinM, wannNat, wannSub
       INTEGER :: iEl_w, iCh_w, iPos_w, iSep_w, iCut_w, l_w, nz_w
-      INTEGER :: iTok_w, lTok_w, iCand_w
+      INTEGER :: iTok_w, lTok_w, iCand_w, na_w, ieq_w, jtyp_w, nSel_w, nSpill_w
+      INTEGER :: selT_w(atoms%ntype)
+      CHARACTER(len=1000) :: wannKey
       CHARACTER(len=1000) :: wannSpec, wannItem, wannMod
       CHARACTER(len=80) :: wannChStr
 
@@ -225,27 +231,75 @@ CONTAINS
                     "-wann: every item needs ELEMENT:channels", calledby="w_inpXML", &
                     hint="Write it as -wann Cu:spd,Mn:spd,Ge:sp")
 
+               !The key is either an element symbol, which takes every type of
+               !that element, or the label of one atom, which takes that atom's
+               !type alone. Labels are written to the inp.xml as relPos/@label,
+               !so the atom a key named can be read back off the file it wrote.
+               wannKey = ADJUSTL(wannItem(:iSep_w - 1))
+               nSel_w = 0
                nz_w = -1
                DO iEl_w = 0, 103
-                  IF (TRIM(ADJUSTL(namat_const(iEl_w))) == &
-                      TRIM(ADJUSTL(wannItem(:iSep_w - 1)))) THEN
+                  IF (TRIM(ADJUSTL(namat_const(iEl_w))) == TRIM(wannKey)) THEN
                      nz_w = iEl_w
                      EXIT
                   END IF
                END DO
-               IF (nz_w < 0) CALL juDFT_error( &
-                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
-                    " is not an element symbol", calledby="w_inpXML")
-               !A key that matches nothing would write a species without
-               !projections, and the run would only fail later, in wannierlib_amn.
-               IF (.NOT. ANY(atoms%nz(:) == nz_w)) CALL juDFT_error( &
-                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
-                    " is not in this structure", calledby="w_inpXML")
-               IF (wannSeen(nz_w)) CALL juDFT_error( &
-                    "-wann: element "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
-                    " appears twice", calledby="w_inpXML", &
-                    hint="Put all of its channels in one item, as Fe:spd.")
-               wannSeen(nz_w) = .TRUE.
+               IF (nz_w >= 0) THEN
+                  DO ityp_w = 1, atoms%ntype
+                     IF (atoms%nz(ityp_w) /= nz_w) CYCLE
+                     nSel_w = nSel_w + 1
+                     selT_w(nSel_w) = ityp_w
+                  END DO
+                  !A key that matches nothing would write a species without
+                  !projections, and the run would only fail later, in
+                  !wannierlib_amn.
+                  IF (nSel_w == 0) CALL juDFT_error( &
+                       "-wann: element "//TRIM(wannKey)// &
+                       " is not in this structure", calledby="w_inpXML")
+               ELSE
+                  !Walked type by type instead of read off the atom-to-type
+                  !map: inpgen never fills that component, and taking it here
+                  !is a read of uninitialised memory that ends in a signal 11.
+                  na_w = 0
+                  DO ityp_w = 1, atoms%ntype
+                     DO ieq_w = 1, atoms%neq(ityp_w)
+                        na_w = na_w + 1
+                        IF (nSel_w > 0) CYCLE
+                        IF (TRIM(ADJUSTL(atoms%label(na_w))) /= TRIM(wannKey)) CYCLE
+                        nSel_w = 1
+                        selT_w(1) = ityp_w
+                     END DO
+                  END DO
+                  IF (nSel_w == 0) CALL juDFT_error( &
+                       "-wann: "//TRIM(wannKey)//" is neither an element symbol &
+                       &nor an atom label", calledby="w_inpXML", &
+                       hint="A label is the last field of an atom line in the &
+                       &inpgen input, and defaults to the atom's number.")
+                  !The projection is written on the SPECIES, so naming one atom
+                  !only means something when its species holds no other atom.
+                  !Refusing is the point: projecting onto all of them in silence
+                  !is the mistake this key exists to avoid.
+                  nSpill_w = atoms%neq(selT_w(1)) - 1
+                  DO jtyp_w = 1, atoms%ntype
+                     IF (jtyp_w == selT_w(1)) CYCLE
+                     IF (TRIM(atoms%speciesname(jtyp_w)) == &
+                         TRIM(atoms%speciesname(selT_w(1)))) &
+                        nSpill_w = nSpill_w + atoms%neq(jtyp_w)
+                  END DO
+                  IF (nSpill_w > 0) CALL juDFT_error( &
+                       "-wann: the atom labelled "//TRIM(wannKey)// &
+                       " shares its species with others", calledby="w_inpXML", &
+                       hint="A projection is written on the species, so it would &
+                       &land on all of them. Give this atom a species of its own &
+                       &first, by changing a parameter of it: &atom id=14.2 jri=725 /")
+               END IF
+               DO iEl_w = 1, nSel_w
+                  IF (wannSeen(selT_w(iEl_w))) CALL juDFT_error( &
+                       "-wann: "//TRIM(wannKey)//" names an atom that already &
+                       &has channels", calledby="w_inpXML", &
+                       hint="Put all of its channels in one item, as Fe:spd.")
+                  wannSeen(selT_w(iEl_w)) = .TRUE.
+               END DO
 
                iCh_w = iSep_w + 1
                DO WHILE (iCh_w <= LEN_TRIM(wannItem))
@@ -272,11 +326,13 @@ CONTAINS
                        calledby="w_inpXML", &
                        hint="Channels are s, p, d, f and the Wannier90 hybrids &
                        &sp1, sp2, sp3, sp3d, sp3d2.")
-                  wannChan(wannChanL(iTok_w), nz_w) = .TRUE.
+                  DO iEl_w = 1, nSel_w
+                     wannChan(wannChanL(iTok_w), selT_w(iEl_w)) = .TRUE.
+                  END DO
                   iCh_w = iCh_w + LEN_TRIM(wannChanName(iTok_w))
                END DO
-               IF (.NOT. ANY(wannChan(:, nz_w))) CALL juDFT_error( &
-                    "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
+               IF (.NOT. ANY(wannChan(:, selT_w(1)))) CALL juDFT_error( &
+                    "-wann: "//TRIM(wannKey)// &
                     " was given no channels", calledby="w_inpXML")
             END DO
 
@@ -286,7 +342,7 @@ CONTAINS
             !it blind to how the species were split.
             DO ityp_w = 1, atoms%ntype
                DO l_w = -5, 3
-                  IF (wannChan(l_w, atoms%nz(ityp_w))) wannNumWann = &
+                  IF (wannChan(l_w, ityp_w)) wannNumWann = &
                      wannNumWann + projection_m_count(l_w)*atoms%neq(ityp_w)
                END DO
             END DO
@@ -731,8 +787,11 @@ WRITE (fileNum, 242) fr(1.0)
             END DO
             wannChStr = ''
             wannSub = 0
+            !iAtomType represents this species, and the key resolution refuses
+            !to give one type of a shared species channels the others lack, so
+            !the representative speaks for all of them.
             DO l_w = -5, 3
-               IF (.NOT. wannChan(l_w, nz_w)) CYCLE
+               IF (.NOT. wannChan(l_w, iAtomType)) CYCLE
                WRITE (fileNum, 901) l_w
                wannChStr = TRIM(wannChStr)//' '//TRIM(wannChanLabel(l_w))
                wannSub = wannSub + projection_m_count(l_w)*wannNat*wannSpinM
