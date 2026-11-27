@@ -38,9 +38,18 @@ MODULE m_winpXML
    use m_juDFT
    use m_constants
    use m_xmlOutput
+   use m_types_wannierlib, ONLY: projection_m_count
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: w_inpxml
+
+   !The channels -wann understands, longest first so the scan is greedy: the
+   !hybrids of Wannier90 open with the letters of the pure channels, so sp3 has
+   !to be tried before s, or Si:sp3 would read as s, p and a stray 3.
+   INTEGER, PARAMETER :: nWannChan = 9
+   CHARACTER(len=5), PARAMETER :: wannChanName(nWannChan) = [CHARACTER(len=5) :: &
+      'sp3d2', 'sp3d', 'sp3', 'sp2', 'sp1', 's', 'p', 'd', 'f']
+   INTEGER, PARAMETER :: wannChanL(nWannChan) = [-5, -4, -3, -2, -1, 0, 1, 2, 3]
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
@@ -144,11 +153,12 @@ CONTAINS
       INTEGER :: wannNumBands, wannMinBand, wannMaxBand, wannSemicore
       INTEGER :: ityp_w, ilo_w, ios_w
       CHARACTER(len=1000) :: wannArg
-      LOGICAL :: l_wannProj, wannSeen(0:103), wannChan(0:3, 0:103)
+      LOGICAL :: l_wannProj, wannSeen(0:103), wannChan(-5:3, 0:103)
       INTEGER :: wannNumWann, wannNbReq, wannSpinM, wannNat, wannSub
       INTEGER :: iEl_w, iCh_w, iPos_w, iSep_w, iCut_w, l_w, nz_w
+      INTEGER :: iTok_w, lTok_w, iCand_w
       CHARACTER(len=1000) :: wannSpec, wannItem, wannMod
-      CHARACTER(len=8) :: wannChStr
+      CHARACTER(len=80) :: wannChStr
 
       l_include = l_includeIn .or. .not. present(filename)
       l_explicit = l_explicitIn .OR. .not. present(filename)
@@ -237,35 +247,47 @@ CONTAINS
                     hint="Put all of its channels in one item, as Fe:spd.")
                wannSeen(nz_w) = .TRUE.
 
-               DO iCh_w = iSep_w + 1, LEN_TRIM(wannItem)
-                  SELECT CASE (wannItem(iCh_w:iCh_w))
-                  CASE ('s')
-                     wannChan(0, nz_w) = .TRUE.
-                  CASE ('p')
-                     wannChan(1, nz_w) = .TRUE.
-                  CASE ('d')
-                     wannChan(2, nz_w) = .TRUE.
-                  CASE ('f')
-                     wannChan(3, nz_w) = .TRUE.
-                  CASE (' ')
-                  CASE DEFAULT
-                     CALL juDFT_error("-wann: "//wannItem(iCh_w:iCh_w)// &
-                          " is not one of s, p, d, f", calledby="w_inpXML")
-                  END SELECT
+               iCh_w = iSep_w + 1
+               DO WHILE (iCh_w <= LEN_TRIM(wannItem))
+                  !A separator is only needed where a hybrid would otherwise
+                  !swallow the channel behind it: As:sp3+d is sp3 and d, while
+                  !As:sp3d is the five-member sp3d hybrid.
+                  IF (wannItem(iCh_w:iCh_w) == ' ' .OR. &
+                      wannItem(iCh_w:iCh_w) == '+') THEN
+                     iCh_w = iCh_w + 1
+                     CYCLE
+                  END IF
+                  iTok_w = 0
+                  DO iCand_w = 1, nWannChan
+                     lTok_w = LEN_TRIM(wannChanName(iCand_w))
+                     IF (iCh_w + lTok_w - 1 > LEN_TRIM(wannItem)) CYCLE
+                     IF (wannItem(iCh_w:iCh_w + lTok_w - 1) == &
+                         TRIM(wannChanName(iCand_w))) THEN
+                        iTok_w = iCand_w
+                        EXIT
+                     END IF
+                  END DO
+                  IF (iTok_w == 0) CALL juDFT_error( &
+                       "-wann: "//TRIM(wannItem(iCh_w:))//" is not a channel", &
+                       calledby="w_inpXML", &
+                       hint="Channels are s, p, d, f and the Wannier90 hybrids &
+                       &sp1, sp2, sp3, sp3d, sp3d2.")
+                  wannChan(wannChanL(iTok_w), nz_w) = .TRUE.
+                  iCh_w = iCh_w + LEN_TRIM(wannChanName(iTok_w))
                END DO
                IF (.NOT. ANY(wannChan(:, nz_w))) CALL juDFT_error( &
                     "-wann: "//TRIM(ADJUSTL(wannItem(:iSep_w - 1)))// &
                     " was given no channels", calledby="w_inpXML")
             END DO
 
-            !num_wann exactly as init_wannierlib counts it: the 2l+1 of every
-            !channel, over the atoms of each type, doubled where the eigenvectors
-            !are spinors. The sum runs over TYPES, which is what makes it blind
-            !to how the species were split.
+            !num_wann exactly as init_wannierlib counts it, through the very
+            !function it uses, so a hybrid cannot be counted as 2l+1 here and as
+            !something else there. The sum runs over TYPES, which is what makes
+            !it blind to how the species were split.
             DO ityp_w = 1, atoms%ntype
-               DO l_w = 0, 3
+               DO l_w = -5, 3
                   IF (wannChan(l_w, atoms%nz(ityp_w))) wannNumWann = &
-                     wannNumWann + (2*l_w + 1)*atoms%neq(ityp_w)
+                     wannNumWann + projection_m_count(l_w)*atoms%neq(ityp_w)
                END DO
             END DO
             wannNumWann = wannSpinM*wannNumWann
@@ -709,11 +731,11 @@ WRITE (fileNum, 242) fr(1.0)
             END DO
             wannChStr = ''
             wannSub = 0
-            DO l_w = 0, 3
+            DO l_w = -5, 3
                IF (.NOT. wannChan(l_w, nz_w)) CYCLE
                WRITE (fileNum, 901) l_w
-               wannChStr = TRIM(wannChStr)//' '//'spdf'(l_w + 1:l_w + 1)
-               wannSub = wannSub + (2*l_w + 1)*wannNat*wannSpinM
+               wannChStr = TRIM(wannChStr)//' '//TRIM(wannChanLabel(l_w))
+               wannSub = wannSub + projection_m_count(l_w)*wannNat*wannSpinM
             END DO
             !Printed before anything runs: the only way to see that the
             !element-to-species translation hit the species it was meant to.
@@ -1007,6 +1029,18 @@ WRITE (fileNum, 242) fr(1.0)
    
          fr=trim(adjustl(temp))
       end function
+   
+      !The name -wann prints for a channel. 'spdf' indexed by l+1 only reaches
+      !l>=0, and a hybrid is exactly what a reader needs to see echoed back.
+      FUNCTION wannChanLabel(l) RESULT(nameOut)
+         INTEGER, INTENT(IN) :: l
+         CHARACTER(len=5) :: nameOut
+         INTEGER :: i
+         nameOut = '?'
+         DO i = 1, nWannChan
+            IF (wannChanL(i) == l) nameOut = wannChanName(i)
+         END DO
+      END FUNCTION
    
    END SUBROUTINE w_inpXML
 END MODULE m_winpXML

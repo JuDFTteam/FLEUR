@@ -51,7 +51,7 @@ CONTAINS
     CALL new_argument(0,"-noKsym","For the generation of the k-point set: Only use identity as symmetry operation","")
     CALL new_argument(0,"-noInpgenComment","Disable printing inpgen input as a comment to the inp.xml file","")
 
-    CALL new_argument(1,"-wann","Bands to wannierize, or an ELEMENT:channels list: write a <wannierlib> block to inp.xml. E.g. -wann 36, or -wann Cu:spd,Mn:spd,Ge:sp[#nbands=48]","")
+    CALL new_argument(1,"-wann","Bands to wannierize, or an ELEMENT:channels list: write a <wannierlib> block to inp.xml. Channels: s,p,d,f and the hybrids sp1,sp2,sp3,sp3d,sp3d2. E.g. -wann 36, or -wann Cu:spd,Ge:sp3+d[#nbands=48]","")
     CALL new_argument(0,"-spinor","Spinor (l_noco) setup for a collinear magnetic configuration","")
 
     CALL new_argument(0,"-precise","Short for '-profile precise'","")
