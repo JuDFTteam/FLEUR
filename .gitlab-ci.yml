@@ -22,3 +22,4 @@ include:
    - "packaging/CI/AiiDA.yml"
    - "packaging/CI/CB.yml"
    - "packaging/CI/CLAUDE.yml"
+   - "packaging/CI/fleurbox.yml"

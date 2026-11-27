@@ -9,7 +9,7 @@ module m_vmts
 #endif
   use m_constants
   use m_mpi_reduce_tool
-  use m_intgr, only: intgr2, sfint
+  use m_intgr, only: intgr2, sfint, sfint_outward
   use m_phasy1
   use m_sphbes
   use m_SphBessel
@@ -197,6 +197,21 @@ contains
 
         integrand_1(1:imax) = green_1(1:imax) * den%mt(1:imax,lh,n,ispin)
         integrand_2(1:imax) = green_2(1:imax) * den%mt(1:imax,lh,n,ispin)
+        IF (dosf .AND. l_dfptvgen) THEN
+           ! The outward integral is accumulated from the MT boundary inward: forming it as a difference
+           ! of integrals from the origin cancels catastrophically for high l.
+           call sfint(integrand_1(1:imax), atoms%rmsh(:,n), atoms%dx(n), imax, integral_1(1:imax))
+           call sfint_outward(integrand_2(1:imax), atoms%rmsh(:,n), atoms%dx(n), imax, integral_2(1:imax))
+           termsR = ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
+           vCoul%mt(1:imax,lh,n,ispin) = green_factor * ( green_1(1:imax) * ( termsR + integral_2(1:imax) ) + green_2(1:imax) * integral_1(1:imax) )
+           integrand_1(1:imax) = green_1(1:imax) * den%mtIm(1:imax,lh,n,ispin)
+           integrand_2(1:imax) = green_2(1:imax) * den%mtIm(1:imax,lh,n,ispin)
+           call sfint(integrand_1(1:imax), atoms%rmsh(:,n), atoms%dx(n), imax, integral_1(1:imax))
+           call sfint_outward(integrand_2(1:imax), atoms%rmsh(:,n), atoms%dx(n), imax, integral_2(1:imax))
+           termsR = ( AIMAG(vtl(lh,n)) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
+           vCoul%mtIm(1:imax,lh,n,ispin) = green_factor * ( green_1(1:imax) * ( termsR + integral_2(1:imax) ) + green_2(1:imax) * integral_1(1:imax) )
+           CYCLE
+        END IF
         if (.not.dosf) THEN
          call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
          call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
