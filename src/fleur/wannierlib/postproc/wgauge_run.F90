@@ -170,8 +170,8 @@ CONTAINS
       !> Rank 0 only, which is where the full U(k) lives and where every driver interpolates.
       !> ndom and not n_ops: what needs H(R) is the loop over domains below, which runs
       !> whether or not any quantity was asked for on them. An <interpolation> with a domain
-      !> and no <operator> used to reach wgauge_hgauge_domain with ham_r unallocated, and
-      !> that dummy is an assumed-shape array rather than an allocatable, so it was read
+      !> and no ki="T" operator used to reach wgauge_hgauge_domain with ham_r unallocated,
+      !> and that dummy is an assumed-shape array rather than an allocatable, so it was read
       !> before it existed. Asking for no operator is how a run says it wants the bands and
       !> nothing else, so it has to work.
       IF (irank == 0 .AND. ndom > 0) THEN
