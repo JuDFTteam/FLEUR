@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,7 +11,7 @@ module m_types_solver
    private
    ! This is the data-type all eigenvalue solvers supported by FLEUR should implement
    type, abstract:: t_solver
-      character(len=10):: name = "none"
+      character(len=16):: name = "none"
       logical :: available
       logical :: parallel
       logical :: serial

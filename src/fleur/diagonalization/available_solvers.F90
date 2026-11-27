@@ -6,7 +6,8 @@
 
 module m_available_solvers
    use m_types_solver
-   use m_lapack
+   use m_lapack_fast
+   use m_lapack_stable
    use m_writeout
    use m_dummy_diag
    use m_scalapack
@@ -19,7 +20,7 @@ module m_available_solvers
    use m_juDFT
    implicit none
    private
-   integer :: first_real_solver = 4, num_solvers = 11
+   integer :: first_real_solver = 4, num_solvers = 12
    public:: t_solver, parallel_solver_available, select_solver, print_solver, list_solvers
 
 contains
@@ -35,20 +36,22 @@ contains
       case (3)
          allocate (all_solvers, source=get_solver_debugout())
       case (4)
-         allocate (all_solvers, source=get_solver_lapack())
+         allocate (all_solvers, source=get_solver_lapack_stable())
       case (5)
-         allocate (all_solvers, source=get_solver_scalapack())
+         allocate (all_solvers, source=get_solver_lapack_fast())
       case (6)
-         allocate (all_solvers, source=get_solver_chase())
+         allocate (all_solvers, source=get_solver_scalapack())
       case (7)
-         allocate (all_solvers, source=get_solver_elsi())
+         allocate (all_solvers, source=get_solver_chase())
       case (8)
-         allocate (all_solvers, source=get_solver_magma())
+         allocate (all_solvers, source=get_solver_elsi())
       case (9)
-         allocate (all_solvers, source=get_solver_cuda())
+         allocate (all_solvers, source=get_solver_magma())
       case (10)
-         allocate (all_solvers, source=get_solver_elpa())
+         allocate (all_solvers, source=get_solver_cuda())
       case (11)
+         allocate (all_solvers, source=get_solver_elpa())
+      case (12)
          allocate (all_solvers, source=get_solver_nvlamath())
       case default
          call judft_bug("Illegal request for solver")
@@ -60,9 +63,13 @@ contains
       CLASS(t_solver), allocatable :: select_by_name
 
       integer:: i
+      character(len=:), allocatable :: name
+
+      name = trim(solver_name)
+      if (name == "lapack") name = "lapack_stable"  ! alias for the default LAPACK solver
       DO i = 1, num_solvers
          call assign_solver(i, select_by_name)
-         if (trim(solver_name) == trim(select_by_name%name)) return
+         if (name == trim(select_by_name%name)) return
       end do
       call judft_error("No Solver/transform could be selected:"//solver_name)
    end function
@@ -200,13 +207,13 @@ contains
 
    function print_solver(parallel)
       logical, intent(IN):: parallel
-      character(len=30):: print_solver
+      character(len=40):: print_solver
       class(t_solver), allocatable:: s, t
 
       call select_solver(parallel, diag_solver=s, diag_transform=t)
       print_solver = trim(s%name)
       if (s%use_sp) print_solver = trim(print_solver)//"-sp"
-      if (allocated(t)) print_solver = t%name//'+'//trim(print_solver)
+      if (allocated(t)) print_solver = trim(t%name)//'+'//trim(print_solver)
    end function
 
    subroutine list_solvers()
@@ -222,10 +229,10 @@ contains
       write (*, '(a)') "      '-diag NAME_TRANS+NAME_STD'"
       write (*, '(a)') ""
       write (*, '(a)') "List of solvers/transforms:"
-      write (*, '(a)') "   Name   available  serial  parallel  GEV  STD STD-SP  Transform  GPU: "
+      write (*, '(a)') "   Name         available  serial  parallel  GEV  STD STD-SP  Transform  GPU: "
       do i = 1, num_solvers
          call assign_solver(i, s)
-         write(*,'(a10,4x,l,7x,l,6x,l,6x,l,3x,l,2x,l,9x,l,6x,l)') s%name,s%available,s%serial,s%parallel,s%generalized,s%standard,s%single_precision,s%transform,s%gpu
+         write(*,'(a16,4x,l,7x,l,6x,l,6x,l,3x,l,2x,l,9x,l,6x,l)') s%name,s%available,s%serial,s%parallel,s%generalized,s%standard,s%single_precision,s%transform,s%gpu
       end do
       write (*, *)
    end subroutine

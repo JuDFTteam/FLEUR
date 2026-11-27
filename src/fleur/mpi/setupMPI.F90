@@ -30,7 +30,7 @@ CONTAINS
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
     REAL    :: matricesSize
     logical :: finished, l_real, l_noco
-    CHARACTER(len=30) :: solver_name
+    CHARACTER(len=40) :: solver_name
 
     TYPE(t_log_message) :: log
     
@@ -115,7 +115,7 @@ CONTAINS
        !error. Determine the name first, print it afterwards.
        if (fmpi%irank==0) THEN
           solver_name = print_solver(fmpi%n_size>1)
-          write(*,'(a,a12)') " Eigenvalue solver        : ", TRIM(solver_name)
+          write(*,'(a,a)') " Eigenvalue solver        : ", TRIM(solver_name)
        END IF
 
        ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))

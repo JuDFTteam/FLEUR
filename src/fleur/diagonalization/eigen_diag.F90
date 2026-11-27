@@ -12,7 +12,6 @@ module m_eigen_diag
    use m_types_mpimat
    use m_types_mat
    use m_types_solver
-   use m_lapack
 #ifdef CPP_MPI
    use mpi
 #endif

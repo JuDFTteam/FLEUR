@@ -1,7 +1,8 @@
 set(diag_files ${fleur_F90}
 src/fleur/diagonalization/types_solver.f90
 src/fleur/diagonalization/eigen_diag.F90
-src/fleur/diagonalization/lapack.F90
+src/fleur/diagonalization/lapack_fast.F90
+src/fleur/diagonalization/lapack_stable.F90
 src/fleur/diagonalization/dummy_diag.F90
 src/fleur/diagonalization/magma.F90
 src/fleur/diagonalization/scalapack.F90
