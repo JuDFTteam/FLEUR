@@ -28,6 +28,7 @@ MODULE m_gf_init
    USE m_gf_iotmat, ONLY: init_tmat_storage
    USE m_gf_embedding, ONLY: gf_checkemb
    USE m_gf_embtransform, ONLY: gf_embtransform
+   USE m_gf_iodop, ONLY: gf_iodop_readvacemb
    USE m_gaunt, ONLY: gaunt_init
    USE m_xmlOutput
 #ifdef CPP_HDF
@@ -48,7 +49,9 @@ CONTAINS
 
       INTEGER :: i, outxmlFileID, ierr, nl
       LOGICAL :: l_tmatmemory, l_exist
-      REAL    :: zplanes(2), c
+      REAL    :: zplanes(2), c, vref, delz
+      LOGICAL :: l_vref
+      REAL, ALLOCATABLE :: vz(:, :)
       CHARACTER(len=100) :: filename_add, xml_add
 
 #ifdef CPP_MPI
@@ -166,11 +169,25 @@ CONTAINS
       END DO
       CALL timestop("Setup of step-functions")
 
+      !energy reference of the run: the potential at the end of the vacuum of
+      !the upper (or, with vacleft only, the lower) side
+      l_vref = .FALSE.
+      vref = 0.0
+      IF (embinp%l_surface .OR. embinp%l_vacleft) THEN
+         IF (embinp%l_simplevacuum) THEN
+            l_vref = .TRUE.
+            vref = embinp%vacuum_energy
+         ELSE IF (gf_iodop_readvacemb(MERGE(2, 1, embinp%l_surface), delz, vz)) THEN
+            l_vref = .TRUE.
+            vref = SUM(vz(SIZE(vz, 1), 1:MIN(2, SIZE(vz, 2))))/MIN(2, SIZE(vz, 2))
+         END IF
+      END IF
+
       !substrate embedding potential mapped to the cell of layer 1
       INQUIRE (FILE="incomm_inp", EXIST=l_exist)
       IF (l_exist) THEN
          CALL timestart("incomm transform")
-         CALL gf_embtransform(gmpi, ld(1), gkpts)
+         CALL gf_embtransform(gmpi, ld(1), gkpts, l_vref, vref)
          CALL timestop("incomm transform")
       END IF
 
@@ -188,9 +205,15 @@ CONTAINS
 
       !open the 2D-matrix store (embedding potentials, G, T)
       CALL timestart("init io2dmat")
-      CALL io2dmat_init(gkpts, embinp, ld(1)%lapw_gf, ld(1)%fi%sym, layers, &
-                        ld(1)%fi%input%jspins, ld(1)%fi%noco%l_noco, gmpi, l_tmatmemory, &
-                        cell=ld(1)%fi%cell, l_soc=ld(1)%fi%noco%l_soc, zplanes=zplanes)
+      IF (l_vref) THEN
+         CALL io2dmat_init(gkpts, embinp, ld(1)%lapw_gf, ld(1)%fi%sym, layers, &
+                           ld(1)%fi%input%jspins, ld(1)%fi%noco%l_noco, gmpi, l_tmatmemory, &
+                           cell=ld(1)%fi%cell, l_soc=ld(1)%fi%noco%l_soc, zplanes=zplanes, vref=vref)
+      ELSE
+         CALL io2dmat_init(gkpts, embinp, ld(1)%lapw_gf, ld(1)%fi%sym, layers, &
+                           ld(1)%fi%input%jspins, ld(1)%fi%noco%l_noco, gmpi, l_tmatmemory, &
+                           cell=ld(1)%fi%cell, l_soc=ld(1)%fi%noco%l_soc, zplanes=zplanes)
+      END IF
       CALL timestop("init io2dmat")
       IF (l_tmatmemory) THEN
          CALL init_tmat_storage(ld(1)%fi%noco%l_noco, gf_noen(), layers%num_layers, &

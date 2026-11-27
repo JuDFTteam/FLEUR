@@ -269,6 +269,17 @@ plane:
   the plane below layer 1, seen from above (`Sigma_up` of the ad-layer
   region). `writeup` needs `gmat=t`.
 
+A write handle at a plane between two layers (`region=r, side=1` with
+`2 <= r <= nlayers`, or `side=2` with `r < nlayers`) is also read by the stack,
+`rw='w'` is turned into `'b'`. Every write handle `region=r, side=1`
+(`r >= 2`) also gets the Coulomb boundary data of layer `r-1`: the group
+`Boundary` with its pseudo charge and its Coulomb potential at the upper plane
+(serial runs with `gf_cdn.hdf`). A stack on top of this plane then runs in the
+charge mode with the file as its left embedding potential
+(`test_surface_split_at_a_plane`: the two top layers of a converged Cu(001)
+surface, self-consistent on the potential of the lead and the layers below,
+reproduce the muffin-tin charges of the full stack).
+
 Conventions, checked on a free Cu(001) film (`test_writeup_film`):
 
 * Both sides use the outward normal of the region they embed, so at a common
@@ -287,9 +298,12 @@ Conventions, checked on a free Cu(001) film (`test_writeup_film`):
   data: always without SOC, with SOC if the k-set was reduced with it), `amat2d` (cartesian in-plane lattice vectors as columns,
   a.u.), `rkmax` (the 2D basis is `|k+G| <= rkmax`) and, for the outer planes,
   `zplane` (distance from the plane to the outermost atom plane of the region
-  behind it). Files written before these attributes existed lack them.
+  behind it) and, for runs with vacuum embedding, `vref` (the planar-averaged
+  potential at the end of the vacuum, about the vacuum level, in the energy
+  scale of the file). Files written before these attributes existed lack them.
 * The energy zero is the one of the layer inputs. Substrate and ad-layer must
-  share it (`gfprep vshift`, see "Charge mode").
+  share it (`gfprep vshift`, see "Charge mode"). With `vref` in both runs the
+  transformation prints both and a note if they differ by more than 1 mHtr.
 
 ## Ad-layers with another lattice (`incomm_inp`)
 
@@ -346,8 +360,10 @@ that is not a mesh (`write_ksub`) only exact lookups are done.
      `region=0, side=2` (`upfile`);
    * `incomm_inp` with `order='2'`, `'3'` or `'full'` and `upfile`.
 5. Self-consistency: charge iterations of the ad-layer with the transformed
-   potential; `Sigma_up` changes slowly, repeat step 4 every few cycles until
-   the DOS and the charge change less than the tolerance.
+   potential (the substrate run of step 1 writes the Coulomb boundary data,
+   the transformation keeps their star `G=0`); `Sigma_up` changes slowly,
+   repeat step 4 every few cycles until the DOS and the charge change less
+   than the tolerance.
 
 ### `&INCOMM` in `incomm_inp`
 
@@ -517,6 +533,8 @@ these kernels.
 
 * Charge mode with a vacuum on the left (free film, `vacleft=t`), and a self-consistent
   vacuum (potential and charge beyond the last plane are frozen).
+* Charge mode of a surface stack with a single layer: the Coulomb setup fails
+  (`mat_lineq failed`); use at least two layers.
 * Noco: spin spirals; the `charge` mode only reliably for moments along z.
 * MPI: the CBS (lead embedding potentials) and the vacuum embedding are serial; a free film is not supported.
 * Second-variation SOC (`l_soc="T"` with `l_noco="F"`).

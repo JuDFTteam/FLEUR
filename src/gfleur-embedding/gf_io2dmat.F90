@@ -102,18 +102,24 @@
         !(region 0 side 2: layer 1, region nl+1 side 1: layer nl), <0 unknown
         REAL    :: zplane(2) = -1.0
         INTEGER :: nlayers = 0
+        !energy reference: planar-averaged potential at the end of the vacuum
+        !of the run (vacuum embedding), in the energy scale of the file
+        LOGICAL :: l_vref = .FALSE.
+        REAL    :: vref = 0.0
       END TYPE
       TYPE(t_io2dmeta),SAVE :: meta
+      !number of handles from gf_io (the automatic handles follow)
+      INTEGER,SAVE :: nuser_handles = 0
       PUBLIC :: t_io2dmeta
 
       PUBLIC init,finalize,gf_write2dmat,gf_read2dmat,gf_io2dmatFID     &
      &     ,gf_io2dmatshift,gf_io2dstatus,gf_io2dmat_memorysync         &
-     &     ,gf_io2dmat_create,gf_io2dmat_kmesh
+     &     ,gf_io2dmat_create,gf_io2dmat_kmesh,gf_io2dmat_userwrite
       CONTAINS 
                                                                         
       !<-- S: init                                                      
       SUBROUTINE init(kpts,gfinp,lapw_gf,sym,layers,jspins,l_noco,gmpi    &
-     &     ,l_tmatmemory,cell,l_soc,zplanes)
+     &     ,l_tmatmemory,cell,l_soc,zplanes,vref)
 !-----------------------------------------------
 !
 !           (last modified: 2004-00-00) D. Wortmann
@@ -133,6 +139,7 @@
       TYPE(t_cell),INTENT(IN),OPTIONAL :: cell
       LOGICAL,INTENT(IN),OPTIONAL      :: l_soc
       REAL,INTENT(IN),OPTIONAL         :: zplanes(2)
+      REAL,INTENT(IN),OPTIONAL         :: vref
                                                                         
       !>                                                                
       !<-- Locals                                                       
@@ -172,6 +179,8 @@
       !gfprep reduces the k-set with time reversal unless SOC is on
       meta%l_timerev = .NOT. meta%l_soc
       IF (PRESENT(zplanes)) meta%zplane = zplanes
+      meta%l_vref = PRESENT(vref)
+      IF (PRESENT(vref)) meta%vref = vref
       meta%nlayers = layers%num_layers
       INQUIRE(FILE ='gf_io',EXIST = lexist)
 
@@ -273,6 +282,18 @@
       ENDDO 
                                                                         
       !>
+      nuser_handles = iohandles
+      !a plane between two layers is also read by the stack: a write handle
+      !there becomes read/write
+      DO i = 1,iohandles
+         IF (iohandle(i)%mode/=IO2D_EMB.OR.iohandle(i)%rw/=IO2D_WRITE) CYCLE
+         IF ((iohandle(i)%side==1.AND.iohandle(i)%region>=2.AND.iohandle(i)%region<=layers%num_layers).OR. &
+     &       (iohandle(i)%side==2.AND.iohandle(i)%region>=1.AND.iohandle(i)%region<layers%num_layers)) THEN
+            iohandle(i)%rw = IO2D_READWRITE
+            IF (gmpi%pe0) WRITE(oUnit,"(a,i0,a,i0,a)") "gf_io: handle of region ",iohandle(i)%region, &
+     &           ", side ",iohandle(i)%side," is between two layers and is used for reading as well"
+         ENDIF
+      ENDDO
       !check for required io-handles
       if (gfinp%l_writeup) THEN
          if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw/=IO2D_READ.and.iohandle%region==0.and.iohandle%side==2)/=1) &
@@ -1423,7 +1444,22 @@
       CALL io_WRITE_att(did,"amat2d",fmeta%amat2d)
       CALL io_WRITE_att(did,"rkmax",fmeta%rkmax)
       IF (fmeta%zplane(1)>=0.0) CALL io_WRITE_att(did,"zplane",fmeta%zplane(1))
+      IF (fmeta%l_vref) CALL io_WRITE_att(did,"vref",fmeta%vref)
       END SUBROUTINE priv_write_cellmeta
+
+      !<-- F: gf_io2dmat_userwrite
+      LOGICAL FUNCTION gf_io2dmat_userwrite(mode,region,side)
+!-----------------------------------------------
+!  is there a write handle of gf_io for this matrix (not one of the
+!  automatic handles of the temporary files)
+!-----------------------------------------------
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: mode,region,side
+      gf_io2dmat_userwrite = .FALSE.
+      IF (.NOT.ALLOCATED(iohandle)) RETURN
+      gf_io2dmat_userwrite = ANY(iohandle(:nuser_handles)%mode==mode.AND.iohandle(:nuser_handles)%region==region &
+     &     .AND.iohandle(:nuser_handles)%side==side.AND.iohandle(:nuser_handles)%rw/=IO2D_READ)
+      END FUNCTION gf_io2dmat_userwrite
 
       !<-- F: priv_trneeded
       LOGICAL FUNCTION priv_trneeded(bk,sym)

@@ -27,7 +27,7 @@ MODULE m_gfleur_driver
    USE m_gf_vgen, ONLY: gf_vgen
    USE m_gf_makepseudocharge, ONLY: gf_makepseudocharge
    USE m_gf_intcoul, ONLY: gf_makeintcoulpot
-   USE m_gf_boundaryembpot, ONLY: gf_boundaryembpot
+   USE m_gf_boundaryembpot, ONLY: gf_boundaryembpot, gf_boundaryplanes
    USE m_gf_apws, ONLY: gf_apws
    USE m_gf_PhaseMatrix, ONLY: initPhaseMatrix
    USE m_gf_curvy2dprojector, ONLY: gf_curvy2dealloc
@@ -45,7 +45,7 @@ MODULE m_gfleur_driver
    USE m_gf_vacuum, ONLY: gf_vacemb_init
    USE m_gf_CBS, ONLY: outCBS_openfile, outCBS_closefile
    USE m_gf_energies, ONLY: gf_noen
-   USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize, gf_io2dmatFID, IO2D_EMB, IO2D_WRITE
+   USE m_gf_io2dmat, ONLY: io2dmat_finalize => finalize, gf_io2dmatFID, IO2D_EMB, IO2D_WRITE, gf_io2dmat_userwrite
    USE m_gf_writetrans, ONLY: gf_writetrans_hdfclose
    USE m_assign_enpara_potential, ONLY: assign_enpara_potential
    IMPLICIT NONE
@@ -105,7 +105,7 @@ CONTAINS
       INTEGER :: it, jspin, nspins, nk, nk_loop, layer, layer_loop, i
       INTEGER :: nl, neigd, ierr
       INTEGER :: chargelayers
-      LOGICAL :: l_exist_cdn, l_writetop
+      LOGICAL :: l_exist_cdn, l_writetop, l_writeplanes
       COMPLEX :: pot_aux(2, 3)
       REAL    :: vac_pot
       REAL, ALLOCATABLE :: qtot_el(:), qtot_nuc(:)
@@ -163,6 +163,10 @@ CONTAINS
       !the embedding potential of the stack at the top plane of a surface is written
       l_writetop = .FALSE.
       IF (embinp%l_surface) l_writetop = (gf_io2dmatFID(IO2D_EMB, nl + 1, 1, IO2D_WRITE) > 0)
+      !potentials written at planes above a layer get its Coulomb boundary data
+      l_writeplanes = ANY([(gf_io2dmat_userwrite(IO2D_EMB, i, 1), i=2, nl + 1)])
+      IF (l_writeplanes .AND. gmpi%fmpi%isize > 1 .AND. gmpi%pe0) WRITE (oUnit, "(a)") &
+         "NOTE: the Coulomb boundary data at the written planes are only written in serial runs"
 
       IF (embinp%l_charge) ALLOCATE (qtot_el(0:nl), qtot_nuc(0:nl))
 
@@ -178,7 +182,7 @@ CONTAINS
          END IF
 
          !<-- pseudo charge + layered interstitial Coulomb potential
-         IF ((embinp%l_charge .OR. embinp%l_CBS) .AND. l_exist_cdn) THEN
+         IF ((embinp%l_charge .OR. embinp%l_CBS .OR. l_writeplanes) .AND. l_exist_cdn) THEN
             CALL timestart("gf_makepseudocharge")
             DO layer_loop = 1, gmpi%kl_LayerperPE
                layer = gmpi%kl_layers(layer_loop)
@@ -211,6 +215,13 @@ CONTAINS
 #endif
          END IF
          !>
+
+         !<-- Coulomb boundary data at the written planes: the Coulomb potential in
+         !gf_pot.hdf is the one of this iteration until gf_vgen replaces the file
+         IF (l_writeplanes .AND. l_exist_cdn .AND. gmpi%fmpi%isize == 1) THEN
+            CALL priv_gather(ld, layers, atoms=atoms, stars=stars, cell=cell)
+            CALL gf_boundaryplanes(layers, stars, cell, atoms)
+         END IF
 
          !<-- Potential generation + energy-parameter / local Hamiltonian update
          IF (embinp%l_gmat) THEN

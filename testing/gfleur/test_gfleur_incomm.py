@@ -440,6 +440,8 @@ def test_writeup_film(film, planes_per_layer):
     # metadata: the planes lie 2 a.u. from the outer atom planes
     assert abs(up["attrs"]["zplane"][0] - top["attrs"]["zplane"][0]) < 1e-8
     assert up["attrs"]["zplane"][0] > 0.0
+    # energy reference: the potential at the end of the vacuum, close to the vacuum level 0 of FLEUR films
+    assert abs(up["attrs"]["vref"][0]) < 1e-2 and up["attrs"]["vref"][0] == top["attrs"]["vref"][0]
 
 
 def _film_sigup(gfprep, gfleur, base, name, kopts):

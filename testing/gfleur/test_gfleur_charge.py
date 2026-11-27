@@ -470,3 +470,49 @@ def test_charge_mpi_equals_serial(env):
     assert _neutrality(out["par"]) == pytest.approx(_neutrality(out["ser"]), abs=1e-6)
     assert _distances(out["par"]) == pytest.approx(_distances(out["ser"]), rel=1e-6)
     assert _mt_total(out["par"]) == pytest.approx(_mt_total(out["ser"]), abs=1e-6)
+
+
+def test_surface_split_at_a_plane(env, surf):
+    """The converged surface stack writes the embedding potential and the Coulomb boundary data
+    of the lead and the layers 1-2 at the plane below layer 3 (write handle region=3, side=1).
+    The two top layers alone, self-consistent on this substrate, reproduce the layers 3 and 4
+    of the stack. (A single layer on top cannot be used: the Coulomb setup of a one-layer
+    surface stack fails in the charge mode.)"""
+    film, prep, cbs = surf
+    run = env.base / "split_stack"
+    run.mkdir()
+    _layer_files(prep, run)
+    shutil.copy(cbs / "embpot11.hdf", run / "embpot11.hdf")
+    shutil.copy(prep / "gf_en.charge", run / "gf_en")
+    (run / "gf_io").write_text("2\n&IO mode='E', region=1, side=1, rw='r', id=1 /\n"
+                               "&IO mode='E', region=3, side=1, rw='w', id=2 /\n"
+                               "&FILE name='embpot11' /\n&FILE name='sigsub' /\n")
+    (run / "gf_inp").write_text(_layers_block(prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
+                                f"&BASIS napw={NAPW} /\n&EMB addemb=T, surface=T, vacleft=F /\n"
+                                f"&SC iter={SURF_ITER}, {SURF_MIX} /\n")
+    proc, log = _run_gf(env.gfleur, run, mpi=False)
+    assert proc.returncode == 0, f"stack run failed\n{log[-3000:]}"
+    out = (run / "out").read_text()
+    assert "Coulomb boundary data of layer 2 written at the plane of region 3" in out
+    stack_top = re.findall(r"\n\s+\d --> 1\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)", out)[-2:]
+
+    top_prep = env.base / "split_top_prep"
+    _gfprep(env.gfprep, top_prep, film, "planes_per_layer=1 first_plane=6 zmirror=f")
+    top = env.base / "split_top"
+    top.mkdir()
+    _layer_files(top_prep, top)
+    shutil.copy(run / "sigsub.hdf", top / "embpot11.hdf")
+    shutil.copy(prep / "gf_en.charge", top / "gf_en")
+    (top / "gf_io").write_text("default\n")
+    (top / "gf_inp").write_text(_layers_block(top_prep) + "&MODE tmat=t, gmat=t, charge=t /\n"
+                                f"&BASIS napw={NAPW} /\n&EMB addemb=T, surface=T, vacleft=F /\n"
+                                f"&SC iter={SURF_ITER}, {SURF_MIX} /\n")
+    proc, log = _run_gf(env.gfleur, top, mpi=False)
+    assert proc.returncode == 0, f"top-layer run failed\n{log[-3000:]}"
+    out_top = (top / "out").read_text()
+    dist = _distances(out_top)
+    assert dist[-1] < dist[0] / 20
+    top_layers = re.findall(r"\n\s+\d --> 1\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)", out_top)[-2:]
+    for lt, ls in zip(top_layers, stack_top):
+        for a, b in zip(lt, ls):
+            assert float(a) == pytest.approx(float(b), abs=0.01)

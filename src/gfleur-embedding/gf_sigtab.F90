@@ -40,9 +40,9 @@ MODULE m_gf_sigtab
       INTEGER              :: nsym = 0
       INTEGER, ALLOCATABLE :: symop(:, :, :)
       REAL, ALLOCATABLE    :: symtau(:, :)
-      LOGICAL :: l_amat = .FALSE., l_rkmax = .FALSE., l_zplane = .FALSE., l_symtau = .FALSE.
+      LOGICAL :: l_amat = .FALSE., l_rkmax = .FALSE., l_zplane = .FALSE., l_symtau = .FALSE., l_vref = .FALSE.
       LOGICAL :: l_timerev = .FALSE., l_noco = .FALSE., l_soc = .FALSE.
-      REAL    :: amat2d(2, 2) = 0.0, rkmax = 0.0, zplane = -1.0
+      REAL    :: amat2d(2, 2) = 0.0, rkmax = 0.0, zplane = -1.0, vref = 0.0
    CONTAINS
       PROCEDURE :: open => embfile_open
       PROCEDURE :: read => embfile_read
@@ -169,6 +169,8 @@ CONTAINS
       IF (f%l_rkmax) CALL io_read_att(did, "rkmax", f%rkmax)
       f%l_zplane = io_attexists(did, "zplane")
       IF (f%l_zplane) CALL io_read_att(did, "zplane", f%zplane)
+      f%l_vref = io_attexists(did, "vref")
+      IF (f%l_vref) CALL io_read_att(did, "vref", f%vref)
       IF (io_attexists(did, "l_timerev")) CALL io_read_att(did, "l_timerev", f%l_timerev)
       IF (io_attexists(did, "l_noco")) CALL io_read_att(did, "l_noco", f%l_noco)
       IF (io_attexists(did, "l_soc")) CALL io_read_att(did, "l_soc", f%l_soc)

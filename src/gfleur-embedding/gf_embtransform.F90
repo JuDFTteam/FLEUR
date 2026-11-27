@@ -55,18 +55,21 @@ MODULE m_gf_embtransform
 
 CONTAINS
 
-   SUBROUTINE gf_embtransform(gmpi, ld, gkpts)
-      !ld: the ad-layer region (layer 1), its lower plane is S
+   SUBROUTINE gf_embtransform(gmpi, ld, gkpts, l_vref, vref)
+      !ld: the ad-layer region (layer 1), its lower plane is S; vref: energy
+      !reference of this run (potential at the end of its vacuum), if known
       TYPE(t_gfmpi), INTENT(IN)   :: gmpi
       TYPE(t_gflayer), INTENT(IN) :: ld
       TYPE(t_kpts), INTENT(IN)    :: gkpts
+      LOGICAL, INTENT(IN)         :: l_vref
+      REAL, INTENT(IN)            :: vref
 
       TYPE(t_incomm) :: inp
       INTEGER :: ierr
 
       CALL priv_read_input(inp)
       CALL gf_out_newheader("Substrate embedding potential for the ad-layer cell (incomm_inp)")
-      IF (gmpi%pe0) CALL priv_run(inp, ld, gkpts)
+      IF (gmpi%pe0) CALL priv_run(inp, ld, gkpts, l_vref, vref)
 #ifdef CPP_MPI
       CALL MPI_BARRIER(gmpi%fmpi%mpi_comm, ierr)
 #endif
@@ -143,10 +146,12 @@ CONTAINS
                           calledby="gf_embtransform")
    END SUBROUTINE priv_read_input
 
-   SUBROUTINE priv_run(inp, ld, gkpts)
+   SUBROUTINE priv_run(inp, ld, gkpts, l_vref, vref)
       TYPE(t_incomm), INTENT(IN)  :: inp
       TYPE(t_gflayer), INTENT(IN) :: ld
       TYPE(t_kpts), INTENT(IN)    :: gkpts
+      LOGICAL, INTENT(IN)         :: l_vref
+      REAL, INTENT(IN)            :: vref
 
       TYPE(t_embfile)  :: f, up
       TYPE(t_sigtab)   :: tab
@@ -190,6 +195,15 @@ CONTAINS
       WRITE (oUnit, "(a,f10.4,a,2f10.4)") "rotation theta (deg):", inp%theta, "  lateral shift (a.u.):", inp%shift
       WRITE (oUnit, "(a,4f12.6)") "M (f_sub = f_ad M):                ", geo%m
       IF (f%l_zplane) WRITE (oUnit, "(a,f10.4)") "substrate: distance plane - top atom plane (a.u.):", f%zplane
+      !energy zero: the substrate and the ad-layer must use the same one
+      IF (f%l_vref .AND. l_vref) THEN
+         WRITE (oUnit, "(a,f10.5,a,f10.5)") "energy reference (vacuum potential, Htr): substrate", f%vref, &
+            "  ad-layer", vref
+         IF (ABS(f%vref - vref) > 1.0E-3) CALL priv_note("NOTE: the energy zeros of the substrate and the ad-layer differ, "// &
+                                                         "check vshift of gfprep")
+      ELSE
+         WRITE (oUnit, "(a)") "energy reference: not available in both runs (no vacuum embedding)"
+      END IF
       IF (f%l_rkmax) THEN
          WRITE (oUnit, "(a,f10.4,a,f10.4)") "Kmax substrate:", f%rkmax, "  ad-layer:", geo%rk
       ELSE
@@ -276,6 +290,8 @@ CONTAINS
       fmeta%l_timerev = .NOT. fmeta%l_soc
       fmeta%zplane = -1.0
       IF (f%l_zplane) fmeta%zplane(1) = f%zplane
+      fmeta%l_vref = f%l_vref
+      fmeta%vref = f%vref
       CALL gf_io2dmat_create(TRIM(inp%outfile), ld%lapw_gf, gkpts, ld%fi%sym, jsp_out, gkpts%nkpt, ng, &
                              fmeta, fid, varid, l_serial=.TRUE.)
       ALLOCATE (a(ng, ng, 2), hl(ng))

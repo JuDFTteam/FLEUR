@@ -4,7 +4,16 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_boundaryembpot 
+      USE m_gf_types
+      USE m_gf_iodop
+      USE m_gf_embdesc
+      USE m_constants
+      USE m_hdf_tools
+      USE hdf5
+      USE m_gf_io2dmat
           IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: gf_boundaryembpot, gf_boundaryplanes
 !-----------------------------------------------                        
 ! DESC:Save boundary value of Coulomb potential and pseudo charge to emb
 !                 Daniel Wortmann, (08-07-10)                           
@@ -17,9 +26,6 @@
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_iodop 
-      USE m_constants 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       TYPE(t_layers),INTENT(IN) :: layers 
@@ -37,6 +43,7 @@
       INTEGER             :: n2 
       REAL                :: dp(2),kg(2) 
       COMPLEX,ALLOCATABLE :: phase(:) 
+      INTEGER(HID_T)      :: fid
       !>                                                                
                                                                         
       DO side = 1,2 
@@ -58,7 +65,12 @@
             psq(:,n2) =psq(:,n2)*phase(n2) 
          ENDDO 
          !>                                                             
-         CALL priv_savepseudo(side,layers,atoms(layer),cell(layer),                &
+         IF (side == 1) THEN
+            fid = gf_io2dmatFID(IO2D_EMB,1,1,IO2D_WRITE)
+         ELSE
+            fid = gf_io2dmatFID(IO2D_EMB,layers%num_layers,2,IO2D_WRITE)
+         ENDIF
+         CALL priv_savepseudo(fid,layer,layers,atoms(layer),cell(layer),       &
      &        MERGE(layers%c(layer),cell(layer)%amat(3,3),layers%c(layer)>0.0),      &
      &        dp,psq)
          !read coulomb-pot                                              
@@ -68,7 +80,7 @@
          CALL priv_calcboundary(side,layer,layers,stars(layer),vpw,pos  &
      &        ,vb)                                                      
          !vb = vb*phase
-         CALL priv_saveboundary(side,layer,layers,vb,pos) 
+         CALL priv_saveboundary(fid,vb,pos) 
          DEALLOCATE(vb,vpw,phase) 
       ENDDO 
       END SUBROUTINE 
@@ -80,9 +92,6 @@
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_gf_embdesc 
-      USE m_constants 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)        :: layer,side 
@@ -143,33 +152,22 @@
       !>                                                                
                                                                         
       !<-- S:priv_saveboundary(side,layer,layers,vb,pos)                
-      SUBROUTINE priv_saveboundary(side,layer,layers,vb,pos) 
+      SUBROUTINE priv_saveboundary(fid,vb,pos) 
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
 !-----------------------------------------------                        
-      USE m_gf_types 
-      USE m_hdf_tools 
-      USE hdf5 
-      USE m_gf_io2dmat 
       IMPLICIT NONE 
       !<--Arguments                                                     
-      INTEGER,INTENT(IN)        :: layer,side 
-      TYPE(t_layers),INTENT(IN) :: layers 
+      INTEGER(HID_T),INTENT(IN) :: fid
       COMPLEX,INTENT(IN)        :: vb(:) 
       REAL   ,INTENT(IN)        :: pos 
                                                                         
       !>                                                                
       !<-- Locals                                                       
       INTEGER             :: hdferr 
-      INTEGER(HID_T)      :: fid,gid 
+      INTEGER(HID_T)      :: gid 
       !>                                                                
-      IF (side == 1) THEN 
-         fid   = gf_io2dmatFID(IO2D_EMB,1,1,IO2D_WRITE) 
-      ELSE 
-         fid = gf_io2dmatFID(IO2D_EMB                                   &
-     &        ,layers%num_layers,2,IO2D_WRITE)                          
-      ENDIF 
       IF (fid ==-1) RETURN 
                                                                         
       CALL io_gopen(fid,"Boundary",gid,hdferr) 
@@ -183,18 +181,15 @@
       !>                                                                
                                                                         
       !<-- S:priv_savepseudo(side,layers,psq)                           
-      SUBROUTINE priv_savepseudo(side,layers,atoms,cell,c_layer,dp,psq)
+      SUBROUTINE priv_savepseudo(fid,layer,layers,atoms,cell,c_layer,dp,psq)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
 !-----------------------------------------------                        
-      USE M_hdf_tools 
-      USE hdf5 
-      USE m_gf_io2dmat 
-      USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
-      INTEGER,INTENT(IN)        :: side 
+      INTEGER(HID_T),INTENT(IN) :: fid
+      INTEGER,INTENT(IN)        :: layer
       TYPE(t_layers),INTENT(IN) :: layers
       type(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -205,24 +200,17 @@
                                                                         
       !>                                                                
       !<-- Locals                                                       
-      INTEGER(HID_T)      :: fid,gid,did 
-      INTEGER             :: hdferr,layer 
+      INTEGER(HID_T)      :: gid,did 
+      INTEGER             :: hdferr 
       REAL                :: atpos(3,atoms%nat)
       REAL                :: rmt(atoms%nat)
       INTEGER             :: n,nn,na,natoms
                                                                         
       !>                                                                
                                                                         
-      IF (side == 1) THEN 
-         fid   = gf_io2dmatFID(IO2D_EMB,1,1,IO2D_WRITE) 
-         layer=1 
-      ELSE 
-         fid = gf_io2dmatFID(IO2D_EMB,layers%num_layers,2,IO2D_WRITE) 
-         layer=layers%num_layers 
-      ENDIF 
-                                                                        
       IF (fid ==-1) RETURN 
-                                                                        
+      !rewritten in every iteration of the charge mode
+      IF (io_groupexists(fid,"Boundary")) CALL io_gdelete(fid,"Boundary",hdferr)
       CALL io_gcreate(fid,"Boundary",gid,hdferr) 
       CALL io_createvar(gid,"pseudo", H5T_NATIVE_DOUBLE,(/2,SIZE(psq,1) &
      &     ,SIZE(psq,2)/),did)                                          
@@ -261,4 +249,39 @@
       END SUBROUTINE 
       !>                                                                
                                                                         
+      !<-- S:gf_boundaryplanes(layers,stars,cell,atoms)
+      SUBROUTINE gf_boundaryplanes(layers,stars,cell,atoms)
+!-----------------------------------------------
+!  Coulomb boundary data at the upper plane of layer r-1 for every user
+!  write handle of an embedding potential at region r, side 1 (r>=2): the
+!  pseudo charge of layer r-1 and its Coulomb potential at z=+c/2. A stack
+!  on top of this plane reads them in the charge mode.
+!-----------------------------------------------
+      IMPLICIT NONE
+      TYPE(t_layers),INTENT(IN) :: layers
+      TYPE(t_stars),INTENT(IN)  :: stars(:)
+      TYPE(t_cell),INTENT(IN)   :: cell(:)
+      TYPE(t_atoms),INTENT(IN)  :: atoms(:)
+      COMPLEX,ALLOCATABLE :: vb(:),vpw(:),psq(:,:)
+      INTEGER(HID_T)      :: fid
+      INTEGER             :: r,layer
+      REAL                :: pos
+      DO r = 2,layers%num_layers+1
+         IF (.NOT.gf_io2dmat_userwrite(IO2D_EMB,r,1)) CYCLE
+         fid = gf_io2dmatFID(IO2D_EMB,r,1,IO2D_WRITE)
+         IF (fid<0) CYCLE
+         layer = r-1
+         CALL gf_iodop_readpseudo(layer,psq)
+         CALL priv_savepseudo(fid,layer,layers,atoms(layer),cell(layer),      &
+     &        MERGE(layers%c(layer),cell(layer)%amat(3,3),layers%c(layer)>0.0),(/0.0,0.0/),psq)
+         ALLOCATE(vpw(stars(layer)%ng3),vb(stars(layer)%ng2))
+         CALL gf_lodcoul(GF_POTFILE,layer,vpw = vpw(:))
+         !the potential at the upper plane z=+c/2 of the layer
+         CALL priv_calcboundary(2,layer,layers,stars(layer),vpw,pos,vb)
+         CALL priv_saveboundary(fid,vb,pos)
+         DEALLOCATE(vpw,vb)
+         WRITE(oUnit,"(a,i0,a,i0)") "Coulomb boundary data of layer ",layer," written at the plane of region ",r
+      ENDDO
+      END SUBROUTINE gf_boundaryplanes
+
       END                                           
