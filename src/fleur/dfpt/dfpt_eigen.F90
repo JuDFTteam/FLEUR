@@ -42,7 +42,7 @@ MODULE m_dfpt_eigen
 
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: dfpt_eigen
+   PUBLIC :: dfpt_eigen, real_to_cmplx
 
 CONTAINS
 
