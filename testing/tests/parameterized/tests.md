@@ -19,7 +19,7 @@ Testset: Basic
 | +   | Bulk Cu one iteration,ELPA                   | basic/CuBulk             | mpi,elpa              | Test for ELPA      | -diag,elpa      | 2   |
 | +   | Bulk Cu one iteration,ScaLapack              | basic/CuBulk             | mpi                   | Test for ELPA      | -diag,scalapack | 2   |
 | +   | Bulk Cu one iteration,Chase                  | basic/CuBulk             | mpi,chase             | Test for ELPA      | -diag,chase     | 2   |
-| +   | Bulk Cu one iteration,LAPACK fast            | basic/CuBulk             | bulk                  |                    | -diag,lapack_fast | 2   |
+| +   | Bulk Cu one iteration,LAPACK fast            | basic/CuBulk             | bulk                  |                    | -diag,lapack_fast | 1   |
 | +   | Bulk Cu one iteration                        | basic/CuBulk             | fast,bulk             |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS                    | basic/CuDOS              | fast,bulk,dos         |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS,Orbital decomp.    | basic/CuOrb              | fast,bulk,dos,orbcomp |                    |                 | 2   |
