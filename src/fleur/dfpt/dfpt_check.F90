@@ -7,7 +7,7 @@ MODULE m_dfpt_check
 
    USE m_types_fleurinput
    USE m_types_xcpot_libxc
-   USE m_juDFT_stop, ONLY: juDFT_error, juDFT_warn
+   USE m_juDFT_stop, ONLY: juDFT_error
    USE m_types_xcpot
 IMPLICIT NONE
    PRIVATE
@@ -38,11 +38,6 @@ CONTAINS
         ! compiled with libxc ? 
 #ifndef CPP_LIBXC
       CALL judft_error("You compiled Fleur without libxc but want to use DFPT. Please fix that.",calledby="dfpt_check.F90")
-#endif
-
-#ifdef _OPENACC
-        CALL judft_warn("DFPT has not been validated on GPUs (OpenACC build).", &
-                        hint="Run with -warn_only to use it anyway.", calledby="dfpt_check.F90")
 #endif
 
         !is libxc?
