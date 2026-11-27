@@ -3774,7 +3774,6 @@ ki is the Wannier interpolation onto the domains declared in &lt;interpolation&g
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="domain" type="WannierlibDomainType"/>
       </xsd:sequence>
       <xsd:attribute default="F" name="useWsDistance" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_intp" type="FleurBool" use="optional"/>
       <xsd:attribute name="kptsPath" type="xsd:string" use="optional">
          <xsd:annotation>
             <xsd:documentation>Name of the q-point list to use.</xsd:documentation>

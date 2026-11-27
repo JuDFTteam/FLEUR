@@ -254,7 +254,6 @@ MODULE m_types_wannierlib
     !> ever count as equal and every shell would hold one vector.
     REAL :: kmesh_tol = -1.0
 
-    LOGICAL :: l_intp = .FALSE.         ! Do interpolation
     REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
 
     !> One entry per <wannierproj> as read, and one per Wannier function after init has
@@ -577,7 +576,6 @@ CONTAINS
       CALL mpi_bc(rank, mpi_comm, this%proj(iproj)%shift)
     END DO
     CALL mpi_bc(this%kpts_fine, rank, mpi_comm)
-    CALL mpi_bc(this%l_intp, rank, mpi_comm)
 
   END SUBROUTINE mpi_bc_wannierlib
 
