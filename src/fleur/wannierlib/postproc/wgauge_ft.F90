@@ -23,6 +23,7 @@ MODULE m_wgauge_ft
   USE m_constants, ONLY : tpi_const, oUnit, bohr_to_angstrom_const
   USE m_types_cell
   USE m_types_kpts
+  USE m_wgauge_mesh, ONLY: wgauge_mp_grid
 #ifdef CPP_MPI
   USE mpi
 #endif
@@ -57,7 +58,7 @@ CONTAINS
     INTEGER, INTENT(OUT) :: nrpts
     INTEGER :: nw, nk, k, irpt, mp_grid(3)
     REAL :: rdotk
-    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); mp_grid = kpts%nkpt3
+    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); mp_grid = wgauge_mp_grid(kpts)
     CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
     ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
     DO irpt = 1, nrpts
@@ -417,7 +418,7 @@ CONTAINS
 #ifdef CPP_MPI
     INTEGER :: ierr
 #endif
-    nw = SIZE(mat_loc, 1); mp_grid = kpts%nkpt3
+    nw = SIZE(mat_loc, 1); mp_grid = wgauge_mp_grid(kpts)
     CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
     ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
     DO irpt = 1, nrpts

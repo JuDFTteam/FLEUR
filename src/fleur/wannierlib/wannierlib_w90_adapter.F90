@@ -11,6 +11,7 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_atoms
   USE m_types_cell
   USE m_types_kpts
+  USE m_wgauge_mesh, ONLY: wgauge_mp_grid
   USE m_types_mpi
   USE m_types_wannierlib
   USE m_types_wgauge_bmesh
@@ -98,7 +99,7 @@ CONTAINS
 
     CALL w90_set_comm(wannierlib_w90main, fmpi%mpi_comm)
 
-    mp_grid = kpts%nkpt3  !TODO: is this correct????
+    mp_grid = wgauge_mp_grid(kpts)
     gamma_only = .FALSE.  !TODO: determine from kpts if this is a gamma-only calculation
  
 

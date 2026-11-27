@@ -28,6 +28,7 @@ MODULE m_wgauge_operators_r
   USE m_constants, ONLY : oUnit, hartree_to_ev_const, tpi_const
   USE m_types_cell
   USE m_types_kpts
+  USE m_wgauge_mesh, ONLY: wgauge_mp_grid
   USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
   USE m_types_melem_request, ONLY : t_melem_request
   USE m_types_wgauge_bmesh
@@ -277,7 +278,7 @@ CONTAINS
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nrpts, ii, iu
     IF (done) RETURN
-    CALL wgauge_ws_vectors(cell, kpts%nkpt3, irvec, ndegen, nrpts)
+    CALL wgauge_ws_vectors(cell, wgauge_mp_grid(kpts), irvec, ndegen, nrpts)
     OPEN(newunit=iu, file=wannierlib_export_file('wig_vectors'), status='replace')
     DO ii = 1, nrpts
       WRITE(iu, *) ii, irvec(1, ii), irvec(2, ii), irvec(3, ii), ndegen(ii)

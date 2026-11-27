@@ -16,6 +16,7 @@ MODULE m_wgauge_run
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_cell
    USE m_types_kpts
+   USE m_wgauge_mesh, ONLY: wgauge_mp_grid
    USE m_types_mpi
    USE m_types_wgauge_bmesh
    USE m_melem_coarse, ONLY: t_melem_coarse
@@ -155,7 +156,7 @@ CONTAINS
             'wannierlib: useWsDistance needs the Wannier centres and none were reported', &
             hint='it requires the Wannier90 library build (CPP_WANNLIB_API)', &
             calledby='wgauge_run')
-         CALL wgauge_mdrs_set(cell, kpts%nkpt3, bmesh%centres, irank)
+         CALL wgauge_mdrs_set(cell, wgauge_mp_grid(kpts), bmesh%centres, irank)
       END IF
 
       !> H_W(k) and its transform to real space. Neither depends on the output domain, and

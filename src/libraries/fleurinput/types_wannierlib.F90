@@ -245,9 +245,11 @@ MODULE m_types_wannierlib
     !> wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the
     !> lattice is the first suspect and not the mesh: a slightly distorted cell splits one
     !> shell into several, or fails (B1), and Wannier90 stops there with nothing left to
-    !> turn. Nothing here checks the mesh, though -- mp_grid is taken from kpts%nkpt3 and the
-    !> k-list from whichever list was selected -- so a shifted list would reach Wannier90 as
-    !> a Monkhorst-Pack grid it is not, and would land in the same place. Negative is the
+    !> turn. The mesh is checked before Wannier90 sees it: wgauge_mp_grid refuses divisions
+    !> that do not multiply out to the k-points of the full zone, so a list that is not the
+    !> grid it claims to be stops there, with both numbers, instead of landing here. What
+    !> that test cannot see is a grid shifted off Gamma -- the count still matches -- and
+    !> such a list does reach Wannier90 as a Monkhorst-Pack grid it is not. Negative is the
     !> sentinel for "say nothing", since zero is a value -- under it no two distances would
     !> ever count as equal and every shell would hold one vector.
     REAL :: kmesh_tol = -1.0
@@ -628,7 +630,6 @@ CONTAINS
   
     xPathA = '/fleurInput/output/wannierlib/interpolation'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
-      this%l_intp = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_intp'))
 
       IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@kptsPath') == 1) THEN
         kptsPath = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kptsPath')))
