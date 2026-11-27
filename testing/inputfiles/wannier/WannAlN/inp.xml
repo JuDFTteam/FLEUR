@@ -86,8 +86,8 @@
          <bands numBands="8" minBand="1" maxBand="8"/>
          <wannierization numIter="3000" convTol="0.00000001" convWindow="3" precond="T"/>
          <operators>
-            <hamiltonian RS="T"/>
-            <orbital RS="T"/>
+            <hamiltonian rs="T"/>
+            <orbital rs="T"/>
          </operators>
       </wannierlib>
 

@@ -936,28 +936,28 @@ WRITE (fileNum, 242) fr(1.0)
          !> comment, so each stage can carry its own explanation: a comment does not
          !> nest, and a double hyphen inside one would end it early.
          WRITE (fileNum, '(a)') '         <operators>'
-         WRITE (fileNum, '(a)') '            <hamiltonian                 RS="F" INT="F"/>'
-         WRITE (fileNum, '(a)') '            <position                    RS="F"/>'
-         WRITE (fileNum, '(a)') '            <positionPw90                RS="F"/>'
-         WRITE (fileNum, '(a)') '            <velocity                           INT="F"/>'
-         WRITE (fileNum, '(a)') '            <spin              KS="F"    RS="F" INT="F"/>'
-         WRITE (fileNum, '(a)') '            <orbital           KS="F"    RS="F" INT="F"/>'
-         WRITE (fileNum, '(a)') '            <spinOrbit         KS="F"    RS="F" INT="F"/>'
-         WRITE (fileNum, '(a)') '            <exchangeTorque    KS="F"    RS="F" INT="F"/>'
+         WRITE (fileNum, '(a)') '            <hamiltonian                 rs="F" ki="F"/>'
+         WRITE (fileNum, '(a)') '            <position                    rs="F"/>'
+         WRITE (fileNum, '(a)') '            <positionPw90                rs="F"/>'
+         WRITE (fileNum, '(a)') '            <velocity                           ki="F"/>'
+         WRITE (fileNum, '(a)') '            <spin              ks="F"    rs="F" ki="F"/>'
+         WRITE (fileNum, '(a)') '            <orbital           ks="F"    rs="F" ki="F"/>'
+         WRITE (fileNum, '(a)') '            <spinOrbit         ks="F"    rs="F" ki="F"/>'
+         WRITE (fileNum, '(a)') '            <exchangeTorque    ks="F"    rs="F" ki="F"/>'
          !> Only on the spinor route, because that is where it exists: the projection on
          !> the moment is taken over a spinor, and offering it in a collinear template
          !> would put a name in the file that the run then refuses.
          IF (judft_was_argument("-spinor")) THEN
-            WRITE (fileNum, '(a)') '            <exchangeField               RS="F"/>'
+            WRITE (fileNum, '(a)') '            <exchangeField               rs="F"/>'
          END IF
-         WRITE (fileNum, '(a)') '            <bmn               KS="F"    RS="F"/>'
-         WRITE (fileNum, '(a)') '            <cmn               KS="F"    RS="F"/>'
-         WRITE (fileNum, '(a)') '            <fmn               KS="F"    RS="F"/>'
+         WRITE (fileNum, '(a)') '            <bmn               ks="F"    rs="F"/>'
+         WRITE (fileNum, '(a)') '            <cmn               ks="F"    rs="F"/>'
+         WRITE (fileNum, '(a)') '            <fmn               ks="F"    rs="F"/>'
          WRITE (fileNum, '(a)') '         </operators>'
-         !> Where the INT="T" operators land: listName names a list of kpts.xml, suffix
+         !> Where the ki="T" operators land: listName names a list of kpts.xml, suffix
          !> names the output files, refinementPoints subdivides each segment of a path.
          !> A cell with no type="path" list has nothing to resolve on, so the element is
-         !> left out; every INT is "F" in this template, so leaving it out costs nothing.
+         !> left out; every ki is "F" in this template, so leaving it out costs nothing.
 447      FORMAT('            <domain listName="', a, '" suffix="dense" refinementPoints="10"/>')
          IF (LEN_TRIM(wannPathName) > 0) THEN
             WRITE (fileNum, '(a)') '         <interpolation useWsDistance="F">'

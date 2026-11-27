@@ -129,11 +129,11 @@ CONTAINS
                                    coarse%s0, coarse%l0, coarse%soc4, coarse%t0, coarse%hxc0, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
 
-      !> (2b) KS="T" can also ask for B, C and F. They are not in the Bloch basis
+      !> (2b) ks="T" can also ask for B, C and F. They are not in the Bloch basis
       !> the other half of that switch promises: contracting over PAIRS of neighbours needs
       !> a band index that means the same state at k+b1 and at k+b2, and the Bloch one does
       !> not, so these three carry the Wannier gauge and go to a file of their own. The
-      !> request is independent of RS="T" -- either switch may ask for a tensor and
+      !> request is independent of rs="T" -- either switch may ask for a tensor and
       !> neither obliges the other -- so this runs whether or not the pass above did.
       !>
       !> C and F arrive already built, so only B is made here; the three travel up to the

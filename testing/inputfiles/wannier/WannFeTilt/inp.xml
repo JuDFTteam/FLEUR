@@ -71,8 +71,8 @@
         <disentanglement disWinMin="-0.027236" disWinMax="2.177723" disFrozMin="-0.027236" disFrozMax="0.560753" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
         <operators>
-           <hamiltonian RS="T" INT="T"/>
-           <exchangeTorque RS="T" INT="T"/>
+           <hamiltonian rs="T" ki="T"/>
+           <exchangeTorque rs="T" ki="T"/>
         </operators>
         <interpolation>
           <domain listName="w222"/>

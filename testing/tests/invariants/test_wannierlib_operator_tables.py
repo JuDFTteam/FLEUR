@@ -26,7 +26,7 @@ SCHEMA = ROOT / "src/fleur/io/xml/FleurInputSchema.xsd"
 
 #> Which exposure table backs which switch. This mapping IS the contract between the
 #> Fortran tables and the XML attributes, and it is the one thing stated in both places.
-TABLE_OF_SWITCH = {"KS": "WANNIERLIB_OPK", "RS": "WANNIERLIB_OPR", "INT": "WANNIERLIB_INTERP"}
+TABLE_OF_SWITCH = {"ks": "WANNIERLIB_OPK", "rs": "WANNIERLIB_OPR", "ki": "WANNIERLIB_INTERP"}
 
 
 def _strip_comments(text):
@@ -75,8 +75,8 @@ def schema_operators():
     for ename, tname in children:
         tm = re.search(r'<xsd:complexType name="%s">(.*?)</xsd:complexType>' % tname, text, re.S)
         assert tm, f"<{ename}> has type {tname}, which the schema does not define"
-        attrs = set(re.findall(r'<xsd:attribute[^>]*\bname="(KS|RS|INT)"', tm.group(1)))
-        assert attrs, f"{tname} offers no KS/RS/INT attribute, so <{ename}> can ask for nothing"
+        attrs = set(re.findall(r'<xsd:attribute[^>]*\bname="(ks|rs|ki)"', tm.group(1)))
+        assert attrs, f"{tname} offers no ks/rs/ki attribute, so <{ename}> can ask for nothing"
         out[ename] = attrs
     return out
 

@@ -3676,21 +3676,21 @@
       <xsd:annotation>
          <xsd:documentation>Every operator this run can produce, each with the bases it is written in. The three switches are INDEPENDENT requests and not stages of one pipeline: asking for a quantity in one basis does not oblige the others, and an element with all its switches off is exactly the same as no element at all, so a row may be left in place and switched off.
 
-KS is the Bloch basis: the matrix at a single k as the coarse pass built it, one step before the Fourier sum RS takes, written to WF&lt;spin&gt;_operators_ks.hdf. No gauge exists yet, so asking only for these costs no wannierisation; with the finite-difference b-shells that travel in the same file, that is what a consumer building its own Wannier functions needs. bmn, cmn and fmn are the exception: they are contractions over PAIRS of neighbours, and summing over b needs a band index that means the same state at k+b1 and at k+b2, which the Bloch index does not. They therefore carry the Wannier gauge and go to WF&lt;spin&gt;_modern_k.hdf. Each file states in its own header which of the two it holds.
+ks is the Bloch basis: the matrix at a single k as the coarse pass built it, one step before the Fourier sum rs takes, written to WF&lt;spin&gt;_operators_ks.hdf. No gauge exists yet, so asking only for these costs no wannierisation; with the finite-difference b-shells that travel in the same file, that is what a consumer building its own Wannier functions needs. bmn, cmn and fmn are the exception: they are contractions over PAIRS of neighbours, and summing over b needs a band index that means the same state at k+b1 and at k+b2, which the Bloch index does not. They therefore carry the Wannier gauge and go to WF&lt;spin&gt;_modern_k.hdf. Each file states in its own header which of the two it holds.
 
-RS is the real-space Wannier matrix O(R), the third Fourier step, in the Wannier90/FLEUR standalone format external transport post-processing reads (orbitrans, ju_wip): WF1_hr.dat, WF1_r.dat, rspauli.1, anglmomrs.1, wig_vectors. Computed once after the wannierisation; no band interpolation is involved.
+rs is the real-space Wannier matrix O(R), the third Fourier step, in the Wannier90/FLEUR standalone format external transport post-processing reads (orbitrans, ju_wip): WF1_hr.dat, WF1_r.dat, rspauli.1, anglmomrs.1, wig_vectors. Computed once after the wannierisation; no band interpolation is involved.
 
-INT is the Wannier interpolation onto the domains declared in &lt;interpolation&gt;, projected on the interpolated bands. This switch says WHAT to interpolate and &lt;interpolation&gt; says WHERE, so the two go together: INT="T" with no &lt;interpolation&gt; element has nowhere to land and is refused, and an &lt;interpolation&gt; whose domains no operator asks for stays what it is today, a declaration that nothing reads.</xsd:documentation>
+ki is the Wannier interpolation onto the domains declared in &lt;interpolation&gt;, projected on the interpolated bands. This switch says WHAT to interpolate and &lt;interpolation&gt; says WHERE, so the two go together: ki="T" with no &lt;interpolation&gt; element has nowhere to land and is refused, and an &lt;interpolation&gt; whose domains no operator asks for stays what it is today, a declaration that nothing reads.</xsd:documentation>
       </xsd:annotation>
       <xsd:all>
          <xsd:element maxOccurs="1" minOccurs="0" name="hamiltonian"    type="WannierlibOpRIType">
             <xsd:annotation>
-               <xsd:documentation>No KS: in the Bloch basis the Hamiltonian is diagonal by construction, so the matrix is the band energies on its diagonal and nothing else. Those energies are already written, three times over and without being asked for: as the 'eigval' dataset of the KS file itself, in out.xml, and in the .eig. An operator here would be nb times the bytes for the same numbers, and a second place for them to disagree.</xsd:documentation>
+               <xsd:documentation>No ks: in the Bloch basis the Hamiltonian is diagonal by construction, so the matrix is the band energies on its diagonal and nothing else. Those energies are already written, three times over and without being asked for: as the 'eigval' dataset of the ks file itself, in out.xml, and in the .eig. An operator here would be nb times the bytes for the same numbers, and a second place for them to disagree.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="position"       type="WannierlibOpRType">
             <xsd:annotation>
-               <xsd:documentation>The Berry connection A(R), written to WF&lt;spin&gt;_r.dat, which carries the Wannier centres. No KS: in the Bloch basis the position operator is not a matrix at one k at all but a finite difference over the b-shells, which is why the shells themselves travel in the KS file instead.</xsd:documentation>
+               <xsd:documentation>The Berry connection A(R), written to WF&lt;spin&gt;_r.dat, which carries the Wannier centres. No ks: in the Bloch basis the position operator is not a matrix at one k at all but a finite difference over the b-shells, which is why the shells themselves travel in the ks file instead.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="positionPw90"   type="WannierlibOpRType">
@@ -3708,7 +3708,7 @@ INT is the Wannier interpolation onto the domains declared in &lt;interpolation&
          <xsd:element maxOccurs="1" minOccurs="0" name="spinOrbit"      type="WannierlibOpKRIType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="exchangeTorque" type="WannierlibOpKRIType">
             <xsd:annotation>
-               <xsd:documentation>T = -mu_B sigma x Omega_xc, muffin-tin only, which is the exchange torque of Freimuth et al., PRB 90, 174423 (2014). Over two collinear channels RS writes the cross-spin block, the same object the classic Wannier route calls updown.perpmag; over spinors it writes the three Cartesian components. Not to be confused with wann_torque.</xsd:documentation>
+               <xsd:documentation>T = -mu_B sigma x Omega_xc, muffin-tin only, which is the exchange torque of Freimuth et al., PRB 90, 174423 (2014). Over two collinear channels rs writes the cross-spin block, the same object the classic Wannier route calls updown.perpmag; over spinors it writes the three Cartesian components. Not to be confused with wann_torque.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="exchangeField"  type="WannierlibOpRType">
@@ -3726,49 +3726,49 @@ INT is the Wannier interpolation onto the domains declared in &lt;interpolation&
       <xsd:annotation>
          <xsd:documentation>An operator the run can write in all three bases.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="KS"  type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="RS"  type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="INT" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="ks"  type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="rs"  type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="ki" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOpKRType">
       <xsd:annotation>
          <xsd:documentation>Bloch basis and real space, but not interpolated: B(k), C(k) and F(k) of the modern theory of magnetisation are pair contractions already carrying the Wannier gauge, and the interpolation has no second gauge to put them in.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="KS" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="RS" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="ks" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="rs" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOpRIType">
       <xsd:annotation>
          <xsd:documentation>Real space and interpolation, but nothing to write in the Bloch basis.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="RS"  type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="INT" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="rs"  type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="ki" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOpRType">
       <xsd:annotation>
          <xsd:documentation>Real space only.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="RS" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="rs" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOpIType">
       <xsd:annotation>
          <xsd:documentation>Interpolation only.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute default="F" name="INT" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="ki" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <!-- ================================================================================
         <interpolation> keeps only the configuration of the interpolation: where to
-        interpolate onto, and how. What to interpolate moved to the INT switches above.
+        interpolate onto, and how. What to interpolate moved to the ki switches above.
         ================================================================================ -->
 
    <xsd:complexType name="WannierlibInterpolationType">
       <xsd:annotation>
-         <xsd:documentation>Where the Wannier interpolation lands and how it is summed. Declare one &lt;domain&gt; per set of k-points; each takes its own group in WF&lt;channel&gt;_interp.hdf. Which operators are interpolated is not said here: it is the INT switch of &lt;operators&gt;.</xsd:documentation>
+         <xsd:documentation>Where the Wannier interpolation lands and how it is summed. Declare one &lt;domain&gt; per set of k-points; each takes its own group in WF&lt;channel&gt;_interp.hdf. Which operators are interpolated is not said here: it is the ki switch of &lt;operators&gt;.</xsd:documentation>
       </xsd:annotation>
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="domain" type="WannierlibDomainType"/>
@@ -3824,12 +3824,12 @@ INT is the Wannier interpolation onto the domains declared in &lt;interpolation&
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbitrans" type="WannierlibExportFlagType">
             <xsd:annotation>
-               <xsd:documentation>Writes input/, the directory orbitrans opens, with the RS="T" operator matrices renamed and the four structural files.</xsd:documentation>
+               <xsd:documentation>Writes input/, the directory orbitrans opens, with the rs="T" operator matrices renamed and the four structural files.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="juwip" type="WannierlibExportFlagType">
             <xsd:annotation>
-               <xsd:documentation>Writes w90files/ with the RS="T" operator matrices. Not combinable with orbitrans: the matrices are moved, not copied.</xsd:documentation>
+               <xsd:documentation>Writes w90files/ with the rs="T" operator matrices. Not combinable with orbitrans: the matrices are moved, not copied.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="plotWF" type="WannierlibExportPlotType">

@@ -87,8 +87,8 @@
          <wannierization numIter="3000" convTol="0.00000001" convWindow="3" precond="T"/>
          <transport axis="z" energyMin="0.025" energyMax="0.085" energyStep="0.0005"/>
          <operators>
-            <hamiltonian RS="T"/>
-            <orbital RS="T"/>
+            <hamiltonian rs="T"/>
+            <orbital rs="T"/>
          </operators>
       </wannierlib>
 

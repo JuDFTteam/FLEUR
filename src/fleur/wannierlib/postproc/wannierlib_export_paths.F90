@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 !>  Where the real-space operator files land, and under which name.
 !>
-!>  RS="T" renders every operator ONCE. A consumer's element in <export> does not add
+!>  rs="T" renders every operator ONCE. A consumer's element in <export> does not add
 !>  a second rendering next to the first: it decides the directory the one rendering is
 !>  written into and the name it is written under. Nothing is copied and nothing is
 !>  moved after the fact -- the writers below already take their filename as an

@@ -62,14 +62,14 @@
         <bands numBands="6" minBand="5" maxBand="10"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
         <operators>
-           <hamiltonian RS="T" INT="T"/>
-           <position RS="T"/>
-           <velocity INT="T"/>
-           <spin RS="T"/>
-           <orbital RS="T" INT="T"/>
-           <bmn RS="T"/>
-           <cmn RS="T"/>
-           <fmn RS="T"/>
+           <hamiltonian rs="T" ki="T"/>
+           <position rs="T"/>
+           <velocity ki="T"/>
+           <spin rs="T"/>
+           <orbital rs="T" ki="T"/>
+           <bmn rs="T"/>
+           <cmn rs="T"/>
+           <fmn rs="T"/>
         </operators>
         <interpolation>
           <domain listName="path-2" suffix="_plane"/>

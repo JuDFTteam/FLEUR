@@ -323,7 +323,7 @@ CONTAINS
          END IF
          IF (this%export%bmesh) CALL wannierlib_export_bmesh(bmesh_k, kpts, jspin, fmpi)
 
-         !> The Bloch-basis half of KS="T", before run_w90 has a gauge to offer.
+         !> The Bloch-basis half of ks="T", before run_w90 has a gauge to offer.
          !> It goes here and not beside the O(R) export because that is the whole point: a
          !> consumer that builds its own Wannier functions needs these and not a gauge,
          !> and asking for them must not oblige the run to produce one. The same block may
@@ -410,7 +410,7 @@ CONTAINS
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx), &
                         b0k_out=b0k_ks, gk_loc_out=gk_loc_ks)
 
-         !> The KS="T" tensors, written here rather than in the pass that built them:
+         !> The ks="T" tensors, written here rather than in the pass that built them:
          !> the writer is a consumer in export/ and postproc/ does not reach into it. B(k)
          !> arrives unallocated when only C or F were asked for, which the writer expects.
          IF (request%has_op_k('bmn') .OR. request%has_op_k('cmn') .OR. request%has_op_k('fmn')) &

@@ -61,9 +61,9 @@
            <orbitrans on="T"/>
         </export>
         <operators>
-           <hamiltonian RS="T"/>
-           <position RS="T"/>
-           <cmn RS="T"/>
+           <hamiltonian rs="T"/>
+           <position rs="T"/>
+           <cmn rs="T"/>
         </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

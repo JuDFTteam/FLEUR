@@ -29,9 +29,9 @@ once per channel.
                    disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
   <wannierization numIter="3000" convTol="0.00001"/>
   <operators>
-    <hamiltonian RS="T" INT="T"/>
-    <spin        RS="T"/>
-    <velocity           INT="T"/>
+    <hamiltonian rs="T" ki="T"/>
+    <spin        rs="T"/>
+    <velocity           ki="T"/>
   </operators>
   <interpolation>
     <domain listName="path-2"/>
@@ -46,19 +46,19 @@ once per channel.
 guesses are `<wannierproj l=".." m=".."/>` children of a `<species>`; their total
 count over all atoms is `num_wann`.
 
-`<operators>` holds one element per operator and, on it, one switch per basis: `KS="T"`
-hands over what the run holds in `k`, `RS="T"` writes `O(R)` to disk and does no
-interpolation, and `INT="T"` projects onto the interpolated bands. The three are
+`<operators>` holds one element per operator and, on it, one switch per basis: `ks="T"`
+hands over what the run holds in `k`, `rs="T"` writes `O(R)` to disk and does no
+interpolation, and `ki="T"` projects onto the interpolated bands. The three are
 independent -- any may be off, and asking for a quantity in one basis never obliges
 another. They accept different *sets* of names, because not everything with an `O(R)` has
 an interpolation driver and the other way round, and a switch set on a basis that does not
 offer that name is refused when the input is read. But **a name never means two different
 things** -- the spin-orbit operator is `spinOrbit` everywhere, and `bmn` is the same `B`
-under `KS` and under `RS`, one Fourier sum apart. The accepted names of each live in
+under `ks` and under `rs`, one Fourier sum apart. The accepted names of each live in
 `fleurinput/types_melem_optable.f90`, and a name the tables do not have stops the run with
 the accepted list in the message.
 
-`KS="T"` carries two kinds of name and writes them to two files. `spin`, `orbital`,
+`ks="T"` carries two kinds of name and writes them to two files. `spin`, `orbital`,
 `spinOrbit` and `exchangeTorque` are a matrix at a single `k`: they go out in the Bloch
 basis, before any gauge exists, and that half costs no wannierisation. `bmn`, `cmn` and `fmn`
 are contractions over *pairs* of neighbours, and summing over `b` needs a band index that
@@ -102,7 +102,7 @@ Declaring operators to interpolate but no domain is an error, not a silent no-op
 
 ## What comes out
 
-Real space, from `RS="T"`:
+Real space, from `rs="T"`:
 
 | File | Content |
 |---|---|
@@ -115,7 +115,7 @@ Real space, from `RS="T"`:
 | `wig_vectors` | the Wigner-Seitz `R` mesh |
 | `WF<n>.amn`, `WF<n>.mmn`, `WF<n>.eig` | from `<export><wannier90 on="T"/></export>`; also written unasked on a serial run, as a path for inspection |
 
-In `k`, from `KS="T"`:
+In `k`, from `ks="T"`:
 
 | File | Content |
 |---|---|

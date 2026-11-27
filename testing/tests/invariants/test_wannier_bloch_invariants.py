@@ -1,8 +1,8 @@
 """
-Differential regression test for KS="T", in both of its halves.
+Differential regression test for ks="T", in both of its halves.
 
-What it guards is a JOIN, not a number. KS="T" hands over what the run holds in
-k; RS="T" writes O(R) after the Fourier sum. The two share their inputs and
+What it guards is a JOIN, not a number. ks="T" hands over what the run holds in
+k; rs="T" writes O(R) after the Fourier sum. The two share their inputs and
 nothing else, so if either export starts writing a different object -- a transposed
 one, a differently distributed one, a stale slice -- the identities below stop holding
 while every self-contained check on the new file keeps passing.
@@ -277,7 +277,7 @@ def _read_bmn_dat(path, num_wann, np):
 @pytest.mark.bulk
 @pytest.mark.soc
 def test_operators_ks_reproduces_the_real_space_route(execute_fleur):
-    """Both halves of KS="T" must land on what RS="T" wrote."""
+    """Both halves of ks="T" must land on what rs="T" wrote."""
     #> These two stay INSIDE the test and must not be hoisted to module level: they are
     #> what keeps it off CI. Collection imports the module, so a module-level "import
     #> numpy" raises there on a machine that lacks it -- which is every CI runner -- and
@@ -292,7 +292,7 @@ def test_operators_ks_reproduces_the_real_space_route(execute_fleur):
     for name in ("WF1_operators_ks.hdf", "WF1_modern_k.hdf", "WF1_bmesh.hdf", "WF1.chk",
                  "rspauli.1", "anglmomrs.1", "WF1_bmn.dat"):
         assert name in res, (
-            f"{name} was not written. This case asks for KS=\"T\", RS=\"T\", "
+            f"{name} was not written. This case asks for ks=\"T\", rs=\"T\", "
             f"a b-mesh and a checkpoint, and the cross-check needs all of them")
 
     bkf = _check_bmesh(res["WF1_bmesh.hdf"], np, h5py)

@@ -86,10 +86,10 @@
         <disentanglement disWinMin="-0.1" disWinMax="0.6" disFrozMin="-0.1" disFrozMax="0.6" disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
         <operators>
-           <hamiltonian RS="T"/>
-           <spin RS="T"/>
-           <orbital RS="T"/>
-           <spinOrbit RS="T"/>
+           <hamiltonian rs="T"/>
+           <spin rs="T"/>
+           <orbital rs="T"/>
+           <spinOrbit rs="T"/>
         </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

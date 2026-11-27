@@ -70,7 +70,7 @@ MODULE m_types_melem_optable
       !> |T(R)|^2 at R = 0), so the interpolation has something local to resum.
       t_melem_exposed('exchangeTorque',  'exchangeTorque',  3, .FALSE.)]
 
-   !> The operators RS="T" can ask for. No output column: these write legacy names that
+   !> The operators rs="T" can ask for. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
    TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(11) = [ &
       t_melem_exposed('hamiltonian',     '',                0, .FALSE.), &
@@ -97,8 +97,8 @@ MODULE m_types_melem_optable
       !> asking for it builds the same exchange-field blocks and nothing more.
       t_melem_exposed('exchangeField',   'exchangeTorque',  1, .FALSE.)]
 
-   !> The operators KS="T" can ask for. What the run holds in k, one step before the
-   !> Fourier sum RS="T" takes. That, and not "no gauge", is what the switch
+   !> The operators ks="T" can ask for. What the run holds in k, one step before the
+   !> Fourier sum rs="T" takes. That, and not "no gauge", is what the switch
    !> collects. The first four ARE a matrix at a single k and go out in the Bloch basis,
    !> before any gauge exists. The last three are contractions over PAIRS of neighbours
    !> and carry the Wannier gauge, because summing over b needs a band index that means

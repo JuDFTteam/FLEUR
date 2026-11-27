@@ -62,10 +62,10 @@
         <bands numBands="6" minBand="5" maxBand="10"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
         <operators>
-           <hamiltonian RS="T"/>
-           <spin RS="T"/>
-           <orbital RS="T"/>
-           <exchangeTorque RS="T"/>
+           <hamiltonian rs="T"/>
+           <spin rs="T"/>
+           <orbital rs="T"/>
+           <exchangeTorque rs="T"/>
         </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

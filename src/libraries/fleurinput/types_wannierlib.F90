@@ -93,16 +93,16 @@ MODULE m_types_wannierlib
     LOGICAL :: l_wannierize = .FALSE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
     ! They gate the coarse-mesh provider calls; the actual dispatch loops over ops(:).
-    LOGICAL :: l_interpolation = .FALSE.   ! <hamiltonian INT="T"/>
+    LOGICAL :: l_interpolation = .FALSE.   ! <hamiltonian ki="T"/>
     LOGICAL :: l_spin = .FALSE.            ! some row asks for the spin, in any basis
     LOGICAL :: l_orbmom = .FALSE.          ! some row asks for the orbital moment
     LOGICAL :: l_socop = .FALSE.           ! some row asks for the spin-orbit operator
-    LOGICAL :: l_operators_r = .FALSE.     ! some row has RS="T" (real-space O(R) export)
-    LOGICAL :: l_operators_k = .FALSE.     ! some row has KS="T" (Bloch basis, no gauge)
+    LOGICAL :: l_operators_r = .FALSE.     ! some row has rs="T" (real-space O(R) export)
+    LOGICAL :: l_operators_k = .FALSE.     ! some row has ks="T" (Bloch basis, no gauge)
     !> The <export> block: one element per consumer, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own
-    !> matrices to someone outside -- and differ only in who reads them. What the RS and
-    !> INT switches of <operators> ask for is NOT here: those compute something first and
+    !> matrices to someone outside -- and differ only in who reads them. What the rs and
+    !> ki switches of <operators> ask for is NOT here: those compute something first and
     !> writing it is the last step, while these copy out what the run already holds.
     TYPE(t_wannierlib_export) :: export
     ! --- opt-in output domains (<domain> children of <interpolation>) ---
@@ -139,17 +139,17 @@ MODULE m_types_wannierlib
     !> into the vacuum of a film -- and where the cell is anisotropic.
     LOGICAL :: l_ws_distance = .FALSE.
 
-    ! --- interpolation list: one entry per <operators> row with INT="T" ---
+    ! --- interpolation list: one entry per <operators> row with ki="T" ---
     !> Always allocated, possibly to size zero, so SIZE() is the count and the two cannot
     !> come apart.
     TYPE(t_wannierlib_op), ALLOCATABLE :: ops(:)
 
-    ! --- real-space list: one entry per <operators> row with RS="T" ---
+    ! --- real-space list: one entry per <operators> row with rs="T" ---
     !> A list of names is all this is, so it stays a list of names rather than a record
     !> with one field in it.
     CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
 
-    ! --- Bloch-basis list: one entry per <operators> row with KS="T". Kept apart from
+    ! --- Bloch-basis list: one entry per <operators> row with ks="T". Kept apart from
     !     the list above for the same reason the request keeps them apart: neither one
     !     implies the other, which is why they are two switches and not one. ---
     CHARACTER(LEN=20), ALLOCATABLE :: op_k_name(:)
@@ -796,7 +796,7 @@ CONTAINS
     !
     !> Only the switches an operator actually offers are read, and what says which those
     !> are is the exposure table itself, not a second list kept here. The schema refuses
-    !> the rest -- <hamiltonian KS="T"/> is not valid input -- so the two cannot drift:
+    !> the rest -- <hamiltonian ks="T"/> is not valid input -- so the two cannot drift:
     !> a basis added to a table without an attribute in the schema reads its default and
     !> stays off, and an attribute without a table row is never looked for.
     xPathA = '/fleurInput/output/wannierlib/operators'
@@ -807,19 +807,19 @@ CONTAINS
         xPathP = TRIM(ADJUSTL(xPathA))//'/'//TRIM(opName)
         IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) /= 1) CYCLE
         IF (melem_exposed_find(opName, WANNIERLIB_OPK) > 0) THEN
-          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@KS'))) THEN
+          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@ks'))) THEN
             nOpkRead = nOpkRead + 1
             opk_buf(nOpkRead) = opName
           END IF
         END IF
         IF (melem_exposed_find(opName, WANNIERLIB_OPR) > 0) THEN
-          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@RS'))) THEN
+          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@rs'))) THEN
             nOprRead = nOprRead + 1
             opr_buf(nOprRead) = opName
           END IF
         END IF
         IF (melem_exposed_find(opName, WANNIERLIB_INTERP) > 0) THEN
-          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@INT'))) THEN
+          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@ki'))) THEN
             nOpsRead = nOpsRead + 1
             ops_buf(nOpsRead) = opName
           END IF
@@ -827,12 +827,12 @@ CONTAINS
       END DO
     END IF
 
-    !> INT says WHAT to interpolate and <interpolation> says WHERE. Without the element
+    !> ki says WHAT to interpolate and <interpolation> says WHERE. Without the element
     !> there is no domain to land on, and the stage would silently compute nothing, which
     !> is the failure a user cannot see.
     IF (nOpsRead > 0 .AND. &
         xml%getNumberOfNodes('/fleurInput/output/wannierlib/interpolation') /= 1) &
-      CALL juDFT_error('wannierlib: an operator is marked INT="T" but the run declares no '// &
+      CALL juDFT_error('wannierlib: an operator is marked ki="T" but the run declares no '// &
                        '<interpolation> block to interpolate it onto', &
                        hint='add <interpolation> with at least one <domain listName=".."/>', &
                        calledby='read_xml_wannierlib')

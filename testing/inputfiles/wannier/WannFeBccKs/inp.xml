@@ -67,11 +67,11 @@
            <bmesh on="T"/>
         </export>
         <operators>
-           <hamiltonian RS="T"/>
-           <spin KS="T" RS="T"/>
-           <orbital KS="T" RS="T"/>
-           <spinOrbit RS="T"/>
-           <bmn KS="T" RS="T"/>
+           <hamiltonian rs="T"/>
+           <spin ks="T" rs="T"/>
+           <orbital ks="T" rs="T"/>
+           <spinOrbit rs="T"/>
+           <bmn ks="T" rs="T"/>
         </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

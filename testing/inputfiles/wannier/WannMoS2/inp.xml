@@ -95,8 +95,8 @@
             <orbitrans on="T"/>
          </export>
          <operators>
-            <hamiltonian RS="T"/>
-            <orbital RS="T"/>
+            <hamiltonian rs="T"/>
+            <orbital rs="T"/>
          </operators>
       </wannierlib>
 
