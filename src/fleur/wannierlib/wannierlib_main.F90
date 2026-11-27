@@ -53,6 +53,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_modern_k, ONLY: wannierlib_export_modern_k
    USE m_wannierlib_chkinfo, ONLY: wl_chkinfo_set, wl_chkinfo_stamp
    USE m_wgauge_check_mw, ONLY: wgauge_check_mw
+   USE m_wgauge_window, ONLY: wgauge_unpack_gauge
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans, orbitrans_assemble_2n
    USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
@@ -351,6 +352,12 @@ CONTAINS
 
          CALL run_w90(wl, cell, kpts, mmn, amn, eig, jspin, melem%n_channels, &
                       u_matrix, u_opt, mw_chk)
+
+         !> Wannier90 hands the gauge back indexed by the states inside the outer window,
+         !> not by band. Put it back on the band index here, once, so that everything
+         !> below -- the cross-check, the operators, the interpolation and the gauge that
+         !> goes to results -- reads one row per band as it already assumes.
+         CALL wgauge_unpack_gauge(u_opt, eig, wl%dis_win_min, wl%dis_win_max, wl%dis_froz_proj)
 
          !> Wannier90 rotated its own copy of the overlaps all the way to the final
          !> gauge, and the operator side is about to build the same quantity from the

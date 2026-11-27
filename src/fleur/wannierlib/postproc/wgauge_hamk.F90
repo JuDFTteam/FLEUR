@@ -50,29 +50,24 @@ CONTAINS
       COMPLEX, INTENT(IN) :: u_opt(:, :, :)                  !< (nb,nw,nk)  disentangled
       COMPLEX, ALLOCATABLE, INTENT(OUT) :: ham_k(:, :, :)    !< (nw,nw,nk)
 
-      INTEGER :: nw, nb, nk, k, i, j, m, counter
+      INTEGER :: nw, nb, nk, k, i, j, m
       LOGICAL :: have_dis
-      REAL, ALLOCATABLE :: eigval2(:, :), eigval_opt(:)
+      REAL, ALLOCATABLE :: eigval2(:, :)
 
       nw = this%num_wann; nb = this%num_bands; nk = SIZE(u_matrix, 3)
       have_dis = (nb > nw)
       ALLOCATE (eigval2(nw, nk), source=0.0)
       IF (have_dis) THEN
-         ALLOCATE (eigval_opt(nb))
+         !> One row per band, the bands the window excludes carrying zeros, because the
+         !> gauge was put back on the band index before it got here. The window is not
+         !> consulted again: doing so would be the same selection twice.
          DO k = 1, nk
-            counter = 0; eigval_opt = 0.0
-            DO j = 1, nb
-               IF (eig(j, k) >= this%dis_win_min .AND. eig(j, k) <= this%dis_win_max) THEN
-                  counter = counter + 1; eigval_opt(counter) = eig(j, k)
-               END IF
-            END DO
             DO m = 1, nw
-               DO i = 1, counter
-                  eigval2(m, k) = eigval2(m, k) + eigval_opt(i) * ABS(u_opt(i, m, k))**2
+               DO j = 1, nb
+                  eigval2(m, k) = eigval2(m, k) + eig(j, k) * ABS(u_opt(j, m, k))**2
                END DO
             END DO
          END DO
-         DEALLOCATE (eigval_opt)
       ELSE
          eigval2(1:nw, :) = eig(1:nw, :)
       END IF
