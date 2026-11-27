@@ -54,7 +54,7 @@ MODULE m_constants
   REAL,             PARAMETER :: eVac0Default_const = -0.25
   CHARACTER(len=9), PARAMETER :: version_const = 'fleur 42'
   CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 8.1          (www.max-centre.eu)'
-  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.39'
+  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.40'
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
   ! io/xml/inputSchema.h.backup, io/xml/outputSchema.h.backup, dropInputSchema.c, dropOutputSchema.c, inputSchema_old.h, outputSchema_old.h.

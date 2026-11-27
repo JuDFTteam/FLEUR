@@ -7,7 +7,7 @@
 !> The operator matrices in the BLOCH basis, O(k), as the coarse pass built them and before
 !> any gauge exists.
 !>
-!> WHY THIS IS NOT <operatorsRs> UNDER ANOTHER FILE NAME. O(R) is the end of a chain:
+!> WHY THIS IS NOT rs="T" UNDER ANOTHER FILE NAME. O(R) is the end of a chain:
 !> wannierise the manifold, rotate every matrix into that gauge, Fourier the result. A
 !> consumer that means to build its own Wannier functions -- or none at all -- would have
 !> to pay for a gauge it is going to discard and then undo it. These matrices come out one
@@ -237,7 +237,7 @@ CONTAINS
       CALL wl_ds5_slab(did, name, [1, 1, 1, icomp, 1], [2, nb, nb, 1, nkptf], buf)
    END SUBROUTINE put_component
 
-   !> An operator named in <operatorsKs> that the run never built. The message says what
+   !> An operator asked for with ks="T" that the run never built. The message says what
    !> is missing rather than how to get it, because the condition is one fact -- the basis
    !> is not spinorial -- reached from several directions.
    SUBROUTINE assert_asked(name, l_asked, l_built)
@@ -245,7 +245,7 @@ CONTAINS
       LOGICAL,          INTENT(IN) :: l_asked, l_built
       IF (.NOT. l_asked) RETURN
       IF (l_built)       RETURN
-      CALL juDFT_error('wannierlib: <operatorsKs> asked for "'//name//'", which this run '// &
+      CALL juDFT_error('wannierlib: ks="T" asked for "'//name//'", which this run '// &
                        'does not build; the Bloch-basis operators need a spinor basis '// &
                        '(l_soc or l_noco)', calledby="wannierlib_export_ks")
    END SUBROUTINE assert_asked

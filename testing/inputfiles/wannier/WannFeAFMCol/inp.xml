@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.39">
+<fleurInput fleurInputVersion="0.40">
    <comment>
       Fe fcc 2-atom uc, AFM collinear, no SOC (jspins=2, l_noco=F, l_soc=F)
    </comment>
@@ -84,12 +84,14 @@
       <wannierlib wannierize="T">
         <bands numBands="12" minBand="9" maxBand="20"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
-        <operatorsRs>
-          <operator name="hamiltonian"/>
-          <operator name="spin"/>
-          <operator name="orbital"/>
-        </operatorsRs>
-        <export wannier90="T"/>
+        <export>
+           <wannier90 on="T"/>
+        </export>
+        <operators>
+           <hamiltonian rs="T"/>
+           <spin rs="T"/>
+           <orbital rs="T"/>
+        </operators>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>

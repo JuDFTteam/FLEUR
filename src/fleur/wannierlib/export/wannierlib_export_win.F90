@@ -28,6 +28,7 @@ MODULE m_wannierlib_export_win
    USE m_types_atoms
    USE m_types_cell
    USE m_types_kpts
+   USE m_wgauge_mesh, ONLY: wgauge_mp_grid
    USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
    IMPLICIT NONE
    PRIVATE
@@ -52,6 +53,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: search_shells
 
       INTEGER :: iunit, io, na, itype, idir, ikpt
+      INTEGER :: mp_grid(3)
       CHARACTER(LEN=2) :: atom_symbol
 
       OPEN (NEWUNIT=iunit, FILE=filename, FORM='formatted', STATUS='replace', IOSTAT=io)
@@ -106,7 +108,8 @@ CONTAINS
       WRITE (iunit, '(a)') 'end atoms_frac'
       WRITE (iunit, '(a)') ''
 
-      WRITE (iunit, '(a,3(1x,i0))') 'mp_grid =', kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3)
+      mp_grid = wgauge_mp_grid(kpts)
+      WRITE (iunit, '(a,3(1x,i0))') 'mp_grid =', mp_grid(1), mp_grid(2), mp_grid(3)
       WRITE (iunit, '(a)') ''
 
       !> The full-zone list, in the order the .amn, .mmn and .eig are written in, because

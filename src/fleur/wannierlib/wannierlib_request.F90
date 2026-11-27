@@ -100,29 +100,30 @@ CONTAINS
       !>   million of the moment the spheres carry, because B_xc follows the spin density
       !>   and the two decay together.
 
-      !> Two channels are two eigenproblems, wannierised one after the other, so there is
-      !> no single spin matrix over them to interpolate: within a channel sigma_z is +/-1 by
-      !> orthonormality, and the transverse part lives in the cross-spin block, which needs
-      !> BOTH gauges and therefore both wannierizations. It exists only as the combined 2N
-      !> operator in real space.
+      !> Two channels are two eigenproblems, wannierised one after the other, so no single
+      !> matrix over them can be interpolated -- with one exception, which is the spin.
+      !> sigma_z is diagonal in the channel index, so each channel carries its own and it
+      !> is interpolated like any other operator, from the diagonal block the provider
+      !> builds anyway. The transverse components come out zero and are written as zero:
+      !> a Hamiltonian block diagonal in spin has spin-pure eigenstates, whose transverse
+      !> expectation value vanishes identically, so nothing is being left out.
+      !>
+      !> What genuinely needs BOTH gauges is the cross-spin block, and the two operators
+      !> refused below are nothing else.
       IF (input%jspins == 2 .AND. .NOT.l_spinors) THEN
-         IF (request%needs_op('spin', interp_only=.TRUE.)) CALL judft_error( &
-            "the spin operator cannot be interpolated when the two spin channels are "// &
-            "wannierised separately", &
-            hint="ask for it in <operatorsRs>: there both channels are combined into the "// &
-                 "2N rspauli.1, which is the only form this operator has here", &
-            calledby="wannierlib_main")
          IF (request%needs_op('spinOrbit', interp_only=.TRUE.)) CALL judft_error( &
             "the spin-orbit operator cannot be interpolated when the two spin channels are "// &
             "wannierised separately", &
-            hint="ask for it in <operatorsRs>: there both channels are combined into the "// &
-                 "2N rssocmat.1, which is the only form this operator has here", &
+            hint="ask for it with <spinOrbit rs='T'/>: there both channels are "// &
+                 "combined into the 2N rssocmat.1, which is the only form this "// &
+                 "operator has here", &
             calledby="wannierlib_main")
          IF (request%needs_op('exchangeTorque', interp_only=.TRUE.)) CALL judft_error( &
             "the exchange torque cannot be interpolated when the two spin channels "// &
             "are wannierised separately", &
-            hint="ask for it in <operatorsRs>: collinearly this operator is the "// &
-                 "up-down Bloch block alone, written to updown.perpmag", &
+            hint="ask for it with <exchangeTorque rs='T'/>: collinearly this "// &
+                 "operator is the up-down Bloch block alone, written to "// &
+                 "updown.perpmag", &
             calledby="wannierlib_main")
          !> Not an interpolation restriction like the three above but a plain absence:
          !> collinearly there is no spinor to take <sigma.m_hat B_xc> over, the same

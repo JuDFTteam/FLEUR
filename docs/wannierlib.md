@@ -69,17 +69,18 @@ Only `<bands>` is required; every other sub-block is optional and independent.
 
     <wannierization numIter="3000" convTol="0.00001"/>
 
-    <operatorsRs>
-      <operator name="hamiltonian"/>
-      <operator name="spin"/>
-    </operatorsRs>
+    <operators>
+      <hamiltonian RS="T" INT="T"/>
+      <spin        RS="T"/>
+    </operators>
 
     <interpolation useWsDistance="F">
       <domain listName="path-2"/>
-      <operator name="hamiltonian"/>
     </interpolation>
 
-    <export wannier90="T"/>
+    <export>
+      <wannier90 on="T"/>
+    </export>
 
     <transport axis="z" energyMin="0.097" energyMax="0.317"/>
   </wannierlib>
@@ -160,47 +161,69 @@ nowhere, so a selected k-list that is not the grid `mp_grid` describes lands her
 Loosening this gets past that, and it is not free, because the weights are then solved over
 b-vectors of unequal length.
 
-### 2.6 `<operatorsRs>` — O(R) for external post-processing
+### 2.6 `<operators>` — what to compute, and in which basis
 
-Writes the real-space operator matrices in the Wannier90/FLEUR standalone format. No band
-interpolation: these are the files an external transport code reads.
+One element per operator and, on it, one switch per basis. The switches are attributes
+with a default, so turning one on or off is **editing a value** — never adding a line,
+deleting one, or commenting one out. A generator that drives FLEUR can do that; commenting
+out XML it did not write, it cannot.
 
 ```xml
-<operatorsRs>
-  <operator name="hamiltonian"/>   <!-- WF<n>_hr.dat   -->
-  <operator name="position"/>      <!-- WF<n>_r.dat    -->
-  <operator name="spin"/>          <!-- rspauli.1      -->
-  <operator name="orbital"/>       <!-- anglmomrs.1    -->
-  <operator name="spinOrbit"/>    <!-- rssocmat.1     -->
-</operatorsRs>
+<operators>
+  <hamiltonian        RS="T" INT="T"/>
+  <position           RS="T"/>
+  <spin        KS="T" RS="T" INT="T"/>
+  <orbital            RS="T"/>
+  <spinOrbit          RS="T"/>
+</operators>
 ```
 
-Accepted names:
+| switch | default | what it asks for |
+|---|---|---|
+| `KS` | `F` | the matrix at one k in the **Bloch basis**, as the coarse pass built it, one step before the Fourier sum `RS` takes. No gauge exists yet, so this costs no wannierisation; with the finite-difference b-shells that travel in the same file it is what a consumer building its own Wannier functions needs. Goes to `WF<n>_operators_ks.hdf`. |
+| `RS` | `F` | the **real-space** Wannier matrix `O(R)`, the third Fourier step, in the Wannier90/FLEUR standalone format an external transport code reads. No band interpolation. |
+| `INT` | `F` | the **Wannier interpolation** onto the domains of `<interpolation>`, projected on the interpolated bands. This switch says *what*, `<interpolation>` says *where*, so the two go together: `INT="T"` with no `<interpolation>` has nowhere to land. |
 
-| name | what it is |
-|---|---|
-| `hamiltonian` | H(R) |
-| `position` | A(R) = `<0n|r|Rm>` |
-| `positionPw90` | the same in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation. Writes `WF<n>_rpw.dat`. |
-| `bmn` | B(R) = `<0n|H(r-R)|Rm>` |
-| `fmn` | F(R) = `<0n|r_a r_b|Rm>` — needs the pair overlap (uIu) |
-| `cmn` | C(R) = `<0n|r_a H r_b|Rm>` — needs uHu |
-| `spin` | S(R) |
-| `orbital` | L(R) |
-| `spinOrbit` | the spin-orbit operator |
+The three are independent requests and **not stages of one pipeline**: asking for a
+quantity in one basis does not oblige the others. A row with all three off is exactly the
+same as no row at all, so a row can be left in place and switched off. A name may appear
+at most once.
+
+Not every operator exists in every basis, and a switch turned on for one that does not
+offer it is refused when the input is read, naming the bases that do:
+
+| name | KS | RS | INT | |
+|---|:--:|:--:|:--:|---|
+| `hamiltonian` | — | ✓ | ✓ | `WF<n>_hr.dat`. In the Bloch basis it **is** the eigenvalue list, which `out.xml` and the `.eig` already carry, so there is no matrix to write there |
+| `position` | — | ✓ | — | `WF<n>_r.dat`, `A(R) = <0n|r|Rm>`. A finite difference over the b-shells rather than a matrix of its own; the shells travel in the `KS` file |
+| `positionPw90` | — | ✓ | — | `WF<n>_rpw.dat`, the same connection in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation |
+| `velocity` | — | — | ✓ | built from the algebra of the interpolated Hamiltonian and position; it has no coarse matrix of its own |
+| `spin` | ✓ | ✓ | ✓ | `rspauli.1` |
+| `orbital` | ✓ | ✓ | ✓ | `anglmomrs.1` |
+| `spinOrbit` | ✓ | ✓ | ✓ | `rssocmat.1` |
+| `exchangeTorque` | ✓ | ✓ | ✓ | collinearly `RS` writes the cross-spin block alone, the same object the classic route calls `updown.perpmag` |
+| `exchangeField` | — | ✓ | — | the half of `<sigma B_xc>` the torque's cross product discards. Spinors only, and every site must share a moment direction |
+| `bmn` | ✓ | ✓ | — | `WF<n>_bmn.dat`, `B(R) = <0n|H(r-R)|Rm>` |
+| `cmn` | ✓ | ✓ | — | `WF<n>_cmn.dat`, `C(R) = <0n|r_a H r_b|Rm>` — needs `uHu` |
+| `fmn` | ✓ | ✓ | — | `WF<n>_fmn.dat`, `F(R) = <0n|r_a r_b|Rm>` — needs the pair overlap (`uIu`) |
+
+`bmn`, `cmn` and `fmn` are the exception to what `KS` means. They are contractions over
+**pairs** of neighbours, and summing over b needs a band index that means the same state
+at `k+b1` and at `k+b2`, which the Bloch index does not. They therefore carry the Wannier
+gauge and go to `WF<n>_modern_k.hdf`; each file states in its own header which of the two
+it holds.
 
 `fmn` and `cmn` are refused on a film: they need the vacuum halves of the pair overlap and
 of the momentum, which this layer does not reach. `spin` is refused on a film for the same
 kind of reason — it sums muffin tins and interstitial, and a film has a third region
 carrying spin density.
 
-### 2.7 `<interpolation>` — bands and operators on any k-list
+### 2.7 `<interpolation>` — where the interpolation lands
 
 ```xml
 <interpolation useWsDistance="F">
   <domain listName="path-2"/>
   <domain listName="path-2" suffix="dense" refinementPoints="10"/>
-  <operator name="hamiltonian"/>
 </interpolation>
 ```
 
@@ -218,7 +241,8 @@ Whether a list is a line, a plane or a mesh is a property of the list, not of FL
 matters when the Wannier centres sit far from the origin. **Wannier90's own default is
 `T`**; the default here is deliberately the other one.
 
-`<operator>` — what to interpolate, repeatable:
+**What** is interpolated is not said here: it is the `INT` switch of 2.6. What each
+operator leaves in the domain's group:
 
 | name | dataset in the domain's group | components | units |
 |---|---|---|---|
@@ -233,29 +257,36 @@ Every domain carries `kdist` (1/Ang), `energy` (eV, `num_wann` x `npoints`) and 
 subgroup whatever operators are asked for, so **`hamiltonian` writes no dataset of its
 own**: the bands are there either way and the name only notes them in `out`.
 
-> The operator names are the **same** in `<operatorsRs>` and `<interpolation>` — in
-> particular it is `spinOrbit` in both. The two blocks do not accept the same *set* of
-> names, because not everything that has an O(R) has an interpolation driver and the other
-> way round, but a name never means two different things.
+> A name means the same thing under all three switches — in particular it is `spinOrbit`
+> everywhere. The three do not accept the same *set* of names, because not everything that
+> has an O(R) has an interpolation driver and the other way round, but a name never means
+> two different things.
 
 ### 2.8 `<export>` — hand out matrices the run already holds
 
-One boolean per **consumer**, all `F` by default, all independent: they are not
-alternatives, and asking for one never turns another off. A flag writes everything its
+One element per **consumer**, all off by default, all independent: they are not
+alternatives, and asking for one never turns another off. An element writes everything its
 consumer needs from this block, so what `wannier90` and `irrep`
 write is a subset of what `wannierberri` writes.
 
-| attribute | writes |
+```xml
+<export>
+  <wannier90 on="T"/>
+  <orbitrans on="T"/>
+</export>
+```
+
+| element | writes |
 |---|---|
 | `wannier90` | `WF<n>.amn`, `.mmn`, `.eig` — what a standalone `wannier90.x` needs to repeat the same wannierisation. The `.mmn` of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. |
 | `irrep` | `WF<n>_basis.hdf` -- the plane-wave index list and the eigenvector coefficients over the interstitial, which is what irrep reads to do the symmetry analysis. That region is invariant under the space group, so the characters taken over it are exact and the muffin-tin parts are not needed: that is what lets the analysis live outside this code. FLEUR dumps and describes -- the cell, the k-list, the eigenvalues and the spin angles are not repeated, they stay in `inp.xml`, `kpts.xml` and `out.xml` for the reader to derive, and the file declares its own layout, so a consumer never has to know how FLEUR stacks spinors. Needs a full-zone mesh and a build with HDF5. **Films are written too**: what makes a character over a region exact is that the group maps the region to itself, which the interstitial of a film does, so the charge in the vacuum never enters. A film describes its cell with `bravaisMatrixFilm` and `filmPos`, so the reader must understand those. |
 | `wannierberri` | everything the two rows above write: the Wannier90 set **and** `WF<n>_basis.hdf`. A superset rather than a third artefact -- WannierBerri computes no electronic structure of its own, its site-symmetric wannierisation consumes the `.amn/.mmn/.eig` and takes its symmetry table from what irrep builds out of the interstitial, so one flag asks for everything that route needs. It wannierises on the irreducible points alone, projects onto the symmetric subspace at every iteration and rotates the result over the full zone, so the symmetry constrains the gauge rather than being imposed afterwards. |
-| `plotWF` | `WF<n>_<nnn>.xsf` and `WF<n>_<nnn>.vts`, one pair per Wannier function: the real part and the modulus on a real-space grid. XSF is what XCrySDen and VESTA read, `.vts` what ParaView reads. `plotGrid="nx ny nz"` sets the resolution (`40 40 40` by default, at least 2 per direction) and is the whole price of the plot: one state evaluated per grid point, band and k-point, so `40^3` is 500x the work of `8^3`. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
-| `orbitrans` | `input/` — the directory the orbitrans transport code opens, holding both halves of what it reads. `lattice`, `atom_centers`, `wann_centers` and `N_wann_atom` are written here: orbitrans otherwise recovers them with regular expressions from a `.wout`, which library mode never writes. Beside them go the operator matrices `<operatorsRs>` produced, **moved and renamed, not copied** — `rspauli.1` is written as `spin`, `anglmomrs.1` as `orbital`, `rssocmat.1` as `spin_orbit`, `WF1_hr.dat` as `hoppings`, `wig_vectors` as `rpts`. Only the operators that were asked for: nothing stands in for one that was not. A second spin channel keeps its own name, since orbitrans wants one 2N basis and that is a combination, not a name. |
-| `juwip` | `w90files/` — the directory JuWIP opens, with the same files under OUR names, which is what it reads. Moved, not copied, like the row above; the two flags therefore cannot be asked for at once and saying so is an error rather than a silent choice. |
+| `plotWF` | `WF<n>_<nnn>.xsf` and `WF<n>_<nnn>.vts`, one pair per Wannier function: the real part and the modulus on a real-space grid. XSF is what XCrySDen and VESTA read, `.vts` what ParaView reads. `grid="nx ny nz"` sets the resolution (`40 40 40` by default, at least 2 per direction) and is the whole price of the plot: one state evaluated per grid point, band and k-point, so `40^3` is 500x the work of `8^3`. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
+| `orbitrans` | `input/` — the directory the orbitrans transport code opens, holding both halves of what it reads. `lattice`, `atom_centers`, `wann_centers` and `N_wann_atom` are written here: orbitrans otherwise recovers them with regular expressions from a `.wout`, which library mode never writes. Beside them go the operator matrices `RS="T"` produced, **moved and renamed, not copied** — `rspauli.1` is written as `spin`, `anglmomrs.1` as `orbital`, `rssocmat.1` as `spin_orbit`, `WF1_hr.dat` as `hoppings`, `wig_vectors` as `rpts`. Only the operators that were asked for: nothing stands in for one that was not. A second spin channel keeps its own name, since orbitrans wants one 2N basis and that is a combination, not a name. |
+| `juwip` | `w90files/` — the directory JuWIP opens, with the same files under OUR names, which is what it reads. Moved, not copied, like the row above; the two therefore cannot be asked for at once, and saying so is an error rather than a silent choice. |
 
-What `<operatorsRs>` and `<interpolation>` write is deliberately not here: those compute
-something first and writing it is the last step, while `<export>` only copies out.
+What the `RS` and `INT` switches of `<operators>` ask for is deliberately not here: those
+compute something first and writing it is the last step, while `<export>` only copies out.
 
 What WannierBerri does with the symmetry table is worth knowing before choosing the mesh:
 it wannierises on the irreducible points alone, projects onto the symmetric subspace at
@@ -301,9 +332,9 @@ principal layers stacked along the axis, and it builds that stack out of one lat
 so a primitive bcc or fcc cell — whose vectors all point between axes — aborts with
 `1-D LATTICE VECTOR NOT DEFINED` whichever axis is asked for. A cell with `a3 ∥ z` works.
 
-**The Hamiltonian is not the one `<operatorsRs>` writes.** The transport module builds its
+**The Hamiltonian is not the one `RS="T"` writes.** The transport module builds its
 own `H(R)` from the gauge matrices, with Wannier90's Wigner-Seitz convention; asking for
-`<operator name="hamiltonian"/>` as well gives a second `H(R)` that is ours. They answer
+`<hamiltonian RS="T"/>` as well gives a second `H(R)` that is ours. They answer
 different questions and neither is a check on the other.
 
 **Only bulk mode is reachable.** Wannier90 also does lead–conductor–lead, which needs a
@@ -466,10 +497,10 @@ https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#ang
         disFrozMin="0.020" disFrozMax="0.562"
         disNumIter="3000" disConvTol="0.00001" disMixRatio="0.5"/>
       <wannierization numIter="3000" convTol="0.00001"/>
-      <operatorsRs>
-        <operator name="hamiltonian"/>
-        <operator name="spin"/>
-      </operatorsRs>
+      <operators>
+        <hamiltonian RS="T"/>
+        <spin        RS="T"/>
+      </operators>
     </wannierlib>
   </output>
   ...

@@ -17,7 +17,7 @@
 !>  table carries, which is the other half of the reason to write them here.
 !>
 !>  Only the four are written. The operator matrices orbitrans also reads are the same
-!>  arrays <operatorsRs> already exports.
+!>  arrays rs="T" already exports.
 !>
 !>  The 2N assembly a collinear run owes the same consumer lives here too. It is a
 !>  different kind of work -- it reads back the rendered files rather than FLEUR's own
@@ -394,7 +394,7 @@ CONTAINS
       nw2 = 2*num_wann
 
       !> Only what the run actually rendered. The consumer flag does not decide the
-      !> operator list -- <operatorsRs> does -- so a run that asked for the Hamiltonian
+      !> operator list -- the rs switches do -- so a run that asked for the Hamiltonian
       !> and not for the position leaves nothing to stack for the second one. Absent
       !> means not asked for; present on one channel and missing on the other is a
       !> broken run and says so below.
@@ -463,7 +463,7 @@ CONTAINS
    END SUBROUTINE orbitrans_assemble_2n
 
    !> Stack one per-channel operator into the 2N file its consumer reads, and do nothing
-   !> when the run did not render it: <operatorsRs> decides the list, not this flag.
+   !> when the run did not render it: the rs switches decide the list, not this flag.
    SUBROUTINE orbitrans_stack_one(ch1, ch2, label, nw, ncomp, l_header2)
       CHARACTER(LEN=*), INTENT(IN) :: ch1, ch2, label
       INTEGER, INTENT(IN) :: nw, ncomp

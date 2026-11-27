@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.39">
+<fleurInput fleurInputVersion="0.40">
    <comment>
       bcc Fe FM, collinear + SOC
    </comment>
@@ -61,22 +61,20 @@
       <wannierlib wannierize="T">
         <bands numBands="6" minBand="5" maxBand="10"/>
         <wannierization numIter="3000" convTol="0.00000001" convWindow="3"/>
-        <operatorsRs>
-          <operator name="hamiltonian"/>
-          <operator name="spin"/>
-          <operator name="orbital"/>
-          <operator name="position"/>
-          <operator name="bmn"/>
-          <operator name="cmn"/>
-          <operator name="fmn"/>
-        </operatorsRs>
+        <operators>
+           <hamiltonian rs="T" ki="T"/>
+           <position rs="T"/>
+           <velocity ki="T"/>
+           <spin rs="T"/>
+           <orbital rs="T" ki="T"/>
+           <bmn rs="T"/>
+           <cmn rs="T"/>
+           <fmn rs="T"/>
+        </operators>
         <interpolation>
           <domain listName="path-2" suffix="_plane"/>
           <domain listName="w222" suffix="_grid"/>
           <domain listName="w222"/>
-          <operator name="hamiltonian"/>
-          <operator name="orbital"/>
-          <operator name="velocity"/>
         </interpolation>
       </wannierlib>
       <checks vchk="F" cdinf="F"/>

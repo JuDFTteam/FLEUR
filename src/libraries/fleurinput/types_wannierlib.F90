@@ -8,7 +8,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_types_wannierlib
   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, WANNIERLIB_OPK, &
-                                  melem_exposed_find
+                                  WANNIERLIB_OP_NAMES, melem_exposed_find
   USE m_types_kpts
   USE m_juDFT
   USE m_types_atoms
@@ -81,29 +81,29 @@ MODULE m_types_wannierlib
     !> Cost is one wann_real per grid point per band per k-point, so this number is the
     !> whole price of the plot: 40^3 is 500x the work of 8^3. Left at 40^3, what it was
     !> before it could be asked for.
-    INTEGER :: plot_grid(3) = [40, 40, 40]  ! <export plotGrid="40 40 40"/>
+    INTEGER :: plot_grid(3) = [40, 40, 40]  ! <plotWF grid="40 40 40"/>
     !> How many cells the region spans. plot_region used to hardwire one, which cuts any
     !> function wider than the cell: in graphene (a = 2.46 A) a sigma function still holds
     !> half its maximum at the cell wall. The grid is scaled with it, so the resolution is
-    !> the one plotGrid asked for and the cost grows with the product of the three.
-    INTEGER :: plot_cells(3) = [1, 1, 1]    ! <export plotCells="1 1 1"/>
+    !> the one grid= asked for and the cost grows with the product of the three.
+    INTEGER :: plot_cells(3) = [1, 1, 1]    ! <plotWF cells="1 1 1"/>
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
     ! They gate the coarse-mesh provider calls; the actual dispatch loops over ops(:).
-    LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
-    LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
-    LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
-    LOGICAL :: l_socop = .FALSE.           ! an <operator name="spinOrbit"> is requested
-    LOGICAL :: l_operators_r = .FALSE.     ! an <operatorsRs> block (real-space O(R) export) is present
-    LOGICAL :: l_operators_k = .FALSE.     ! an <operatorsKs> block (Bloch basis, no gauge) is present
-    !> The <export> block: one boolean per artefact, all off by default. They are grouped
+    LOGICAL :: l_interpolation = .FALSE.   ! <hamiltonian ki="T"/>
+    LOGICAL :: l_spin = .FALSE.            ! some row asks for the spin, in any basis
+    LOGICAL :: l_orbmom = .FALSE.          ! some row asks for the orbital moment
+    LOGICAL :: l_socop = .FALSE.           ! some row asks for the spin-orbit operator
+    LOGICAL :: l_operators_r = .FALSE.     ! some row has rs="T" (real-space O(R) export)
+    LOGICAL :: l_operators_k = .FALSE.     ! some row has ks="T" (Bloch basis, no gauge)
+    !> The <export> block: one element per consumer, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own
-    !> matrices to someone outside -- and differ only in who reads them. What <operatorsRs>
-    !> and <interpolation> write is NOT here: those compute something first and writing it
-    !> is the last step, while these copy out what the run already holds.
+    !> matrices to someone outside -- and differ only in who reads them. What the rs and
+    !> ki switches of <operators> ask for is NOT here: those compute something first and
+    !> writing it is the last step, while these copy out what the run already holds.
     TYPE(t_wannierlib_export) :: export
     ! --- opt-in output domains (<domain> children of <interpolation>) ---
     ! One <domain> per set of k-points the operators are evaluated on, repeatable and
@@ -139,19 +139,19 @@ MODULE m_types_wannierlib
     !> into the vacuum of a film -- and where the cell is anisotropic.
     LOGICAL :: l_ws_distance = .FALSE.
 
-    ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
+    ! --- interpolation list: one entry per <operators> row with ki="T" ---
     !> Always allocated, possibly to size zero, so SIZE() is the count and the two cannot
-    !> come apart. One entry per <operator> of <interpolation>.
+    !> come apart.
     TYPE(t_wannierlib_op), ALLOCATABLE :: ops(:)
 
-    ! --- operatorsRs table: one entry per <operatorsRs>/<operator name=".."> child ---
-    !> One name per <operator> of <operatorsRs>. A list of names is all this is, so it
-    !> stays a list of names rather than a record with one field in it.
+    ! --- real-space list: one entry per <operators> row with rs="T" ---
+    !> A list of names is all this is, so it stays a list of names rather than a record
+    !> with one field in it.
     CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
 
-    ! --- operatorsKs table: one entry per <operatorsKs>/<operator name=".."> child.
-    !     Kept apart from the list above for the same reason the request keeps them
-    !     apart: neither one implies the other. ---
+    ! --- Bloch-basis list: one entry per <operators> row with ks="T". Kept apart from
+    !     the list above for the same reason the request keeps them apart: neither one
+    !     implies the other, which is why they are two switches and not one. ---
     CHARACTER(LEN=20), ALLOCATABLE :: op_k_name(:)
 
     INTEGER :: num_wann = 0
@@ -245,14 +245,15 @@ MODULE m_types_wannierlib
     !> wannierisation runs on a uniform full-zone mesh, so when the shells come out wrong the
     !> lattice is the first suspect and not the mesh: a slightly distorted cell splits one
     !> shell into several, or fails (B1), and Wannier90 stops there with nothing left to
-    !> turn. Nothing here checks the mesh, though -- mp_grid is taken from kpts%nkpt3 and the
-    !> k-list from whichever list was selected -- so a shifted list would reach Wannier90 as
-    !> a Monkhorst-Pack grid it is not, and would land in the same place. Negative is the
+    !> turn. The mesh is checked before Wannier90 sees it: wgauge_mp_grid refuses divisions
+    !> that do not multiply out to the k-points of the full zone, so a list that is not the
+    !> grid it claims to be stops there, with both numbers, instead of landing here. What
+    !> that test cannot see is a grid shifted off Gamma -- the count still matches -- and
+    !> such a list does reach Wannier90 as a Monkhorst-Pack grid it is not. Negative is the
     !> sentinel for "say nothing", since zero is a value -- under it no two distances would
     !> ever count as equal and every shell would hold one vector.
     REAL :: kmesh_tol = -1.0
 
-    LOGICAL :: l_intp = .FALSE.         ! Do interpolation
     REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
 
     !> One entry per <wannierproj> as read, and one per Wannier function after init has
@@ -575,7 +576,6 @@ CONTAINS
       CALL mpi_bc(rank, mpi_comm, this%proj(iproj)%shift)
     END DO
     CALL mpi_bc(this%kpts_fine, rank, mpi_comm)
-    CALL mpi_bc(this%l_intp, rank, mpi_comm)
 
   END SUBROUTINE mpi_bc_wannierlib
 
@@ -596,6 +596,12 @@ CONTAINS
     TYPE(t_kpts) :: kpts_temp
     CHARACTER(len=40) :: kptsPath
     REAL, ALLOCATABLE :: gridlist(:)
+    CHARACTER(LEN=20) :: opName
+    !> One slot per name of WANNIERLIB_OP_NAMES. An operator cannot be named twice -- the
+    !> schema sees to that -- so the union is the upper bound for each of the three lists.
+    CHARACTER(LEN=20) :: opk_buf(SIZE(WANNIERLIB_OP_NAMES)), &
+                         opr_buf(SIZE(WANNIERLIB_OP_NAMES)), &
+                         ops_buf(SIZE(WANNIERLIB_OP_NAMES))
 
 
     xPathA = '/fleurInput/output/wannierlib'
@@ -622,7 +628,6 @@ CONTAINS
   
     xPathA = '/fleurInput/output/wannierlib/interpolation'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
-      this%l_intp = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_intp'))
 
       IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@kptsPath') == 1) THEN
         kptsPath = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kptsPath')))
@@ -780,85 +785,153 @@ CONTAINS
 
       this%l_ws_distance = evaluateFirstBoolOnly( &
         xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@useWsDistance'))
-      nOpsRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
 
-    ALLOCATE(this%ops(nOpsRead))
-    DO iProj = 1, nOpsRead
-      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/interpolation/operator[', iProj, ']'
-      this%ops(iProj)%name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
+    ! --- <operators>: one element per operator, and on it the bases it is written in.
+    !     One pass over the elements fills the three lists the rest of the code reads:
+    !     the Bloch-basis list, the real-space list and the interpolation list. Their
+    !     contents are what they always were, so no reader of them has to change.
+    !
+    !> Only the switches an operator actually offers are read, and what says which those
+    !> are is the exposure table itself, not a second list kept here. The schema refuses
+    !> the rest -- <hamiltonian ks="T"/> is not valid input -- so the two cannot drift:
+    !> a basis added to a table without an attribute in the schema reads its default and
+    !> stays off, and an attribute without a table row is never looked for.
+    xPathA = '/fleurInput/output/wannierlib/operators'
+    nOpkRead = 0; nOprRead = 0; nOpsRead = 0
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
+      DO iProj = 1, SIZE(WANNIERLIB_OP_NAMES)
+        opName = WANNIERLIB_OP_NAMES(iProj)
+        xPathP = TRIM(ADJUSTL(xPathA))//'/'//TRIM(opName)
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) /= 1) CYCLE
+        IF (melem_exposed_find(opName, WANNIERLIB_OPK) > 0) THEN
+          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@ks'))) THEN
+            nOpkRead = nOpkRead + 1
+            opk_buf(nOpkRead) = opName
+          END IF
+        END IF
+        IF (melem_exposed_find(opName, WANNIERLIB_OPR) > 0) THEN
+          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@rs'))) THEN
+            nOprRead = nOprRead + 1
+            opr_buf(nOprRead) = opName
+          END IF
+        END IF
+        IF (melem_exposed_find(opName, WANNIERLIB_INTERP) > 0) THEN
+          IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@ki'))) THEN
+            nOpsRead = nOpsRead + 1
+            ops_buf(nOpsRead) = opName
+          END IF
+        END IF
+      END DO
+    END IF
 
-      ! derive convenience flags that gate the coarse-mesh provider calls.
-      ! Class-C operators auto-request their prerequisite coarse matrices:
-      !   velocity is built from H alone, so it needs no coarse provider.
-      !> Which coarse matrix a name needs built for it is a column of the exposure table,
-      !> so a name added there is picked up here without being remembered twice. What is
-      !> left below maps the three CATALOGUE entries onto the three flags, and that mapping
-      !> only grows if the catalogue itself does.
+    !> ki says WHAT to interpolate and <interpolation> says WHERE. Without the element
+    !> there is no domain to land on, and the stage would silently compute nothing, which
+    !> is the failure a user cannot see.
+    IF (nOpsRead > 0 .AND. &
+        xml%getNumberOfNodes('/fleurInput/output/wannierlib/interpolation') /= 1) &
+      CALL juDFT_error('wannierlib: an operator is marked ki="T" but the run declares no '// &
+                       '<interpolation> block to interpolate it onto', &
+                       hint='add <interpolation> with at least one <domain listName=".."/>', &
+                       calledby='read_xml_wannierlib')
+
+    !> True when any element asks for that basis. An element present with every switch
+    !> off asks for nothing, and reads the same as an element that is not there.
+    this%l_operators_k = nOpkRead > 0
+    this%l_operators_r = nOprRead > 0
+
+    ALLOCATE(this%op_k_name(nOpkRead))
+    ALLOCATE(this%op_r_name(nOprRead))
+    ALLOCATE(this%ops(nOpsRead))
+
+    !> Which coarse matrix a name needs built for it is a column of the exposure table, so
+    !> a name added there is picked up without being remembered twice. What is left here
+    !> maps the three CATALOGUE entries onto the three flags, and only grows if the
+    !> catalogue does.
+    DO iProj = 1, nOpkRead
+      this%op_k_name(iProj) = opk_buf(iProj)
+      iRow = melem_exposed_find(this%op_k_name(iProj), WANNIERLIB_OPK)
+      IF (iRow > 0) THEN
+        SELECT CASE (TRIM(WANNIERLIB_OPK(iRow)%operator))
+        CASE ('spin');      this%l_spin = .TRUE.
+        CASE ('orbital');   this%l_orbmom = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
+        END SELECT
+      END IF
+    END DO
+    DO iProj = 1, nOprRead
+      this%op_r_name(iProj) = opr_buf(iProj)
+      iRow = melem_exposed_find(this%op_r_name(iProj), WANNIERLIB_OPR)
+      IF (iRow > 0) THEN
+        SELECT CASE (TRIM(WANNIERLIB_OPR(iRow)%operator))
+        CASE ('spin');      this%l_spin = .TRUE.
+        CASE ('orbital');   this%l_orbmom = .TRUE.
+        CASE ('spinOrbit'); this%l_socop = .TRUE.
+        END SELECT
+      END IF
+    END DO
+    DO iProj = 1, nOpsRead
+      this%ops(iProj)%name = ops_buf(iProj)
       iRow = melem_exposed_find(this%ops(iProj)%name, WANNIERLIB_INTERP)
       IF (iRow > 0) THEN
         IF (TRIM(WANNIERLIB_INTERP(iRow)%name) == 'hamiltonian') this%l_interpolation = .TRUE.
         SELECT CASE (TRIM(WANNIERLIB_INTERP(iRow)%operator))
-        CASE ('spin');       this%l_spin = .TRUE.
-        CASE ('orbital');    this%l_orbmom = .TRUE.
+        CASE ('spin');      this%l_spin = .TRUE.
+        CASE ('orbital');   this%l_orbmom = .TRUE.
         CASE ('spinOrbit'); this%l_socop = .TRUE.
         END SELECT
       END IF
     END DO
 
-    ! --- export: hand the run's own matrices to a reader outside. One boolean per
-    !     artefact rather than one format enumeration, because they are not alternatives:
+    ! --- export: hand the run's own matrices to a reader outside. One element per
+    !     consumer rather than one format enumeration, because they are not alternatives:
     !     a run can want the .amn/.mmn to be replayed by wannier90.x AND the interstitial
-    !     for irrep AND the gauge, and asking for one must not turn the others off. ---
+    !     for irrep AND the gauge, and asking for one must not turn the others off.
+    !
+    !> The switch is @on of the consumer's own element. As attributes of <export> the plot
+    !> grid and cell count sat beside six unrelated booleans and were read whether or not
+    !> the plot was switched on; on <plotWF> they are read where they belong.
     xPathA = '/fleurInput/output/wannierlib/export'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
-      this%export%w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@wannier90'))
-      this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
-      this%export%juwip = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@juwip'))
-      this%export%plot = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@plotWF'))
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotGrid') == 1) THEN
+      this%export%w90       = export_on(xml, xPathA, 'wannier90')
+      this%export%basis     = export_on(xml, xPathA, 'irrep')
+      this%export%bmesh     = export_on(xml, xPathA, 'bmesh')
+      this%export%orbitrans = export_on(xml, xPathA, 'orbitrans')
+      this%export%juwip     = export_on(xml, xPathA, 'juwip')
+      this%export%plot      = export_on(xml, xPathA, 'plotWF')
+      !> wannierberri is a superset of the two above rather than a third artefact: that
+      !> wannierisation consumes the .amn/.mmn/.eig/.chk and takes its symmetry table from
+      !> what irrep reads out of the interstitial, so one element asks for everything the
+      !> route needs and nobody has to remember to light two.
+      IF (export_on(xml, xPathA, 'wannierberri')) THEN
+        this%export%w90 = .TRUE.
+        this%export%basis = .TRUE.
+      END IF
+      xPathP = TRIM(ADJUSTL(xPathA))//'/plotWF'
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
         !> Through a variable and not straight from the call: evaluateList takes its
         !> string as INTENT(INOUT), as types_sliceplot does for the same attribute.
-        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotGrid')
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@grid')
         CALL evaluateList(gridlist, sbuf)
         IF (SIZE(gridlist) /= 3) CALL juDFT_error( &
-          'wannierlib: <export plotGrid=".."/> takes three numbers', &
+          'wannierlib: <plotWF grid=".."/> takes three numbers', &
           calledby='read_xml_wannierlib')
         !> Two points per direction is the least that spans the cell at all: the step is
         !> v/(n-1), so n=1 divides by zero and n<1 is not a grid.
         IF (ANY(NINT(gridlist) < 2)) CALL juDFT_error( &
-          'wannierlib: <export plotGrid=".."/> needs at least two points per direction', &
+          'wannierlib: <plotWF grid=".."/> needs at least two points per direction', &
           calledby='read_xml_wannierlib')
         this%export%plot_grid = NINT(gridlist)
-      END IF
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotCells') == 1) THEN
-        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotCells')
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@cells')
         CALL evaluateList(gridlist, sbuf)
         IF (SIZE(gridlist) /= 3) CALL juDFT_error( &
-          'wannierlib: <export plotCells=".."/> takes three numbers', &
+          'wannierlib: <plotWF cells=".."/> takes three numbers', &
           calledby='read_xml_wannierlib')
         !> One cell is the whole cell; zero or less is not a region.
         IF (ANY(NINT(gridlist) < 1)) CALL juDFT_error( &
-          'wannierlib: <export plotCells=".."/> needs at least one cell per direction', &
+          'wannierlib: <plotWF cells=".."/> needs at least one cell per direction', &
           calledby='read_xml_wannierlib')
         this%export%plot_cells = NINT(gridlist)
-      END IF
-      this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@irrep'))
-      this%export%bmesh = evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@bmesh'))
-      !> wannierberri="T" is a superset of the two flags above rather than a third artefact:
-      !> that wannierization consumes the .amn/.mmn/.eig/.chk and takes its symmetry table
-      !> from what irrep reads out of the interstitial, so one flag asks for everything the
-      !> route needs and nobody has to remember to light two.
-      IF (evaluateFirstBoolOnly(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))) THEN
-        this%export%w90 = .TRUE.
-        this%export%basis = .TRUE.
       END IF
     END IF
 
@@ -882,50 +955,6 @@ CONTAINS
         END IF
       END IF
     END IF
-
-    ! --- operatorsKs: what the run holds in k, before the Fourier sum to R. The four
-    !     Bloch-basis matrices come straight out of the coarse pass and need no gauge, so
-    !     asking only for those costs no wannierisation; bmn, cmn and fmn are pair
-    !     contractions and do carry the gauge, so they go to a file of their own. ---
-    xPathA = '/fleurInput/output/wannierlib/operatorsKs'
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
-      this%l_operators_k = .TRUE.
-      nOpkRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
-    END IF
-    ALLOCATE(this%op_k_name(nOpkRead))
-    DO iProj = 1, nOpkRead
-      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operatorsKs/operator[', iProj, ']'
-      this%op_k_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
-      iRow = melem_exposed_find(this%op_k_name(iProj), WANNIERLIB_OPK)
-      IF (iRow > 0) THEN
-        SELECT CASE (TRIM(WANNIERLIB_OPK(iRow)%operator))
-        CASE ('spin');      this%l_spin = .TRUE.
-        CASE ('orbital');   this%l_orbmom = .TRUE.
-        CASE ('spinOrbit'); this%l_socop = .TRUE.
-        END SELECT
-      END IF
-    END DO
-
-    ! --- operatorsRs: real-space operator matrices O(R) (Fourier step 3, no interpolation).
-    !     Groups <operator name=".."> children written to standalone-format files. ---
-    xPathA = '/fleurInput/output/wannierlib/operatorsRs'
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
-      this%l_operators_r = .TRUE.
-      nOprRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
-    END IF
-    ALLOCATE(this%op_r_name(nOprRead))
-    DO iProj = 1, nOprRead
-      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operatorsRs/operator[', iProj, ']'
-      this%op_r_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
-      iRow = melem_exposed_find(this%op_r_name(iProj), WANNIERLIB_OPR)
-      IF (iRow > 0) THEN
-        SELECT CASE (TRIM(WANNIERLIB_OPR(iRow)%operator))
-        CASE ('spin');       this%l_spin = .TRUE.
-        CASE ('orbital');    this%l_orbmom = .TRUE.
-        CASE ('spinOrbit'); this%l_socop = .TRUE.
-        END SELECT
-      END IF
-    END DO
 
     nSpecies = xml%getNumberOfNodes('/fleurInput/atomSpecies/species')
     nProjTotal = 0
@@ -1116,5 +1145,17 @@ CONTAINS
     DEALLOCATE(raw)
   END SUBROUTINE read_domain_kset_wannierlib
 
+
+  !> Whether a consumer of <export> is switched on. An absent element and on="F" mean the
+  !> same, which is what lets a generator leave every consumer in the file and flip values.
+  LOGICAL FUNCTION export_on(xml, xPathExport, name) RESULT(l_on)
+    TYPE(t_xml), INTENT(INOUT) :: xml
+    CHARACTER(LEN=*), INTENT(IN) :: xPathExport, name
+    CHARACTER(LEN=255) :: p
+    p = TRIM(ADJUSTL(xPathExport))//'/'//TRIM(name)
+    l_on = .FALSE.
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(p))) == 1) &
+      l_on = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(p))//'/@on'))
+  END FUNCTION export_on
 
 END MODULE m_types_wannierlib

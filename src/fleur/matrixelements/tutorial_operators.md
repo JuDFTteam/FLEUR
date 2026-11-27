@@ -42,7 +42,7 @@ only route with no provider to copy.
 
 ```
   inp.xml                types_wannierlib    wannierlib_main      melem_coarse
-  <operator name=".."/>  ---> reader ------>  resolves -------->  builds O(k)
+  <myOperator ki="T"/>  ---> reader ------>  resolves -------->  builds O(k)
                                     ^              ^                    |
                                     |              |                    v
                           types_melem_optable -----+            postproc/wgauge_run
@@ -206,7 +206,7 @@ Then expose it: §6.
 The same three steps for all three routes. What differs is only whether the branch calls
 the generic driver (A and B) or yours (C).
 
-### For interpolation — `<interpolation><operator name=".."/>`
+### For interpolation — `<operators><myOperator ki="T"/></operators>`
 
 A row in `WANNIERLIB_INTERP` and a branch in the `SELECT CASE` of `postproc/wgauge_run.F90`:
 
@@ -223,7 +223,7 @@ operator builds. For routes A and B that is all: the generic driver does
 `O_W(k) = V^dagger O(k) V`, the transform to `R` and back, the diagonalisation of `H(k')`
 and the projection, **for any operator**. A route-C name calls its own driver here instead.
 
-### For the real-space export — `<operatorsRs><operator name=".."/>`
+### For the real-space export — `<operators><myOperator rs="T"/></operators>`
 
 A row in `WANNIERLIB_OPR` and a branch in `postproc/wgauge_operators_r.F90`:
 

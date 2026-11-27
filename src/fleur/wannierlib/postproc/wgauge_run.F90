@@ -16,6 +16,7 @@ MODULE m_wgauge_run
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_cell
    USE m_types_kpts
+   USE m_wgauge_mesh, ONLY: wgauge_mp_grid
    USE m_types_mpi
    USE m_types_wgauge_bmesh
    USE m_melem_coarse, ONLY: t_melem_coarse
@@ -62,7 +63,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN), OPTIONAL :: wf_channel            !< collinear spin channel (1/2); default 1
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix  !< '_spin1'/'_spin2' collinear; empty otherwise
-      !> B(k) and this rank's global-k list, handed up for the <operatorsKs> file. The file
+      !> B(k) and this rank's global-k list, handed up for the Bloch-basis file. The file
       !> is written by the driver because the writer lives in export/, which this directory
       !> does not reach into: what belongs here is building B(k), not writing it.
       COMPLEX, ALLOCATABLE, INTENT(OUT), OPTIONAL :: b0k_out(:, :, :, :)
@@ -76,6 +77,9 @@ CONTAINS
       INTEGER(WL_BANDS_HID) :: dgid
       CHARACTER(LEN=40) :: dgrp
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
+      !> The three-component spin slice of one collinear channel, assembled from the
+      !> channel's own block so the generic driver takes it like any other operator.
+      COMPLEX, ALLOCATABLE :: s_ch(:, :, :, :)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
       COMPLEX, ALLOCATABLE :: b0k(:, :, :, :)          ! (nw,nw,3,nk_loc) B(k) for the k-space export
       !> H_W(k) and H(R): the Hamiltonian side of every interpolation, built once here.
@@ -94,7 +98,7 @@ CONTAINS
       IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
       wf_ch = 1
       IF (PRESENT(wf_channel)) wf_ch = wf_channel
-      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operatorsRs (WF1/WF2)
+      l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel O(R) files (WF1/WF2)
 
       CALL timestart('wgauge_run')
 
@@ -125,11 +129,11 @@ CONTAINS
                                    coarse%s0, coarse%l0, coarse%soc4, coarse%t0, coarse%hxc0, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
 
-      !> (2b) <operatorsKs> can also ask for B, C and F. They are not in the Bloch basis
-      !> the other half of that block promises: contracting over PAIRS of neighbours needs
+      !> (2b) ks="T" can also ask for B, C and F. They are not in the Bloch basis
+      !> the other half of that switch promises: contracting over PAIRS of neighbours needs
       !> a band index that means the same state at k+b1 and at k+b2, and the Bloch one does
       !> not, so these three carry the Wannier gauge and go to a file of their own. The
-      !> request is independent of <operatorsRs> -- either block may ask for a tensor and
+      !> request is independent of rs="T" -- either switch may ask for a tensor and
       !> neither obliges the other -- so this runs whether or not the pass above did.
       !>
       !> C and F arrive already built, so only B is made here; the three travel up to the
@@ -152,7 +156,7 @@ CONTAINS
             'wannierlib: useWsDistance needs the Wannier centres and none were reported', &
             hint='it requires the Wannier90 library build (CPP_WANNLIB_API)', &
             calledby='wgauge_run')
-         CALL wgauge_mdrs_set(cell, kpts%nkpt3, bmesh%centres, irank)
+         CALL wgauge_mdrs_set(cell, wgauge_mp_grid(kpts), bmesh%centres, irank)
       END IF
 
       !> H_W(k) and its transform to real space. Neither depends on the output domain, and
@@ -219,9 +223,26 @@ CONTAINS
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
                ! bound=1: <sigma> of a normalised spinor cannot exceed 1, so the driver can
                ! say so when the interpolation overshoots. Only spin has a bound this simple.
-               CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
-                                               coarse%s0, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
-                                               bound=1.0)
+               IF (l_collinear) THEN
+                  !> This channel's own block in z, and zero in x and y. The zeros are the
+                  !> answer and not an omission: the transverse expectation value of a
+                  !> spin-pure eigenstate is zero, and collinearly every eigenstate is one.
+                  IF (.NOT. ALLOCATED(coarse%sz0)) CALL juDFT_error( &
+                     'wannierlib: the collinear spin channel block was never built', &
+                     hint='melem_coarse allocates sz0 when spin is requested; it was not', &
+                     calledby='wgauge_run')
+                  ALLOCATE (s_ch(SIZE(coarse%sz0, 1), SIZE(coarse%sz0, 2), 3, SIZE(coarse%sz0, 4)), &
+                            source=CMPLX(0.0, 0.0))
+                  s_ch(:, :, 3, :) = coarse%sz0(:, :, wf_ch, :)
+                  CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                                  s_ch, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
+                                                  bound=1.0)
+                  DEALLOCATE (s_ch)
+               ELSE
+                  CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &
+                                                  coarse%s0, gk_loc, 3, kfrac, hg, dgid, 'spin', 'hbar/2', irank, mpi_comm, &
+                                                  bound=1.0)
+               END IF
             CASE ('orbital')
                ! total (site-summed) orbital moment
                CALL wgauge_interpolate_operator(manifold, cell, kpts, u_matrix, u_opt, &

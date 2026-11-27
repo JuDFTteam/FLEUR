@@ -65,7 +65,7 @@ CONTAINS
                         bk_loc, irank)
     IF (.NOT. ALLOCATED(bk_loc)) THEN
       IF (irank == 0) WRITE(oUnit,'(a)') &
-        'wannierlib operatorsRs: B(R) needs the b-shell weights -> skipped'
+        'wannierlib: B(R) with rs="T" needs the b-shell weights -> skipped'
       RETURN
     END IF
     !> bk_loc arrives in Hartree*Angstrom, and the eV*Angstrom of the file is put on by
@@ -112,8 +112,8 @@ CONTAINS
   !> B(k)_a = i sum_b w_b b_a M^H(k,b), with M^H(k,b) = V(k)^dag diag(eig) M^(0,b) V(k+b).
   !>
   !> Split out because two separate requests want it and neither implies the other:
-  !> <operatorsRs name="bmn"> sums it over R and writes WF<n>_bmn.dat, and
-  !> <operatorsKs name="bmn"> hands it over as it stands. One builder, so the two cannot
+  !> <bmn rs="T"/> sums it over R and writes WF<n>_bmn.dat, and
+  !> <bmn ks="T"/> hands it over as it stands. One builder, so the two cannot
   !> disagree, and the b-sum sits here rather than inside the R loop, where it did not
   !> depend on the loop variable and was rebuilt nrpts times.
   !>

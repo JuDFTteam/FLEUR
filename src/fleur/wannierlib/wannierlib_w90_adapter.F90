@@ -11,6 +11,7 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_atoms
   USE m_types_cell
   USE m_types_kpts
+  USE m_wgauge_mesh, ONLY: wgauge_mp_grid
   USE m_types_mpi
   USE m_types_wannierlib
   USE m_types_wgauge_bmesh
@@ -98,7 +99,7 @@ CONTAINS
 
     CALL w90_set_comm(wannierlib_w90main, fmpi%mpi_comm)
 
-    mp_grid = kpts%nkpt3  !TODO: is this correct????
+    mp_grid = wgauge_mp_grid(kpts)
     gamma_only = .FALSE.  !TODO: determine from kpts if this is a gamma-only calculation
  
 
@@ -398,7 +399,7 @@ CONTAINS
     !> Transport last, because it reads the gauge: tran_main builds its own real-space
     !> Hamiltonian from u_matrix, u_matrix_opt and eigval, which are exactly what the calls
     !> above have already set, so nothing further is handed to it. That H(R) is Wannier90's
-    !> own, with its own Wigner-Seitz convention, and is NOT the one <operatorsRs> writes --
+    !> own, with its own Wigner-Seitz convention, and is NOT the one rs="T" writes --
     !> two objects of the same name that must not be read into each other.
     !>
     !> Every rank calls it although tran_main is serial: w90_transport runs it on rank 0 and

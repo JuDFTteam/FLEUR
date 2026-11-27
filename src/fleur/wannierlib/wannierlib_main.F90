@@ -53,6 +53,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_modern_k, ONLY: wannierlib_export_modern_k
    USE m_wannierlib_chkinfo, ONLY: wl_chkinfo_set, wl_chkinfo_stamp
    USE m_wgauge_check_mw, ONLY: wgauge_check_mw
+   USE m_wgauge_window, ONLY: wgauge_unpack_gauge
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans, orbitrans_assemble_2n
    USE m_wannierlib_export_paths, ONLY: wannierlib_export_dir_set
@@ -131,7 +132,7 @@ CONTAINS
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
-      !> What the postproc pass hands back for the <operatorsKs> file: B(k) and the global
+      !> What the postproc pass hands back for the Bloch-basis file: B(k) and the global
       !> index of each k this rank owns, in the order the per-rank slices were cut.
       INTEGER, ALLOCATABLE :: gk_loc_ks(:)
       COMPLEX, ALLOCATABLE :: b0k_ks(:, :, :, :)
@@ -323,7 +324,7 @@ CONTAINS
          END IF
          IF (this%export%bmesh) CALL wannierlib_export_bmesh(bmesh_k, kpts, jspin, fmpi)
 
-         !> The Bloch-basis half of <operatorsKs>, before run_w90 has a gauge to offer.
+         !> The Bloch-basis half of ks="T", before run_w90 has a gauge to offer.
          !> It goes here and not beside the O(R) export because that is the whole point: a
          !> consumer that builds its own Wannier functions needs these and not a gauge,
          !> and asking for them must not oblige the run to produce one. The same block may
@@ -351,6 +352,12 @@ CONTAINS
 
          CALL run_w90(wl, cell, kpts, mmn, amn, eig, jspin, melem%n_channels, &
                       u_matrix, u_opt, mw_chk)
+
+         !> Wannier90 hands the gauge back indexed by the states inside the outer window,
+         !> not by band. Put it back on the band index here, once, so that everything
+         !> below -- the cross-check, the operators, the interpolation and the gauge that
+         !> goes to results -- reads one row per band as it already assumes.
+         CALL wgauge_unpack_gauge(u_opt, eig, wl%dis_win_min, wl%dis_win_max, wl%dis_froz_proj)
 
          !> Wannier90 rotated its own copy of the overlaps all the way to the final
          !> gauge, and the operator side is about to build the same quantity from the
@@ -410,7 +417,7 @@ CONTAINS
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx), &
                         b0k_out=b0k_ks, gk_loc_out=gk_loc_ks)
 
-         !> The <operatorsKs> tensors, written here rather than in the pass that built them:
+         !> The ks="T" tensors, written here rather than in the pass that built them:
          !> the writer is a consumer in export/ and postproc/ does not reach into it. B(k)
          !> arrives unallocated when only C or F were asked for, which the writer expects.
          IF (request%has_op_k('bmn') .OR. request%has_op_k('cmn') .OR. request%has_op_k('fmn')) &
