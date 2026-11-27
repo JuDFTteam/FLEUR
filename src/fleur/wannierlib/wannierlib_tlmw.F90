@@ -11,8 +11,9 @@
 !>  the combination its (l, mr) names.
 !>
 !>  A NEGATIVE l is a hybrid, and that is where the coefficients stop being one row of tlm:
-!>  sp3 mixes l=0 and l=1 with 1/sqrt(3) and 1/sqrt(6), sp3d2 reaches l=2 as well. Those are
-!>  the guesses that localise on a bond rather than on an atom.
+!>  sp3 mixes l=0 and l=1 with 1/2 on each of its four members, sp2 with 1/sqrt(3), 1/sqrt(6)
+!>  and 1/sqrt(2) on each of its three, and sp3d2 reaches l=2 as well. Those are the guesses
+!>  that localise on a bond rather than on an atom.
 !>
 !>  m_wannierlib_rad_twd carries the same table for the spin-orbit case, where the orbital is
 !>  named by (j, m_j) and the coefficients are Clebsch-Gordan instead.
